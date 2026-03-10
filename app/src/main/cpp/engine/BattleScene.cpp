@@ -1,6 +1,8 @@
 #include "BattleScene.h"
 #include "GameEngine.h"
 #include "UnitData.h"
+#include "GradeColors.h"
+#include "ProjectileEffects.h"
 #include "ResultScene.h"
 #include "PlayerData.h"
 #include "Currency.h"
@@ -349,6 +351,10 @@ void BattleScene::onUpdate(float dt) {
             // Game over states - no updates
             break;
     }
+
+    // Update particle system (always, even during wave delay for visual effects)
+    particles_.update(dt);
+    floatingText_.update(dt);
 }
 
 void BattleScene::updateEnemies(float dt) {
@@ -375,6 +381,16 @@ void BattleScene::updateUnits(float dt) {
         if (!unit.active) return;
         unit.update(dt, enemyPool_, projectilePool_, enemySpatialHash_);
     });
+
+    // Spawn visual aura particles for all active units
+    visualAuraTimer_ -= dt;
+    if (visualAuraTimer_ <= 0.f) {
+        visualAuraTimer_ = VISUAL_AURA_INTERVAL;
+        unitPool_.forEach([&](Unit& unit) {
+            if (!unit.active) return;
+            unit.spawnAura(particles_);
+        });
+    }
 }
 
 void BattleScene::updateProjectiles(float dt) {
@@ -386,16 +402,40 @@ void BattleScene::updateProjectiles(float dt) {
     projectilePool_.forEach([&](Projectile& proj) {
         if (!proj.active) return;
 
+        // Trail particles disabled — Compose ProjectileOverlay renders family-themed beams.
+        // C++ particles aren't visible under opaque Compose overlay.
+
         bool wasPrevActive = proj.active;
         proj.update(dt);
 
         if (!proj.active && wasPrevActive) {
             // Projectile just finished
             if (proj.hasHit() && proj.getHitTarget() && proj.sourceUnitId >= 0) {
+                // Impact particles disabled — Compose ProjectileOverlay handles impact visuals.
+
                 // Apply damage with magic flag
                 Enemy* hitEnemy = proj.getHitTarget();
                 if (hitEnemy->active && !hitEnemy->isDead()) {
+                    float hpBefore = hitEnemy->hp;
                     hitEnemy->takeDamage(proj.damage, proj.isMagic);
+                    float actualDmg = hpBefore - hitEnemy->hp;
+
+                    // Spawn floating damage number in C++
+                    {
+                        int familyIdx = (proj.sourceUnitId >= 0) ? (proj.sourceUnitId % 5) : 0;
+                        Vec4 dmgColor;
+                        bool isBigHit = actualDmg > 100.f;
+                        switch (familyIdx) {
+                            case 0: dmgColor = {1.f, 0.6f, 0.2f, 1.f}; break; // Fire: orange
+                            case 1: dmgColor = {0.5f, 0.85f, 1.f, 1.f}; break; // Frost: blue
+                            case 2: dmgColor = {0.4f, 1.f, 0.3f, 1.f}; break; // Poison: green
+                            case 3: dmgColor = {1.f, 1.f, 0.6f, 1.f}; break; // Lightning: yellow-white
+                            default: dmgColor = {1.f, 0.9f, 0.4f, 1.f}; break; // Support: gold
+                        }
+                        floatingText_.spawn(hitEnemy->position,
+                                           static_cast<int>(actualDmg), dmgColor,
+                                           2.5f, isBigHit);
+                    }
 
                     // Notify Compose of damage hit for visual effect
                     if (env && g_onDamageMethod) {
@@ -474,6 +514,29 @@ void BattleScene::summonUnit() {
     grid_.placeUnit(row, col, unit);
     unitTypesUsed_.insert(def.id);
 
+    // Summon particle burst — family-colored
+    {
+        int familyIdx = def.id % 5;
+        int grade = def.id / 5;
+        Vec4 col = getFamilyColor(familyIdx);
+        col.w = 0.9f;
+        Vec4 colEnd = col;
+        colEnd.w = 0.f;
+        int count = 12 + grade * 4;
+        particles_.burst(cellPos, count, 80.f + grade * 15.f, 30.f,
+                        col, colEnd, 0.5f, 6.f, 1.f, BlendMode::Additive);
+        // Upward sparkle column
+        for (int i = 0; i < 6; i++) {
+            particles_.spawn(
+                {cellPos.x + ParticleSystem::randRange(-10.f, 10.f), cellPos.y + 20.f},
+                {ParticleSystem::randRange(-8.f, 8.f), ParticleSystem::randRange(-100.f, -50.f)},
+                brighten(col, 0.4f), colEnd,
+                ParticleSystem::randRange(0.3f, 0.6f), 4.f, 0.f,
+                0.f, BlendMode::Additive
+            );
+        }
+    }
+
     aout << "Summoned " << def.name << " at (" << row << "," << col
          << ") cost=" << cost << " SP=" << sp_ << std::endl;
 
@@ -488,6 +551,11 @@ void BattleScene::checkWaveComplete() {
     if (waveManager_.isWaveComplete()) {
         aout << "Wave " << currentWave_ << " complete!" << std::endl;
 
+        // Clear all in-flight projectiles
+        projectilePool_.forEach([](Projectile& proj) {
+            proj.active = false;
+        });
+
         if (currentWave_ >= maxWaves_) {
             state_ = State::Victory;
             aout << "VICTORY! All waves cleared!" << std::endl;
@@ -496,6 +564,9 @@ void BattleScene::checkWaveComplete() {
             state_ = State::WaveDelay;
             waveDelayTimer_ = WAVE_DELAY;
         }
+
+        // Push empty projectile state to Compose immediately
+        pushProjectilePositions();
     }
 }
 
@@ -579,16 +650,20 @@ void BattleScene::onRender(float alpha, SpriteBatch& batch) {
     // 1. Render path
     renderPath(batch);
 
-    // 2. Enemies are now rendered by Compose overlay via pushEnemyPositions()
+    // 2. Units: sprites rendered by Compose overlay (proper drawable icons).
+    //    C++ only renders aura particles (spawned in updateUnits) behind the Compose layer.
 
-    // 3. Render projectiles
-    projectilePool_.forEach([&](Projectile& proj) {
-        if (proj.active) {
-            proj.render(alpha, batch, atlas_);
-        }
-    });
+    // 3. Enemies: sprites + HP bars rendered by Compose EnemyOverlay (proper drawable icons).
 
-    // 4. Wave delay overlay
+    // 4. Projectile sprites rendered by Compose ProjectileOverlay (proper family-themed beams).
+    //    C++ only spawns trail/impact particles (below).
+
+    // 5. Render particles (auras, impacts, trails)
+    particles_.render(batch, atlas_);
+
+    // 6. Damage numbers rendered by Compose DamageNumberOverlay.
+
+    // 7. Wave delay overlay
     if (state_ == State::WaveDelay) {
         renderHUD(batch);
     }
@@ -711,6 +786,37 @@ void BattleScene::handleMergeRequest(int tileIndex) {
     auto result = mergeSystem_.trySmartMerge(tileIndex, grid_, unitPool_);
     if (result.success) {
         mergeCount_++;
+
+        // Merge particle burst at tile position
+        {
+            int row = tileIndex / Grid::COLS;
+            int col = tileIndex % Grid::COLS;
+            Vec2 pos = grid_.cellCenter(row, col);
+            int grade = result.resultUnitId / 5;
+            Vec4 gradeCol = getGradeColor(grade);
+            gradeCol.w = 1.f;
+            Vec4 endCol = gradeCol;
+            endCol.w = 0.f;
+
+            // Big grade-colored burst
+            int count = 16 + grade * 6;
+            particles_.burst(pos, count, 100.f + grade * 20.f, 40.f,
+                            gradeCol, endCol, 0.6f, 8.f + grade, 1.f, BlendMode::Additive);
+
+            // Lucky merge: extra golden sparkle ring
+            if (result.lucky) {
+                particles_.burst(pos, 24, 120.f, 30.f,
+                                {1.f, 0.9f, 0.3f, 1.f}, {1.f, 1.f, 0.6f, 0.f},
+                                0.8f, 6.f, 0.f, BlendMode::Additive);
+            }
+
+            // Central white flash
+            particles_.spawn(pos, {0.f, 0.f},
+                            {1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 0.f},
+                            0.2f, 30.f + grade * 5.f, 0.f,
+                            0.f, BlendMode::Additive);
+        }
+
         notifyMergeComplete(tileIndex, result.lucky, result.resultUnitId);
         aout << "Smart merge! Result unit: " << result.resultUnitId
              << (result.lucky ? " (LUCKY!)" : "") << std::endl;

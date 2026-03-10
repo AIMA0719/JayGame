@@ -133,9 +133,11 @@ void DeckEditScene::renderDeckSlots(SpriteBatch& batch) {
             const auto& def = getUnitDef(deck_[i]);
             Vec4 unitColor;
             switch (def.family) {
-                case UnitFamily::Fire: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-                case UnitFamily::Frost:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-                case UnitFamily::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+                case UnitFamily::Fire:      unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+                case UnitFamily::Frost:     unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+                case UnitFamily::Poison:    unitColor = {0.5f, 1.0f, 0.3f, 0.9f}; break;
+                case UnitFamily::Lightning: unitColor = {0.8f, 0.8f, 1.0f, 0.9f}; break;
+                case UnitFamily::Support:   unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
             }
 
             float unitSize = 60.f;
@@ -190,10 +192,13 @@ void DeckEditScene::renderInventory(SpriteBatch& batch) {
         float bw = 2.f;
         Vec4 borderCol;
         switch (def.grade) {
-            case UnitGrade::Low:    borderCol = {0.5f, 0.5f, 0.5f, 0.5f}; break;
-            case UnitGrade::Medium:      borderCol = {0.3f, 0.5f, 1.0f, 0.6f}; break;
-            case UnitGrade::High:      borderCol = {0.7f, 0.3f, 0.9f, 0.6f}; break;
-            case UnitGrade::Supreme: borderCol = {1.0f, 0.8f, 0.2f, 0.7f}; break;
+            case UnitGrade::Common:   borderCol = {0.5f, 0.5f, 0.5f, 0.5f}; break;
+            case UnitGrade::Rare:     borderCol = {0.3f, 0.5f, 1.0f, 0.6f}; break;
+            case UnitGrade::Hero:     borderCol = {0.7f, 0.3f, 0.9f, 0.6f}; break;
+            case UnitGrade::Legend:   borderCol = {1.0f, 0.8f, 0.2f, 0.7f}; break;
+            case UnitGrade::Ancient:  borderCol = {0.9f, 0.3f, 0.3f, 0.6f}; break;
+            case UnitGrade::Mythic:   borderCol = {0.9f, 0.8f, 0.2f, 0.7f}; break;
+            case UnitGrade::Immortal: borderCol = {0.9f, 0.6f, 0.9f, 0.7f}; break;
         }
         batch.draw(*whiteTexture_, x, y, cardW, bw,
                    0.f, 0.f, 1.f, 1.f, borderCol.x, borderCol.y, borderCol.z, borderCol.w);
@@ -207,9 +212,11 @@ void DeckEditScene::renderInventory(SpriteBatch& batch) {
         // Unit icon
         Vec4 unitColor;
         switch (def.family) {
-            case UnitFamily::Fire: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-            case UnitFamily::Frost:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-            case UnitFamily::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+            case UnitFamily::Fire:      unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+            case UnitFamily::Frost:     unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+            case UnitFamily::Poison:    unitColor = {0.5f, 1.0f, 0.3f, 0.9f}; break;
+            case UnitFamily::Lightning: unitColor = {0.8f, 0.8f, 1.0f, 0.9f}; break;
+            case UnitFamily::Support:   unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
         }
         float iconSize = 50.f;
         batch.draw(*whiteTexture_,

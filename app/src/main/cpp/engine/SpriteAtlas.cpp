@@ -95,14 +95,15 @@ const SpriteFrame& SpriteAtlas::getWhitePixel() const {
     return whitePixel_;
 }
 
-// ---------- Init: Units (rows 0-3) ----------
-// 25 units, 4 frames each (idle0, idle1, attack0, attack1)
+// ---------- Init: Units (rows 0-4) ----------
+// 35 units, 4 frames each (idle0, idle1, attack0, attack1)
 // 8 units per row, 4 columns per unit
-// Row 0: units 0-7, Row 1: units 8-15, Row 2: units 16-23, Row 3: unit 24
+// Row 0: units 0-7, Row 1: units 8-15, Row 2: units 16-23,
+// Row 3: units 24-31, Row 4: units 32-34
 
 void SpriteAtlas::initUnits() {
     for (int i = 0; i < MAX_UNITS; i++) {
-        int row = i / 8;          // 0 or 1
+        int row = i / 8;          // 0..4
         int slot = i % 8;         // 0..7
         int baseCol = slot * 4;   // each unit occupies 4 columns
 
@@ -122,12 +123,12 @@ void SpriteAtlas::initUnits() {
     }
 }
 
-// ---------- Init: Enemies (row 4) ----------
+// ---------- Init: Enemies (row 5) ----------
 // 6 enemies, 3 frames each (walk0, walk1, hit)
-// 3 columns per enemy
+// 3 columns per enemy (shifted from row 4 to row 5 due to 35 units)
 
 void SpriteAtlas::initEnemies() {
-    const int row = 4;
+    const int row = 5;
     for (int i = 0; i < MAX_ENEMIES; i++) {
         int baseCol = i * 3;
         auto& e = enemies_[i];
@@ -144,7 +145,7 @@ void SpriteAtlas::initEnemies() {
 }
 
 // ---------- Init: Projectiles (row 6) ----------
-// 6 projectile types, 2 frames each
+// 6 projectile types, 2 frames each (kept at row 6, no overlap)
 
 void SpriteAtlas::initProjectiles() {
     const int row = 6;
@@ -201,9 +202,19 @@ void SpriteAtlas::initHud() {
         col++;
     }
 
-    // Debuff/buff icon on next cell
+    // Debuff/buff icons
     if (col >= 32) { col = 0; row++; }
-    hud_["icon_buff"] = {cellUV(col, row)};
+    hud_["icon_buff"] = {cellUV(col, row)}; col++;
+    if (col >= 32) { col = 0; row++; }
+    hud_["debuff_slow"] = {cellUV(col, row)}; col++;
+    if (col >= 32) { col = 0; row++; }
+    hud_["debuff_dot"] = {cellUV(col, row)}; col++;
+    if (col >= 32) { col = 0; row++; }
+    hud_["debuff_armor"] = {cellUV(col, row)}; col++;
+
+    // Panel used by wave delay HUD
+    if (col >= 32) { col = 0; row++; }
+    hud_["panel"] = {cellUV(col, row)};
 }
 
 // ---------- Init: Effects (rows 12-13) ----------

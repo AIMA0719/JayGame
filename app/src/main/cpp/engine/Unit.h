@@ -11,6 +11,7 @@ class Enemy;
 class Projectile;
 class SpriteBatch;
 class SpriteAtlas;
+class ParticleSystem;
 
 class Unit {
 public:
@@ -42,6 +43,7 @@ public:
     void update(float dt, ObjectPool<Enemy>& enemies, ObjectPool<Projectile>& projectiles,
                 SpatialHash<Enemy>& spatialHash);
     void render(float alpha, SpriteBatch& batch, const SpriteAtlas& atlas) const;
+    void spawnAura(ParticleSystem& particles) const;
 
     float getDamage() const;    // baseATK * level multiplier * buff bonus
     float getRange() const;     // range from UnitDef with row bonus

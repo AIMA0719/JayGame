@@ -36,15 +36,8 @@ import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.NeonCyan
 import kotlinx.coroutines.delay
 
-private val GradeColors = arrayOf(
-    Color(0xFF9E9E9E), // Normal
-    Color(0xFF42A5F5), // Rare
-    Color(0xFFAB47BC), // Epic
-    Color(0xFFFF8F00), // Legendary
-    Color(0xFFE94560), // Transcendent
-)
-
-private val GradeNames = arrayOf("하급", "중급", "상급", "최상급", "초월")
+private val GradeColors = GradeColorsByIndex
+private val GradeNames = GradeNamesByIndex
 
 /**
  * Shows merge result with unit info:

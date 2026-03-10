@@ -3,6 +3,7 @@
 #include "SpriteBatch.h"
 #include "SpriteAtlas.h"
 #include "TextureAsset.h"
+#include "GradeColors.h"
 
 #include <cmath>
 
@@ -76,6 +77,14 @@ void Projectile::render(float alpha, SpriteBatch& batch, const SpriteAtlas& atla
         rotation = std::atan2(velocity.y, velocity.x);
     }
 
-    batch.draw(tex, pos, {size, size}, frame.uvRect,
-               {1.f, 1.f, 1.f, 1.f}, rotation, {0.5f, 0.5f});
+    // Tint by family color for visual distinction
+    Vec4 tint = {1.f, 1.f, 1.f, 1.f};
+    if (sourceUnitId >= 0) {
+        int familyIdx = sourceUnitId % 5;
+        Vec4 famCol = getFamilyColor(familyIdx);
+        // Subtle tint blend: 70% white + 30% family color
+        tint = {0.7f + famCol.x * 0.3f, 0.7f + famCol.y * 0.3f, 0.7f + famCol.z * 0.3f, 1.f};
+    }
+
+    batch.draw(tex, pos, {size, size}, frame.uvRect, tint, rotation, {0.5f, 0.5f});
 }

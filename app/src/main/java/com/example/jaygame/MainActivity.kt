@@ -1,5 +1,6 @@
 package com.example.jaygame
 
+import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -42,6 +43,8 @@ class MainActivity : GameActivity() {
         val composeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@MainActivity)
             setViewTreeSavedStateRegistryOwner(this@MainActivity)
+            // Transparent background so C++ GL surface shows through
+            setBackgroundColor(AndroidColor.TRANSPARENT)
             setContent {
                 JayGameTheme {
                     val result by BattleBridge.result.collectAsState()

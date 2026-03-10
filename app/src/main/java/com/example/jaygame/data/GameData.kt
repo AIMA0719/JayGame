@@ -12,8 +12,8 @@ data class GameData(
     val trophies: Int = 0,
     val playerLevel: Int = 1,
     val totalXP: Int = 0,
-    val units: List<UnitProgress> = List(25) { i ->
-        // LOW grade (0-4) owned by default, others unlocked via merge
+    val units: List<UnitProgress> = List(35) { i ->
+        // COMMON grade (0-4) owned by default, others unlocked via merge
         UnitProgress(owned = i < 5, cards = 0, level = 1)
     },
     val deck: List<Int> = listOf(0, 1, 2, 3, 4),

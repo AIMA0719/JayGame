@@ -6,6 +6,8 @@
 #include "SpriteBatch.h"
 #include "SpriteAtlas.h"
 #include "TextureAsset.h"
+#include "AuraEffect.h"
+#include "ParticleSystem.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -173,38 +175,52 @@ void Unit::render(float alpha, SpriteBatch& batch, const SpriteAtlas& atlas) con
     const auto& tex = *atlas.getTexture();
     float cx = position.x;
     float cy = position.y;
-    float spriteSize = 56.f; // unit sprite display size
+    float spriteSize = 56.f;
+    int grade = unitDefId / 5;
 
-    // Get the actual unit sprite from atlas
+    // 1. Pedestal glow (flat ellipse under unit, grade-colored)
+    drawPedestalGlow(batch, atlas, {cx, cy}, grade);
+
+    // 2. Get the actual unit sprite from atlas
     const auto& unitSprite = atlas.getUnitSprite(unitDefId);
-
-    // Select animation: attack if attacking, otherwise idle
     const SpriteFrame& frame = attacking_
         ? unitSprite.attack.getFrame(attackAnimTimer_)
         : unitSprite.idle.getFrame(animTime_);
 
-    // Brightness increases with level
+    // Brightness increases with level; grade adds subtle tint
     float brightness = 1.0f + (level - 1) * 0.08f;
-    float r = std::min(brightness, 1.2f);
-    float g = std::min(brightness, 1.2f);
-    float b = std::min(brightness, 1.2f);
+    Vec4 gradeCol = getGradeColor(grade);
+    float tintAmount = grade * 0.04f; // subtle grade tint
+    float r = std::min(brightness * (1.f - tintAmount) + gradeCol.x * tintAmount, 1.2f);
+    float g = std::min(brightness * (1.f - tintAmount) + gradeCol.y * tintAmount, 1.2f);
+    float b = std::min(brightness * (1.f - tintAmount) + gradeCol.z * tintAmount, 1.2f);
 
-    // Draw unit sprite from atlas
+    // 3. Draw unit sprite
     batch.draw(tex,
                {cx, cy}, {spriteSize, spriteSize},
                frame.uvRect, {r, g, b, 1.f},
                0.f, {0.5f, 0.5f});
 
-    // Attack animation: glow pulse behind sprite
+    // 4. Attack animation: glow pulse with family color
     if (attacking_) {
         const auto& wp = atlas.getWhitePixel();
+        int familyIdx = unitDefId % 5;
+        Vec4 famCol = getFamilyColor(familyIdx);
         float pulse = 0.5f + 0.5f * std::sin(attackAnimTimer_ * 20.f);
-        float glowSize = spriteSize + 8.f * pulse;
+        float glowSize = spriteSize + 8.f * pulse + grade * 2.f;
         batch.draw(tex,
                    cx - glowSize * 0.5f, cy - glowSize * 0.5f, glowSize, glowSize,
                    wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-                   1.f, 1.f, 1.f, 0.15f * pulse);
+                   famCol.x, famCol.y, famCol.z, 0.2f * pulse);
     }
+
+    // 5. Level badge (gold dots above sprite)
+    drawLevelBadge(batch, atlas, {cx, cy}, level);
+}
+
+void Unit::spawnAura(ParticleSystem& particles) const {
+    if (!active) return;
+    spawnUnitAura(particles, position, unitDefId, level, animTime_);
 }
 
 float Unit::getDamage() const {

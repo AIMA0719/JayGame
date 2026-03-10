@@ -212,6 +212,11 @@ object BattleBridge {
             isBossRound = isBossRound != 0,
             bossTimeRemaining = bossTimeRemaining,
         )
+
+        // Clear visual effects on wave end
+        if (state == 0 || state == 2 || state == 3) {
+            _damageEvents.value = emptyList()
+        }
     }
 
     @JvmStatic

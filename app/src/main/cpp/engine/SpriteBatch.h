@@ -6,6 +6,7 @@
 #include <memory>
 #include "MathTypes.h"
 
+enum class BlendMode : uint8_t;
 class TextureAsset;
 
 // Vertex layout for batched sprite rendering
@@ -59,6 +60,9 @@ public:
                      float r, float g, float b, float a);
 
     void end();
+
+    // Change blend mode mid-batch (flushes current batch, changes GL state)
+    void setBlendMode(BlendMode mode);
 
     int getDrawCallCount() const { return drawCallCount_; }
     int getSpriteCount() const { return totalSpriteCount_; }

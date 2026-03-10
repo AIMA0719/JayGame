@@ -84,6 +84,41 @@ private val SupportGold02 = SupportGold.copy(alpha = 0.2f)
 private val SupportGold015 = SupportGold.copy(alpha = 0.15f)
 private val GoldBeam = Color(0xFFFFCC80)
 
+// Support grade 1 highlight
+private val SupportGoldHighlight = Color(0xFFFFE082)
+
+// Prismatic rainbow colors (Support grade 6)
+private val PrismColors = listOf(
+    Color(0xFFFF0000), Color(0xFFFF7700), Color(0xFFFFFF00),
+    Color(0xFF00FF00), Color(0xFF0077FF), Color(0xFF0000FF), Color(0xFF8800FF)
+)
+
+// Grade 5-6 Fire
+private val FireInferno = Color(0xFFFF2200)
+private val FireInferno04 = Color(0xFFFF2200).copy(alpha = 0.4f)
+private val FireWhiteHot = Color(0xFFFFFFCC)
+private val FirePlasma = Color(0xFFFF6600).copy(alpha = 0.2f)
+
+// Grade 5-6 Frost
+private val FrostCrystal = Color(0xFFB3E5FC)
+private val FrostNova = Color(0xFFE1F5FE).copy(alpha = 0.3f)
+private val FrostDeep = Color(0xFF0288D1)
+
+// Grade 5-6 Poison
+private val PoisonToxic = Color(0xFF00E676)
+private val PoisonMiasma = Color(0xFF1B5E20).copy(alpha = 0.3f)
+private val PoisonAcid = Color(0xFFCCFF00).copy(alpha = 0.8f)
+
+// Grade 5-6 Lightning
+private val LightThunder = Color(0xFFFFFF88)
+private val LightArc = Color(0xFFFFEE58).copy(alpha = 0.5f)
+private val LightFlash = Color.White.copy(alpha = 0.8f)
+
+// Grade 5-6 Support
+private val SupportDivine = Color(0xFFFFF3E0)
+private val SupportSacred = Color(0xFFFFD700).copy(alpha = 0.4f)
+private val SupportPrismatic = Color(0xFFF8BBD0).copy(alpha = 0.5f)
+
 // Rainbow (support grade 4)
 private val RainbowColors = listOf(
     Color(0xFFFF6B6B), Color(0xFFFFD93D), Color(0xFF6BCB77),
@@ -208,13 +243,75 @@ private fun DrawScope.drawFireEffect(
             drawParticleTrail(srcX, srcY, dstX, dstY, 8, 12f, FireOrange04, 0.6f, 5f, time, seed)
             drawCircle(FireDark05, radius = 14f, center = dst)
         }
-        else -> {
+        4 -> {
             drawLine(FireRed015, start = src, end = dst, strokeWidth = 60f, cap = StrokeCap.Round)
             drawLine(FireDark, start = src, end = dst, strokeWidth = 12f, cap = StrokeCap.Round)
             drawLine(FireBright, alpha = 0.9f, start = src, end = dst, strokeWidth = 3.6f, cap = StrokeCap.Round)
             drawParticleTrail(srcX, srcY, dstX, dstY, 16, 20f, FireGold05, 0.5f, 4f, time, seed)
             drawCircle(FireDDark06, radius = 18f, center = dst)
             drawCircle(White03, radius = 8f, center = dst)
+        }
+        5 -> {
+            // Triple-layer fire beam: outer glow, mid flame, bright core
+            drawLine(FirePlasma, start = src, end = dst, strokeWidth = 80f, cap = StrokeCap.Round)
+            drawLine(FireInferno04, start = src, end = dst, strokeWidth = 40f, cap = StrokeCap.Round)
+            drawLine(FireDark, start = src, end = dst, strokeWidth = 14f, cap = StrokeCap.Round)
+            drawLine(FireBright, alpha = 0.95f, start = src, end = dst, strokeWidth = 4f, cap = StrokeCap.Round)
+            // Spiral fire particles
+            val dx5 = dstX - srcX; val dy5 = dstY - srcY
+            val len5 = sqrt(dx5 * dx5 + dy5 * dy5)
+            if (len5 > 1f) {
+                val px5 = -dy5 / len5; val py5 = dx5 / len5
+                for (j in 0 until 14) {
+                    val t = j.toFloat() / 14f
+                    val spiralAngle = t * 12f + time * 10f + seed
+                    val spiralR = 15f * sin(t * PI.toFloat())
+                    val sx = srcX + dx5 * t + px5 * cos(spiralAngle) * spiralR
+                    val sy = srcY + dy5 * t + py5 * cos(spiralAngle) * spiralR
+                    drawCircle(FireGlow, alpha = 0.6f * (1f - t * 0.4f), radius = 4f, center = Offset(sx, sy))
+                }
+            }
+            // Impact explosion with expanding ring
+            val impR5 = 20f + sin(time * 8f) * 8f
+            drawCircle(FireInferno04, radius = impR5, center = dst)
+            drawCircle(FireDark, alpha = 0.5f, radius = impR5 * 0.6f, center = dst, style = Stroke(3f))
+            drawCircle(FireBright, alpha = 0.8f, radius = 8f, center = dst)
+        }
+        else -> {
+            // Grade 6 (Immortal): Quad-layer beam with chromatic aberration
+            val dx6 = dstX - srcX; val dy6 = dstY - srcY
+            val len6 = sqrt(dx6 * dx6 + dy6 * dy6)
+            if (len6 < 1f) return
+            val px6 = -dy6 / len6; val py6 = dx6 / len6
+            // Outer plasma glow
+            drawLine(FirePlasma, start = src, end = dst, strokeWidth = 100f, cap = StrokeCap.Round)
+            // Chromatic aberration: offset beams in different fire colors
+            for (ab in -1..1) {
+                val off = ab * 4f
+                val abSrc = Offset(srcX + px6 * off, srcY + py6 * off)
+                val abDst = Offset(dstX + px6 * off, dstY + py6 * off)
+                val abColor = when (ab) { -1 -> FireInferno; 0 -> FireDark; else -> FireGlow }
+                drawLine(abColor, alpha = 0.8f, start = abSrc, end = abDst, strokeWidth = 10f, cap = StrokeCap.Round)
+            }
+            drawLine(FireWhiteHot, alpha = 0.9f, start = src, end = dst, strokeWidth = 4f, cap = StrokeCap.Round)
+            // Massive particle storm (20+ particles)
+            for (j in 0 until 22) {
+                val t = j.toFloat() / 22f
+                val wobble = sin(t * 14f + time * 12f + seed + j) * 25f * sin(t * PI.toFloat())
+                val wobble2 = cos(t * 10f + time * 8f + seed) * 15f * sin(t * PI.toFloat())
+                val fx = srcX + dx6 * t + px6 * wobble
+                val fy = srcY + dy6 * t + py6 * wobble
+                drawCircle(FireGlow, alpha = 0.5f * (1f - t * 0.3f), radius = 5f, center = Offset(fx, fy))
+                val fx2 = srcX + dx6 * t + px6 * wobble2
+                val fy2 = srcY + dy6 * t + py6 * wobble2
+                drawCircle(FireInferno, alpha = 0.3f, radius = 3f, center = Offset(fx2, fy2))
+            }
+            // Impact shockwave + white-hot core
+            val shockR = 28f + sin(time * 10f) * 12f
+            drawCircle(FireInferno04, radius = shockR, center = dst)
+            drawCircle(FireDark, alpha = 0.6f, radius = shockR * 0.7f, center = dst, style = Stroke(4f))
+            drawCircle(FireDDark06, radius = 14f, center = dst)
+            drawCircle(FireWhiteHot, alpha = 0.9f, radius = 8f, center = dst)
         }
     }
 }
@@ -258,12 +355,70 @@ private fun DrawScope.drawFrostEffect(
             drawLine(White07, start = src, end = dst, strokeWidth = 2.7f, cap = StrokeCap.Round)
             drawParticleTrail(srcX, srcY, dstX, dstY, 6, 10f, White06, 0.6f, 2.5f, time, seed)
         }
-        else -> {
+        4 -> {
             drawLine(FrostLight015, start = src, end = dst, strokeWidth = 48f, cap = StrokeCap.Round)
             drawLine(FrostBase, start = src, end = dst, strokeWidth = 12f, cap = StrokeCap.Round)
             drawLine(White09, start = src, end = dst, strokeWidth = 4.8f, cap = StrokeCap.Round)
             drawParticleTrail(srcX, srcY, dstX, dstY, 10, 15f, White04, 0.4f, 3f, time, seed)
             drawCircle(FrostBright07, radius = 16f, center = dst)
+        }
+        5 -> {
+            // Wide crystalline beam with sharp ice particle trails
+            drawLine(FrostNova, start = src, end = dst, strokeWidth = 60f, cap = StrokeCap.Round)
+            drawLine(FrostCrystal, start = src, end = dst, strokeWidth = 14f, cap = StrokeCap.Round)
+            drawLine(FrostBase, start = src, end = dst, strokeWidth = 8f, cap = StrokeCap.Round)
+            drawLine(White09, start = src, end = dst, strokeWidth = 3f, cap = StrokeCap.Round)
+            // Sharp ice particle trails
+            val dx5 = dstX - srcX; val dy5 = dstY - srcY
+            val len5 = sqrt(dx5 * dx5 + dy5 * dy5)
+            if (len5 > 1f) {
+                val px5 = -dy5 / len5; val py5 = dx5 / len5
+                for (j in 0 until 12) {
+                    val t = j.toFloat() / 12f
+                    val sharpOff = sin(t * 16f + time * 6f + seed) * 18f * sin(t * PI.toFloat())
+                    val ix = srcX + dx5 * t + px5 * sharpOff
+                    val iy = srcY + dy5 * t + py5 * sharpOff
+                    drawCircle(FrostCrystal, alpha = 0.5f * (1f - t * 0.4f), radius = 3.5f, center = Offset(ix, iy))
+                }
+            }
+            // Expanding frost ring at impact
+            val frostR5 = 18f + sin(time * 8f) * 6f
+            drawCircle(FrostNova, radius = frostR5, center = dst)
+            drawCircle(FrostCrystal, alpha = 0.4f, radius = frostR5 * 0.7f, center = dst, style = Stroke(2.5f))
+            drawCircle(White07, radius = 6f, center = dst)
+        }
+        else -> {
+            // Grade 6 (Immortal): Blizzard beam - multiple parallel ice beams
+            val dx6 = dstX - srcX; val dy6 = dstY - srcY
+            val len6 = sqrt(dx6 * dx6 + dy6 * dy6)
+            if (len6 < 1f) return
+            val px6 = -dy6 / len6; val py6 = dx6 / len6
+            // Wide frost aura
+            drawLine(FrostNova, start = src, end = dst, strokeWidth = 80f, cap = StrokeCap.Round)
+            // Multiple parallel ice beams
+            for (b in -2..2) {
+                val off = b * 6f
+                val bSrc = Offset(srcX + px6 * off, srcY + py6 * off)
+                val bDst = Offset(dstX + px6 * off, dstY + py6 * off)
+                drawLine(FrostDeep, alpha = 0.6f, start = bSrc, end = bDst, strokeWidth = 3f, cap = StrokeCap.Round)
+            }
+            drawLine(FrostCrystal, start = src, end = dst, strokeWidth = 10f, cap = StrokeCap.Round)
+            drawLine(White09, start = src, end = dst, strokeWidth = 3.5f, cap = StrokeCap.Round)
+            // Snowflake particles between beams
+            for (j in 0 until 18) {
+                val t = j.toFloat() / 18f
+                val sOff = sin(t * 12f + time * 8f + seed + j * 0.7f) * 22f * sin(t * PI.toFloat())
+                val sx = srcX + dx6 * t + px6 * sOff
+                val sy = srcY + dy6 * t + py6 * sOff
+                drawCircle(FrostCrystal, alpha = 0.4f * (1f - t * 0.3f), radius = 3f, center = Offset(sx, sy))
+                drawCircle(Color.White, alpha = 0.2f, radius = 1.5f, center = Offset(sx, sy))
+            }
+            // Frost nova at impact
+            val novaR = 24f + sin(time * 10f) * 10f
+            drawCircle(FrostNova, radius = novaR, center = dst)
+            drawCircle(FrostDeep, alpha = 0.4f, radius = novaR * 0.8f, center = dst, style = Stroke(3f))
+            drawCircle(FrostCrystal, alpha = 0.5f, radius = novaR * 0.5f, center = dst, style = Stroke(2f))
+            drawCircle(White09, radius = 7f, center = dst)
         }
     }
 }
@@ -309,12 +464,78 @@ private fun DrawScope.drawPoisonEffect(
             drawLine(PoisonLime05, start = src, end = dst, strokeWidth = 2.4f, cap = StrokeCap.Round)
             drawParticleTrail(srcX, srcY, dstX, dstY, 8, 12f, PoisonBase, 0.25f, 6f, time, seed)
         }
-        else -> {
+        4 -> {
             drawLine(PoisonBase012, start = src, end = dst, strokeWidth = 55f, cap = StrokeCap.Round)
             drawLine(PoisonDark, start = src, end = dst, strokeWidth = 11f, cap = StrokeCap.Round)
             drawLine(PoisonLime07, start = src, end = dst, strokeWidth = 3.3f, cap = StrokeCap.Round)
             drawParticleTrail(srcX, srcY, dstX, dstY, 12, 18f, PoisonBase, 0.4f, 5f, time, seed)
             drawCircle(PoisonGreen04, radius = 16f, center = dst)
+        }
+        5 -> {
+            // Thick toxic beam with bubbling particle effect
+            drawLine(PoisonMiasma, start = src, end = dst, strokeWidth = 65f, cap = StrokeCap.Round)
+            drawLine(PoisonToxic, alpha = 0.7f, start = src, end = dst, strokeWidth = 14f, cap = StrokeCap.Round)
+            drawLine(PoisonDark, start = src, end = dst, strokeWidth = 8f, cap = StrokeCap.Round)
+            drawLine(PoisonAcid, start = src, end = dst, strokeWidth = 3f, cap = StrokeCap.Round)
+            // Bubbling particle effect
+            val dx5 = dstX - srcX; val dy5 = dstY - srcY
+            val len5 = sqrt(dx5 * dx5 + dy5 * dy5)
+            if (len5 > 1f) {
+                val px5 = -dy5 / len5; val py5 = dx5 / len5
+                for (j in 0 until 14) {
+                    val t = j.toFloat() / 14f
+                    val bubbleOff = sin(t * 8f + time * 7f + seed + j * 1.3f) * 16f * sin(t * PI.toFloat())
+                    val bx = srcX + dx5 * t + px5 * bubbleOff
+                    val by = srcY + dy5 * t + py5 * bubbleOff
+                    val bubbleR = 3f + sin(time * 10f + j * 2f) * 2f
+                    drawCircle(PoisonToxic, alpha = 0.4f * (1f - t * 0.3f), radius = bubbleR, center = Offset(bx, by))
+                }
+            }
+            // Miasma cloud at impact
+            val mR = 20f + sin(time * 6f) * 6f
+            drawCircle(PoisonMiasma, radius = mR, center = dst)
+            drawCircle(PoisonToxic, alpha = 0.3f, radius = mR * 0.7f, center = dst)
+            drawCircle(PoisonAcid, radius = 6f, center = dst)
+        }
+        else -> {
+            // Grade 6 (Immortal): Multi-tendril poison streams weaving around center
+            val dx6 = dstX - srcX; val dy6 = dstY - srcY
+            val len6 = sqrt(dx6 * dx6 + dy6 * dy6)
+            if (len6 < 1f) return
+            val px6 = -dy6 / len6; val py6 = dx6 / len6
+            // Background toxic fog
+            drawLine(PoisonMiasma, start = src, end = dst, strokeWidth = 90f, cap = StrokeCap.Round)
+            // Multi-tendril weaving streams
+            for (tendril in 0 until 4) {
+                val phase = tendril * PI.toFloat() / 2f
+                for (seg in 0 until 16) {
+                    val t1 = seg.toFloat() / 16f
+                    val t2 = (seg + 1).toFloat() / 16f
+                    val wave1 = sin(t1 * 8f + time * 6f + phase) * 20f * sin(t1 * PI.toFloat())
+                    val wave2 = sin(t2 * 8f + time * 6f + phase) * 20f * sin(t2 * PI.toFloat())
+                    val s = Offset(srcX + dx6 * t1 + px6 * wave1, srcY + dy6 * t1 + py6 * wave1)
+                    val e = Offset(srcX + dx6 * t2 + px6 * wave2, srcY + dy6 * t2 + py6 * wave2)
+                    drawLine(PoisonToxic, alpha = 0.5f, start = s, end = e, strokeWidth = 4f, cap = StrokeCap.Round)
+                }
+            }
+            // Center line
+            drawLine(PoisonDark, start = src, end = dst, strokeWidth = 6f, cap = StrokeCap.Round)
+            drawLine(PoisonAcid, start = src, end = dst, strokeWidth = 2.5f, cap = StrokeCap.Round)
+            // Expanding toxic cloud with dripping particles at impact
+            val cloudR = 26f + sin(time * 8f) * 10f
+            drawCircle(PoisonMiasma, radius = cloudR, center = dst)
+            drawCircle(PoisonToxic, alpha = 0.35f, radius = cloudR * 0.7f, center = dst)
+            drawCircle(PoisonDark, alpha = 0.4f, radius = cloudR * 0.5f, center = dst, style = Stroke(3f))
+            // Dripping particles
+            for (d in 0 until 5) {
+                val dripOff = (time * 30f + d * 12f) % 30f
+                val dAngle = d * 72f * PI.toFloat() / 180f
+                drawCircle(PoisonToxic, alpha = 0.5f, radius = 2.5f, center = Offset(
+                    dst.x + cos(dAngle) * 10f,
+                    dst.y + sin(dAngle) * 10f + dripOff
+                ))
+            }
+            drawCircle(PoisonAcid, radius = 7f, center = dst)
         }
     }
 }
@@ -355,7 +576,7 @@ private fun DrawScope.drawLightningEffect(
             }
             drawCircle(LightGlow06, radius = 12f, center = dst)
         }
-        else -> {
+        4 -> {
             val dx = dstX - srcX; val dy = dstY - srcY
             val len = sqrt(dx * dx + dy * dy)
             if (len < 1f) return
@@ -368,6 +589,61 @@ private fun DrawScope.drawLightningEffect(
             drawCircle(LightGlow015, radius = ringR * 2f, center = dst)
             drawCircle(LightBase, alpha = 0.4f, radius = ringR, center = dst, style = StrokeGlow)
             drawCircle(White06, radius = 6f, center = dst)
+        }
+        5 -> {
+            // Chain lightning: main bolt plus 2 forking branches
+            drawLightningBolt(srcX, srcY, dstX, dstY, LightThunder, 12, 22f, 8f, time, seed, path)
+            drawLightningBolt(srcX, srcY, dstX, dstY, LightArc, 12, 28f, 14f, time, seed + 5, path)
+            // Forking branches from midpoints
+            for (fork in 0 until 2) {
+                val ft = 0.35f + fork * 0.3f
+                val fx = srcX + (dstX - srcX) * ft; val fy = srcY + (dstY - srcY) * ft
+                val fAngle = ((seed + fork * 137) % 360) * PI.toFloat() / 180f
+                val fLen = 50f + fork * 20f
+                drawLightningBolt(fx, fy, fx + cos(fAngle) * fLen, fy + sin(fAngle) * fLen,
+                    LightThunder, 6, 12f, 4f, time, seed + fork * 11, path)
+            }
+            // Bright impact
+            val impR5 = 14f + sin(time * 10f) * 6f
+            drawCircle(LightArc, radius = impR5 * 1.5f, center = dst)
+            drawCircle(LightThunder, alpha = 0.6f, radius = impR5, center = dst)
+            drawCircle(White08, radius = 7f, center = dst)
+        }
+        else -> {
+            // Grade 6 (Immortal): Thunder storm - 3 parallel main bolts with cross-connecting arcs
+            val dx6 = dstX - srcX; val dy6 = dstY - srcY
+            val len6 = sqrt(dx6 * dx6 + dy6 * dy6)
+            if (len6 < 1f) return
+            val px6 = -dy6 / len6; val py6 = dx6 / len6
+            // 3 parallel main bolts
+            for (b in -1..1) {
+                val off = b * 10f
+                drawLightningBolt(srcX + px6 * off, srcY + py6 * off,
+                    dstX + px6 * off * 0.5f, dstY + py6 * off * 0.5f,
+                    LightThunder, 14, 20f, 7f, time, seed + b * 17, path)
+                // Glow layer for each bolt
+                drawLightningBolt(srcX + px6 * off, srcY + py6 * off,
+                    dstX + px6 * off * 0.5f, dstY + py6 * off * 0.5f,
+                    LightArc, 14, 26f, 16f, time, seed + b * 23, path)
+            }
+            // Cross-connecting arcs between parallel bolts
+            for (c in 0 until 4) {
+                val ct = 0.2f + c * 0.2f
+                val cx = srcX + dx6 * ct; val cy = srcY + dy6 * ct
+                val cOff1 = -10f; val cOff2 = 10f
+                drawLightningBolt(
+                    cx + px6 * cOff1, cy + py6 * cOff1,
+                    cx + px6 * cOff2, cy + py6 * cOff2,
+                    LightBase, 4, 8f, 3f, time, seed + c * 7, path)
+            }
+            // Bright flash at impact
+            val flashR = 18f + sin(time * 14f) * 10f
+            drawCircle(LightFlash, radius = flashR, center = dst)
+            // Expanding electrical field
+            drawCircle(LightArc, radius = flashR * 1.6f, center = dst)
+            drawCircle(LightThunder, alpha = 0.5f, radius = flashR * 1.2f, center = dst, style = Stroke(3f))
+            drawCircle(LightBase, alpha = 0.3f, radius = flashR * 2f, center = dst, style = Stroke(1.5f))
+            drawCircle(White09, radius = 8f, center = dst)
         }
     }
 }
@@ -388,7 +664,7 @@ private fun DrawScope.drawSupportEffect(
             drawCircle(SupportHoly06, radius = 4f, center = Offset(srcX + (dstX - srcX) * t, srcY + (dstY - srcY) * t))
         }
         1 -> {
-            drawBeam(src, dst, SupportGold, Color(0xFFFFE082), 3.5f)
+            drawBeam(src, dst, SupportGold, SupportGoldHighlight, 3.5f)
             for (j in 0 until 4) {
                 val t = ((time * 2 + j * 0.25f) % 1f)
                 val tx = srcX + (dstX - srcX) * t; val ty = srcY + (dstY - srcY) * t
@@ -413,7 +689,7 @@ private fun DrawScope.drawSupportEffect(
             drawParticleTrail(srcX, srcY, dstX, dstY, 5, 4f, SupportGold, 0.6f, 2f, time, seed)
             drawCircle(SupportGold05, radius = 14f, center = dst)
         }
-        else -> {
+        4 -> {
             drawLine(White01, start = src, end = dst, strokeWidth = 60f, cap = StrokeCap.Round)
             val dx = dstX - srcX; val dy = dstY - srcY
             val len = sqrt(dx * dx + dy * dy)
@@ -427,6 +703,73 @@ private fun DrawScope.drawSupportEffect(
             val impR = 12f + sin(time * 10f) * 4f
             drawCircle(White04, radius = impR, center = dst)
             drawCircle(SupportGold03, radius = impR * 1.5f, center = dst, style = StrokeGlow)
+        }
+        5 -> {
+            // Divine beam with golden halo particles
+            drawLine(SupportSacred, start = src, end = dst, strokeWidth = 70f, cap = StrokeCap.Round)
+            drawLine(SupportDivine, alpha = 0.7f, start = src, end = dst, strokeWidth = 14f, cap = StrokeCap.Round)
+            drawLine(SupportGold, start = src, end = dst, strokeWidth = 8f, cap = StrokeCap.Round)
+            drawLine(White09, start = src, end = dst, strokeWidth = 3f, cap = StrokeCap.Round)
+            // Golden halo particles
+            val dx5 = dstX - srcX; val dy5 = dstY - srcY
+            val len5 = sqrt(dx5 * dx5 + dy5 * dy5)
+            if (len5 > 1f) {
+                val px5 = -dy5 / len5; val py5 = dx5 / len5
+                for (j in 0 until 10) {
+                    val t = j.toFloat() / 10f
+                    val haloAngle = t * 10f + time * 8f + seed
+                    val haloR = 12f * sin(t * PI.toFloat())
+                    val hx = srcX + dx5 * t + px5 * cos(haloAngle) * haloR
+                    val hy = srcY + dy5 * t + py5 * cos(haloAngle) * haloR
+                    drawCircle(SupportSacred, radius = 4f, center = Offset(hx, hy))
+                    drawCircle(SupportDivine, alpha = 0.5f, radius = 2f, center = Offset(hx, hy))
+                }
+            }
+            // Star-burst at impact
+            val starR = 16f + sin(time * 10f) * 6f
+            for (ray in 0 until 8) {
+                val rayAngle = ray * PI.toFloat() / 4f + time * 2f
+                val rayEnd = Offset(dst.x + cos(rayAngle) * starR, dst.y + sin(rayAngle) * starR)
+                drawLine(SupportSacred, start = dst, end = rayEnd, strokeWidth = 2f, cap = StrokeCap.Round)
+            }
+            drawCircle(SupportDivine, alpha = 0.5f, radius = starR * 0.6f, center = dst)
+            drawCircle(White08, radius = 7f, center = dst)
+        }
+        else -> {
+            // Grade 6 (Immortal): Prismatic rainbow beam with sacred geometry
+            val dx6 = dstX - srcX; val dy6 = dstY - srcY
+            val len6 = sqrt(dx6 * dx6 + dy6 * dy6)
+            if (len6 < 1f) return
+            val px6 = -dy6 / len6; val py6 = dx6 / len6
+            // Outer divine glow
+            drawLine(SupportPrismatic, start = src, end = dst, strokeWidth = 90f, cap = StrokeCap.Round)
+            drawLine(SupportSacred, start = src, end = dst, strokeWidth = 50f, cap = StrokeCap.Round)
+            // 7 parallel rainbow color lines
+            for ((ci, pc) in PrismColors.withIndex()) {
+                val off = (ci - 3) * 4f
+                val pSrc = Offset(srcX + px6 * off, srcY + py6 * off)
+                val pDst = Offset(dstX + px6 * off, dstY + py6 * off)
+                drawLine(pc, alpha = 0.6f, start = pSrc, end = pDst, strokeWidth = 3f, cap = StrokeCap.Round)
+            }
+            // White core beam
+            drawLine(White09, start = src, end = dst, strokeWidth = 3f, cap = StrokeCap.Round)
+            // Sacred geometry pattern at impact: expanding hexagonal glow
+            val hexR = 20f + sin(time * 8f) * 8f
+            for (h in 0 until 6) {
+                val a1 = h * PI.toFloat() / 3f + time * 1.5f
+                val a2 = (h + 1) * PI.toFloat() / 3f + time * 1.5f
+                val p1 = Offset(dst.x + cos(a1) * hexR, dst.y + sin(a1) * hexR)
+                val p2 = Offset(dst.x + cos(a2) * hexR, dst.y + sin(a2) * hexR)
+                drawLine(SupportSacred, start = p1, end = p2, strokeWidth = 2.5f, cap = StrokeCap.Round)
+                // Inner hexagon
+                val innerR = hexR * 0.5f
+                val ip1 = Offset(dst.x + cos(a1) * innerR, dst.y + sin(a1) * innerR)
+                val ip2 = Offset(dst.x + cos(a2) * innerR, dst.y + sin(a2) * innerR)
+                drawLine(SupportDivine, alpha = 0.5f, start = ip1, end = ip2, strokeWidth = 1.5f, cap = StrokeCap.Round)
+            }
+            drawCircle(SupportPrismatic, radius = hexR * 1.2f, center = dst)
+            drawCircle(SupportDivine, alpha = 0.6f, radius = hexR * 0.4f, center = dst)
+            drawCircle(White09, radius = 8f, center = dst)
         }
     }
 }

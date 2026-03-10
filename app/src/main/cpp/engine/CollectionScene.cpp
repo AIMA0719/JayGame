@@ -113,10 +113,13 @@ void CollectionScene::renderUnitGrid(SpriteBatch& batch) {
         // Rarity border
         Vec4 rarityColor;
         switch (def.grade) {
-            case UnitGrade::Low:    rarityColor = {0.5f, 0.5f, 0.5f, 0.4f}; break;
-            case UnitGrade::Medium:      rarityColor = {0.3f, 0.5f, 1.0f, 0.5f}; break;
-            case UnitGrade::High:      rarityColor = {0.7f, 0.3f, 0.9f, 0.5f}; break;
-            case UnitGrade::Supreme: rarityColor = {1.0f, 0.8f, 0.2f, 0.6f}; break;
+            case UnitGrade::Common:   rarityColor = {0.5f, 0.5f, 0.5f, 0.4f}; break;
+            case UnitGrade::Rare:     rarityColor = {0.3f, 0.5f, 1.0f, 0.5f}; break;
+            case UnitGrade::Hero:     rarityColor = {0.7f, 0.3f, 0.9f, 0.5f}; break;
+            case UnitGrade::Legend:   rarityColor = {1.0f, 0.8f, 0.2f, 0.6f}; break;
+            case UnitGrade::Ancient:  rarityColor = {0.9f, 0.3f, 0.3f, 0.6f}; break;
+            case UnitGrade::Mythic:   rarityColor = {0.9f, 0.8f, 0.2f, 0.7f}; break;
+            case UnitGrade::Immortal: rarityColor = {0.9f, 0.6f, 0.9f, 0.7f}; break;
         }
         float bw = 2.f;
         batch.draw(*whiteTexture_, x, y, cardW, bw,
@@ -128,9 +131,11 @@ void CollectionScene::renderUnitGrid(SpriteBatch& batch) {
         Vec4 unitColor;
         if (isOwned) {
             switch (def.family) {
-                case UnitFamily::Fire: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-                case UnitFamily::Frost:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-                case UnitFamily::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+                case UnitFamily::Fire:      unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+                case UnitFamily::Frost:     unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+                case UnitFamily::Poison:    unitColor = {0.5f, 1.0f, 0.3f, 0.9f}; break;
+                case UnitFamily::Lightning: unitColor = {0.8f, 0.8f, 1.0f, 0.9f}; break;
+                case UnitFamily::Support:   unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
             }
         } else {
             unitColor = {0.2f, 0.2f, 0.25f, 0.5f};
@@ -172,10 +177,13 @@ void CollectionScene::renderUnitGrid(SpriteBatch& batch) {
         // Rarity text
         const char* rarityText = "";
         switch (def.grade) {
-            case UnitGrade::Low:    rarityText = "NORMAL"; break;
-            case UnitGrade::Medium:      rarityText = "RARE"; break;
-            case UnitGrade::High:      rarityText = "EPIC"; break;
-            case UnitGrade::Supreme: rarityText = "LEGEND"; break;
+            case UnitGrade::Common:   rarityText = "NORMAL"; break;
+            case UnitGrade::Rare:     rarityText = "RARE"; break;
+            case UnitGrade::Hero:     rarityText = "EPIC"; break;
+            case UnitGrade::Legend:   rarityText = "LEGEND"; break;
+            case UnitGrade::Ancient:  rarityText = "ANCIENT"; break;
+            case UnitGrade::Mythic:   rarityText = "MYTHIC"; break;
+            case UnitGrade::Immortal: rarityText = "IMMORTAL"; break;
         }
         text.drawText(batch, rarityText, x + cardW * 0.5f, y + 155.f,
                       1.5f, rarityColor, TextAlign::Center);
@@ -212,9 +220,11 @@ void CollectionScene::renderDetailPanel(SpriteBatch& batch) {
     // Large icon
     Vec4 unitColor;
     switch (def.family) {
-        case UnitFamily::Fire: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-        case UnitFamily::Frost:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-        case UnitFamily::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+        case UnitFamily::Fire:      unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+        case UnitFamily::Frost:     unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+        case UnitFamily::Poison:    unitColor = {0.5f, 1.0f, 0.3f, 0.9f}; break;
+        case UnitFamily::Lightning: unitColor = {0.8f, 0.8f, 1.0f, 0.9f}; break;
+        case UnitFamily::Support:   unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
     }
     float iconSize = 100.f;
     batch.draw(*whiteTexture_,
@@ -251,9 +261,11 @@ void CollectionScene::renderDetailPanel(SpriteBatch& batch) {
     // Element
     const char* elemText = "";
     switch (def.family) {
-        case UnitFamily::Fire: elemText = "PHYSICAL"; break;
-        case UnitFamily::Frost:    elemText = "MAGIC"; break;
-        case UnitFamily::Support:  elemText = "SUPPORT"; break;
+        case UnitFamily::Fire:      elemText = "PHYSICAL"; break;
+        case UnitFamily::Frost:     elemText = "MAGIC"; break;
+        case UnitFamily::Poison:    elemText = "POISON"; break;
+        case UnitFamily::Lightning: elemText = "LIGHTNING"; break;
+        case UnitFamily::Support:   elemText = "SUPPORT"; break;
     }
     snprintf(buf, sizeof(buf), "ELEM: %s", elemText);
     text.drawText(batch, buf, px + 30.f, statY, 2.5f, {0.7f, 0.7f, 0.8f, 1.f});

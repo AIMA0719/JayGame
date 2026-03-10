@@ -23,10 +23,11 @@ class DefaultProbabilityEngine(
 ) : ProbabilityEngine {
 
     override fun getGradeWeights(): Map<UnitGrade, Int> = mapOf(
-        UnitGrade.LOW to 80,
-        UnitGrade.MEDIUM to 15,
-        UnitGrade.HIGH to 5,
-        // SUPREME, TRANSCENDENT는 조합으로만 획득 — 소환 불가
+        UnitGrade.COMMON to 60,
+        UnitGrade.RARE to 25,
+        UnitGrade.HERO to 12,
+        UnitGrade.LEGEND to 3,
+        // ANCIENT, MYTHIC, IMMORTAL은 조합으로만 획득 — 소환 불가
     )
 
     override fun rollUnit(availableUnits: List<UnitSpec>): UnitSpec {
@@ -36,7 +37,7 @@ class DefaultProbabilityEngine(
         val candidates = availableUnits.filter { it.grade == grade }
         if (candidates.isEmpty()) {
             // 해당 등급 유닛이 없으면 하급에서 선택
-            val fallback = availableUnits.filter { it.grade == UnitGrade.LOW }
+            val fallback = availableUnits.filter { it.grade == UnitGrade.COMMON }
             return fallback.random(random)
         }
         return candidates.random(random)
@@ -57,6 +58,6 @@ class DefaultProbabilityEngine(
             roll -= weight
             if (roll < 0) return grade
         }
-        return UnitGrade.LOW
+        return UnitGrade.COMMON
     }
 }
