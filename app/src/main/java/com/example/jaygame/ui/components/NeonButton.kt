@@ -77,7 +77,7 @@ fun NeonButton(
                     onClick = onClick,
                 ) else Modifier,
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(
             text = text,

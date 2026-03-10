@@ -52,7 +52,7 @@ fun RankBadge(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(DarkNavy)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(
             text = "\uD83C\uDFC6",

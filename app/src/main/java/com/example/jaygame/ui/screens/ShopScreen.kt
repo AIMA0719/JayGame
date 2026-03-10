@@ -186,7 +186,7 @@ fun ShopScreen(repository: GameRepository) {
         Text(
             text = "상점",
             fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
+            fontSize = 20.sp,
             color = NeonRed,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -268,7 +268,7 @@ private fun ShopItemCard(
                 Text(
                     text = item.name,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     color = LightText,
                 )
                 Spacer(modifier = Modifier.height(2.dp))

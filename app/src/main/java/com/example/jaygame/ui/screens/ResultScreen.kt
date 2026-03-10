@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,7 +70,7 @@ fun ResultScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DeepDark)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -80,14 +79,14 @@ fun ResultScreen(
         // Victory / Defeat title with pulse animation
         Text(
             text = resultText,
-            style = MaterialTheme.typography.displayLarge,
+            fontWeight = FontWeight.Bold,
             color = resultColor,
             textAlign = TextAlign.Center,
-            fontSize = 48.sp,
+            fontSize = 28.sp,
             modifier = Modifier.scale(pulseScale),
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Stats panel
         GameCard(
@@ -113,7 +112,7 @@ fun ResultScreen(
                 Text(
                     text = "보상",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     color = Gold,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -136,12 +135,12 @@ fun ResultScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             accentColor = NeonCyan,
             accentColorDark = NeonCyan.copy(alpha = 0.5f),
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -153,13 +152,13 @@ private fun StatRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            fontSize = 15.sp,
+            fontSize = 14.sp,
             color = SubText,
         )
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
+            fontSize = 14.sp,
             color = LightText,
         )
     }
@@ -172,12 +171,12 @@ private fun RewardRow(
     color: androidx.compose.ui.graphics.Color,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = icon, fontSize = 18.sp)
-        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = icon, fontSize = 16.sp)
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = label,
             fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
+            fontSize = 14.sp,
             color = color,
         )
     }

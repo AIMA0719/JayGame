@@ -175,7 +175,7 @@ fun AchievementsScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             categories.forEachIndexed { index, category ->
@@ -196,7 +196,7 @@ fun AchievementsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(filteredAchievements, key = { it.id }) { achievement ->
@@ -236,7 +236,7 @@ private fun AchievementItem(
             // Status indicator
             Text(
                 text = if (isCompleted) "\u2713" else "\u25CB",
-                fontSize = if (isCompleted) 22.sp else 18.sp,
+                fontSize = if (isCompleted) 18.sp else 14.sp,
                 color = if (isCompleted) NeonGreen else SubText,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
@@ -274,7 +274,7 @@ private fun AchievementItem(
 
                 NeonProgressBar(
                     progress = fraction,
-                    height = 10.dp,
+                    height = 8.dp,
                     barColor = if (isCompleted) NeonGreen else NeonCyan,
                 )
 

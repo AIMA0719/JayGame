@@ -217,7 +217,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = 16.dp),
         ) {
             Text(
                 text = "\u26A1 ${data.stamina}/${data.maxStamina}",
@@ -254,9 +254,9 @@ fun HomeScreen(
                 enabled = canStart,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
+                    .padding(horizontal = 16.dp)
                     .height(48.dp),
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 accentColor = NeonRed,
                 accentColorDark = NeonRedDark,
             )

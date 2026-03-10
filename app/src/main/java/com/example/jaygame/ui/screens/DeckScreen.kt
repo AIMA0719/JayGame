@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -92,7 +91,8 @@ fun DeckScreen(repository: GameRepository) {
 
         Text(
             text = "덱 편집",
-            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
             color = LightText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -137,7 +137,8 @@ fun DeckScreen(repository: GameRepository) {
 
         Text(
             text = "보유 유닛",
-            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
             color = SubText,
             textAlign = TextAlign.Center,
             modifier = Modifier

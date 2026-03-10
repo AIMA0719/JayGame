@@ -227,8 +227,8 @@ fun DailyLoginDialog(
                     enabled = claimable,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    fontSize = 18.sp,
+                        .padding(horizontal = 16.dp),
+                    fontSize = 14.sp,
                     accentColor = NeonCyan,
                     accentColorDark = NeonCyan.copy(alpha = 0.5f),
                 )

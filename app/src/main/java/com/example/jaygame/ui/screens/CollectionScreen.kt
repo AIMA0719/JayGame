@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -77,7 +76,8 @@ fun CollectionScreen(repository: GameRepository) {
 
         Text(
             text = "컬렉션",
-            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
             color = LightText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -280,12 +280,12 @@ private fun UnitDetailPanel(
                     Text(
                         text = def.name,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         color = LightText,
                     )
                     Text(
                         text = def.rarity.label,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = def.rarity.color,
                     )

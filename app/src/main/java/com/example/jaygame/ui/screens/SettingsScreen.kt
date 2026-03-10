@@ -85,7 +85,7 @@ fun SettingsScreen(
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Sound toggle
                 Row(
@@ -94,7 +94,7 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "사운드",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
@@ -119,7 +119,7 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "음악",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
@@ -146,7 +146,7 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "버전",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         color = LightText,
                     )
                     Spacer(Modifier.weight(1f))

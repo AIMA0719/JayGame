@@ -150,7 +150,7 @@ fun SeasonPassScreen(
 
                 NeonProgressBar(
                     progress = tierProgress,
-                    height = 14.dp,
+                    height = 10.dp,
                     barColor = NeonCyan,
                 )
 
@@ -371,7 +371,7 @@ private fun TierCard(
                 isClaimed -> {
                     Text(
                         text = "\u2713",
-                        fontSize = 18.sp,
+                        fontSize = 14.sp,
                         color = NeonGreen,
                         fontWeight = FontWeight.Bold,
                     )

@@ -74,8 +74,8 @@ fun StageCardPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
-                .padding(horizontal = 24.dp),
+                .height(150.dp)
+                .padding(horizontal = 16.dp),
         ) { page ->
             val stage = STAGES[page]
             val isUnlocked = page in unlockedStages
@@ -175,7 +175,7 @@ private fun StageCardItem(
                     "\uD83C\uDFC6 ${stage.unlockTrophies} 필요"
                 },
                 fontWeight = FontWeight.Bold,
-                fontSize = 32.sp,
+                fontSize = 24.sp,
                 color = if (isUnlocked) LightText else LightText.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,
             )
