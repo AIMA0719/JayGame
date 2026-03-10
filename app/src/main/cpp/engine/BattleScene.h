@@ -48,6 +48,9 @@ public:
     static std::atomic<int> upgradeRequestTileIndex;  // -1 = no request
     static std::atomic<int> swapRequestFrom;   // -1 = no request
     static std::atomic<int> swapRequestTo;     // -1 = no request
+    static std::atomic<int> relocateRequestTile;  // -1 = no request
+    static std::atomic<int> relocateRequestX;     // normX * 10000
+    static std::atomic<int> relocateRequestY;     // normY * 10000
 
     // State getters for JNI bridge
     int getCurrentWave() const { return currentWave_; }
@@ -143,7 +146,11 @@ private:
     void pushGridState();
     void pushEnemyPositions();
     void pushProjectilePositions();
+    void pushUnitPositions();
     void notifySummonResult(int unitDefId, int grade);
+    void notifyUnitClicked(int tileIndex, Unit* unit);
+    void notifyMergeComplete(int tileIndex, bool lucky, int resultUnitId);
+    void handleRelocateUnit(int tileIndex, float normX, float normY);
 };
 
 #endif // JAYGAME_BATTLESCENE_H

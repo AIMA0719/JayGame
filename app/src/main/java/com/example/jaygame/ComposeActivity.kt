@@ -5,12 +5,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.navigation.NavGraph
+import com.example.jaygame.ui.screens.SplashScreen
 import com.example.jaygame.ui.theme.JayGameTheme
+import kotlinx.coroutines.delay
 
 class ComposeActivity : ComponentActivity() {
     lateinit var repository: GameRepository
@@ -21,11 +28,22 @@ class ComposeActivity : ComponentActivity() {
         repository = GameRepository(this)
         setContent {
             JayGameTheme {
-                NavGraph(
-                    repository = repository,
-                    onStartBattle = { launchBattle() },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                var showSplash by remember { mutableStateOf(true) }
+
+                LaunchedEffect(Unit) {
+                    delay(1500L)
+                    showSplash = false
+                }
+
+                if (showSplash) {
+                    SplashScreen()
+                } else {
+                    NavGraph(
+                        repository = repository,
+                        onStartBattle = { launchBattle() },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }
@@ -43,6 +61,8 @@ class ComposeActivity : ComponentActivity() {
     }
 
     private fun launchBattle() {
+        val data = repository.gameData.value
+        BattleBridge.setStageId(data.currentStageId)
         startActivity(android.content.Intent(this, MainActivity::class.java))
     }
 }

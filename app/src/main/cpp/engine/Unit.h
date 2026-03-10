@@ -29,8 +29,14 @@ public:
     bool attacking_ = false;
     float attackAnimTimer_ = 0.f;  // countdown for attack animation display
 
-    int gridRow = -1;            // stored row for range bonus
+    int gridRow = -1;            // stored row for management
     int gridCol = -1;            // stored col
+
+    // Free movement
+    Vec2 homePosition;           // grid cell center (wander anchor)
+    Vec2 wanderTarget;           // current wander destination
+    float moveSpeed = 50.f;      // chase speed (pixels/sec)
+    float wanderTimer = 0.f;     // time until next wander point
 
     void init(int defId, Vec2 pos);
     void update(float dt, ObjectPool<Enemy>& enemies, ObjectPool<Projectile>& projectiles,

@@ -69,6 +69,14 @@ Java_com_example_jaygame_bridge_BattleBridge_nativeSwapUnits(JNIEnv* /*env*/, jc
     BattleScene::swapRequestTo.store(toTile, std::memory_order_release);
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeRelocateUnit(JNIEnv* /*env*/, jclass /*clazz*/, jint tileIndex, jfloat normX, jfloat normY) {
+    // Set X, Y first, then tile as ready flag
+    BattleScene::relocateRequestX.store(static_cast<int>(normX * 10000.f), std::memory_order_release);
+    BattleScene::relocateRequestY.store(static_cast<int>(normY * 10000.f), std::memory_order_release);
+    BattleScene::relocateRequestTile.store(tileIndex, std::memory_order_release);
+}
+
 void android_main(struct android_app *pApp) {
     aout << "Welcome to JayGame" << std::endl;
 

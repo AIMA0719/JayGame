@@ -9,8 +9,8 @@
 
 class Grid {
 public:
-    static constexpr int COLS = 5;
-    static constexpr int ROWS = 3;
+    static constexpr int COLS = 6;
+    static constexpr int ROWS = 5;
     static constexpr int TOTAL_CELLS = COLS * ROWS;
 
     // Grid area centered on screen with room for monster track

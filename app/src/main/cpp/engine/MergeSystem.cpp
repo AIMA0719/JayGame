@@ -73,10 +73,12 @@ SmartMergeResult MergeSystem::trySmartMerge(int tileIndex, Grid& grid, ObjectPoo
         consumed++;
     }
 
-    // Transform clicked unit into merge result
-    Vec2 pos = grid.cellCenter(row, col);
+    // Transform clicked unit into merge result — preserve home position
+    Vec2 prevHome = clickedUnit->homePosition;
+    Vec2 prevPos = clickedUnit->position;
     grid.removeUnit(row, col);
-    clickedUnit->init(mergeResultId, pos);
+    clickedUnit->init(mergeResultId, prevPos);
+    clickedUnit->homePosition = prevHome;
     clickedUnit->gridRow = row;
     clickedUnit->gridCol = col;
     grid.placeUnit(row, col, clickedUnit);

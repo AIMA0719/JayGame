@@ -2,6 +2,8 @@ package com.example.jaygame.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -20,12 +23,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.LEVEL_MULTIPLIER
 import com.example.jaygame.data.UNIT_DEFS
-import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.data.UPGRADE_COSTS
 import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitProgress
@@ -63,93 +62,71 @@ import java.text.NumberFormat
 @Composable
 fun CollectionScreen(repository: GameRepository) {
     val data by repository.gameData.collectAsState()
-    var selectedUnitId by remember { mutableIntStateOf(-1) }
+    var selectedUnit by remember { mutableStateOf<UnitDef?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DeepDark),
-    ) {
-        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "컬렉션",
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            color = LightText,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Unit Grid
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .fillMaxSize()
+                .background(DeepDark),
         ) {
-            items(UNIT_DEFS, key = { it.id }) { def ->
-                val progress = data.units.getOrNull(def.id)
-                val isSelected = selectedUnitId == def.id
-                CollectionUnitCard(
-                    def = def,
-                    progress = progress,
-                    isSelected = isSelected,
-                    onClick = { selectedUnitId = def.id },
-                )
-            }
-        }
+            ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // Detail Panel
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 8.dp),
-        ) {
-            val selectedDef = if (selectedUnitId >= 0) UNIT_DEFS_MAP[selectedUnitId] else null
-            val selectedProgress = if (selectedUnitId >= 0) data.units.getOrNull(selectedUnitId) else null
+            Text(
+                text = "컬렉션",
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                color = LightText,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-            if (selectedDef != null && selectedProgress != null) {
-                UnitDetailPanel(
-                    def = selectedDef,
-                    progress = selectedProgress,
-                    gold = data.gold,
-                    onUpgrade = {
-                        val level = selectedProgress.level
-                        if (level < 7) {
-                            val cost = UPGRADE_COSTS[level - 1]
-                            val newUnits = data.units.toMutableList()
-                            newUnits[selectedDef.id] = newUnits[selectedDef.id].copy(
-                                level = newUnits[selectedDef.id].level + 1,
-                                cards = newUnits[selectedDef.id].cards - cost.first,
-                            )
-                            val newGold = data.gold - cost.second
-                            repository.save(data.copy(units = newUnits, gold = newGold))
-                        }
-                    },
-                )
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "유닛을 선택하세요",
-                        fontSize = 16.sp,
-                        color = DimText,
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Unit Grid — full screen, click to open detail dialog
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(UNIT_DEFS, key = { it.id }) { def ->
+                    val progress = data.units.getOrNull(def.id)
+                    CollectionUnitCard(
+                        def = def,
+                        progress = progress,
+                        onClick = { selectedUnit = def },
                     )
                 }
             }
+        }
+
+        // Detail dialog overlay
+        selectedUnit?.let { def ->
+            val progress = data.units.getOrNull(def.id)
+            CollectionUnitDetailDialog(
+                def = def,
+                progress = progress,
+                gold = data.gold,
+                onUpgrade = {
+                    if (progress != null && progress.level < 7) {
+                        val cost = UPGRADE_COSTS[progress.level - 1]
+                        val newUnits = data.units.toMutableList()
+                        newUnits[def.id] = newUnits[def.id].copy(
+                            level = newUnits[def.id].level + 1,
+                            cards = newUnits[def.id].cards - cost.first,
+                        )
+                        val newGold = data.gold - cost.second
+                        repository.save(data.copy(units = newUnits, gold = newGold))
+                    }
+                },
+                onDismiss = { selectedUnit = null },
+            )
         }
     }
 }
@@ -158,27 +135,16 @@ fun CollectionScreen(repository: GameRepository) {
 private fun CollectionUnitCard(
     def: UnitDef,
     progress: UnitProgress?,
-    isSelected: Boolean,
     onClick: () -> Unit,
 ) {
     val owned = progress?.owned == true
     val level = progress?.level ?: 1
 
-    val selectionScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.05f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f),
-        label = "cardScale",
-    )
-
     GameCard(
-        borderColor = if (isSelected) NeonCyan else def.grade.color,
+        borderColor = def.grade.color,
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = selectionScale
-                scaleY = selectionScale
-            }
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
         Column(
@@ -230,134 +196,175 @@ private fun CollectionUnitCard(
 }
 
 @Composable
-private fun UnitDetailPanel(
+private fun CollectionUnitDetailDialog(
     def: UnitDef,
-    progress: UnitProgress,
+    progress: UnitProgress?,
     gold: Int,
     onUpgrade: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    val level = progress.level
+    val owned = progress?.owned == true
+    val level = progress?.level ?: 1
     val calculatedATK = (def.baseATK * LEVEL_MULTIPLIER[level - 1]).toInt()
     val upgradeCost = if (level < 7) UPGRADE_COSTS[level - 1] else null
-    val canUpgrade = progress.owned && level < 7
+    val canUpgrade = owned && level < 7
             && upgradeCost != null
-            && progress.cards >= upgradeCost.first
+            && (progress?.cards ?: 0) >= upgradeCost.first
             && gold >= upgradeCost.second
     val fmt = NumberFormat.getNumberInstance()
 
-    GameCard(
-        modifier = Modifier.fillMaxSize(),
-        borderColor = def.grade.color,
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
+        GameCard(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .width(300.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) {},
+            borderColor = def.grade.color,
         ) {
-            // Large icon + name + rarity
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(DarkSurface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(id = def.iconRes),
-                        contentDescription = def.name,
-                        modifier = Modifier.size(42.dp),
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    Text(
-                        text = def.name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = LightText,
-                    )
-                    Text(
-                        text = def.grade.label,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = def.grade.color,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Stats
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                StatRow("ATK", fmt.format(calculatedATK), Gold)
-                StatRow("Speed", String.format("%.1f", def.baseSpeed), LightText)
-                StatRow("Range", String.format("%.0f", def.range), LightText)
-                StatRow("계열", def.family.label, def.family.color)
-                StatRow("Ability", def.abilityName, NeonCyan)
-            }
+                // Large icon + name + rarity
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DarkSurface),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(id = def.iconRes),
+                            contentDescription = def.name,
+                            modifier = Modifier.size(42.dp),
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-            // Level with stars
-            Text(
-                text = "레벨 $level  ${buildStarString(level)}",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gold,
-            )
+                    Column {
+                        Text(
+                            text = def.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = LightText,
+                        )
+                        Text(
+                            text = def.grade.label,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = def.grade.color,
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-            // Card progress
-            if (upgradeCost != null) {
+                // Stats
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    StatRow("ATK", fmt.format(calculatedATK), Gold)
+                    StatRow("Speed", String.format("%.1f", def.baseSpeed), LightText)
+                    StatRow("Range", String.format("%.0f", def.range), LightText)
+                    StatRow("계열", def.family.label, def.family.color)
+                    StatRow("Ability", def.abilityName, NeonCyan)
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Description
                 Text(
-                    text = "카드: ${progress.cards} / ${upgradeCost.first}",
+                    text = def.description,
                     fontSize = 12.sp,
-                    color = if (progress.cards >= upgradeCost.first) PositiveGreen else SubText,
+                    color = SubText,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            // Upgrade button
-            if (!progress.owned) {
+                // Level with stars
+                if (owned) {
+                    Text(
+                        text = "레벨 $level  ${buildStarString(level)}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold,
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Card progress
+                    if (upgradeCost != null) {
+                        Text(
+                            text = "카드: ${progress?.cards ?: 0} / ${upgradeCost.first}",
+                            fontSize = 12.sp,
+                            color = if ((progress?.cards ?: 0) >= upgradeCost.first) PositiveGreen else SubText,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Upgrade button
+                    if (level >= 7) {
+                        NeonButton(
+                            text = "최대 레벨",
+                            onClick = {},
+                            enabled = false,
+                            modifier = Modifier.fillMaxWidth(),
+                            accentColor = DimText,
+                            accentColorDark = DimText,
+                        )
+                    } else {
+                        val goldCost = upgradeCost?.second ?: 0
+                        NeonButton(
+                            text = "업그레이드 (골드 ${fmt.format(goldCost)})",
+                            onClick = onUpgrade,
+                            enabled = canUpgrade,
+                            modifier = Modifier.fillMaxWidth(),
+                            fontSize = 14.sp,
+                            accentColor = NeonGreen,
+                            accentColorDark = NeonGreen.copy(alpha = 0.5f),
+                        )
+                    }
+                } else {
+                    NeonButton(
+                        text = "미보유",
+                        onClick = {},
+                        enabled = false,
+                        modifier = Modifier.fillMaxWidth(),
+                        accentColor = DimText,
+                        accentColorDark = DimText,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
                 NeonButton(
-                    text = "미보유",
-                    onClick = {},
-                    enabled = false,
+                    text = "닫기",
+                    onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    accentColor = DimText,
+                    accentColor = SubText,
                     accentColorDark = DimText,
-                )
-            } else if (level >= 7) {
-                NeonButton(
-                    text = "최대 레벨",
-                    onClick = {},
-                    enabled = false,
-                    modifier = Modifier.fillMaxWidth(),
-                    accentColor = DimText,
-                    accentColorDark = DimText,
-                )
-            } else {
-                val goldCost = upgradeCost?.second ?: 0
-                NeonButton(
-                    text = "업그레이드 (골드 ${fmt.format(goldCost)})",
-                    onClick = onUpgrade,
-                    enabled = canUpgrade,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontSize = 14.sp,
-                    accentColor = NeonGreen,
-                    accentColorDark = NeonGreen.copy(alpha = 0.5f),
                 )
             }
         }

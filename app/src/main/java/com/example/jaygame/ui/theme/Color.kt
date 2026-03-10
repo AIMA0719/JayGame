@@ -2,43 +2,43 @@ package com.example.jaygame.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Background
-val DeepDark = Color(0xFF0f0f23)
-val DarkNavy = Color(0xFF1a1a3e)
-val HoverNavy = Color(0xFF252550)
-val DarkSurface = Color(0xFF161630)
+// Background - Fantasy parchment/dark wood tones
+val DeepDark = Color(0xFF1A0F0A)
+val DarkNavy = Color(0xFF2A1F15)
+val HoverNavy = Color(0xFF3A2E22)
+val DarkSurface = Color(0xFF231810)
 
-// Accent
-val NeonRed = Color(0xFFe94560)
-val NeonRedDark = Color(0xFFb8354d)
-val Gold = Color(0xFFffd700)
-val DarkGold = Color(0xFFb8960c)
-val NeonCyan = Color(0xFF00d4ff)
-val NeonGreen = Color(0xFF4ade80)
+// Accent - Fantasy gold/ruby
+val NeonRed = Color(0xFFCC3333)
+val NeonRedDark = Color(0xFF991F1F)
+val Gold = Color(0xFFD4A847)
+val DarkGold = Color(0xFF8B6914)
+val NeonCyan = Color(0xFF5BA4CF)
+val NeonGreen = Color(0xFF6DBF67)
 
 // Text
-val LightText = Color(0xFFf0f0f0)
-val SubText = Color(0xFF8888aa)
-val DimText = Color(0xFF555577)
+val LightText = Color(0xFFF0E6D3)
+val SubText = Color(0xFF9B8B78)
+val DimText = Color(0xFF6B5D50)
 
 // Divider / Border
-val Divider = Color(0xFF2a2a4a)
-val BorderGlow = Color(0xFF3a3a6a)
+val Divider = Color(0xFF3D2E20)
+val BorderGlow = Color(0xFF5A4430)
 
 // Rarity
-val RarityNormal = Color(0xFF9ca3af)
-val RarityRare = Color(0xFF60a5fa)
-val RarityEpic = Color(0xFFc084fc)
-val RarityLegendary = Color(0xFFfb923c)
-val RarityHidden = Color(0xFFf472b6)
+val RarityNormal = Color(0xFF9E9E9E)
+val RarityRare = Color(0xFF5B9BD5)
+val RarityEpic = Color(0xFFAB47BC)
+val RarityLegendary = Color(0xFFE8A030)
+val RarityHidden = Color(0xFFE06090)
 
 // Resources
-val GoldCoin = Color(0xFFffd700)
-val DiamondBlue = Color(0xFF00d4ff)
-val TrophyAmber = Color(0xFFff8f00)
-val StaminaGreen = Color(0xFF66bb6a)
+val GoldCoin = Color(0xFFD4A847)
+val DiamondBlue = Color(0xFF5BA4CF)
+val TrophyAmber = Color(0xFFCC8800)
+val StaminaGreen = Color(0xFF6DBF67)
 
 // Status
-val PositiveGreen = Color(0xFF4ade80)
-val NegativeRed = Color(0xFFe94560)
-val WarningYellow = Color(0xFFffc107)
+val PositiveGreen = Color(0xFF6DBF67)
+val NegativeRed = Color(0xFFCC3333)
+val WarningYellow = Color(0xFFD4A847)

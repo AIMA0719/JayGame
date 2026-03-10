@@ -27,11 +27,11 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.SubText
 
 enum class NavTab(val label: String, val iconRes: Int) {
-    BATTLE("전투", R.drawable.ic_nav_battle),
     DECK("덱", R.drawable.ic_nav_deck),
     HOME("홈", R.drawable.ic_nav_home),
     COLLECTION("컬렉션", R.drawable.ic_nav_collection),
     SHOP("상점", R.drawable.ic_nav_shop),
+    SETTINGS("설정", R.drawable.ic_settings),
 }
 
 @Composable

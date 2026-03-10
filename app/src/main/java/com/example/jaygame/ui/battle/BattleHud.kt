@@ -47,86 +47,92 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.ui.theme.*
 
-/** Compact top bar: WAVE | Timer | Enemy count | HP bar */
+/** Compact top bar: Pause | WAVE | Timer | Enemy count | HP bar */
 @Composable
-fun BattleTopHud() {
+fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Dark panel background
+        // Compact dark panel
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF0A0A1A).copy(alpha = 0.85f))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .background(DeepDark.copy(alpha = 0.85f))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            // Pause button
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(DarkSurface)
+                    .border(1.dp, BorderGlow, RoundedCornerShape(6.dp))
+                    .clickable(onClick = onPauseClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("☰", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
             // Wave pill badge
             Box(
                 modifier = Modifier
-                    .shadow(4.dp, RoundedCornerShape(20.dp))
                     .background(
                         Brush.horizontalGradient(
                             listOf(NeonCyan.copy(alpha = 0.25f), NeonCyan.copy(alpha = 0.10f))
                         ),
-                        RoundedCornerShape(20.dp),
+                        RoundedCornerShape(12.dp),
                     )
-                    .border(1.dp, NeonCyan.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 14.dp, vertical = 5.dp),
+                    .border(1.dp, NeonCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 3.dp),
             ) {
                 Text(
                     text = "WAVE ${battle.currentWave}",
                     color = NeonCyan,
-                    fontSize = 14.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
             }
 
-            // Timer - more prominent
+            // Timer
             val totalSeconds = battle.elapsedTime.toInt()
             val minutes = totalSeconds / 60
             val seconds = totalSeconds % 60
             Text(
                 text = "%02d:%02d".format(minutes, seconds),
                 color = Color.White,
-                fontSize = 20.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
 
-            // Enemy count with label
+            // Enemy count
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(6.dp)
                         .background(
                             if (battle.enemyCount > 80) NeonRed else NeonGreen,
                             CircleShape,
                         ),
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "\uBAB8\uC2A4\uD130 ${battle.enemyCount}/${battle.maxEnemyCount}",
+                    text = "${battle.enemyCount}/${battle.maxEnemyCount}",
                     color = if (battle.enemyCount > 80) NeonRed else Color.White.copy(alpha = 0.9f),
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }
 
             // HP bar
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "HP",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                )
                 Box(
                     modifier = Modifier
-                        .width(56.dp)
-                        .height(6.dp)
+                        .width(48.dp)
+                        .height(5.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(Color(0xFF1A1A2E)),
+                        .background(DarkSurface),
                 ) {
                     val hpFraction = if (battle.maxHP > 0)
                         (battle.playerHP.toFloat() / battle.maxHP).coerceIn(0f, 1f) else 1f
@@ -138,13 +144,13 @@ fun BattleTopHud() {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(hpFraction)
-                            .height(6.dp)
+                            .height(5.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(hpColor),
                     )
                 }
                 Text(
-                    text = "${battle.playerHP}",
+                    text = "HP ${battle.playerHP}",
                     color = if (battle.playerHP <= battle.maxHP / 4) NeonRed else Color.White.copy(alpha = 0.7f),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
@@ -177,7 +183,8 @@ fun BattleBottomHud() {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
     val selectedTile by BattleBridge.selectedTile.collectAsState()
-    val canSummon = battle.sp >= battle.summonCost
+    val gridFull = gridState.all { it.unitDefId >= 0 }
+    val canSummon = battle.sp >= battle.summonCost && !gridFull
 
     // Check if any merge is possible
     val canMerge = gridState.any { it.canMerge }
@@ -214,8 +221,8 @@ fun BattleBottomHud() {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF0A0A1A).copy(alpha = 0.85f))
-                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 20.dp),
+                .background(DeepDark.copy(alpha = 0.85f))
+                .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // SP bar - taller with shimmer label
@@ -237,7 +244,7 @@ fun BattleBottomHud() {
                         .weight(1f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFF1A1A2E)),
+                        .background(DarkSurface),
                 ) {
                     Box(
                         modifier = Modifier
@@ -291,6 +298,7 @@ fun BattleBottomHud() {
                 SummonButton(
                     cost = battle.summonCost,
                     enabled = canSummon,
+                    gridFull = gridFull,
                     onClick = { BattleBridge.requestSummon() },
                     modifier = Modifier.weight(1.5f),
                 )
@@ -309,15 +317,17 @@ fun BattleBottomHud() {
                 )
             }
 
-            // Boss timer
-            if (battle.isBossRound) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "BOSS ${battle.bossTimeRemaining.toInt()}s",
-                    color = NeonRed,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
+            // Boss timer — fixed height slot to prevent layout jump
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(modifier = Modifier.height(16.dp)) {
+                if (battle.isBossRound) {
+                    Text(
+                        text = "BOSS ${battle.bossTimeRemaining.toInt()}s",
+                        color = NeonRed,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }
@@ -400,6 +410,7 @@ private fun ActionButton(
 fun SummonButton(
     cost: Int,
     enabled: Boolean,
+    gridFull: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -478,8 +489,8 @@ fun SummonButton(
                 fontWeight = FontWeight.ExtraBold,
             )
             Text(
-                text = "$cost SP",
-                color = if (enabled) Color(0xFFE8F5E9) else Color(0xFF555570),
+                text = if (gridFull) "FULL" else "$cost SP",
+                color = if (gridFull) NeonRed else if (enabled) Color(0xFFE8F5E9) else Color(0xFF555570),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
             )

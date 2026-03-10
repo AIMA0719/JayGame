@@ -43,39 +43,39 @@ struct UnitDef {
 inline constexpr UnitDef UNIT_TABLE[] = {
     // ===== LOW grade (summonable) =====
     // id  name          grade               family                ATK    spd    range   ability             value  mergeResultId
-    {  0, "화염병",   UnitGrade::Low,      UnitFamily::Fire,      25.f,  1.0f,  150.f, AbilityType::Splash, 80.f,   5 },
-    {  1, "냉기병",   UnitGrade::Low,      UnitFamily::Frost,     20.f,  0.8f,  160.f, AbilityType::Slow,    0.3f,  6 },
-    {  2, "독침병",   UnitGrade::Low,      UnitFamily::Poison,    15.f,  0.9f,  140.f, AbilityType::DoT,    10.f,   7 },
-    {  3, "전격병",   UnitGrade::Low,      UnitFamily::Lightning, 22.f,  1.2f,  170.f, AbilityType::Chain,   3.f,   8 },
-    {  4, "격려병",   UnitGrade::Low,      UnitFamily::Support,   10.f,  0.5f,  100.f, AbilityType::Buff,    0.2f,  9 },
+    {  0, "루비",      UnitGrade::Low,      UnitFamily::Fire,      25.f,  1.0f,  150.f, AbilityType::Splash, 80.f,   5 },
+    {  1, "미스트",    UnitGrade::Low,      UnitFamily::Frost,     20.f,  0.8f,  160.f, AbilityType::Slow,    0.3f,  6 },
+    {  2, "베놈",      UnitGrade::Low,      UnitFamily::Poison,    15.f,  0.9f,  140.f, AbilityType::DoT,    10.f,   7 },
+    {  3, "스파크",    UnitGrade::Low,      UnitFamily::Lightning, 22.f,  1.2f,  170.f, AbilityType::Chain,   3.f,   8 },
+    {  4, "뮤즈",      UnitGrade::Low,      UnitFamily::Support,   10.f,  0.5f,  100.f, AbilityType::Buff,    0.2f,  9 },
 
     // ===== MEDIUM grade =====
-    {  5, "화염술사",  UnitGrade::Medium,   UnitFamily::Fire,      50.f,  1.0f,  160.f, AbilityType::Splash, 90.f,  10 },
-    {  6, "냉기술사",  UnitGrade::Medium,   UnitFamily::Frost,     40.f,  0.9f,  170.f, AbilityType::Slow,    0.4f, 11 },
-    {  7, "독술사",    UnitGrade::Medium,   UnitFamily::Poison,    30.f,  1.0f,  150.f, AbilityType::DoT,    15.f,  12 },
-    {  8, "전격술사",  UnitGrade::Medium,   UnitFamily::Lightning, 45.f,  1.3f,  180.f, AbilityType::Chain,   4.f,  13 },
-    {  9, "지휘관",    UnitGrade::Medium,   UnitFamily::Support,   20.f,  0.5f,  120.f, AbilityType::Buff,    0.3f, 14 },
+    {  5, "카르마",    UnitGrade::Medium,   UnitFamily::Fire,      50.f,  1.0f,  160.f, AbilityType::Splash, 90.f,  10 },
+    {  6, "프로스트",  UnitGrade::Medium,   UnitFamily::Frost,     40.f,  0.9f,  170.f, AbilityType::Slow,    0.4f, 11 },
+    {  7, "바이퍼",    UnitGrade::Medium,   UnitFamily::Poison,    30.f,  1.0f,  150.f, AbilityType::DoT,    15.f,  12 },
+    {  8, "볼트",      UnitGrade::Medium,   UnitFamily::Lightning, 45.f,  1.3f,  180.f, AbilityType::Chain,   4.f,  13 },
+    {  9, "가디언",    UnitGrade::Medium,   UnitFamily::Support,   20.f,  0.5f,  120.f, AbilityType::Buff,    0.3f, 14 },
 
     // ===== HIGH grade =====
-    { 10, "화염마도사", UnitGrade::High,    UnitFamily::Fire,     100.f,  1.1f,  170.f, AbilityType::Splash,100.f,  15 },
-    { 11, "냉기마도사", UnitGrade::High,    UnitFamily::Frost,     80.f,  1.0f,  180.f, AbilityType::Slow,    0.5f, 16 },
-    { 12, "독마도사",   UnitGrade::High,    UnitFamily::Poison,    60.f,  1.1f,  160.f, AbilityType::DoT,    20.f,  17 },
-    { 13, "전격마도사", UnitGrade::High,    UnitFamily::Lightning, 90.f,  1.4f,  190.f, AbilityType::Chain,   5.f,  18 },
-    { 14, "대사제",     UnitGrade::High,    UnitFamily::Support,   40.f,  0.5f,  140.f, AbilityType::Buff,    0.4f, 19 },
+    { 10, "이그니스",  UnitGrade::High,    UnitFamily::Fire,     100.f,  1.1f,  170.f, AbilityType::Splash,100.f,  15 },
+    { 11, "블리자드",  UnitGrade::High,    UnitFamily::Frost,     80.f,  1.0f,  180.f, AbilityType::Slow,    0.5f, 16 },
+    { 12, "플레이그",  UnitGrade::High,    UnitFamily::Poison,    60.f,  1.1f,  160.f, AbilityType::DoT,    20.f,  17 },
+    { 13, "썬더",      UnitGrade::High,    UnitFamily::Lightning, 90.f,  1.4f,  190.f, AbilityType::Chain,   5.f,  18 },
+    { 14, "오라클",    UnitGrade::High,    UnitFamily::Support,   40.f,  0.5f,  140.f, AbilityType::Buff,    0.4f, 19 },
 
     // ===== SUPREME grade =====
-    { 15, "불의군주",   UnitGrade::Supreme, UnitFamily::Fire,     200.f,  1.2f,  180.f, AbilityType::Splash,120.f,  20 },
-    { 16, "얼음의군주", UnitGrade::Supreme, UnitFamily::Frost,    160.f,  1.0f,  190.f, AbilityType::Slow,    0.6f, 21 },
-    { 17, "역병의군주", UnitGrade::Supreme, UnitFamily::Poison,   120.f,  1.2f,  170.f, AbilityType::DoT,    30.f,  22 },
-    { 18, "뇌전의군주", UnitGrade::Supreme, UnitFamily::Lightning,180.f,  1.5f,  200.f, AbilityType::Chain,   6.f,  23 },
-    { 19, "전쟁의군주", UnitGrade::Supreme, UnitFamily::Support,   80.f,  0.6f,  160.f, AbilityType::Buff,    0.5f, 24 },
+    { 15, "인페르노",  UnitGrade::Supreme, UnitFamily::Fire,     200.f,  1.2f,  180.f, AbilityType::Splash,120.f,  20 },
+    { 16, "아이스본",  UnitGrade::Supreme, UnitFamily::Frost,    160.f,  1.0f,  190.f, AbilityType::Slow,    0.6f, 21 },
+    { 17, "코로시브",  UnitGrade::Supreme, UnitFamily::Poison,   120.f,  1.2f,  170.f, AbilityType::DoT,    30.f,  22 },
+    { 18, "스톰",      UnitGrade::Supreme, UnitFamily::Lightning,180.f,  1.5f,  200.f, AbilityType::Chain,   6.f,  23 },
+    { 19, "발키리",    UnitGrade::Supreme, UnitFamily::Support,   80.f,  0.6f,  160.f, AbilityType::Buff,    0.5f, 24 },
 
     // ===== TRANSCENDENT grade (merge-only, no further merge) =====
-    { 20, "불사조",     UnitGrade::Transcendent, UnitFamily::Fire,     400.f,  1.3f,  200.f, AbilityType::Splash,160.f, -1 },
-    { 21, "빙하제왕",   UnitGrade::Transcendent, UnitFamily::Frost,    320.f,  1.1f,  200.f, AbilityType::Slow,    0.7f,-1 },
-    { 22, "독룡",       UnitGrade::Transcendent, UnitFamily::Poison,   240.f,  1.2f,  180.f, AbilityType::DoT,    40.f, -1 },
-    { 23, "폭풍신",     UnitGrade::Transcendent, UnitFamily::Lightning,350.f,  1.5f,  220.f, AbilityType::Chain,   7.f, -1 },
-    { 24, "수호신",     UnitGrade::Transcendent, UnitFamily::Support,  150.f,  0.6f,  180.f, AbilityType::Buff,    0.6f,-1 },
+    { 20, "피닉스",    UnitGrade::Transcendent, UnitFamily::Fire,     400.f,  1.3f,  200.f, AbilityType::Splash,160.f, -1 },
+    { 21, "유키",      UnitGrade::Transcendent, UnitFamily::Frost,    320.f,  1.1f,  200.f, AbilityType::Slow,    0.7f,-1 },
+    { 22, "헤카테",    UnitGrade::Transcendent, UnitFamily::Poison,   240.f,  1.2f,  180.f, AbilityType::DoT,    40.f, -1 },
+    { 23, "토르",      UnitGrade::Transcendent, UnitFamily::Lightning,350.f,  1.5f,  220.f, AbilityType::Chain,   7.f, -1 },
+    { 24, "아르카나",  UnitGrade::Transcendent, UnitFamily::Support,  150.f,  0.6f,  180.f, AbilityType::Buff,    0.6f,-1 },
 };
 
 inline constexpr size_t UNIT_TABLE_SIZE = sizeof(UNIT_TABLE) / sizeof(UNIT_TABLE[0]); // 25

@@ -28,24 +28,11 @@ class MainActivity : GameActivity() {
         }
     }
 
-    private var backPressedTime = 0L
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         BattleBridge.reset()
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (System.currentTimeMillis() - backPressedTime < 2000) {
-                    finish()
-                } else {
-                    backPressedTime = System.currentTimeMillis()
-                    Toast.makeText(this@MainActivity, "한 번 더 누르면 종료됩니다", Toast.LENGTH_SHORT).show()
-                }
-            }
-        })
 
         // Single full-screen Compose overlay on top of C++ SurfaceView
         addBattleOverlay()

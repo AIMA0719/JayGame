@@ -41,8 +41,8 @@ WaveConfig WaveManager::getWaveConfig(int wave) const {
     // Enemy count: 8 + wave/2 for normal; 1 for boss
     config.enemyCount = boss ? 1 : (8 + wave / 2);
 
-    // SP reward per enemy kill
-    config.spReward = boss ? (5 + wave / 2) : (1 + wave / 10);
+    // SP reward per enemy kill (meaningful bonus)
+    config.spReward = boss ? (15 + wave) : (3 + wave / 5);
 
     // Spawn interval: 1.0s normal, decreasing by 0.01 per wave (min 0.3s)
     float interval = 1.0f - static_cast<float>(wave - 1) * 0.01f;

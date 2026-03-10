@@ -4,7 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val DarkNeonColorScheme = darkColorScheme(
+private val FantasyColorScheme = darkColorScheme(
     primary = NeonRed,
     onPrimary = LightText,
     primaryContainer = DarkNavy,
@@ -27,7 +27,7 @@ private val DarkNeonColorScheme = darkColorScheme(
 @Composable
 fun JayGameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = DarkNeonColorScheme,
+        colorScheme = FantasyColorScheme,
         typography = GameTypography,
         content = content,
     )

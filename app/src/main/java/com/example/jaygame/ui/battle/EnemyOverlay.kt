@@ -20,6 +20,16 @@ import androidx.core.graphics.drawable.toBitmap
 import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 
+// Pre-allocated color constants
+private val HpBarBg = Color.Black.copy(alpha = 0.6f)
+private val FallbackColors = arrayOf(
+    Color(0xFFFF6B35),
+    Color(0xFF64B5F6),
+    Color(0xFF81C784),
+    Color(0xFFFFD54F),
+    Color(0xFFCE93D8),
+)
+
 /**
  * Renders all active enemies on a full-screen Canvas overlay.
  * Enemy positions come from C++ via BattleBridge as normalized coordinates (0-1).
@@ -108,13 +118,7 @@ fun EnemyOverlay() {
                 )
             } else {
                 // Fallback: colored circle
-                val color = when (type % 5) {
-                    0 -> Color(0xFFFF6B35)
-                    1 -> Color(0xFF64B5F6)
-                    2 -> Color(0xFF81C784)
-                    3 -> Color(0xFFFFD54F)
-                    else -> Color(0xFFCE93D8)
-                }
+                val color = FallbackColors[type % 5]
                 drawCircle(
                     color = color,
                     radius = spriteSize / 2,
@@ -130,7 +134,7 @@ fun EnemyOverlay() {
 
             // Background
             drawRect(
-                color = Color.Black.copy(alpha = 0.6f),
+                color = HpBarBg,
                 topLeft = Offset(barX, barY),
                 size = Size(barWidth, barHeight),
             )

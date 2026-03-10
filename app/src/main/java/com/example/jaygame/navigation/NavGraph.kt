@@ -24,7 +24,6 @@ import com.example.jaygame.ui.screens.HomeScreen
 import com.example.jaygame.ui.screens.SettingsScreen
 import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
-import com.example.jaygame.ui.screens.SeasonPassScreen
 import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
@@ -46,11 +45,12 @@ fun NavGraph(
         Routes.DECK -> NavTab.DECK
         Routes.COLLECTION -> NavTab.COLLECTION
         Routes.SHOP -> NavTab.SHOP
+        Routes.SETTINGS -> NavTab.SETTINGS
         else -> NavTab.HOME
     }
 
     val showBottomBar = currentRoute in listOf(
-        Routes.HOME, Routes.DECK, Routes.COLLECTION, Routes.SHOP,
+        Routes.HOME, Routes.DECK, Routes.COLLECTION, Routes.SHOP, Routes.SETTINGS,
     )
 
     Column(modifier = modifier
@@ -69,13 +69,6 @@ fun NavGraph(
             composable(Routes.HOME) {
                 HomeScreen(
                     repository = repository,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
                     onStartBattle = onStartBattle,
                 )
             }
@@ -91,13 +84,13 @@ fun NavGraph(
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     repository = repository,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.SEASON_PASS) {
-                SeasonPassScreen(
-                    repository = repository,
-                    onBack = { navController.popBackStack() },
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo(Routes.SETTINGS) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                 )
             }
             composable(Routes.ACHIEVEMENTS) {
@@ -143,22 +136,17 @@ fun NavGraph(
             GameBottomNavBar(
                 selectedTab = selectedTab,
                 onTabSelected = { tab ->
-                    when (tab) {
-                        NavTab.BATTLE -> onStartBattle()
-                        else -> {
-                            val route = when (tab) {
-                                NavTab.DECK -> Routes.DECK
-                                NavTab.HOME -> Routes.HOME
-                                NavTab.COLLECTION -> Routes.COLLECTION
-                                NavTab.SHOP -> Routes.SHOP
-                                else -> Routes.HOME
-                            }
-                            navController.navigate(route) {
-                                popUpTo(Routes.HOME) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                    val route = when (tab) {
+                        NavTab.DECK -> Routes.DECK
+                        NavTab.HOME -> Routes.HOME
+                        NavTab.COLLECTION -> Routes.COLLECTION
+                        NavTab.SHOP -> Routes.SHOP
+                        NavTab.SETTINGS -> Routes.SETTINGS
+                    }
+                    navController.navigate(route) {
+                        popUpTo(Routes.HOME) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
             )

@@ -2,7 +2,9 @@ package com.example.jaygame.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,11 +12,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,23 +32,30 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.R
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.ui.components.GachaProbabilityDialog
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.components.ResourceHeader
 import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.DimText
+import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.DarkGold
+import com.example.jaygame.ui.theme.GoldCoin
 import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
@@ -51,6 +66,22 @@ private data class ShopItem(
     val priceText: String,
     val onPurchase: ((GameData, GameRepository) -> Boolean)?,
 )
+
+private data class TierReward(
+    val tier: Int,
+    val gold: Int,
+    val diamonds: Int,
+    val cards: Int,
+)
+
+private val SEASON_REWARDS = (1..30).map { tier ->
+    TierReward(
+        tier = tier,
+        gold = tier * 50,
+        diamonds = if (tier % 5 == 0) tier / 5 * 2 else 0,
+        cards = if (tier % 3 == 0) tier / 3 else 0,
+    )
+}
 
 @Composable
 fun ShopScreen(repository: GameRepository) {
@@ -63,120 +94,49 @@ fun ShopScreen(repository: GameRepository) {
         GachaProbabilityDialog(onDismiss = { showProbabilityDialog = false })
     }
 
-    val tabNames = listOf("골드팩", "다이아팩", "스페셜")
+    val tabNames = listOf("골드팩", "다이아팩", "스페셜", "시즌패스")
 
     val goldPackItems = remember {
         listOf(
-            ShopItem(
-                name = "골드 100개",
-                description = "소량의 골드를 획득합니다.",
-                priceText = "다이아 10",
+            ShopItem("골드 100개", "소량의 골드를 획득합니다.", "다이아 10",
                 onPurchase = { d, repo ->
-                    if (d.diamonds >= 10) {
-                        repo.save(d.copy(diamonds = d.diamonds - 10, gold = d.gold + 100))
-                        true
-                    } else false
-                },
-            ),
-            ShopItem(
-                name = "골드 500개",
-                description = "적당한 양의 골드를 획득합니다.",
-                priceText = "다이아 40",
+                    if (d.diamonds >= 10) { repo.save(d.copy(diamonds = d.diamonds - 10, gold = d.gold + 100)); true } else false
+                }),
+            ShopItem("골드 500개", "적당한 양의 골드를 획득합니다.", "다이아 40",
                 onPurchase = { d, repo ->
-                    if (d.diamonds >= 40) {
-                        repo.save(d.copy(diamonds = d.diamonds - 40, gold = d.gold + 500))
-                        true
-                    } else false
-                },
-            ),
-            ShopItem(
-                name = "골드 2,000개",
-                description = "대량의 골드를 획득합니다.",
-                priceText = "다이아 150",
+                    if (d.diamonds >= 40) { repo.save(d.copy(diamonds = d.diamonds - 40, gold = d.gold + 500)); true } else false
+                }),
+            ShopItem("골드 2,000개", "대량의 골드를 획득합니다.", "다이아 150",
                 onPurchase = { d, repo ->
-                    if (d.diamonds >= 150) {
-                        repo.save(d.copy(diamonds = d.diamonds - 150, gold = d.gold + 2000))
-                        true
-                    } else false
-                },
-            ),
-            ShopItem(
-                name = "골드 10,000개",
-                description = "엄청난 양의 골드를 획득합니다.",
-                priceText = "다이아 700",
+                    if (d.diamonds >= 150) { repo.save(d.copy(diamonds = d.diamonds - 150, gold = d.gold + 2000)); true } else false
+                }),
+            ShopItem("골드 10,000개", "엄청난 양의 골드를 획득합니다.", "다이아 700",
                 onPurchase = { d, repo ->
-                    if (d.diamonds >= 700) {
-                        repo.save(d.copy(diamonds = d.diamonds - 700, gold = d.gold + 10000))
-                        true
-                    } else false
-                },
-            ),
+                    if (d.diamonds >= 700) { repo.save(d.copy(diamonds = d.diamonds - 700, gold = d.gold + 10000)); true } else false
+                }),
         )
     }
 
     val diamondPackItems = remember {
         listOf(
-            ShopItem(
-                name = "다이아 50개",
-                description = "소량의 다이아몬드를 획득합니다.",
-                priceText = "준비 중",
-                onPurchase = null,
-            ),
-            ShopItem(
-                name = "다이아 200개",
-                description = "적당한 양의 다이아몬드를 획득합니다.",
-                priceText = "준비 중",
-                onPurchase = null,
-            ),
-            ShopItem(
-                name = "다이아 500개",
-                description = "대량의 다이아몬드를 획득합니다.",
-                priceText = "준비 중",
-                onPurchase = null,
-            ),
+            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", "준비 중", onPurchase = null),
+            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", "준비 중", onPurchase = null),
+            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", "준비 중", onPurchase = null),
         )
     }
 
     val specialItems = remember {
         listOf(
-            ShopItem(
-                name = "랜덤 유닛 카드 5장",
-                description = "랜덤한 보유 유닛의 카드 5장을 획득합니다.",
-                priceText = "골드 1,000",
+            ShopItem("랜덤 유닛 카드 5장", "랜덤한 보유 유닛의 카드 5장을 획득합니다.", "골드 1,000",
                 onPurchase = { d, repo ->
-                    if (d.gold >= 1000) {
-                        val updatedUnits = addRandomCardsToUnits(d.units, 5)
-                        repo.save(d.copy(units = updatedUnits, gold = d.gold - 1000))
-                        true
-                    } else false
-                },
-            ),
-            ShopItem(
-                name = "랜덤 유닛 카드 20장",
-                description = "랜덤한 보유 유닛의 카드 20장을 획득합니다.",
-                priceText = "다이아 50",
+                    if (d.gold >= 1000) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 5), gold = d.gold - 1000)); true } else false
+                }),
+            ShopItem("랜덤 유닛 카드 20장", "랜덤한 보유 유닛의 카드 20장을 획득합니다.", "다이아 50",
                 onPurchase = { d, repo ->
-                    if (d.diamonds >= 50) {
-                        val updatedUnits = addRandomCardsToUnits(d.units, 20)
-                        repo.save(d.copy(units = updatedUnits, diamonds = d.diamonds - 50))
-                        true
-                    } else false
-                },
-            ),
-            ShopItem(
-                name = "초보자 패키지",
-                description = "골드 5,000 + 랜덤 카드 10장을 획득합니다.",
-                priceText = "준비 중",
-                onPurchase = null,
-            ),
+                    if (d.diamonds >= 50) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 20), diamonds = d.diamonds - 50)); true } else false
+                }),
+            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", "준비 중", onPurchase = null),
         )
-    }
-
-    val currentItems = when (selectedTab) {
-        0 -> goldPackItems
-        1 -> diamondPackItems
-        2 -> specialItems
-        else -> goldPackItems
     }
 
     Column(
@@ -222,14 +182,14 @@ fun ShopScreen(repository: GameRepository) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             tabNames.forEachIndexed { index, name ->
                 NeonButton(
                     text = name,
                     onClick = { selectedTab = index },
                     modifier = Modifier.weight(1f),
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     accentColor = if (selectedTab == index) NeonRed else DimText,
                     accentColorDark = if (selectedTab == index) NeonRedDark else DimText.copy(alpha = 0.6f),
                 )
@@ -238,36 +198,212 @@ fun ShopScreen(repository: GameRepository) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Item List
-        LazyColumn(
+        // Content
+        if (selectedTab == 3) {
+            // Season Pass tab
+            SeasonPassContent(repository = repository)
+        } else {
+            val currentItems = when (selectedTab) {
+                0 -> goldPackItems
+                1 -> diamondPackItems
+                2 -> specialItems
+                else -> goldPackItems
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(currentItems) { item ->
+                    ShopItemCard(
+                        item = item,
+                        onBuy = {
+                            val purchase = item.onPurchase
+                            if (purchase != null) {
+                                val currentData = repository.gameData.value
+                                val success = purchase(currentData, repository)
+                                if (success) {
+                                    Toast.makeText(context, "${item.name} 구매 완료!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "재화가 부족합니다.", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonPassContent(repository: GameRepository) {
+    val data by repository.gameData.collectAsState()
+    val context = LocalContext.current
+
+    val currentTier = data.seasonTier
+    val tierProgress = data.seasonTierProgress
+    val claimedTier = data.seasonClaimedTier
+    val totalXP = data.seasonXP
+    val nextTierXP = (currentTier + 1) * 100
+
+    val claimableTiers = SEASON_REWARDS.count { it.tier <= currentTier && it.tier > claimedTier }
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(currentTier) {
+        if (currentTier > 0) {
+            listState.animateScrollToItem((currentTier - 1).coerceIn(0, 29))
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // XP Progress Section
+        GameCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "시즌 XP: $totalXP / $nextTierXP",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = LightText,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                NeonProgressBar(
+                    progress = tierProgress,
+                    height = 10.dp,
+                    barColor = NeonCyan,
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "현재 티어: $currentTier / 30",
+                    fontSize = 13.sp,
+                    color = Gold,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Claim All button
+        if (claimableTiers > 0) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                NeonButton(
+                    text = "모두 수령 (${claimableTiers}개)",
+                    onClick = {
+                        val currentData = repository.gameData.value
+                        val ct = currentData.seasonTier
+                        val claimed = currentData.seasonClaimedTier
+                        var goldReward = 0
+                        var diamondReward = 0
+                        var cardReward = 0
+                        for (reward in SEASON_REWARDS) {
+                            if (reward.tier in (claimed + 1)..ct) {
+                                goldReward += reward.gold
+                                diamondReward += reward.diamonds
+                                cardReward += reward.cards
+                            }
+                        }
+                        val updatedData = currentData.copy(
+                            units = addRandomCardsToUnits(currentData.units, cardReward),
+                        ).copy(
+                            gold = currentData.gold + goldReward,
+                            diamonds = currentData.diamonds + diamondReward,
+                            seasonClaimedTier = ct,
+                        )
+                        repository.save(updatedData)
+                        Toast.makeText(
+                            context,
+                            "보상 수령! 골드+$goldReward" +
+                                if (diamondReward > 0) " 다이아+$diamondReward" else "" +
+                                    if (cardReward > 0) " 카드+$cardReward" else "",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                    accentColor = NeonGreen,
+                    accentColorDark = NeonGreen.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // Section title
+        Text(
+            text = "\u2500\u2500 보상 트랙 \u2500\u2500",
+            fontSize = 13.sp,
+            color = SubText,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Horizontal tier track
+        LazyRow(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(currentItems) { item ->
-                ShopItemCard(
-                    item = item,
-                    onBuy = {
-                        val purchase = item.onPurchase
-                        if (purchase != null) {
-                            val currentData = repository.gameData.value
-                            val success = purchase(currentData, repository)
-                            if (success) {
-                                Toast.makeText(context, "${item.name} 구매 완료!", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "재화가 부족합니다.", Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
-                        }
+            items(SEASON_REWARDS) { reward ->
+                val isCurrent = reward.tier == currentTier
+                val isClaimed = reward.tier <= claimedTier
+                val isClaimable = reward.tier <= currentTier && reward.tier > claimedTier
+                val isLocked = reward.tier > currentTier
+
+                TierCard(
+                    reward = reward,
+                    isCurrent = isCurrent,
+                    isClaimed = isClaimed,
+                    isClaimable = isClaimable,
+                    isLocked = isLocked,
+                    onClaim = {
+                        val currentData = repository.gameData.value
+                        val updatedData = currentData.copy(
+                            units = addRandomCardsToUnits(currentData.units, reward.cards),
+                        ).copy(
+                            gold = currentData.gold + reward.gold,
+                            diamonds = currentData.diamonds + reward.diamonds,
+                            seasonClaimedTier = reward.tier,
+                        )
+                        repository.save(updatedData)
+                        Toast.makeText(
+                            context,
+                            "티어 ${reward.tier} 보상 수령!",
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     },
                 )
             }
 
-            // Bottom spacing
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
             }
         }
     }
@@ -325,6 +461,123 @@ private fun ShopItemCard(
                 accentColor = btnAccent,
                 accentColorDark = btnAccentDark,
             )
+        }
+    }
+}
+
+@Composable
+private fun TierCard(
+    reward: TierReward,
+    isCurrent: Boolean,
+    isClaimed: Boolean,
+    isClaimable: Boolean,
+    isLocked: Boolean,
+    onClaim: () -> Unit,
+) {
+    val borderColor = when {
+        isCurrent -> NeonCyan
+        isClaimed -> NeonGreen.copy(alpha = 0.6f)
+        isClaimable -> Gold.copy(alpha = 0.8f)
+        else -> Divider
+    }
+
+    val cardModifier = Modifier
+        .width(100.dp)
+        .then(
+            if (isCurrent) {
+                Modifier.border(2.dp, NeonCyan, RoundedCornerShape(12.dp))
+            } else {
+                Modifier
+            },
+        )
+
+    GameCard(
+        modifier = cardModifier,
+        borderColor = borderColor,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = "티어 ${reward.tier}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = if (isCurrent) NeonCyan else LightText,
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_gold),
+                    contentDescription = null,
+                    tint = GoldCoin,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    text = "${reward.gold}",
+                    fontSize = 11.sp,
+                    color = if (isLocked) SubText else LightText,
+                )
+            }
+
+            if (reward.diamonds > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_diamond),
+                        contentDescription = null,
+                        tint = DiamondBlue,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = "${reward.diamonds}",
+                        fontSize = 11.sp,
+                        color = if (isLocked) SubText else LightText,
+                    )
+                }
+            }
+
+            if (reward.cards > 0) {
+                Text(
+                    text = "카드 x${reward.cards}",
+                    fontSize = 11.sp,
+                    color = if (isLocked) SubText else Gold,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            when {
+                isClaimed -> {
+                    Text(
+                        text = "\u2713",
+                        fontSize = 14.sp,
+                        color = NeonGreen,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                isClaimable -> {
+                    NeonButton(
+                        text = "수령",
+                        onClick = onClaim,
+                        fontSize = 10.sp,
+                        accentColor = NeonGreen,
+                        accentColorDark = NeonGreen.copy(alpha = 0.6f),
+                        modifier = Modifier.height(28.dp),
+                    )
+                }
+                else -> {
+                    Text(
+                        text = "\uD83D\uDD12",
+                        fontSize = 16.sp,
+                        color = SubText.copy(alpha = 0.5f),
+                    )
+                }
+            }
         }
     }
 }

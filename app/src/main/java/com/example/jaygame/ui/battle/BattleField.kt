@@ -16,20 +16,45 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.ui.theme.*
 
+// Pre-allocated constants
+private val GroundShadow = Color.Black.copy(alpha = 0.35f)
+private val GroundEdgeDark = Color(0xFF2A1A0A).copy(alpha = 0.7f)
+private val GroundEdgeLight = Color(0xFF8B6914).copy(alpha = 0.3f)
+private val PedestalShadow = Color.Black.copy(alpha = 0.35f)
+private val BadgeBg = Color(0xFF1A1A2E).copy(alpha = 0.85f)
+private val BadgeBorder = Gold.copy(alpha = 0.5f)
+private val GroundBorderStroke = Stroke(width = 2.5f)
+private val SelectedStroke = Stroke(width = 2f)
+private val BadgeBorderStroke = Stroke(width = 1f)
+private val AttackGlow = Color.White.copy(alpha = 0.4f)
+private val DragGhost = Color(0xFF00D4FF).copy(alpha = 0.3f)
+
+private val GradeColors = arrayOf(
+    Color(0xFF9E9E9E), // 0 Normal
+    Color(0xFF42A5F5), // 1 Rare
+    Color(0xFFAB47BC), // 2 Epic
+    Color(0xFFFF8F00), // 3 Legendary
+    Color(0xFFE94560), // 4 Transcendent
+)
+
+// C++ grid area in 1280x720 space
+private const val GRID_NORM_X = 290f / 1280f
+private const val GRID_NORM_Y = 190f / 720f
+private const val GRID_NORM_W = 700f / 1280f
+private const val GRID_NORM_H = 340f / 720f
+
 /**
- * Canvas-based battlefield. Green field with units standing on pedestals.
- * Uses EXACT same coordinates as C++ (normalized from 1280x720).
- *
- * C++ Grid: GRID_X=290, GRID_Y=190, GRID_W=700, GRID_H=340
- * Cell size: 140 x 113.3
- * Cell center(row,col) = (290 + col*140 + 70, 190 + row*113.3 + 56.7)
+ * Canvas-based battlefield — "Summon Ground" with free-moving units.
+ * Draws a raised grassy platform, renders units at dynamic positions from C++.
+ * Long-press drag to reposition units within the field.
  */
 @Composable
 fun BattleField() {
-    val gridState by BattleBridge.gridState.collectAsState()
+    val unitPositions by BattleBridge.unitPositions.collectAsState()
     val selectedTile by BattleBridge.selectedTile.collectAsState()
     val context = LocalContext.current
 
@@ -38,6 +63,10 @@ fun BattleField() {
             ContextCompat.getDrawable(context, def.iconRes)?.toBitmap(64, 64)?.asImageBitmap()
         }
     }
+
+    val stageId by BattleBridge.stageId.collectAsState()
+    val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
+    val fieldBorderColor = remember(stageId) { stage.fieldColors.last().copy(alpha = 0.6f) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "fieldPulse")
     val breathe by infiniteTransition.animateFloat(
@@ -50,15 +79,36 @@ fun BattleField() {
         label = "breathe",
     )
 
-    // C++ grid constants (normalized to 0-1)
-    val gridNormX = 290f / 1280f
-    val gridNormY = 190f / 720f
-    val gridNormW = 700f / 1280f
-    val gridNormH = 340f / 720f
-    val cellNormW = (700f / 5f) / 1280f  // 140 / 1280
-    val cellNormH = (340f / 3f) / 720f   // 113.3 / 720
+    // Smooth unit positions (same approach as EnemyOverlay)
+    val smoothXs = remember { mutableStateOf(FloatArray(0)) }
+    val smoothYs = remember { mutableStateOf(FloatArray(0)) }
 
-    // Drag state for unit repositioning
+    LaunchedEffect(Unit) {
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { _ ->
+                val data = BattleBridge.unitPositions.value
+                val sx = smoothXs.value
+                val sy = smoothYs.value
+
+                if (data.count != sx.size) {
+                    smoothXs.value = data.xs.copyOf(data.count)
+                    smoothYs.value = data.ys.copyOf(data.count)
+                } else if (data.count > 0) {
+                    val lerpFactor = 0.25f
+                    val newX = FloatArray(data.count)
+                    val newY = FloatArray(data.count)
+                    for (i in 0 until data.count) {
+                        newX[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
+                        newY[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
+                    }
+                    smoothXs.value = newX
+                    smoothYs.value = newY
+                }
+            }
+        }
+    }
+
+    // Drag state for unit relocation
     var dragFromTile by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var isDragging by remember { mutableStateOf(false) }
@@ -71,27 +121,28 @@ fun BattleField() {
                     onDragStart = { startOffset ->
                         val w = size.width.toFloat()
                         val h = size.height.toFloat()
-                        val normX = startOffset.x / w
-                        val normY = startOffset.y / h
+                        val tapNormX = startOffset.x / w
+                        val tapNormY = startOffset.y / h
 
-                        // Find cell at drag start
-                        for (row in 0 until 3) {
-                            for (col in 0 until 5) {
-                                val cx = gridNormX + (col + 0.5f) * cellNormW
-                                val cy = gridNormY + (row + 0.5f) * cellNormH
-                                val dx = normX - cx
-                                val dy = normY - cy
-                                if (kotlin.math.sqrt(dx * dx + dy * dy) < cellNormW * 0.5f) {
-                                    val idx = row * 5 + col
-                                    val tile = BattleBridge.gridState.value.getOrNull(idx)
-                                    if (tile != null && tile.unitDefId >= 0) {
-                                        dragFromTile = idx
-                                        isDragging = true
-                                        dragOffset = startOffset
-                                    }
-                                    return@detectDragGesturesAfterLongPress
-                                }
+                        val data = BattleBridge.unitPositions.value
+                        var closestIdx = -1
+                        var closestDistSq = Float.MAX_VALUE
+                        val threshold = 0.05f
+
+                        for (i in 0 until data.count) {
+                            val dx = tapNormX - data.xs[i]
+                            val dy = tapNormY - data.ys[i]
+                            val distSq = dx * dx + dy * dy
+                            if (distSq < threshold * threshold && distSq < closestDistSq) {
+                                closestDistSq = distSq
+                                closestIdx = i
                             }
+                        }
+
+                        if (closestIdx >= 0) {
+                            dragFromTile = data.tileIndices[closestIdx]
+                            isDragging = true
+                            dragOffset = startOffset
                         }
                     },
                     onDrag = { change, dragAmount ->
@@ -104,24 +155,8 @@ fun BattleField() {
                             val h = size.height.toFloat()
                             val normX = dragOffset.x / w
                             val normY = dragOffset.y / h
-
-                            // Find destination cell
-                            var destTile = -1
-                            for (row in 0 until 3) {
-                                for (col in 0 until 5) {
-                                    val cx = gridNormX + (col + 0.5f) * cellNormW
-                                    val cy = gridNormY + (row + 0.5f) * cellNormH
-                                    val dx = normX - cx
-                                    val dy = normY - cy
-                                    if (kotlin.math.sqrt(dx * dx + dy * dy) < cellNormW * 0.5f) {
-                                        destTile = row * 5 + col
-                                    }
-                                }
-                            }
-
-                            if (destTile >= 0 && destTile != dragFromTile) {
-                                BattleBridge.requestSwap(dragFromTile, destTile)
-                            }
+                            // Relocate unit to drop position
+                            BattleBridge.requestRelocate(dragFromTile, normX, normY)
                         }
                         isDragging = false
                         dragFromTile = -1
@@ -138,29 +173,26 @@ fun BattleField() {
                 detectTapGestures { tapOffset ->
                     val w = size.width.toFloat()
                     val h = size.height.toFloat()
-                    // Convert tap to normalized coordinates
                     val tapNormX = tapOffset.x / w
                     val tapNormY = tapOffset.y / h
 
-                    // Find closest grid cell
-                    val tapRadius = cellNormW * 0.5f
+                    val data = BattleBridge.unitPositions.value
                     var closestIdx = -1
-                    var closestDist = Float.MAX_VALUE
-                    for (row in 0 until 3) {
-                        for (col in 0 until 5) {
-                            val cx = gridNormX + (col + 0.5f) * cellNormW
-                            val cy = gridNormY + (row + 0.5f) * cellNormH
-                            val dx = tapNormX - cx
-                            val dy = tapNormY - cy
-                            val dist = kotlin.math.sqrt(dx * dx + dy * dy)
-                            if (dist < tapRadius && dist < closestDist) {
-                                closestDist = dist
-                                closestIdx = row * 5 + col
-                            }
+                    var closestDistSq = Float.MAX_VALUE
+                    val threshold = 0.04f
+
+                    for (i in 0 until data.count) {
+                        val dx = tapNormX - data.xs[i]
+                        val dy = tapNormY - data.ys[i]
+                        val distSq = dx * dx + dy * dy
+                        if (distSq < threshold * threshold && distSq < closestDistSq) {
+                            closestDistSq = distSq
+                            closestIdx = i
                         }
                     }
+
                     if (closestIdx >= 0) {
-                        BattleBridge.requestClickTile(closestIdx)
+                        BattleBridge.requestClickTile(data.tileIndices[closestIdx])
                     }
                 }
             }
@@ -168,190 +200,198 @@ fun BattleField() {
         val w = size.width
         val h = size.height
 
-        // Grid screen coordinates
-        val gridLeft = gridNormX * w
-        val gridTop = gridNormY * h
-        val gridW = gridNormW * w
-        val gridH = gridNormH * h
+        val gridLeft = GRID_NORM_X * w
+        val gridTop = GRID_NORM_Y * h
+        val gridW = GRID_NORM_W * w
+        val gridH = GRID_NORM_H * h
 
-        // Field shadow
+        // ── Raised Ground Platform ──
+        val groundThickness = gridH * 0.08f
+
+        // Side face
         drawRoundRect(
-            color = Color.Black.copy(alpha = 0.4f),
-            topLeft = Offset(gridLeft + 4f, gridTop + 4f),
-            size = Size(gridW, gridH),
-            cornerRadius = CornerRadius(16f),
+            color = GroundEdgeDark,
+            topLeft = Offset(gridLeft, gridTop + gridH),
+            size = Size(gridW, groundThickness),
+            cornerRadius = CornerRadius(8f),
+        )
+        drawRoundRect(
+            color = GroundEdgeLight,
+            topLeft = Offset(gridLeft, gridTop + gridH),
+            size = Size(gridW, groundThickness * 0.3f),
+            cornerRadius = CornerRadius(4f),
         )
 
-        // Green field background
+        // Drop shadow
+        drawRoundRect(
+            color = GroundShadow,
+            topLeft = Offset(gridLeft + 6f, gridTop + gridH + groundThickness * 0.5f),
+            size = Size(gridW, groundThickness * 0.5f),
+            cornerRadius = CornerRadius(12f),
+        )
+
+        // Main ground surface
         drawRoundRect(
             brush = Brush.verticalGradient(
-                colors = listOf(
-                    Color(0xFF4CAF50),
-                    Color(0xFF388E3C),
-                    Color(0xFF2E7D32),
-                ),
+                colors = stage.fieldColors,
                 startY = gridTop,
                 endY = gridTop + gridH,
             ),
             topLeft = Offset(gridLeft, gridTop),
             size = Size(gridW, gridH),
-            cornerRadius = CornerRadius(16f),
+            cornerRadius = CornerRadius(12f),
         )
 
-        // Field border
+        // Top highlight
         drawRoundRect(
-            color = Color(0xFF1B5E20),
+            brush = Brush.verticalGradient(
+                colors = listOf(Color.White.copy(alpha = 0.08f), Color.Transparent),
+                startY = gridTop,
+                endY = gridTop + gridH * 0.3f,
+            ),
+            topLeft = Offset(gridLeft, gridTop),
+            size = Size(gridW, gridH * 0.3f),
+            cornerRadius = CornerRadius(12f),
+        )
+
+        // Ground border
+        drawRoundRect(
+            color = fieldBorderColor,
             topLeft = Offset(gridLeft, gridTop),
             size = Size(gridW, gridH),
-            cornerRadius = CornerRadius(16f),
-            style = Stroke(width = 3f),
+            cornerRadius = CornerRadius(12f),
+            style = GroundBorderStroke,
         )
 
-        // Subtle grid lines
-        val gridLineColor = Color.White.copy(alpha = 0.06f)
-        val cellW = gridW / 5f
-        val cellH = gridH / 3f
-        for (col in 1 until 5) {
-            val x = gridLeft + cellW * col
-            drawLine(gridLineColor, Offset(x, gridTop + 8f), Offset(x, gridTop + gridH - 8f), 1f)
-        }
-        for (row in 1 until 3) {
-            val y = gridTop + cellH * row
-            drawLine(gridLineColor, Offset(gridLeft + 8f, y), Offset(gridLeft + gridW - 8f, y), 1f)
-        }
+        // ── Draw Units at Dynamic Positions ──
+        val data = unitPositions
+        val sxArr = smoothXs.value
+        val syArr = smoothYs.value
+        val useSmooth = sxArr.size == data.count && data.count > 0
 
-        // Draw units
-        val unitSize = cellW * 0.5f
-        val pedestalRadius = unitSize * 0.45f
+        val unitSize = gridW / 6f * 0.55f
+        val pedestalRx = unitSize * 0.4f
+        val pedestalRy = pedestalRx * 0.35f
 
-        for (row in 0 until 3) {
-            for (col in 0 until 5) {
-                val index = row * 5 + col
-                val tile = gridState.getOrNull(index)
-                val isEmpty = tile == null || tile.unitDefId < 0
-                val isSelected = selectedTile == index
+        for (i in 0 until data.count) {
+            val screenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
+            val screenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
+            val gradeColor = GradeColors.getOrElse(data.grades[i]) { Color.Gray }
+            val tileIdx = data.tileIndices[i]
+            val isSelected = selectedTile == tileIdx
+            val isAttacking = data.isAttacking.getOrElse(i) { false }
 
-                // Cell center in screen coordinates (matching C++ exactly)
-                val cx = gridLeft + (col + 0.5f) * cellW
-                val cy = gridTop + (row + 0.5f) * cellH
+            // Skip dragged unit at original position
+            if (isDragging && dragFromTile == tileIdx) continue
 
-                if (!isEmpty && tile != null) {
-                    val gradeColor = when (tile.grade) {
-                        0 -> Color(0xFF9E9E9E)
-                        1 -> Color(0xFF42A5F5)
-                        2 -> Color(0xFFAB47BC)
-                        3 -> Color(0xFFFF8F00)
-                        4 -> Color(0xFFE94560)
-                        else -> Color.Gray
-                    }
+            // Ground shadow
+            drawOval(
+                color = PedestalShadow,
+                topLeft = Offset(screenX - pedestalRx, screenY + unitSize * 0.05f),
+                size = Size(pedestalRx * 2, pedestalRy * 2),
+            )
 
-                    // Pedestal shadow
-                    drawOval(
-                        color = Color.Black.copy(alpha = 0.3f),
-                        topLeft = Offset(cx - pedestalRadius, cy + unitSize * 0.15f),
-                        size = Size(pedestalRadius * 2, pedestalRadius * 0.5f),
-                    )
+            // Pedestal glow
+            val pedestalColor = if (isSelected) NeonCyan else gradeColor
+            drawOval(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        pedestalColor.copy(alpha = 0.5f),
+                        pedestalColor.copy(alpha = 0.15f),
+                        Color.Transparent,
+                    ),
+                ),
+                topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
+                size = Size(pedestalRx * 2.4f, pedestalRy * 2.5f),
+            )
 
-                    // Pedestal glow
-                    val pedestalColor = if (isSelected) NeonCyan else gradeColor
-                    drawOval(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                pedestalColor.copy(alpha = 0.6f),
-                                pedestalColor.copy(alpha = 0.2f),
-                                Color.Transparent,
-                            ),
-                        ),
-                        topLeft = Offset(cx - pedestalRadius, cy + unitSize * 0.05f),
-                        size = Size(pedestalRadius * 2, pedestalRadius * 0.6f),
-                    )
+            // Selected ring
+            if (isSelected) {
+                drawOval(
+                    color = NeonCyan.copy(alpha = 0.5f + breathe * 0.3f),
+                    topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.3f),
+                    size = Size(pedestalRx * 2.2f, pedestalRy * 2.2f),
+                    style = SelectedStroke,
+                )
+            }
 
-                    // Selected ring
-                    if (isSelected) {
-                        drawOval(
-                            color = NeonCyan.copy(alpha = 0.5f + breathe * 0.3f),
-                            topLeft = Offset(cx - pedestalRadius * 1.1f, cy + unitSize * 0.02f),
-                            size = Size(pedestalRadius * 2.2f, pedestalRadius * 0.7f),
-                            style = Stroke(width = 2.5f),
-                        )
-                    }
+            // Attack glow
+            if (isAttacking) {
+                drawCircle(
+                    color = AttackGlow,
+                    radius = unitSize * 0.5f,
+                    center = Offset(screenX, screenY - unitSize * 0.3f),
+                )
+            }
 
-                    // Unit sprite
-                    val bitmap = unitBitmaps[tile.unitDefId]
-                    if (bitmap != null) {
-                        val spriteY = cy - unitSize * 0.6f - breathe * 3f
-                        drawImage(
-                            image = bitmap,
-                            topLeft = Offset(cx - unitSize / 2, spriteY),
-                        )
-                    }
+            // Unit sprite
+            val bitmap = unitBitmaps[data.unitDefIds[i]]
+            if (bitmap != null) {
+                val spriteSize = unitSize * 0.85f
+                val spriteY = screenY - spriteSize - pedestalRy * 0.3f - breathe * 2f
+                drawImage(
+                    image = bitmap,
+                    topLeft = Offset(screenX - spriteSize / 2, spriteY),
+                )
+            }
 
-                    // Level badge
-                    if (tile.level > 1) {
-                        val badgeY = cy + unitSize * 0.3f
-                        drawRoundRect(
-                            color = Color(0xFF1A1A2E).copy(alpha = 0.8f),
-                            topLeft = Offset(cx - 18f, badgeY),
-                            size = Size(36f, 14f),
-                            cornerRadius = CornerRadius(7f),
-                        )
-                        drawRoundRect(
-                            color = Gold.copy(alpha = 0.5f),
-                            topLeft = Offset(cx - 18f, badgeY),
-                            size = Size(36f, 14f),
-                            cornerRadius = CornerRadius(7f),
-                            style = Stroke(width = 1f),
-                        )
-                    }
+            // Grade dot
+            drawCircle(
+                color = gradeColor,
+                radius = 4f,
+                center = Offset(screenX - unitSize * 0.35f, screenY - unitSize * 0.7f),
+            )
 
-                    // Grade dot
-                    drawCircle(
-                        color = gradeColor,
-                        radius = 5f,
-                        center = Offset(cx - unitSize / 2 + 5f, cy - unitSize * 0.55f),
-                    )
+            // Level badge
+            if (data.levels[i] > 1) {
+                val badgeY = screenY + pedestalRy * 1.2f
+                drawRoundRect(
+                    color = BadgeBg,
+                    topLeft = Offset(screenX - 14f, badgeY),
+                    size = Size(28f, 12f),
+                    cornerRadius = CornerRadius(6f),
+                )
+                drawRoundRect(
+                    color = BadgeBorder,
+                    topLeft = Offset(screenX - 14f, badgeY),
+                    size = Size(28f, 12f),
+                    cornerRadius = CornerRadius(6f),
+                    style = BadgeBorderStroke,
+                )
+            }
 
-                    // Merge indicator
-                    if (tile.canMerge) {
-                        drawCircle(
-                            color = Gold,
-                            radius = 8f,
-                            center = Offset(cx + unitSize / 2 - 5f, cy - unitSize * 0.55f),
-                        )
-                    }
-                } else {
-                    // Empty slot
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.05f),
-                        radius = pedestalRadius * 0.6f,
-                        center = Offset(cx, cy),
-                    )
-                }
+            // Merge indicator
+            val gridState = BattleBridge.gridState.value
+            val tile = gridState.getOrNull(tileIdx)
+            if (tile != null && tile.canMerge) {
+                drawCircle(
+                    color = Gold,
+                    radius = 5f,
+                    center = Offset(screenX + unitSize * 0.35f, screenY - unitSize * 0.7f),
+                )
             }
         }
 
-        // Draw drag indicator
+        // Draw drag ghost at finger position
         if (isDragging && dragFromTile >= 0) {
-            val tile = gridState.getOrNull(dragFromTile)
-            if (tile != null && tile.unitDefId >= 0) {
-                val bitmap = unitBitmaps[tile.unitDefId]
+            val data2 = BattleBridge.unitPositions.value
+            val dragUnitIdx = (0 until data2.count).firstOrNull {
+                data2.tileIndices[it] == dragFromTile
+            }
+            if (dragUnitIdx != null) {
+                val bitmap = unitBitmaps[data2.unitDefIds[dragUnitIdx]]
                 if (bitmap != null) {
-                    // Draw ghost unit at drag position
                     drawImage(
                         image = bitmap,
                         topLeft = Offset(dragOffset.x - unitSize / 2, dragOffset.y - unitSize / 2),
                         alpha = 0.7f,
                     )
                 }
-                // Draw highlight on source cell
-                val fromRow = dragFromTile / 5
-                val fromCol = dragFromTile % 5
-                val fromCx = gridLeft + (fromCol + 0.5f) * cellW
-                val fromCy = gridTop + (fromRow + 0.5f) * cellH
+                // Drop target indicator
                 drawCircle(
-                    color = Color(0xFF00D4FF).copy(alpha = 0.3f),
-                    radius = pedestalRadius,
-                    center = Offset(fromCx, fromCy),
+                    color = DragGhost,
+                    radius = unitSize * 0.6f,
+                    center = Offset(dragOffset.x, dragOffset.y),
                 )
             }
         }

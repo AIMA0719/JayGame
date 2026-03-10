@@ -163,65 +163,56 @@ void onProjectileHit(const Unit& sourceUnit, Enemy& hitEnemy,
     }
 }
 
-void applyAuraEffects(const Unit& sourceUnit, const Grid& grid,
+void applyAuraEffects(const Unit& sourceUnit, const Grid& /*grid*/,
                       ObjectPool<Unit>& unitPool) {
     const UnitDef& def = getUnitDef(sourceUnit.unitDefId);
     if (def.ability != AbilityType::Buff) return;
 
-    // Find grid position of source unit
-    int srcRow, srcCol;
-    if (!grid.getCellAt(sourceUnit.position, srcRow, srcCol)) return;
+    // Distance-based aura (works with free-moving units)
+    constexpr float AURA_RANGE = 150.f;
+    constexpr float AURA_RANGE_SQ = AURA_RANGE * AURA_RANGE;
 
-    // Check 4 adjacent cells
-    static const int dx[] = {-1, 1, 0, 0};
-    static const int dy[] = {0, 0, -1, 1};
-
-    for (int d = 0; d < 4; d++) {
-        int adjRow = srcRow + dy[d];
-        int adjCol = srcCol + dx[d];
-        Unit* neighbor = grid.getUnit(adjRow, adjCol);
-        if (neighbor && neighbor->active && neighbor != &sourceUnit) {
+    unitPool.forEach([&](Unit& neighbor) {
+        if (!neighbor.active || &neighbor == &sourceUnit) return;
+        Vec2 diff = neighbor.position - sourceUnit.position;
+        if (diff.lengthSq() <= AURA_RANGE_SQ) {
             Buff atkBuff;
             atkBuff.type = BuffType::AtkUp;
-            atkBuff.magnitude = def.abilityValue; // e.g., 0.2 = 20% ATK bonus
-            atkBuff.duration = 1.1f; // slightly > 1 frame at 60fps to ensure persistence
+            atkBuff.magnitude = def.abilityValue;
+            atkBuff.duration = 1.1f;
             atkBuff.tickTimer = 0.f;
             atkBuff.tickInterval = 0.f;
             atkBuff.sourceUnitId = sourceUnit.unitDefId;
-            neighbor->unitBuffs.addBuff(atkBuff);
+            neighbor.unitBuffs.addBuff(atkBuff);
         }
-    }
+    });
 }
 
-void applyShieldAura(const Unit& sourceUnit, const Grid& grid,
+void applyShieldAura(const Unit& sourceUnit, const Grid& /*grid*/,
                      ObjectPool<Unit>& unitPool) {
     const UnitDef& def = getUnitDef(sourceUnit.unitDefId);
     if (def.ability != AbilityType::Shield) return;
 
-    // Shield aura: grant shield to adjacent units (refreshed each second)
-    int srcRow, srcCol;
-    if (!grid.getCellAt(sourceUnit.position, srcRow, srcCol)) return;
+    // Distance-based shield aura (works with free-moving units)
+    constexpr float SHIELD_RANGE = 150.f;
+    constexpr float SHIELD_RANGE_SQ = SHIELD_RANGE * SHIELD_RANGE;
 
-    static const int dx[] = {-1, 1, 0, 0};
-    static const int dy[] = {0, 0, -1, 1};
-
-    for (int d = 0; d < 4; d++) {
-        int adjRow = srcRow + dy[d];
-        int adjCol = srcCol + dx[d];
-        Unit* neighbor = grid.getUnit(adjRow, adjCol);
-        if (neighbor && neighbor->active && neighbor != &sourceUnit) {
-            if (!neighbor->unitBuffs.hasBuffType(BuffType::Shield)) {
+    unitPool.forEach([&](Unit& neighbor) {
+        if (!neighbor.active || &neighbor == &sourceUnit) return;
+        Vec2 diff = neighbor.position - sourceUnit.position;
+        if (diff.lengthSq() <= SHIELD_RANGE_SQ) {
+            if (!neighbor.unitBuffs.hasBuffType(BuffType::Shield)) {
                 Buff shield;
                 shield.type = BuffType::Shield;
-                shield.magnitude = def.abilityValue; // shield HP amount
+                shield.magnitude = def.abilityValue;
                 shield.duration = 5.f;
                 shield.tickTimer = 0.f;
                 shield.tickInterval = 0.f;
                 shield.sourceUnitId = sourceUnit.unitDefId;
-                neighbor->unitBuffs.addBuff(shield);
+                neighbor.unitBuffs.addBuff(shield);
             }
         }
-    }
+    });
 }
 
 } // namespace Ability

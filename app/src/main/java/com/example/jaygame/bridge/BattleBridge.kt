@@ -77,6 +77,25 @@ data class DamageEvent(
     val timestamp: Long = System.currentTimeMillis(),
 )
 
+data class UnitPositionData(
+    val xs: FloatArray = FloatArray(0),
+    val ys: FloatArray = FloatArray(0),
+    val unitDefIds: IntArray = IntArray(0),
+    val grades: IntArray = IntArray(0),
+    val levels: IntArray = IntArray(0),
+    val isAttacking: BooleanArray = BooleanArray(0),
+    val tileIndices: IntArray = IntArray(0),
+    val count: Int = 0,
+    val frameId: Long = 0L,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is UnitPositionData) return false
+        return frameId == other.frameId
+    }
+    override fun hashCode(): Int = frameId.hashCode()
+}
+
 data class BattleResultData(
     val victory: Boolean = false,
     val waveReached: Int = 0,
@@ -101,6 +120,7 @@ data class GridTileState(
 object BattleBridge {
     private var enemyFrameCounter = 0L
     private var projFrameCounter = 0L
+    private var unitFrameCounter = 0L
 
     private val _state = MutableStateFlow(BattleState())
     val state: StateFlow<BattleState> = _state.asStateFlow()
@@ -117,17 +137,31 @@ object BattleBridge {
     private val _projectiles = MutableStateFlow(ProjectileData())
     val projectiles: StateFlow<ProjectileData> = _projectiles.asStateFlow()
 
+    /** 유닛 위치 데이터 — 자유 이동 (C++ → Compose) */
+    private val _unitPositions = MutableStateFlow(UnitPositionData())
+    val unitPositions: StateFlow<UnitPositionData> = _unitPositions.asStateFlow()
+
     /** 데미지 이벤트 (C++ → Compose) */
     private val _damageEvents = MutableStateFlow<List<DamageEvent>>(emptyList())
     val damageEvents: StateFlow<List<DamageEvent>> = _damageEvents.asStateFlow()
 
-    /** 15타일 그리드 상태 (5x3) */
-    private val _gridState = MutableStateFlow(List(15) { GridTileState() })
+    /** 30타일 그리드 상태 (6x5) */
+    const val GRID_COLS = 6
+    const val GRID_ROWS = 5
+    const val GRID_TOTAL = GRID_COLS * GRID_ROWS
+
+    private val _gridState = MutableStateFlow(List(GRID_TOTAL) { GridTileState() })
     val gridState: StateFlow<List<GridTileState>> = _gridState.asStateFlow()
 
     /** Whether any merge is possible on the grid */
     val canMergeAny: Boolean
         get() = _gridState.value.any { it.canMerge }
+
+    /** 현재 스테이지 ID */
+    private val _stageId = MutableStateFlow(0)
+    val stageId: StateFlow<Int> = _stageId.asStateFlow()
+
+    fun setStageId(id: Int) { _stageId.value = id }
 
     /** 선택된 타일 인덱스 (-1 = 없음) */
     private val _selectedTile = MutableStateFlow(-1)
@@ -151,8 +185,8 @@ object BattleBridge {
     private val _summonResult = MutableStateFlow<SummonResult?>(null)
     val summonResult: StateFlow<SummonResult?> = _summonResult.asStateFlow()
 
-    /** 머지 이펙트 (타일 인덱스, lucky 여부) */
-    data class MergeEffect(val tileIndex: Int, val isLucky: Boolean)
+    /** 머지 이펙트 (타일 인덱스, lucky 여부, 결과 유닛 ID) */
+    data class MergeEffect(val tileIndex: Int, val isLucky: Boolean, val resultUnitId: Int = -1)
     private val _mergeEffect = MutableStateFlow<MergeEffect?>(null)
     val mergeEffect: StateFlow<MergeEffect?> = _mergeEffect.asStateFlow()
 
@@ -221,6 +255,13 @@ object BattleBridge {
     }
 
     @JvmStatic
+    fun updateUnitPositions(xs: FloatArray, ys: FloatArray, unitDefIds: IntArray,
+                            grades: IntArray, levels: IntArray, isAttacking: BooleanArray,
+                            tileIndices: IntArray, count: Int) {
+        _unitPositions.value = UnitPositionData(xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, ++unitFrameCounter)
+    }
+
+    @JvmStatic
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
         val event = DamageEvent(x, y, damage, isCrit)
         val current = _damageEvents.value.toMutableList()
@@ -232,7 +273,8 @@ object BattleBridge {
 
     @JvmStatic
     fun updateGridState(unitIds: IntArray, grades: IntArray, families: IntArray, canMerge: BooleanArray, levels: IntArray) {
-        val tiles = List(15) { i ->
+        val count = unitIds.size.coerceAtMost(GRID_TOTAL)
+        val tiles = List(count) { i ->
             GridTileState(
                 unitDefId = unitIds[i],
                 grade = grades[i],
@@ -256,8 +298,8 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun onMergeComplete(tileIndex: Int, isLucky: Boolean) {
-        _mergeEffect.value = MergeEffect(tileIndex, isLucky)
+    fun onMergeComplete(tileIndex: Int, isLucky: Boolean, resultUnitId: Int) {
+        _mergeEffect.value = MergeEffect(tileIndex, isLucky, resultUnitId)
     }
 
     fun dismissPopup() {
@@ -286,12 +328,15 @@ object BattleBridge {
         _enemyPositions.value = EnemyPositionData()
         projFrameCounter = 0L
         _projectiles.value = ProjectileData()
+        unitFrameCounter = 0L
+        _unitPositions.value = UnitPositionData()
         _damageEvents.value = emptyList()
-        _gridState.value = List(15) { GridTileState() }
+        _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
         _unitPopup.value = null
         _mergeEffect.value = null
         _summonResult.value = null
+        _stageId.value = 0
     }
 
     // JNI native methods — implemented in main.cpp
@@ -312,6 +357,9 @@ object BattleBridge {
 
     @JvmStatic
     private external fun nativeSwapUnits(fromTile: Int, toTile: Int)
+
+    @JvmStatic
+    private external fun nativeRelocateUnit(tileIndex: Int, normX: Float, normY: Float)
 
     fun requestSummon() {
         nativeSummon()
@@ -337,6 +385,10 @@ object BattleBridge {
 
     fun requestSwap(fromTile: Int, toTile: Int) {
         nativeSwapUnits(fromTile, toTile)
+    }
+
+    fun requestRelocate(tileIndex: Int, normX: Float, normY: Float) {
+        nativeRelocateUnit(tileIndex, normX, normY)
     }
 
     /** In-battle upgrade costs: level 1->2 through 6->7 */

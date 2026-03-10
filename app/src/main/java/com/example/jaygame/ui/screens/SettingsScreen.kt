@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -28,13 +30,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
+import com.example.jaygame.navigation.Routes
+import com.example.jaygame.ui.components.DailyLoginDialog
+import com.example.jaygame.ui.components.DifficultyDialog
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.canClaim
+import com.example.jaygame.ui.components.claimReward
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
@@ -43,42 +52,122 @@ import com.example.jaygame.ui.theme.SubText
 @Composable
 fun SettingsScreen(
     repository: GameRepository,
-    onBack: () -> Unit,
+    onNavigate: (String) -> Unit,
 ) {
     val data by repository.gameData.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
+    var showDailyLogin by remember { mutableStateOf(false) }
+    var showDifficulty by remember { mutableStateOf(false) }
+
+    if (showDailyLogin) {
+        DailyLoginDialog(
+            data = data,
+            onClaim = {
+                val updated = claimReward(data)
+                repository.save(updated)
+                showDailyLogin = false
+            },
+            onDismiss = { showDailyLogin = false },
+        )
+    }
+
+    if (showDifficulty) {
+        DifficultyDialog(
+            currentDifficulty = data.difficulty,
+            onSelect = { diff ->
+                repository.save(data.copy(difficulty = diff))
+                showDifficulty = false
+            },
+            onDismiss = { showDifficulty = false },
+        )
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DeepDark)
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
     ) {
-        // Back button + title row
+        // Title
+        Text(
+            text = "설정",
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            color = Gold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Quick Access Section ──
+        Text(
+            text = "게임 메뉴",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = SubText,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        // Row 1: 주간보상 + 난이도
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             NeonButton(
-                text = "\u2190",
-                onClick = onBack,
-                modifier = Modifier.height(36.dp),
-                fontSize = 14.sp,
-                accentColor = NeonRed,
-                accentColorDark = NeonRedDark,
+                text = "주간보상",
+                onClick = { showDailyLogin = true },
+                modifier = Modifier.weight(1f).height(42.dp),
+                fontSize = 13.sp,
+                accentColor = NeonCyan,
+                accentColorDark = NeonCyan.copy(alpha = 0.5f),
             )
-            Text(
-                text = "설정",
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = Gold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
+            NeonButton(
+                text = "난이도",
+                onClick = { showDifficulty = true },
+                modifier = Modifier.weight(1f).height(42.dp),
+                fontSize = 13.sp,
+                accentColor = NeonCyan,
+                accentColorDark = NeonCyan.copy(alpha = 0.5f),
             )
-            Spacer(Modifier.width(56.dp))
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
+
+        // Row 2: 업적 + 도감
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            NeonButton(
+                text = "업적",
+                onClick = { onNavigate(Routes.ACHIEVEMENTS) },
+                modifier = Modifier.weight(1f).height(42.dp),
+                fontSize = 13.sp,
+                accentColor = Gold,
+                accentColorDark = Gold.copy(alpha = 0.5f),
+            )
+            NeonButton(
+                text = "영웅 도감",
+                onClick = { onNavigate(Routes.UNIT_CODEX) },
+                modifier = Modifier.weight(1f).height(42.dp),
+                fontSize = 13.sp,
+                accentColor = Gold,
+                accentColorDark = Gold.copy(alpha = 0.5f),
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // ── Settings Section ──
+        Text(
+            text = "환경설정",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = SubText,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
 
         GameCard(
             modifier = Modifier.fillMaxWidth(),
@@ -151,7 +240,7 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
-                        text = "v0.4.0",
+                        text = "v0.5.0",
                         fontSize = 14.sp,
                         color = SubText,
                     )
@@ -174,6 +263,8 @@ fun SettingsScreen(
                 }
             }
         }
+
+        Spacer(Modifier.height(16.dp))
     }
 
     if (showResetDialog) {

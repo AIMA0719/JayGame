@@ -120,14 +120,11 @@ fun UnitDetailPopup() {
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Row position bonus info
-            val rowLabel = when (data.tileIndex / 5) {
-                0 -> "\uD6C4\uC5F4 (+20% \uC0AC\uAC70\uB9AC)"   // 후열 (+20% 사거리)
-                2 -> "\uC804\uC5F4 (-15% \uC0AC\uAC70\uB9AC, \uADFC\uC811 \uC6B0\uC120)"  // 전열
-                else -> "\uC911\uC5F4"  // 중열
-            }
+            // Slot info
+            val slotRow = data.tileIndex / BattleBridge.GRID_COLS + 1
+            val slotCol = data.tileIndex % BattleBridge.GRID_COLS + 1
             Text(
-                text = "\uBC30\uCE58: $rowLabel",  // 배치:
+                text = "\uC2AC\uB86F: ${slotRow}-${slotCol}",  // 슬롯:
                 color = SubText.copy(alpha = 0.7f),
                 fontSize = 10.sp,
                 modifier = Modifier.fillMaxWidth(),

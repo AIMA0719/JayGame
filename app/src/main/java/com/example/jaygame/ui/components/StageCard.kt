@@ -37,14 +37,8 @@ import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.SubText
 
-private val stageColors = listOf(
-    listOf(Color(0xFF2E7D32), Color(0xFF4CAF50)),
-    listOf(Color(0xFF1B5E20), Color(0xFF388E3C)),
-    listOf(Color(0xFFE65100), Color(0xFFFF9800)),
-    listOf(Color(0xFF42A5F5), Color(0xFFBBDEFB)),
-    listOf(Color(0xFFBF360C), Color(0xFFFF5722)),
-    listOf(Color(0xFF311B92), Color(0xFF7C4DFF)),
-)
+// Derive stage card colors from StageDef to stay in sync
+private val stageColors = STAGES.map { it.bgColors }
 
 @Composable
 fun StageCardPager(
