@@ -1,28 +1,43 @@
 package com.example.jaygame.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.components.ScreenHeader
-import com.example.jaygame.ui.components.WoodFrame
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.LightText
-import com.example.jaygame.ui.theme.NegativeRed
-import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.NeonGreen
+import com.example.jaygame.ui.theme.NeonRed
+import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
 @Composable
@@ -39,18 +54,38 @@ fun SettingsScreen(
             .background(DeepDark)
             .padding(16.dp),
     ) {
-        ScreenHeader(title = "설정", onBack = onBack)
+        // Back button + title row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NeonButton(
+                text = "\u2190",
+                onClick = onBack,
+                modifier = Modifier.height(36.dp),
+                fontSize = 14.sp,
+                accentColor = NeonRed,
+                accentColorDark = NeonRedDark,
+            )
+            Text(
+                text = "설정",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Gold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.width(56.dp))
+        }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
 
-        WoodFrame(
+        GameCard(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 // Sound toggle
                 Row(
@@ -58,21 +93,22 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "\uD83D\uDD0A 사운드",
-                        fontSize = 18.sp,
+                        text = "사운드",
+                        fontSize = 16.sp,
                         color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
-                    MedievalButton(
+                    NeonButton(
                         text = if (data.soundEnabled) "ON" else "OFF",
                         onClick = {
                             repository.save(data.copy(soundEnabled = !data.soundEnabled))
                         },
-                        baseColor = if (data.soundEnabled) PositiveGreen else NegativeRed,
+                        accentColor = if (data.soundEnabled) NeonGreen else NeonRed,
+                        accentColorDark = if (data.soundEnabled) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
                         modifier = Modifier
-                            .width(80.dp)
-                            .height(36.dp),
-                        fontSize = 14.sp,
+                            .width(72.dp)
+                            .height(34.dp),
+                        fontSize = 13.sp,
                     )
                 }
 
@@ -82,25 +118,26 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "\uD83C\uDFB5 음악",
-                        fontSize = 18.sp,
+                        text = "음악",
+                        fontSize = 16.sp,
                         color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
-                    MedievalButton(
+                    NeonButton(
                         text = if (data.musicEnabled) "ON" else "OFF",
                         onClick = {
                             repository.save(data.copy(musicEnabled = !data.musicEnabled))
                         },
-                        baseColor = if (data.musicEnabled) PositiveGreen else NegativeRed,
+                        accentColor = if (data.musicEnabled) NeonGreen else NeonRed,
+                        accentColorDark = if (data.musicEnabled) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
                         modifier = Modifier
-                            .width(80.dp)
-                            .height(36.dp),
-                        fontSize = 14.sp,
+                            .width(72.dp)
+                            .height(34.dp),
+                        fontSize = 13.sp,
                     )
                 }
 
-                HorizontalDivider(color = Gold.copy(alpha = 0.3f))
+                HorizontalDivider(color = Divider)
 
                 // Version
                 Row(
@@ -108,30 +145,31 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "\uD83D\uDCF1 버전",
-                        fontSize = 18.sp,
+                        text = "버전",
+                        fontSize = 16.sp,
                         color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
                         text = "v0.4.0",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         color = SubText,
                     )
                 }
 
-                HorizontalDivider(color = Gold.copy(alpha = 0.3f))
+                HorizontalDivider(color = Divider)
 
                 // Data reset button
                 Box(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    MedievalButton(
-                        text = "\uD83D\uDD04 데이터 초기화",
+                    NeonButton(
+                        text = "데이터 초기화",
                         onClick = { showResetDialog = true },
-                        baseColor = NegativeRed,
-                        fontSize = 16.sp,
+                        accentColor = NeonRed,
+                        accentColorDark = NeonRedDark,
+                        fontSize = 14.sp,
                     )
                 }
             }
@@ -157,21 +195,24 @@ fun SettingsScreen(
                 )
             },
             confirmButton = {
-                MedievalButton(
+                NeonButton(
                     text = "초기화",
                     onClick = {
                         repository.save(GameData())
                         showResetDialog = false
                     },
-                    baseColor = NegativeRed,
-                    fontSize = 14.sp,
+                    accentColor = NeonRed,
+                    accentColorDark = NeonRedDark,
+                    fontSize = 13.sp,
                 )
             },
             dismissButton = {
-                MedievalButton(
+                NeonButton(
                     text = "취소",
                     onClick = { showResetDialog = false },
-                    fontSize = 14.sp,
+                    accentColor = SubText,
+                    accentColorDark = SubText.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
                 )
             },
         )

@@ -30,15 +30,17 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.addRandomCardsToUnits
-import com.example.jaygame.ui.components.CurrencyHeader
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.components.MedievalCard
-import com.example.jaygame.ui.theme.BorderGlow
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.ResourceHeader
 import com.example.jaygame.ui.theme.DeepDark
-import com.example.jaygame.ui.theme.DiamondBlue
+import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.GoldCoin
+import com.example.jaygame.ui.theme.DarkGold
 import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonRed
+import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
 private data class ShopItem(
@@ -56,106 +58,112 @@ fun ShopScreen(repository: GameRepository) {
 
     val tabNames = listOf("골드팩", "다이아팩", "스페셜")
 
-    val goldPackItems = remember { listOf(
-        ShopItem(
-            name = "골드 100개",
-            description = "소량의 골드를 획득합니다.",
-            priceText = "다이아 10",
-            onPurchase = { d, repo ->
-                if (d.diamonds >= 10) {
-                    repo.save(d.copy(diamonds = d.diamonds - 10, gold = d.gold + 100))
-                    true
-                } else false
-            },
-        ),
-        ShopItem(
-            name = "골드 500개",
-            description = "적당한 양의 골드를 획득합니다.",
-            priceText = "다이아 40",
-            onPurchase = { d, repo ->
-                if (d.diamonds >= 40) {
-                    repo.save(d.copy(diamonds = d.diamonds - 40, gold = d.gold + 500))
-                    true
-                } else false
-            },
-        ),
-        ShopItem(
-            name = "골드 2,000개",
-            description = "대량의 골드를 획득합니다.",
-            priceText = "다이아 150",
-            onPurchase = { d, repo ->
-                if (d.diamonds >= 150) {
-                    repo.save(d.copy(diamonds = d.diamonds - 150, gold = d.gold + 2000))
-                    true
-                } else false
-            },
-        ),
-        ShopItem(
-            name = "골드 10,000개",
-            description = "엄청난 양의 골드를 획득합니다.",
-            priceText = "다이아 700",
-            onPurchase = { d, repo ->
-                if (d.diamonds >= 700) {
-                    repo.save(d.copy(diamonds = d.diamonds - 700, gold = d.gold + 10000))
-                    true
-                } else false
-            },
-        ),
-    ) }
+    val goldPackItems = remember {
+        listOf(
+            ShopItem(
+                name = "골드 100개",
+                description = "소량의 골드를 획득합니다.",
+                priceText = "다이아 10",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 10) {
+                        repo.save(d.copy(diamonds = d.diamonds - 10, gold = d.gold + 100))
+                        true
+                    } else false
+                },
+            ),
+            ShopItem(
+                name = "골드 500개",
+                description = "적당한 양의 골드를 획득합니다.",
+                priceText = "다이아 40",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 40) {
+                        repo.save(d.copy(diamonds = d.diamonds - 40, gold = d.gold + 500))
+                        true
+                    } else false
+                },
+            ),
+            ShopItem(
+                name = "골드 2,000개",
+                description = "대량의 골드를 획득합니다.",
+                priceText = "다이아 150",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 150) {
+                        repo.save(d.copy(diamonds = d.diamonds - 150, gold = d.gold + 2000))
+                        true
+                    } else false
+                },
+            ),
+            ShopItem(
+                name = "골드 10,000개",
+                description = "엄청난 양의 골드를 획득합니다.",
+                priceText = "다이아 700",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 700) {
+                        repo.save(d.copy(diamonds = d.diamonds - 700, gold = d.gold + 10000))
+                        true
+                    } else false
+                },
+            ),
+        )
+    }
 
-    val diamondPackItems = remember { listOf(
-        ShopItem(
-            name = "다이아 50개",
-            description = "소량의 다이아몬드를 획득합니다.",
-            priceText = "준비 중",
-            onPurchase = null,
-        ),
-        ShopItem(
-            name = "다이아 200개",
-            description = "적당한 양의 다이아몬드를 획득합니다.",
-            priceText = "준비 중",
-            onPurchase = null,
-        ),
-        ShopItem(
-            name = "다이아 500개",
-            description = "대량의 다이아몬드를 획득합니다.",
-            priceText = "준비 중",
-            onPurchase = null,
-        ),
-    ) }
+    val diamondPackItems = remember {
+        listOf(
+            ShopItem(
+                name = "다이아 50개",
+                description = "소량의 다이아몬드를 획득합니다.",
+                priceText = "준비 중",
+                onPurchase = null,
+            ),
+            ShopItem(
+                name = "다이아 200개",
+                description = "적당한 양의 다이아몬드를 획득합니다.",
+                priceText = "준비 중",
+                onPurchase = null,
+            ),
+            ShopItem(
+                name = "다이아 500개",
+                description = "대량의 다이아몬드를 획득합니다.",
+                priceText = "준비 중",
+                onPurchase = null,
+            ),
+        )
+    }
 
-    val specialItems = remember { listOf(
-        ShopItem(
-            name = "랜덤 유닛 카드 5장",
-            description = "랜덤한 보유 유닛의 카드 5장을 획득합니다.",
-            priceText = "골드 1,000",
-            onPurchase = { d, repo ->
-                if (d.gold >= 1000) {
-                    val updatedUnits = addRandomCardsToUnits(d.units, 5)
-                    repo.save(d.copy(units = updatedUnits, gold = d.gold - 1000))
-                    true
-                } else false
-            },
-        ),
-        ShopItem(
-            name = "랜덤 유닛 카드 20장",
-            description = "랜덤한 보유 유닛의 카드 20장을 획득합니다.",
-            priceText = "다이아 50",
-            onPurchase = { d, repo ->
-                if (d.diamonds >= 50) {
-                    val updatedUnits = addRandomCardsToUnits(d.units, 20)
-                    repo.save(d.copy(units = updatedUnits, diamonds = d.diamonds - 50))
-                    true
-                } else false
-            },
-        ),
-        ShopItem(
-            name = "초보자 패키지",
-            description = "골드 5,000 + 랜덤 카드 10장을 획득합니다.",
-            priceText = "준비 중",
-            onPurchase = null,
-        ),
-    ) }
+    val specialItems = remember {
+        listOf(
+            ShopItem(
+                name = "랜덤 유닛 카드 5장",
+                description = "랜덤한 보유 유닛의 카드 5장을 획득합니다.",
+                priceText = "골드 1,000",
+                onPurchase = { d, repo ->
+                    if (d.gold >= 1000) {
+                        val updatedUnits = addRandomCardsToUnits(d.units, 5)
+                        repo.save(d.copy(units = updatedUnits, gold = d.gold - 1000))
+                        true
+                    } else false
+                },
+            ),
+            ShopItem(
+                name = "랜덤 유닛 카드 20장",
+                description = "랜덤한 보유 유닛의 카드 20장을 획득합니다.",
+                priceText = "다이아 50",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 50) {
+                        val updatedUnits = addRandomCardsToUnits(d.units, 20)
+                        repo.save(d.copy(units = updatedUnits, diamonds = d.diamonds - 50))
+                        true
+                    } else false
+                },
+            ),
+            ShopItem(
+                name = "초보자 패키지",
+                description = "골드 5,000 + 랜덤 카드 10장을 획득합니다.",
+                priceText = "준비 중",
+                onPurchase = null,
+            ),
+        )
+    }
 
     val currentItems = when (selectedTab) {
         0 -> goldPackItems
@@ -169,22 +177,22 @@ fun ShopScreen(repository: GameRepository) {
             .fillMaxSize()
             .background(DeepDark),
     ) {
-        // Currency Header
-        CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
+        // Resource Header
+        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Title
         Text(
             text = "상점",
-                        fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            color = Gold,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            color = NeonRed,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Tab Row
         Row(
@@ -194,24 +202,25 @@ fun ShopScreen(repository: GameRepository) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             tabNames.forEachIndexed { index, name ->
-                MedievalButton(
+                NeonButton(
                     text = name,
                     onClick = { selectedTab = index },
                     modifier = Modifier.weight(1f),
-                    fontSize = 14.sp,
-                    accentColor = if (selectedTab == index) Gold else SubText,
+                    fontSize = 13.sp,
+                    accentColor = if (selectedTab == index) NeonRed else DimText,
+                    accentColorDark = if (selectedTab == index) NeonRedDark else DimText.copy(alpha = 0.6f),
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Item List
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(currentItems) { item ->
                 ShopItemCard(
@@ -246,13 +255,11 @@ private fun ShopItemCard(
     item: ShopItem,
     onBuy: () -> Unit,
 ) {
-    MedievalCard(
+    GameCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
@@ -260,33 +267,41 @@ private fun ShopItemCard(
             ) {
                 Text(
                     text = item.name,
-                                        fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Gold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = LightText,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = item.description,
-                                        fontSize = 12.sp,
-                    color = LightText.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    color = SubText,
                 )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            MedievalButton(
+            val btnAccent = when {
+                item.onPurchase == null -> DimText
+                item.priceText.contains("다이아") -> NeonCyan
+                item.priceText.contains("골드") -> Gold
+                else -> SubText
+            }
+            val btnAccentDark = when {
+                item.onPurchase == null -> DimText.copy(alpha = 0.6f)
+                item.priceText.contains("다이아") -> NeonCyan.copy(alpha = 0.7f)
+                item.priceText.contains("골드") -> DarkGold
+                else -> SubText.copy(alpha = 0.7f)
+            }
+
+            NeonButton(
                 text = item.priceText,
                 onClick = onBuy,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 enabled = item.onPurchase != null,
-                accentColor = when {
-                    item.onPurchase == null -> SubText
-                    item.priceText.contains("다이아") -> DiamondBlue
-                    item.priceText.contains("골드") -> GoldCoin
-                    else -> BorderGlow
-                },
+                accentColor = btnAccent,
+                accentColorDark = btnAccentDark,
             )
         }
     }
 }
-

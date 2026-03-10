@@ -35,17 +35,20 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.addRandomCardsToUnits
-import com.example.jaygame.ui.components.CurrencyHeader
-import com.example.jaygame.ui.components.GameProgressBar
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.components.MedievalCard
-import com.example.jaygame.ui.components.ScreenHeader
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.NeonProgressBar
+import com.example.jaygame.ui.components.ResourceHeader
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
+import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
 import com.example.jaygame.ui.theme.LightText
-import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonGreen
+import com.example.jaygame.ui.theme.NeonRed
+import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
 private data class TierReward(
@@ -78,12 +81,10 @@ fun SeasonPassScreen(
     val totalXP = data.seasonXP
     val nextTierXP = (currentTier + 1) * 100
 
-    // Count how many tiers can be claimed
     val claimableTiers = SEASON_REWARDS.count { it.tier <= currentTier && it.tier > claimedTier }
 
     val listState = rememberLazyListState()
 
-    // Scroll to current tier on first composition
     LaunchedEffect(currentTier) {
         if (currentTier > 0) {
             listState.animateScrollToItem((currentTier - 1).coerceIn(0, 29))
@@ -95,49 +96,75 @@ fun SeasonPassScreen(
             .fillMaxSize()
             .background(DeepDark),
     ) {
-        // Currency Header
-        CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
+        // Resource Header
+        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        ScreenHeader(title = "\uC2DC\uC98C\uD328\uC2A4", onBack = onBack)
+        // Back button + title row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NeonButton(
+                text = "\u2190",
+                onClick = onBack,
+                modifier = Modifier.height(36.dp),
+                fontSize = 14.sp,
+                accentColor = NeonRed,
+                accentColorDark = NeonRedDark,
+            )
+            Text(
+                text = "시즌패스",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = NeonCyan,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.width(56.dp))
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // XP Progress Section
-        MedievalCard(
+        GameCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "\uC2DC\uC98C XP: $totalXP / $nextTierXP",
-                                        fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    text = "시즌 XP: $totalXP / $nextTierXP",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
                     color = LightText,
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                GameProgressBar(progress = tierProgress, height = 20.dp)
+                NeonProgressBar(
+                    progress = tierProgress,
+                    height = 14.dp,
+                    barColor = NeonCyan,
+                )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "\uD604\uC7AC \uD2F0\uC5B4: $currentTier / 30",
-                                        fontSize = 14.sp,
+                    text = "현재 티어: $currentTier / 30",
+                    fontSize = 13.sp,
                     color = Gold,
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Claim All button
         if (claimableTiers > 0) {
@@ -147,8 +174,8 @@ fun SeasonPassScreen(
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                MedievalButton(
-                    text = "\uBAA8\uB450 \uC218\uB839 ($claimableTiers\uAC1C)",
+                NeonButton(
+                    text = "모두 수령 (${claimableTiers}개)",
                     onClick = {
                         val currentData = repository.gameData.value
                         val ct = currentData.seasonTier
@@ -163,7 +190,9 @@ fun SeasonPassScreen(
                                 cardReward += reward.cards
                             }
                         }
-                        val updatedData = currentData.copy(units = addRandomCardsToUnits(currentData.units, cardReward)).copy(
+                        val updatedData = currentData.copy(
+                            units = addRandomCardsToUnits(currentData.units, cardReward),
+                        ).copy(
                             gold = currentData.gold + goldReward,
                             diamonds = currentData.diamonds + diamondReward,
                             seasonClaimedTier = ct,
@@ -171,25 +200,26 @@ fun SeasonPassScreen(
                         repository.save(updatedData)
                         Toast.makeText(
                             context,
-                            "\uBCF4\uC0C1 \uC218\uB839! \uAD08\uB4DC+$goldReward" +
-                                if (diamondReward > 0) " \uB2E4\uC774\uC544+$diamondReward" else "" +
-                                    if (cardReward > 0) " \uCE74\uB4DC+$cardReward" else "",
+                            "보상 수령! 골드+$goldReward" +
+                                if (diamondReward > 0) " 다이아+$diamondReward" else "" +
+                                    if (cardReward > 0) " 카드+$cardReward" else "",
                             Toast.LENGTH_SHORT,
                         ).show()
                     },
-                    accentColor = PositiveGreen,
-                    fontSize = 14.sp,
+                    accentColor = NeonGreen,
+                    accentColorDark = NeonGreen.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
         // Section title
         Text(
-            text = "\u2500\u2500 \uBCF4\uC0C1 \uD2B8\uB799 \u2500\u2500",
-                        fontSize = 14.sp,
-            color = LightText.copy(alpha = 0.6f),
+            text = "\u2500\u2500 보상 트랙 \u2500\u2500",
+            fontSize = 13.sp,
+            color = SubText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -218,7 +248,9 @@ fun SeasonPassScreen(
                     isLocked = isLocked,
                     onClaim = {
                         val currentData = repository.gameData.value
-                        val updatedData = currentData.copy(units = addRandomCardsToUnits(currentData.units, reward.cards)).copy(
+                        val updatedData = currentData.copy(
+                            units = addRandomCardsToUnits(currentData.units, reward.cards),
+                        ).copy(
                             gold = currentData.gold + reward.gold,
                             diamonds = currentData.diamonds + reward.diamonds,
                             seasonClaimedTier = reward.tier,
@@ -226,14 +258,13 @@ fun SeasonPassScreen(
                         repository.save(updatedData)
                         Toast.makeText(
                             context,
-                            "\uD2F0\uC5B4 ${reward.tier} \uBCF4\uC0C1 \uC218\uB839!",
+                            "티어 ${reward.tier} 보상 수령!",
                             Toast.LENGTH_SHORT,
                         ).show()
                     },
                 )
             }
 
-            // Bottom spacing
             item {
                 Spacer(modifier = Modifier.width(8.dp))
             }
@@ -251,10 +282,10 @@ private fun TierCard(
     onClaim: () -> Unit,
 ) {
     val borderColor = when {
-        isCurrent -> Gold
-        isClaimed -> PositiveGreen.copy(alpha = 0.6f)
+        isCurrent -> NeonCyan
+        isClaimed -> NeonGreen.copy(alpha = 0.6f)
         isClaimable -> Gold.copy(alpha = 0.8f)
-        else -> SubText.copy(alpha = 0.4f)
+        else -> Divider
     }
 
     val cardModifier = Modifier
@@ -263,29 +294,29 @@ private fun TierCard(
             if (isCurrent) {
                 Modifier.border(
                     width = 2.dp,
-                    color = Gold,
-                    shape = RoundedCornerShape(10.dp),
+                    color = NeonCyan,
+                    shape = RoundedCornerShape(12.dp),
                 )
             } else {
                 Modifier
             },
         )
 
-    MedievalCard(
+    GameCard(
         modifier = cardModifier,
         borderColor = borderColor,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             // Tier number
             Text(
-                text = "\uD2F0\uC5B4 ${reward.tier}",
-                                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = if (isCurrent) Gold else LightText,
+                text = "티어 ${reward.tier}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = if (isCurrent) NeonCyan else LightText,
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -296,13 +327,13 @@ private fun TierCard(
                     painter = painterResource(id = R.drawable.ic_gold),
                     contentDescription = null,
                     tint = GoldCoin,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(14.dp),
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
                     text = "${reward.gold}",
-                                        fontSize = 12.sp,
-                    color = if (isLocked) LightText.copy(alpha = 0.5f) else LightText,
+                    fontSize = 11.sp,
+                    color = if (isLocked) SubText else LightText,
                 )
             }
 
@@ -313,58 +344,52 @@ private fun TierCard(
                         painter = painterResource(id = R.drawable.ic_diamond),
                         contentDescription = null,
                         tint = DiamondBlue,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(14.dp),
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(
                         text = "${reward.diamonds}",
-                                                fontSize = 12.sp,
-                        color = if (isLocked) LightText.copy(alpha = 0.5f) else LightText,
+                        fontSize = 11.sp,
+                        color = if (isLocked) SubText else LightText,
                     )
                 }
             }
 
             // Card reward (if any)
             if (reward.cards > 0) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "\uD83C\uDCCF",
-                        fontSize = 14.sp,
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        text = "${reward.cards}",
-                                                fontSize = 12.sp,
-                        color = if (isLocked) LightText.copy(alpha = 0.5f) else LightText,
-                    )
-                }
+                Text(
+                    text = "카드 x${reward.cards}",
+                    fontSize = 11.sp,
+                    color = if (isLocked) SubText else Gold,
+                )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             // Status
             when {
                 isClaimed -> {
                     Text(
                         text = "\u2713",
-                        fontSize = 20.sp,
-                        color = PositiveGreen,
+                        fontSize = 18.sp,
+                        color = NeonGreen,
                         fontWeight = FontWeight.Bold,
                     )
                 }
                 isClaimable -> {
-                    MedievalButton(
-                        text = "\uC218\uB839",
+                    NeonButton(
+                        text = "수령",
                         onClick = onClaim,
-                        fontSize = 11.sp,
-                        accentColor = PositiveGreen,
-                        modifier = Modifier.height(30.dp),
+                        fontSize = 10.sp,
+                        accentColor = NeonGreen,
+                        accentColorDark = NeonGreen.copy(alpha = 0.6f),
+                        modifier = Modifier.height(28.dp),
                     )
                 }
                 else -> {
                     Text(
                         text = "\uD83D\uDD12",
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         color = SubText.copy(alpha = 0.5f),
                     )
                 }
@@ -372,4 +397,3 @@ private fun TierCard(
         }
     }
 }
-

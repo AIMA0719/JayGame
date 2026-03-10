@@ -1,7 +1,6 @@
 package com.example.jaygame.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -26,27 +23,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
-import com.example.jaygame.ui.components.CurrencyHeader
-import com.example.jaygame.ui.components.GameProgressBar
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.components.MedievalCard
-import com.example.jaygame.ui.components.ScreenHeader
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.NeonProgressBar
+import com.example.jaygame.ui.components.ResourceHeader
 import com.example.jaygame.ui.theme.BorderGlow
-import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
+import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
 import com.example.jaygame.ui.theme.LightText
-import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonGreen
+import com.example.jaygame.ui.theme.NeonRed
+import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
 // ── Achievement definitions ──
@@ -109,7 +108,6 @@ private fun getProgress(achievement: AchievementDef, data: GameData): Int {
         in 9..11 -> data.units.count { it.owned }
         in 12..14 -> data.totalGoldEarned
         15 -> {
-            // Proxy: sum of all unit levels minus initial 15 (each starts at 1)
             val totalLevels = data.units.sumOf { it.level }
             (totalLevels - data.units.size).coerceAtLeast(0)
         }
@@ -140,35 +138,54 @@ fun AchievementsScreen(
             .fillMaxSize()
             .background(DeepDark),
     ) {
-        // Currency Header
-        CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
+        // Resource Header
+        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        ScreenHeader(title = "\uC5C5\uC801", onBack = onBack)
+        // Back button + title row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NeonButton(
+                text = "\u2190",
+                onClick = onBack,
+                modifier = Modifier.height(36.dp),
+                fontSize = 14.sp,
+                accentColor = NeonRed,
+                accentColorDark = NeonRedDark,
+            )
+            Text(
+                text = "업적",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Gold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.width(56.dp))
+        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Category tabs
-        ScrollableTabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = DarkNavy,
-            contentColor = LightText,
-            edgePadding = 8.dp,
-            divider = {},
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             categories.forEachIndexed { index, category ->
-                Tab(
-                    selected = selectedTabIndex == index,
+                NeonButton(
+                    text = category.label,
                     onClick = { selectedTabIndex = index },
-                    text = {
-                        Text(
-                            text = category.label,
-                                                        fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 14.sp,
-                            color = if (selectedTabIndex == index) Gold else LightText.copy(alpha = 0.7f),
-                        )
-                    },
+                    modifier = Modifier.weight(1f),
+                    fontSize = 12.sp,
+                    accentColor = if (selectedTabIndex == index) NeonRed else DimText,
+                    accentColorDark = if (selectedTabIndex == index) NeonRedDark else DimText.copy(alpha = 0.6f),
                 )
             }
         }
@@ -206,9 +223,9 @@ private fun AchievementItem(
     progress: Int,
     isCompleted: Boolean,
 ) {
-    val borderColor = if (isCompleted) PositiveGreen.copy(alpha = 0.8f) else BorderGlow
+    val borderColor = if (isCompleted) NeonGreen.copy(alpha = 0.7f) else BorderGlow
 
-    MedievalCard(
+    GameCard(
         modifier = Modifier.fillMaxWidth(),
         borderColor = borderColor,
     ) {
@@ -216,12 +233,15 @@ private fun AchievementItem(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Trophy icon
+            // Status indicator
             Text(
-                text = "\uD83C\uDFC6",
-                fontSize = 28.sp,
-                color = if (isCompleted) Gold else SubText,
-                modifier = Modifier.padding(end = 10.dp),
+                text = if (isCompleted) "\u2713" else "\u25CB",
+                fontSize = if (isCompleted) 22.sp else 18.sp,
+                color = if (isCompleted) NeonGreen else SubText,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .padding(end = 10.dp)
+                    .width(28.dp),
             )
 
             // Center: name, description, progress bar
@@ -230,20 +250,20 @@ private fun AchievementItem(
             ) {
                 Text(
                     text = achievement.name,
-                                        fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = if (isCompleted) Gold else LightText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (isCompleted) NeonGreen else LightText,
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
                     text = achievement.description,
-                                        fontSize = 12.sp,
-                    color = LightText.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    color = SubText,
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(5.dp))
 
                 val clampedProgress = progress.coerceAtMost(achievement.threshold)
                 val fraction = if (achievement.threshold > 0) {
@@ -252,14 +272,18 @@ private fun AchievementItem(
                     0f
                 }
 
-                GameProgressBar(progress = fraction, height = 14.dp)
+                NeonProgressBar(
+                    progress = fraction,
+                    height = 10.dp,
+                    barColor = if (isCompleted) NeonGreen else NeonCyan,
+                )
 
                 Spacer(modifier = Modifier.height(3.dp))
 
                 Text(
                     text = "$clampedProgress / ${achievement.threshold}",
-                                        fontSize = 11.sp,
-                    color = if (isCompleted) PositiveGreen else LightText.copy(alpha = 0.6f),
+                    fontSize = 10.sp,
+                    color = if (isCompleted) NeonGreen else SubText,
                 )
             }
 
@@ -276,12 +300,12 @@ private fun AchievementItem(
                             painter = painterResource(id = R.drawable.ic_gold),
                             contentDescription = null,
                             tint = GoldCoin,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(13.dp),
                         )
                         Spacer(Modifier.width(2.dp))
                         Text(
                             text = "${achievement.goldReward}",
-                                                        fontSize = 12.sp,
+                            fontSize = 11.sp,
                             color = LightText,
                         )
                     }
@@ -292,12 +316,12 @@ private fun AchievementItem(
                             painter = painterResource(id = R.drawable.ic_diamond),
                             contentDescription = null,
                             tint = DiamondBlue,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(13.dp),
                         )
                         Spacer(Modifier.width(2.dp))
                         Text(
                             text = "${achievement.diamondReward}",
-                                                        fontSize = 12.sp,
+                            fontSize = 11.sp,
                             color = LightText,
                         )
                     }
