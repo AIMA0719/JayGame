@@ -6,21 +6,15 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.theme.*
+import com.example.jaygame.ui.battle.BattleBottomHud
+import com.example.jaygame.ui.battle.BattleTopHud
+import com.example.jaygame.ui.theme.JayGameTheme
 import com.google.androidgamesdk.GameActivity
 
 class MainActivity : GameActivity() {
@@ -47,27 +41,48 @@ class MainActivity : GameActivity() {
             }
         })
 
-        // Add Compose overlay on top of C++ SurfaceView
+        // Add Compose overlays on top of C++ SurfaceView
         addBattleOverlay()
     }
 
     private fun addBattleOverlay() {
-        val composeView = ComposeView(this).apply {
+        // Top HUD overlay
+        val topView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@MainActivity)
             setViewTreeSavedStateRegistryOwner(this@MainActivity)
             setContent {
                 JayGameTheme {
-                    BattleOverlayContent()
+                    BattleTopHud()
                 }
             }
         }
-
-        val params = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM,
+        addContentView(
+            topView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP,
+            ),
         )
-        addContentView(composeView, params)
+
+        // Bottom HUD overlay
+        val bottomView = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(this@MainActivity)
+            setViewTreeSavedStateRegistryOwner(this@MainActivity)
+            setContent {
+                JayGameTheme {
+                    BattleBottomHud()
+                }
+            }
+        }
+        addContentView(
+            bottomView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM,
+            ),
+        )
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -80,45 +95,6 @@ class MainActivity : GameActivity() {
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
-}
-
-@Composable
-private fun BattleOverlayContent() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(DeepDark.copy(alpha = 0.9f))
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // Summon button
-        MedievalButton(
-            text = "⚡ 소환 SUMMON",
-            onClick = { /* TODO: JNI call */ },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            fontSize = 18.sp,
-            accentColor = Gold,
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Bottom tab bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            listOf("에테르", "미션", "롤러럭키", "스크롤", "강화").forEach { tab ->
-                MedievalButton(
-                    text = tab,
-                    onClick = { /* 준비 중 */ },
-                    fontSize = 11.sp,
-                    accentColor = SubText,
-                )
-            }
         }
     }
 }
