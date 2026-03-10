@@ -13,6 +13,7 @@ struct WaveConfig {
     float enemyHP;
     float enemySpeed;
     float enemyArmor;
+    float magicResist;   // magic damage reduction (0.0-1.0)
     bool isBoss;
     int spReward;        // SP reward for clearing wave
     float spawnInterval; // seconds between enemy spawns

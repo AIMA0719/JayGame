@@ -1,297 +1,90 @@
 #include "MergeSystem.h"
 #include "Unit.h"
 #include "UnitData.h"
-#include "SpriteBatch.h"
-#include "TextureAsset.h"
-#include "SpriteAtlas.h"
 #include "AndroidOut.h"
 
-#include <cmath>
+#include <cstdlib>
+#include <vector>
 
-void MergeSystem::onDragBegin(const Vec2& worldPos, Grid& grid) {
-    if (state_ != DragState::Idle) return;
+SmartMergeResult MergeSystem::trySmartMerge(int tileIndex, Grid& grid, ObjectPool<Unit>& unitPool) {
+    SmartMergeResult result;
 
-    int row, col;
-    if (!grid.getCellAt(worldPos, row, col)) return;
+    int row = tileIndex / Grid::COLS;
+    int col = tileIndex % Grid::COLS;
 
-    Unit* unit = grid.getUnit(row, col);
-    if (!unit || !unit->active) return;
+    if (!grid.isValid(row, col)) return result;
 
-    // Start dragging
-    state_ = DragState::Dragging;
-    dragUnit_ = unit;
-    dragSourceRow_ = row;
-    dragSourceCol_ = col;
-    dragCurrentPos_ = worldPos;
-    highlightRow_ = -1;
-    highlightCol_ = -1;
+    Unit* clickedUnit = grid.getUnit(row, col);
+    if (!clickedUnit || !clickedUnit->active) return result;
 
-    aout << "Drag started: unit " << unit->unitDefId << " lv" << unit->level
-         << " from (" << row << "," << col << ")" << std::endl;
-}
+    int family = clickedUnit->unitDefId % 5;
+    int grade = clickedUnit->unitDefId / 5;
 
-void MergeSystem::onDragMove(const Vec2& worldPos) {
-    if (state_ != DragState::Dragging) return;
-    dragCurrentPos_ = worldPos;
+    // Can't merge if already at max grade
+    if (grade >= MAX_GRADE) return result;
 
-    // Update highlight (which cell the finger is over)
-    int row, col;
-    Grid tempGrid; // just for coordinate conversion
-    if (tempGrid.getCellAt(worldPos, row, col)) {
-        highlightRow_ = row;
-        highlightCol_ = col;
-    } else {
-        highlightRow_ = -1;
-        highlightCol_ = -1;
-    }
-}
+    // Find all units of same family+grade on the grid
+    struct UnitPos { Unit* unit; int r; int c; };
+    std::vector<UnitPos> sameUnits;
 
-MergeSystem::MergeResult MergeSystem::onDragEnd(const Vec2& worldPos,
-                                                  Grid& grid,
-                                                  ObjectPool<Unit>& unitPool) {
-    if (state_ != DragState::Dragging || !dragUnit_) {
-        state_ = DragState::Idle;
-        lastResult_ = MergeResult::Cancelled;
-        return lastResult_;
-    }
-
-    int targetRow, targetCol;
-    if (!grid.getCellAt(worldPos, targetRow, targetCol)) {
-        // Dropped outside grid — cancel
-        state_ = DragState::Idle;
-        dragUnit_ = nullptr;
-        lastResult_ = MergeResult::Cancelled;
-        aout << "Drag cancelled: dropped outside grid" << std::endl;
-        return lastResult_;
-    }
-
-    // Same cell — cancel
-    if (targetRow == dragSourceRow_ && targetCol == dragSourceCol_) {
-        state_ = DragState::Idle;
-        dragUnit_ = nullptr;
-        lastResult_ = MergeResult::Cancelled;
-        return lastResult_;
-    }
-
-    Unit* targetUnit = grid.getUnit(targetRow, targetCol);
-
-    if (!targetUnit) {
-        // Empty cell — move
-        grid.removeUnit(dragSourceRow_, dragSourceCol_);
-        Vec2 newPos = grid.cellCenter(targetRow, targetCol);
-        dragUnit_->position = newPos;
-        dragUnit_->entity.transform.position = newPos;
-        dragUnit_->entity.transform.syncPrevious();
-        grid.placeUnit(targetRow, targetCol, dragUnit_);
-
-        aout << "Moved unit to (" << targetRow << "," << targetCol << ")" << std::endl;
-        state_ = DragState::Idle;
-        dragUnit_ = nullptr;
-        lastResult_ = MergeResult::Moved;
-        return lastResult_;
-    }
-
-    // Target cell has a unit
-    // 3-unit merge: same family + same grade → next grade
-    {
-        int dragFamily = dragUnit_->unitDefId % 5;
-        int dragGrade  = dragUnit_->unitDefId / 5;
-        int targetFamily = targetUnit->unitDefId % 5;
-        int targetGrade  = targetUnit->unitDefId / 5;
-
-        if (dragFamily == targetFamily &&
-            dragGrade == targetGrade &&
-            dragGrade < MAX_GRADE) {
-
-            // Find a 3rd unit of same family+grade on the grid
-            Unit* third = findThirdUnit(grid, dragFamily, dragGrade,
-                                        dragUnit_, targetUnit);
-
-            if (third) {
-                int mergeResultId = dragUnit_->unitDefId + 5;
-                if (mergeResultId >= 0 && mergeResultId < static_cast<int>(UNIT_TABLE_SIZE)) {
-                    aout << "3-unit merge! " << getUnitDef(dragUnit_->unitDefId).name
-                         << " x3 → " << getUnitDef(mergeResultId).name << std::endl;
-
-                    // Remove source unit
-                    grid.removeUnit(dragSourceRow_, dragSourceCol_);
-                    dragUnit_->active = false;
-                    unitPool.release(dragUnit_);
-
-                    // Remove third unit from grid
-                    int thirdRow, thirdCol;
-                    if (grid.findUnit(third, thirdRow, thirdCol)) {
-                        grid.removeUnit(thirdRow, thirdCol);
-                    }
-                    third->active = false;
-                    unitPool.release(third);
-
-                    // Transform target into merge result
-                    Vec2 targetPos = grid.cellCenter(targetRow, targetCol);
-                    grid.removeUnit(targetRow, targetCol);
-                    targetUnit->init(mergeResultId, targetPos);
-                    grid.placeUnit(targetRow, targetCol, targetUnit);
-
-                    state_ = DragState::Idle;
-                    dragUnit_ = nullptr;
-                    lastResult_ = MergeResult::Merged;
-                    return lastResult_;
-                }
-            }
-        }
-    }
-
-    // Can't merge (different type, different level, or max level) — swap
-    aout << "Swap: (" << dragSourceRow_ << "," << dragSourceCol_
-         << ") <-> (" << targetRow << "," << targetCol << ")" << std::endl;
-
-    grid.removeUnit(dragSourceRow_, dragSourceCol_);
-    grid.removeUnit(targetRow, targetCol);
-
-    // Swap positions
-    Vec2 srcPos = grid.cellCenter(dragSourceRow_, dragSourceCol_);
-    Vec2 tgtPos = grid.cellCenter(targetRow, targetCol);
-
-    dragUnit_->position = tgtPos;
-    dragUnit_->entity.transform.position = tgtPos;
-    dragUnit_->entity.transform.syncPrevious();
-
-    targetUnit->position = srcPos;
-    targetUnit->entity.transform.position = srcPos;
-    targetUnit->entity.transform.syncPrevious();
-
-    grid.placeUnit(dragSourceRow_, dragSourceCol_, targetUnit);
-    grid.placeUnit(targetRow, targetCol, dragUnit_);
-
-    state_ = DragState::Idle;
-    dragUnit_ = nullptr;
-    lastResult_ = MergeResult::Swapped;
-    return lastResult_;
-}
-
-void MergeSystem::onDragCancel(Grid& grid) {
-    state_ = DragState::Idle;
-    dragUnit_ = nullptr;
-    lastResult_ = MergeResult::Cancelled;
-}
-
-Unit* MergeSystem::findThirdUnit(const Grid& grid, int family, int grade,
-                                  Unit* exclude1, Unit* exclude2) const {
     for (int r = 0; r < Grid::ROWS; r++) {
         for (int c = 0; c < Grid::COLS; c++) {
             Unit* u = grid.getUnit(r, c);
             if (!u || !u->active) continue;
-            if (u == exclude1 || u == exclude2) continue;
             int uFamily = u->unitDefId % 5;
-            int uGrade  = u->unitDefId / 5;
+            int uGrade = u->unitDefId / 5;
             if (uFamily == family && uGrade == grade) {
-                return u;
+                sameUnits.push_back({u, r, c});
             }
         }
     }
-    return nullptr;
-}
 
-void MergeSystem::render(SpriteBatch& batch, const SpriteAtlas& atlas,
-                          const Grid& grid) const {
-    if (state_ != DragState::Dragging || !dragUnit_) return;
+    // Need at least 3 to merge
+    if (sameUnits.size() < 3) return result;
 
-    const auto& texture = *atlas.getTexture();
-    const auto& wp = atlas.getWhitePixel();
+    // Determine merge result grade
+    int resultGrade = grade + 1;
+    bool lucky = false;
 
-    renderSourceOutline(batch, texture, wp, grid);
-    renderHighlight(batch, texture, wp, grid);
-    renderGhost(batch, texture, wp);
-}
-
-void MergeSystem::renderGhost(SpriteBatch& batch, const TextureAsset& texture,
-                               const SpriteFrame& wp) const {
-    if (!dragUnit_) return;
-
-    Vec2 sz = dragUnit_->entity.sprite.size;
-    Vec4 color = dragUnit_->entity.sprite.color;
-    color.w = 0.6f; // semi-transparent ghost
-
-    batch.draw(texture,
-               dragCurrentPos_, sz,
-               {0.f, 0.f, 1.f, 1.f},
-               color,
-               0.f,
-               {0.5f, 0.5f});
-
-    // Level indicator dot
-    float levelSize = 8.f + dragUnit_->level * 2.f;
-    batch.draw(texture,
-               dragCurrentPos_.x - levelSize * 0.5f,
-               dragCurrentPos_.y - sz.y * 0.5f - levelSize - 4.f,
-               levelSize, levelSize,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               1.f, 1.f, 0.f, 0.8f);
-}
-
-void MergeSystem::renderHighlight(SpriteBatch& batch, const TextureAsset& texture,
-                                   const SpriteFrame& wp, const Grid& grid) const {
-    if (highlightRow_ < 0 || highlightCol_ < 0) return;
-    if (highlightRow_ == dragSourceRow_ && highlightCol_ == dragSourceCol_) return;
-
-    Vec2 cellTopLeft = grid.worldToCell(highlightRow_, highlightCol_);
-
-    // Determine highlight color based on what would happen
-    Vec4 hlColor;
-    Unit* targetUnit = grid.getUnit(highlightRow_, highlightCol_);
-
-    if (!targetUnit) {
-        // Empty cell — move (blue)
-        hlColor = {0.3f, 0.5f, 1.0f, 0.3f};
-    } else if (dragUnit_ && targetUnit) {
-        int dragFamily = dragUnit_->unitDefId % 5;
-        int dragGrade  = dragUnit_->unitDefId / 5;
-        int targetFamily = targetUnit->unitDefId % 5;
-        int targetGrade  = targetUnit->unitDefId / 5;
-
-        if (dragFamily == targetFamily &&
-            dragGrade == targetGrade &&
-            dragGrade < MAX_GRADE) {
-            // 3-unit merge possible (green)
-            hlColor = {0.2f, 1.0f, 0.3f, 0.4f};
-        } else {
-            // Swap (orange)
-            hlColor = {1.0f, 0.6f, 0.2f, 0.3f};
-        }
-    } else {
-        hlColor = {0.5f, 0.5f, 0.5f, 0.2f};
+    // 5% lucky chance: skip one grade
+    float luckyRoll = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 100.f;
+    if (luckyRoll < 5.f && resultGrade + 1 <= MAX_GRADE) {
+        resultGrade += 1;
+        lucky = true;
     }
 
-    batch.draw(texture,
-               cellTopLeft.x, cellTopLeft.y,
-               Grid::CELL_W, Grid::CELL_H,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               hlColor.x, hlColor.y, hlColor.z, hlColor.w);
-}
+    int mergeResultId = resultGrade * 5 + family;
+    if (mergeResultId < 0 || mergeResultId >= static_cast<int>(UNIT_TABLE_SIZE)) return result;
 
-void MergeSystem::renderSourceOutline(SpriteBatch& batch, const TextureAsset& texture,
-                                       const SpriteFrame& wp, const Grid& grid) const {
-    if (dragSourceRow_ < 0 || dragSourceCol_ < 0) return;
+    aout << "Smart merge! " << getUnitDef(clickedUnit->unitDefId).name
+         << " x3 -> " << getUnitDef(mergeResultId).name
+         << (lucky ? " (LUCKY!)" : "") << std::endl;
 
-    Vec2 cellTopLeft = grid.worldToCell(dragSourceRow_, dragSourceCol_);
-    constexpr float LINE_W = 3.f;
+    // Consume 3 units (prefer the clicked one to be the one that stays)
+    // Remove clicked unit from consumed list — it will be transformed
+    int consumed = 0;
+    for (auto& up : sameUnits) {
+        if (up.unit == clickedUnit) continue;  // skip clicked unit
+        if (consumed >= 2) break;
 
-    // Faded outline of original cell
-    batch.draw(texture,
-               cellTopLeft.x, cellTopLeft.y,
-               Grid::CELL_W, Grid::CELL_H,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               0.5f, 0.5f, 0.5f, 0.15f);
+        grid.removeUnit(up.r, up.c);
+        up.unit->active = false;
+        unitPool.release(up.unit);
+        consumed++;
+    }
 
-    // Border
-    batch.draw(texture, cellTopLeft.x, cellTopLeft.y, Grid::CELL_W, LINE_W,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h, 1.f, 1.f, 1.f, 0.3f);
-    batch.draw(texture, cellTopLeft.x, cellTopLeft.y + Grid::CELL_H - LINE_W,
-               Grid::CELL_W, LINE_W,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h, 1.f, 1.f, 1.f, 0.3f);
-    batch.draw(texture, cellTopLeft.x, cellTopLeft.y, LINE_W, Grid::CELL_H,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h, 1.f, 1.f, 1.f, 0.3f);
-    batch.draw(texture, cellTopLeft.x + Grid::CELL_W - LINE_W, cellTopLeft.y,
-               LINE_W, Grid::CELL_H,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h, 1.f, 1.f, 1.f, 0.3f);
+    // Transform clicked unit into merge result
+    Vec2 pos = grid.cellCenter(row, col);
+    grid.removeUnit(row, col);
+    clickedUnit->init(mergeResultId, pos);
+    clickedUnit->gridRow = row;
+    clickedUnit->gridCol = col;
+    grid.placeUnit(row, col, clickedUnit);
+
+    result.success = true;
+    result.lucky = lucky;
+    result.resultUnitId = mergeResultId;
+    result.consumedCount = consumed + 1;  // including the transformed one
+
+    return result;
 }

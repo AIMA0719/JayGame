@@ -18,13 +18,17 @@
 #include <cstdlib>
 #include <algorithm>
 
-// Static member
+// Static members
 std::atomic<bool> BattleScene::summonRequested{false};
+std::atomic<int> BattleScene::clickedTileIndex{-1};
+std::atomic<int> BattleScene::mergeRequestUnitId{-1};
+std::atomic<int> BattleScene::sellRequestTileIndex{-1};
 
 // JNI state push — cached references
 static jclass g_bridgeClass = nullptr;
 static jmethodID g_updateMethod = nullptr;
 static jmethodID g_battleEndMethod = nullptr;
+static jmethodID g_pushGridMethod = nullptr;
 static bool g_jniInitialized = false;
 static float g_statePushTimer = 0.f;
 static constexpr float STATE_PUSH_INTERVAL = 0.1f; // push 10 times/sec
@@ -76,18 +80,22 @@ void BattleScene::onEnter() {
     grid_.clear();
     waveManager_.init();
 
-    // Reset player state
-    playerHP_ = 20;
+    // Reset player state (no HP system — lose only by 100 monsters)
     sp_ = 100.f;
     summonCount_ = 0;
     currentWave_ = 0;
     killCount_ = 0;
     mergeCount_ = 0;
-    hpLost_ = 0;
     waveTimer_ = 0.f;
     bossTimer_ = 0.f;
     isBossRound_ = false;
+    gridPushTimer_ = 0.f;
     unitTypesUsed_.clear();
+
+    // Reset atomic flags
+    clickedTileIndex.store(-1, std::memory_order_release);
+    mergeRequestUnitId.store(-1, std::memory_order_release);
+    sellRequestTileIndex.store(-1, std::memory_order_release);
 
     // Copy deck and stage data from PlayerData
     auto& pd = PlayerData::get();
@@ -122,8 +130,11 @@ void BattleScene::onEnter() {
                     "(IIIIFFIIIIF)V");
                 g_battleEndMethod = env->GetStaticMethodID(g_bridgeClass, "onBattleEnd",
                     "(ZIIIIII)V");
+                g_pushGridMethod = env->GetStaticMethodID(g_bridgeClass, "updateGridState",
+                    "([I[I[I[Z)V");
                 g_jniInitialized = (g_updateMethod != nullptr && g_battleEndMethod != nullptr);
-                aout << "BattleBridge JNI initialized: " << g_jniInitialized << std::endl;
+                aout << "BattleBridge JNI initialized: " << g_jniInitialized
+                     << " gridMethod: " << (g_pushGridMethod != nullptr) << std::endl;
             }
         }
     }
@@ -142,23 +153,35 @@ void BattleScene::onExit() {
 }
 
 void BattleScene::setupPath() {
-    // S-shape path along the right/bottom of the screen
+    // S-shape path in top area (y: 30-280) — monsters traverse above the grid
     pathWaypoints_.clear();
-    pathWaypoints_.push_back({760.f,  60.f});
-    pathWaypoints_.push_back({1220.f, 60.f});
-    pathWaypoints_.push_back({1220.f, 240.f});
-    pathWaypoints_.push_back({760.f,  240.f});
-    pathWaypoints_.push_back({760.f,  420.f});
-    pathWaypoints_.push_back({1220.f, 420.f});
-    pathWaypoints_.push_back({1220.f, 660.f});
-    pathWaypoints_.push_back({760.f,  660.f});
-    pathWaypoints_.push_back({40.f,   660.f});
+    pathWaypoints_.push_back({40.f,   60.f});   // start left
+    pathWaypoints_.push_back({1240.f, 60.f});   // go right
+    pathWaypoints_.push_back({1240.f, 160.f});  // down
+    pathWaypoints_.push_back({40.f,   160.f});  // go left
+    pathWaypoints_.push_back({40.f,   260.f});  // down
+    pathWaypoints_.push_back({1240.f, 260.f});  // go right
+    // Path ends here, monsters loop back to start
 }
 
 void BattleScene::onUpdate(float dt) {
     // Check summon request from Compose
     if (summonRequested.exchange(false, std::memory_order_acq_rel)) {
         summonUnit();
+    }
+
+    // Check click/merge/sell requests from Compose
+    {
+        int tile = clickedTileIndex.exchange(-1, std::memory_order_acq_rel);
+        if (tile >= 0) handleTileClick(tile);
+    }
+    {
+        int tile = mergeRequestUnitId.exchange(-1, std::memory_order_acq_rel);
+        if (tile >= 0) handleMergeRequest(tile);
+    }
+    {
+        int tile = sellRequestTileIndex.exchange(-1, std::memory_order_acq_rel);
+        if (tile >= 0) handleSellRequest(tile);
     }
 
     // Push state to Compose HUD periodically
@@ -176,7 +199,7 @@ void BattleScene::onUpdate(float dt) {
 
             env->CallStaticVoidMethod(g_bridgeClass, g_updateMethod,
                 currentWave_, maxWaves_,
-                playerHP_, 20,
+                20, 20,  // HP always 20 (no HP system)
                 sp_, waveTimer_,
                 static_cast<int>(state_),
                 static_cast<int>(getSummonCost()),
@@ -184,6 +207,13 @@ void BattleScene::onUpdate(float dt) {
                 isBossRound_ ? 1 : 0,
                 bossTimer_);
         }
+    }
+
+    // Push grid state periodically
+    gridPushTimer_ -= dt;
+    if (gridPushTimer_ <= 0.f) {
+        gridPushTimer_ = GRID_PUSH_INTERVAL;
+        pushGridState();
     }
 
     switch (state_) {
@@ -273,20 +303,9 @@ void BattleScene::updateEnemies(float dt) {
             killCount_++;
             enemy.active = false;
             enemyPool_.release(&enemy);
-        } else if (enemy.reachedEnd()) {
-            // Enemy reached the end - player takes damage
-            playerHP_--;
-            hpLost_++;
-            waveManager_.onEnemyEscaped();
-            enemy.active = false;
-            enemyPool_.release(&enemy);
-
-            if (playerHP_ <= 0) {
-                state_ = State::Defeat;
-                aout << "DEFEAT! Wave " << currentWave_ << std::endl;
-                notifyBattleEnd(false, currentWave_, currentWave_ * 10, -15);
-            }
         }
+        // Enemies loop automatically in Enemy::update() — no reachedEnd check needed
+        // Defeat condition is checked separately via active enemy count >= 100
     });
 }
 
@@ -307,10 +326,12 @@ void BattleScene::updateProjectiles(float dt) {
         if (!proj.active && wasPrevActive) {
             // Projectile just finished
             if (proj.hasHit() && proj.getHitTarget() && proj.sourceUnitId >= 0) {
-                // Find the source unit to apply ability effects
+                // Apply damage with magic flag
                 Enemy* hitEnemy = proj.getHitTarget();
                 if (hitEnemy->active && !hitEnemy->isDead()) {
-                    // Find source unit by scanning pool (lightweight for pool sizes < 64)
+                    hitEnemy->takeDamage(proj.damage, proj.isMagic);
+
+                    // Find source unit to apply ability effects
                     unitPool_.forEach([&](Unit& unit) {
                         if (unit.active && unit.unitDefId == proj.sourceUnitId) {
                             Ability::onProjectileHit(unit, *hitEnemy, proj.damage,
@@ -369,6 +390,8 @@ void BattleScene::summonUnit() {
 
     Vec2 cellPos = grid_.cellCenter(row, col);
     unit->init(def.id, cellPos);
+    unit->gridRow = row;
+    unit->gridCol = col;
 
     // Place on grid
     grid_.placeUnit(row, col, unit);
@@ -419,7 +442,7 @@ void BattleScene::notifyBattleEnd(bool victory, int waveReached, int goldEarned,
     if (waveReached > pd.highestWave) pd.highestWave = waveReached;
     pd.totalKills += killCount_;
     pd.totalMerges += mergeCount_;
-    if (victory && hpLost_ == 0) pd.wonWithoutDamage = true;
+    if (victory) pd.wonWithoutDamage = true;  // no HP system — all victories are "without damage"
     if (victory && unitTypesUsed_.size() <= 1) pd.wonWithSingleType = true;
     SeasonPass::addBattleXP();
     AchievementSystem::get().checkAndUnlock();
@@ -448,8 +471,10 @@ void BattleScene::startNextWave() {
     // Boss round detection
     isBossRound_ = (currentWave_ % 10 == 0) && (currentWave_ > 0);
     if (isBossRound_) {
-        bossTimer_ = BOSS_TIME_LIMIT;
-        aout << "BOSS ROUND! Time limit: " << BOSS_TIME_LIMIT << "s" << std::endl;
+        // Boss timer: 60 - (currentWave / 10) * 5, minimum 30s
+        float bossTime = 60.f - static_cast<float>(currentWave_ / 10) * 5.f;
+        bossTimer_ = std::max(30.f, bossTime);
+        aout << "BOSS ROUND! Time limit: " << bossTimer_ << "s" << std::endl;
     }
 }
 
@@ -513,8 +538,7 @@ void BattleScene::onRender(float alpha, SpriteBatch& batch) {
         }
     });
 
-    // 6. Render merge system (ghost sprite, highlights)
-    mergeSystem_.render(batch, atlas_, grid_);
+    // 6. Merge system rendering removed — now click-based via Compose overlay
 
     // 7. HUD rendering disabled — now handled by Compose overlay
     // renderHUD(batch);
@@ -553,53 +577,14 @@ void BattleScene::renderPath(SpriteBatch& batch) {
 }
 
 void BattleScene::renderHUD(SpriteBatch& batch) {
-    auto& text = engine_.getTextRenderer();
-    const auto& tex = *atlas_.getTexture();
-    const auto& wp = atlas_.getWhitePixel();
-    const auto& panel = atlas_.getHud("panel");
-    char buf[64];
-
-    // === Top HUD bar (horizontal) ===
-    batch.draw(tex, 0.f, 0.f, 1280.f, 50.f,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               0.1f, 0.08f, 0.06f, 0.85f);
-
-    // HP (left)
-    const auto& hpIcon = atlas_.getHud("icon_hp");
-    batch.draw(tex, {10.f, 8.f}, {28.f, 28.f},
-               hpIcon.uvRect, {1.f,1.f,1.f,1.f}, 0.f, {0.f,0.f});
-    snprintf(buf, sizeof(buf), "%d", playerHP_);
-    float hpRatio = static_cast<float>(playerHP_) / 20.f;
-    Vec4 hpColor = hpRatio > 0.5f ? Vec4{0.3f, 1.f, 0.4f, 1.f}
-                                    : Vec4{1.f, 0.3f, 0.3f, 1.f};
-    text.drawText(batch, buf, 42.f, 15.f, 3.f, hpColor);
-
-    // Round (center-left)
-    snprintf(buf, sizeof(buf), "Round %d/%d", currentWave_, maxWaves_);
-    text.drawText(batch, buf, 400.f, 15.f, 2.8f, {0.5f, 0.8f, 1.f, 1.f}, TextAlign::Center);
-
-    // Timer (center)
-    int minutes = static_cast<int>(waveTimer_) / 60;
-    int seconds = static_cast<int>(waveTimer_) % 60;
-    snprintf(buf, sizeof(buf), "%02d:%02d", minutes, seconds);
-    text.drawText(batch, buf, 640.f, 15.f, 2.8f, {1.f, 1.f, 1.f, 0.9f}, TextAlign::Center);
-
-    // SP bar (right)
-    const auto& spIcon = atlas_.getHud("icon_sp");
-    batch.draw(tex, {880.f, 8.f}, {28.f, 28.f},
-               spIcon.uvRect, {1.f,1.f,1.f,1.f}, 0.f, {0.f,0.f});
-    batch.draw(tex, 916.f, 14.f, 280.f, 22.f,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               0.15f, 0.15f, 0.15f, 0.7f);
-    float spRatio = std::min(sp_ / 200.f, 1.f);
-    batch.draw(tex, 916.f, 14.f, 280.f * spRatio, 22.f,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               0.9f, 0.8f, 0.2f, 0.85f);
-    snprintf(buf, sizeof(buf), "SP %.0f/200", sp_);
-    text.drawText(batch, buf, 1056.f, 15.f, 2.f, {1.f, 1.f, 1.f, 0.9f}, TextAlign::Center);
-
-    // Wave delay overlay
+    // HUD rendering is now handled entirely by Compose overlay.
+    // This method is kept as a stub for wave delay overlay rendered in C++.
     if (state_ == State::WaveDelay) {
+        auto& text = engine_.getTextRenderer();
+        const auto& tex = *atlas_.getTexture();
+        const auto& panel = atlas_.getHud("panel");
+        char buf[64];
+
         float pulse = 0.5f + 0.5f * std::sin(waveDelayTimer_ * 4.f);
         batch.draw(tex, 440.f, 330.f, 400.f, 60.f,
                    panel.uvRect.x, panel.uvRect.y, panel.uvRect.w, panel.uvRect.h,
@@ -608,103 +593,142 @@ void BattleScene::renderHUD(SpriteBatch& batch) {
         text.drawText(batch, buf, 640.f, 345.f, 3.f,
                       {0.5f, 0.8f, 1.f, pulse}, TextAlign::Center);
     }
-
-    // Summon button (keep for now, will be moved to Compose overlay later)
-    float cost = getSummonCost();
-    bool canSummon = (sp_ >= cost) && (grid_.getEmptyCellCount() > 0);
-    const auto& btnSprite = canSummon
-        ? atlas_.getHud("btn_normal")
-        : atlas_.getHud("btn_disabled");
-    Vec4 btnTint = canSummon
-        ? Vec4{0.7f, 1.f, 0.8f, 0.95f}
-        : Vec4{0.7f, 0.5f, 0.5f, 0.7f};
-    batch.draw(tex,
-               SUMMON_BUTTON.x, SUMMON_BUTTON.y, SUMMON_BUTTON.w, SUMMON_BUTTON.h,
-               btnSprite.uvRect.x, btnSprite.uvRect.y,
-               btnSprite.uvRect.w, btnSprite.uvRect.h,
-               btnTint.x, btnTint.y, btnTint.z, btnTint.w);
-    const auto& summonIcon = atlas_.getHud("icon_summon");
-    batch.draw(tex,
-               {SUMMON_BUTTON.x + SUMMON_BUTTON.w * 0.5f - 10.f, SUMMON_BUTTON.y + 5.f},
-               {20.f, 20.f},
-               summonIcon.uvRect, {1.f,1.f,1.f,0.9f}, 0.f, {0.f,0.f});
-    snprintf(buf, sizeof(buf), "SUMMON");
-    text.drawText(batch, buf,
-                  SUMMON_BUTTON.x + SUMMON_BUTTON.w * 0.5f,
-                  SUMMON_BUTTON.y + 28.f,
-                  2.f, {1.f, 1.f, 1.f, 0.9f}, TextAlign::Center);
-    snprintf(buf, sizeof(buf), "%.0f SP", cost);
-    text.drawText(batch, buf,
-                  SUMMON_BUTTON.x + SUMMON_BUTTON.w * 0.5f,
-                  SUMMON_BUTTON.y + 50.f,
-                  1.8f, {0.9f, 0.8f, 0.3f, 0.8f}, TextAlign::Center);
 }
 
 void BattleScene::onInput(const InputEvent& event) {
     if (state_ == State::Victory || state_ == State::Defeat) return;
 
-    Vec2 pos = event.worldPos;
-
-    // Handle merge system drag events
-    switch (event.action) {
-        case InputAction::DragBegin:
-            // Only start drag if on a unit in the grid
-            if (!SUMMON_BUTTON.contains(pos)) {
-                mergeSystem_.onDragBegin(pos, grid_);
-            }
-            break;
-
-        case InputAction::DragMove:
-            if (mergeSystem_.isDragging()) {
-                mergeSystem_.onDragMove(pos);
-            }
-            break;
-
-        case InputAction::DragEnd: {
-            if (mergeSystem_.isDragging()) {
-                auto result = mergeSystem_.onDragEnd(pos, grid_, unitPool_);
-                switch (result) {
-                    case MergeSystem::MergeResult::Merged:
-                        mergeCount_++;
-                        aout << "3-unit merge successful!" << std::endl;
-                        break;
-                    default:
-                        break;
-                }
-                return; // consume event
-            }
-            break;
+    // All interaction is now click-based via Compose overlay (JNI).
+    // This method handles raw touch events on the C++ rendering surface.
+    if (event.action == InputAction::Tap) {
+        Vec2 pos = event.worldPos;
+        int row, col;
+        if (grid_.getCellAt(pos, row, col)) {
+            int tileIndex = row * Grid::COLS + col;
+            handleTileClick(tileIndex);
         }
-
-        case InputAction::Cancel:
-            if (mergeSystem_.isDragging()) {
-                mergeSystem_.onDragCancel(grid_);
-                return;
-            }
-            break;
-
-        case InputAction::Tap:
-            // Summon button
-            if (SUMMON_BUTTON.contains(pos)) {
-                summonUnit();
-                return;
-            }
-            // Info tap on unit
-            {
-                int row, col;
-                if (grid_.getCellAt(pos, row, col)) {
-                    Unit* unit = grid_.getUnit(row, col);
-                    if (unit) {
-                        const UnitDef& def = getUnitDef(unit->unitDefId);
-                        aout << "Unit: " << def.name << " lv" << unit->level
-                             << " ATK=" << unit->getDamage()
-                             << " SPD=" << unit->getAtkSpeed() << std::endl;
-                    }
-                }
-            }
-            break;
-
-        default:
-            break;
     }
+}
+
+void BattleScene::summonUnitAt(int tileIndex) {
+    int row = tileIndex / Grid::COLS;
+    int col = tileIndex % Grid::COLS;
+    if (!grid_.isValid(row, col) || !grid_.isEmpty(row, col)) return;
+
+    float cost = getSummonCost();
+    if (sp_ < cost) return;
+
+    const UnitDef& def = rollRandomUnit(deck_, 5);
+    sp_ -= cost;
+    summonCount_++;
+
+    Unit* unit = unitPool_.acquire();
+    if (!unit) return;
+
+    Vec2 cellPos = grid_.cellCenter(row, col);
+    unit->init(def.id, cellPos);
+    unit->gridRow = row;
+    unit->gridCol = col;
+    grid_.placeUnit(row, col, unit);
+    unitTypesUsed_.insert(def.id);
+
+    aout << "Summoned " << def.name << " at tile " << tileIndex
+         << " cost=" << cost << " SP=" << sp_ << std::endl;
+}
+
+void BattleScene::handleTileClick(int tileIndex) {
+    int row = tileIndex / Grid::COLS;
+    int col = tileIndex % Grid::COLS;
+    if (!grid_.isValid(row, col)) return;
+
+    Unit* unit = grid_.getUnit(row, col);
+    if (unit) {
+        // Unit info — logged for now, detail popup handled by Compose
+        const UnitDef& def = getUnitDef(unit->unitDefId);
+        aout << "Clicked unit: " << def.name << " lv" << unit->level
+             << " ATK=" << unit->getDamage() << std::endl;
+    } else {
+        // Empty tile — summon
+        summonUnitAt(tileIndex);
+    }
+}
+
+void BattleScene::handleMergeRequest(int tileIndex) {
+    auto result = mergeSystem_.trySmartMerge(tileIndex, grid_, unitPool_);
+    if (result.success) {
+        mergeCount_++;
+        aout << "Smart merge! Result unit: " << result.resultUnitId
+             << (result.lucky ? " (LUCKY!)" : "") << std::endl;
+    }
+}
+
+void BattleScene::handleSellRequest(int tileIndex) {
+    int row = tileIndex / Grid::COLS;
+    int col = tileIndex % Grid::COLS;
+    if (!grid_.isValid(row, col)) return;
+
+    Unit* unit = grid_.removeUnit(row, col);
+    if (unit) {
+        // Refund some SP based on unit grade
+        int grade = unit->unitDefId / 5;
+        float refund = 5.f + grade * 10.f;
+        sp_ += refund;
+        unit->active = false;
+        unitPool_.release(unit);
+        aout << "Sold unit at tile " << tileIndex << " refund=" << refund << std::endl;
+    }
+}
+
+void BattleScene::pushGridState() {
+    if (!g_jniInitialized || !g_pushGridMethod) return;
+
+    JNIEnv* env = nullptr;
+    engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+    if (!env || !g_bridgeClass) return;
+
+    jintArray unitIds = env->NewIntArray(15);
+    jintArray grades = env->NewIntArray(15);
+    jintArray families = env->NewIntArray(15);
+    jbooleanArray canMerge = env->NewBooleanArray(15);
+
+    int ids[15], grd[15], fam[15];
+    jboolean merge[15];
+
+    for (int i = 0; i < 15; i++) {
+        int r = i / 5, c = i % 5;
+        Unit* u = grid_.getUnit(r, c);
+        if (u && u->active) {
+            ids[i] = u->unitDefId;
+            grd[i] = u->unitDefId / 5;  // grade
+            fam[i] = u->unitDefId % 5;  // family
+            // Can merge if 3+ same family+grade exist
+            int count = 0;
+            int grade = u->unitDefId / 5;
+            int family = u->unitDefId % 5;
+            for (int j = 0; j < 15; j++) {
+                int jr = j / 5, jc = j % 5;
+                Unit* uj = grid_.getUnit(jr, jc);
+                if (uj && uj->active && uj->unitDefId / 5 == grade && uj->unitDefId % 5 == family)
+                    count++;
+            }
+            merge[i] = (count >= 3 && grade < 4) ? JNI_TRUE : JNI_FALSE;
+        } else {
+            ids[i] = -1;
+            grd[i] = -1;
+            fam[i] = -1;
+            merge[i] = JNI_FALSE;
+        }
+    }
+
+    env->SetIntArrayRegion(unitIds, 0, 15, ids);
+    env->SetIntArrayRegion(grades, 0, 15, grd);
+    env->SetIntArrayRegion(families, 0, 15, fam);
+    env->SetBooleanArrayRegion(canMerge, 0, 15, merge);
+
+    env->CallStaticVoidMethod(g_bridgeClass, g_pushGridMethod, unitIds, grades, families, canMerge);
+
+    env->DeleteLocalRef(unitIds);
+    env->DeleteLocalRef(grades);
+    env->DeleteLocalRef(families);
+    env->DeleteLocalRef(canMerge);
 }

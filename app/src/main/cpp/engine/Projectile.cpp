@@ -19,6 +19,7 @@ void Projectile::init(Vec2 startPos, Enemy* tgt, float dmg) {
     hitTarget_ = nullptr;
     sourceUnitId = -1;
     projType = 0;
+    isMagic = false;
     velocity = {0.f, 0.f};
 }
 
@@ -38,8 +39,7 @@ void Projectile::update(float dt) {
         float dist = diff.length();
 
         if (dist < size) {
-            // Hit!
-            target->takeDamage(damage);
+            // Hit! Damage is applied by BattleScene::updateProjectiles with isMagic flag
             hit_ = true;
             hitTarget_ = target;
             active = false;

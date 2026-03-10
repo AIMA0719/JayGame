@@ -35,15 +35,21 @@ public:
 
     // Public methods for JNI bridge
     void summonUnit();
+    void summonUnitAt(int tileIndex);
     float getSummonCost() const;
 
     // Summon request flag — set from JNI (Compose thread), consumed on game thread
     static std::atomic<bool> summonRequested;
 
+    // Click/merge/sell request flags — set from JNI, consumed on game thread
+    static std::atomic<int> clickedTileIndex;     // -1 = no click, 0-14 = tile
+    static std::atomic<int> mergeRequestUnitId;   // -1 = no request (tile index actually)
+    static std::atomic<int> sellRequestTileIndex;  // -1 = no request
+
     // State getters for JNI bridge
     int getCurrentWave() const { return currentWave_; }
     int getMaxWaves() const { return maxWaves_; }
-    int getPlayerHP() const { return playerHP_; }
+    int getPlayerHP() const { return 20; }  // always 20 — no HP system
     float getSP() const { return sp_; }
     float getElapsedTime() const { return waveTimer_; }
     int getStateInt() const { return static_cast<int>(state_); }
@@ -68,8 +74,7 @@ private:
     // Enemy path waypoints
     std::vector<Vec2> pathWaypoints_;
 
-    // Player state
-    int playerHP_ = 20;
+    // Player state (no HP — lose only by 100 monsters)
     float sp_ = 100.f;
     int summonCount_ = 0;
     int currentWave_ = 0;
@@ -93,9 +98,6 @@ private:
     // Sprite atlas (single texture for all rendering)
     SpriteAtlas atlas_;
 
-    // Summon button area (bottom-right)
-    static constexpr Rect SUMMON_BUTTON = {1080.f, 620.f, 180.f, 80.f};
-
     // Monster limit — defeat if active enemies reach this count
     static constexpr int MAX_ENEMY_COUNT = 100;
 
@@ -108,10 +110,13 @@ private:
     float auraTimer_ = 0.f;
     static constexpr float AURA_INTERVAL = 0.5f;
 
+    // Grid state push timer
+    float gridPushTimer_ = 0.f;
+    static constexpr float GRID_PUSH_INTERVAL = 0.1f;
+
     // Tracking for results/achievements
     int killCount_ = 0;
     int mergeCount_ = 0;
-    int hpLost_ = 0;
     std::set<int> unitTypesUsed_;
 
     // Methods
@@ -126,6 +131,10 @@ private:
     void checkWaveComplete();
     void startNextWave();
     void notifyBattleEnd(bool victory, int waveReached, int goldEarned, int trophyChange);
+    void handleTileClick(int tileIndex);
+    void handleMergeRequest(int tileIndex);
+    void handleSellRequest(int tileIndex);
+    void pushGridState();
 };
 
 #endif // JAYGAME_BATTLESCENE_H

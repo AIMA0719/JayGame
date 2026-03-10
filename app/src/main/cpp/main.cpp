@@ -43,6 +43,21 @@ Java_com_example_jaygame_bridge_BattleBridge_nativeSummon(JNIEnv* /*env*/, jclas
     BattleScene::summonRequested.store(true, std::memory_order_release);
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeClickTile(JNIEnv* /*env*/, jclass /*clazz*/, jint tileIndex) {
+    BattleScene::clickedTileIndex.store(tileIndex, std::memory_order_release);
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeMergeUnit(JNIEnv* /*env*/, jclass /*clazz*/, jint tileIndex) {
+    BattleScene::mergeRequestUnitId.store(tileIndex, std::memory_order_release);
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeSellUnit(JNIEnv* /*env*/, jclass /*clazz*/, jint tileIndex) {
+    BattleScene::sellRequestTileIndex.store(tileIndex, std::memory_order_release);
+}
+
 void android_main(struct android_app *pApp) {
     aout << "Welcome to JayGame" << std::endl;
 

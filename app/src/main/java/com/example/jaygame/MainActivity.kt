@@ -6,9 +6,16 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -16,7 +23,10 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.ui.battle.BattleBottomHud
+import com.example.jaygame.ui.battle.BattleFieldGrid
 import com.example.jaygame.ui.battle.BattleTopHud
+import com.example.jaygame.ui.battle.MergeEffectOverlay
+import com.example.jaygame.ui.battle.UnitDetailPopup
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import com.google.androidgamesdk.GameActivity
@@ -50,6 +60,7 @@ class MainActivity : GameActivity() {
 
         // Add Compose overlays on top of C++ SurfaceView
         addBattleOverlay()
+        addGridOverlay()
         addResultOverlay()
     }
 
@@ -89,6 +100,45 @@ class MainActivity : GameActivity() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM,
+            ),
+        )
+    }
+
+    /**
+     * Grid + popup + merge effect overlays.
+     * Layered on top of the battle HUD, below the result overlay.
+     */
+    private fun addGridOverlay() {
+        val gridView = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(this@MainActivity)
+            setViewTreeSavedStateRegistryOwner(this@MainActivity)
+            setContent {
+                JayGameTheme {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Grid in bottom-center area
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 40.dp),
+                        ) {
+                            BattleFieldGrid()
+                        }
+
+                        // Unit detail popup (full screen overlay)
+                        UnitDetailPopup()
+
+                        // Merge effect overlay
+                        MergeEffectOverlay()
+                    }
+                }
+            }
+        }
+        addContentView(
+            gridView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
     }

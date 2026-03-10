@@ -19,6 +19,8 @@ void Unit::init(int defId, Vec2 pos) {
     animTime_ = 0.f;
     attacking_ = false;
     attackAnimTimer_ = 0.f;
+    gridRow = -1;
+    gridCol = -1;
     unitBuffs.clear();
 
     entity.active = true;
@@ -35,6 +37,12 @@ void Unit::init(int defId, Vec2 pos) {
             break;
         case UnitFamily::Frost:
             entity.sprite.color = {0.4f, 0.6f, 1.0f, 1.f}; // blue
+            break;
+        case UnitFamily::Poison:
+            entity.sprite.color = {0.5f, 1.0f, 0.3f, 1.f}; // green-yellow
+            break;
+        case UnitFamily::Lightning:
+            entity.sprite.color = {0.8f, 0.8f, 1.0f, 1.f}; // light blue-white
             break;
         case UnitFamily::Support:
             entity.sprite.color = {0.4f, 1.0f, 0.5f, 1.f}; // green
@@ -73,6 +81,7 @@ void Unit::update(float dt, ObjectPool<Enemy>& enemies, ObjectPool<Projectile>& 
     if (proj) {
         proj->init(position, target, getDamage());
         proj->sourceUnitId = unitDefId;
+        proj->isMagic = isMagicDamage();
 
         // Set projectile visual type based on unit ability
         const UnitDef& def = getUnitDef(unitDefId);
@@ -141,13 +150,25 @@ float Unit::getDamage() const {
 }
 
 float Unit::getRange() const {
-    return getUnitDef(unitDefId).range;
+    float base = getUnitDef(unitDefId).range;
+    // Back row (row 0) gets +20% range, front row (row 2) gets melee priority
+    if (gridRow == 0) return base * 1.2f;
+    if (gridRow == 2) return base * 0.85f;
+    return base;
 }
 
 float Unit::getAtkSpeed() const {
     float baseSpd = getUnitDef(unitDefId).atkSpeed;
     float spdBonus = unitBuffs.getSpdBonus();
     return baseSpd * (1.f + spdBonus);
+}
+
+bool Unit::isMagicDamage() const {
+    const UnitDef& def = getUnitDef(unitDefId);
+    // Fire=physical splash, Frost/Poison/Lightning=magic, Support=physical
+    return def.family == UnitFamily::Frost ||
+           def.family == UnitFamily::Poison ||
+           def.family == UnitFamily::Lightning;
 }
 
 Enemy* Unit::findTarget(SpatialHash<Enemy>& spatialHash) {
@@ -170,7 +191,9 @@ Enemy* Unit::findTarget(SpatialHash<Enemy>& spatialHash) {
 
         // Pick enemy closest to path end (highest pathProgress + pathIndex)
         // Use pathIndex * 1000 + pathProgress as a combined metric
-        float progress = static_cast<float>(enemy->pathIndex) * 1000.f + enemy->pathProgress;
+        // Include loopCount to prioritize enemies that have looped more
+        float progress = static_cast<float>(enemy->loopCount) * 1000000.f +
+                         static_cast<float>(enemy->pathIndex) * 1000.f + enemy->pathProgress;
         if (progress > bestProgress) {
             bestProgress = progress;
             bestTarget = enemy;

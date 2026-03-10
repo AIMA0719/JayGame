@@ -5,23 +5,21 @@
 #include "MathTypes.h"
 #include "SpriteBatch.h"
 #include "SpriteAtlas.h"
-
-// Forward declaration — Unit is defined in Unit.h
-class Unit;
+#include "Unit.h"
 
 class Grid {
 public:
     static constexpr int COLS = 5;
-    static constexpr int ROWS = 4;
+    static constexpr int ROWS = 3;
     static constexpr int TOTAL_CELLS = COLS * ROWS;
 
-    // Grid area in logical coordinates (left side of 1280x720 screen)
-    static constexpr float GRID_X = 40.f;
-    static constexpr float GRID_Y = 60.f;
-    static constexpr float GRID_W = 600.f;
-    static constexpr float GRID_H = 600.f;
-    static constexpr float CELL_W = GRID_W / COLS;   // 120
-    static constexpr float CELL_H = GRID_H / ROWS;   // 150
+    // Grid area in logical coordinates (center-bottom of 1280x720 screen)
+    static constexpr float GRID_X = 140.f;
+    static constexpr float GRID_Y = 320.f;
+    static constexpr float GRID_W = 1000.f;
+    static constexpr float GRID_H = 360.f;
+    static constexpr float CELL_W = GRID_W / COLS;   // 200
+    static constexpr float CELL_H = GRID_H / ROWS;   // 120
 
     Grid() { clear(); }
 
@@ -136,31 +134,53 @@ public:
         const auto& cellBg = atlas.getTile("grid_cell");
         const auto& wp = atlas.getWhitePixel();
 
-        // Draw cell backgrounds — dark navy tint to match neon theme
+        // Draw cell backgrounds
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
                 float x = GRID_X + c * CELL_W;
                 float y = GRID_Y + r * CELL_H;
-                batch.draw(tex, x, y, CELL_W, CELL_H,
-                           cellBg.uvRect.x, cellBg.uvRect.y,
-                           cellBg.uvRect.w, cellBg.uvRect.h,
-                           0.06f, 0.07f, 0.14f, 0.4f);
+
+                Unit* u = cells_[r * COLS + c];
+                if (u) {
+                    // Occupied cell — tint with unit's grade color
+                    // Grade colors: Low=gray, Medium=green, High=blue, Supreme=purple, Transcendent=gold
+                    int grade = u->unitDefId / 5;
+                    float cr, cg, cb;
+                    switch (grade) {
+                        case 0: cr = 0.15f; cg = 0.18f; cb = 0.25f; break; // Low - dim
+                        case 1: cr = 0.10f; cg = 0.25f; cb = 0.15f; break; // Medium - green tint
+                        case 2: cr = 0.10f; cg = 0.15f; cb = 0.30f; break; // High - blue tint
+                        case 3: cr = 0.20f; cg = 0.10f; cb = 0.25f; break; // Supreme - purple tint
+                        case 4: cr = 0.25f; cg = 0.22f; cb = 0.10f; break; // Transcendent - gold tint
+                        default: cr = 0.15f; cg = 0.18f; cb = 0.25f; break;
+                    }
+                    batch.draw(tex, x, y, CELL_W, CELL_H,
+                               cellBg.uvRect.x, cellBg.uvRect.y,
+                               cellBg.uvRect.w, cellBg.uvRect.h,
+                               cr, cg, cb, 0.5f);
+                } else {
+                    // Empty cell — dim gray border
+                    batch.draw(tex, x, y, CELL_W, CELL_H,
+                               cellBg.uvRect.x, cellBg.uvRect.y,
+                               cellBg.uvRect.w, cellBg.uvRect.h,
+                               0.15f, 0.18f, 0.25f, 0.5f);
+                }
             }
         }
 
-        // Draw grid lines — subtle cyan-tinted borders
+        // Draw grid lines — slightly more visible
         constexpr float LINE_W = 1.f;
         for (int c = 0; c <= COLS; c++) {
             float x = GRID_X + c * CELL_W - LINE_W * 0.5f;
             batch.draw(tex, x, GRID_Y, LINE_W, GRID_H,
                        wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-                       0.2f, 0.35f, 0.5f, 0.35f);
+                       0.25f, 0.4f, 0.6f, 0.4f);
         }
         for (int r = 0; r <= ROWS; r++) {
             float y = GRID_Y + r * CELL_H - LINE_W * 0.5f;
             batch.draw(tex, GRID_X, y, GRID_W, LINE_W,
                        wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-                       0.2f, 0.35f, 0.5f, 0.35f);
+                       0.25f, 0.4f, 0.6f, 0.4f);
         }
     }
 

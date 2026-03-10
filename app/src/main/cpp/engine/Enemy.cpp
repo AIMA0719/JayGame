@@ -6,7 +6,7 @@
 #include <cmath>
 #include <algorithm>
 
-void Enemy::init(float hp_, float speed_, float armor_, bool boss, int spReward_, int enemyType_) {
+void Enemy::init(float hp_, float speed_, float armor_, float magicResist_, bool boss, int spReward_, int enemyType_) {
     active = true;
     hp = hp_;
     maxHp = hp_;
@@ -14,12 +14,13 @@ void Enemy::init(float hp_, float speed_, float armor_, bool boss, int spReward_
     speed = speed_;
     baseArmor = armor_;
     armor = armor_;
+    magicResist = magicResist_;
     isBoss = boss;
     spReward = spReward_;
     size = boss ? 96.f : 48.f;
     pathIndex = 0;
     pathProgress = 0.f;
-    reachedEnd_ = false;
+    loopCount = 0;
     enemyType = enemyType_;
     animTime_ = 0.f;
     position = {0.f, 0.f};
@@ -28,7 +29,7 @@ void Enemy::init(float hp_, float speed_, float armor_, bool boss, int spReward_
 }
 
 void Enemy::update(float dt, const std::vector<Vec2>& waypoints) {
-    if (!active || reachedEnd_ || isDead()) return;
+    if (!active || isDead()) return;
     animTime_ += dt;
     if (waypoints.size() < 2) return;
 
@@ -50,7 +51,12 @@ void Enemy::update(float dt, const std::vector<Vec2>& waypoints) {
     // Move along the path
     int nextIndex = pathIndex + 1;
     if (nextIndex >= static_cast<int>(waypoints.size())) {
-        reachedEnd_ = true;
+        // Loop back to start
+        pathIndex = 0;
+        pathProgress = 0.f;
+        loopCount++;
+        position = waypoints[0];
+        prevPosition = position;
         return;
     }
 
@@ -68,13 +74,17 @@ void Enemy::update(float dt, const std::vector<Vec2>& waypoints) {
     float progressDelta = distToMove / segmentLength;
     pathProgress += progressDelta;
 
-    while (pathProgress >= 1.f && pathIndex + 1 < static_cast<int>(waypoints.size())) {
+    while (pathProgress >= 1.f) {
         pathProgress -= 1.f;
         pathIndex++;
         nextIndex = pathIndex + 1;
         if (nextIndex >= static_cast<int>(waypoints.size())) {
-            reachedEnd_ = true;
-            position = waypoints.back();
+            // Loop back to start
+            pathIndex = 0;
+            pathProgress = 0.f;
+            loopCount++;
+            position = waypoints[0];
+            prevPosition = position;
             return;
         }
         from = waypoints[pathIndex];
@@ -83,25 +93,27 @@ void Enemy::update(float dt, const std::vector<Vec2>& waypoints) {
         if (segmentLength < 1e-6f) continue;
     }
 
-    if (!reachedEnd_) {
-        from = waypoints[pathIndex];
-        to = waypoints[std::min(pathIndex + 1, static_cast<int>(waypoints.size()) - 1)];
-        position = Vec2::lerp(from, to, std::min(pathProgress, 1.f));
-    }
+    from = waypoints[pathIndex];
+    to = waypoints[std::min(pathIndex + 1, static_cast<int>(waypoints.size()) - 1)];
+    position = Vec2::lerp(from, to, std::min(pathProgress, 1.f));
 }
 
-void Enemy::takeDamage(float damage) {
-    float effectiveDamage = std::max(1.f, damage - armor);
-    hp -= effectiveDamage;
+void Enemy::takeDamage(float damage, bool isMagic) {
+    float finalDamage;
+    if (isMagic) {
+        // Magic ignores armor but affected by magic resist
+        finalDamage = damage * (1.f - magicResist);
+    } else {
+        // Physical: FinalDamage = Damage * (100 / (100 + Defense))
+        finalDamage = damage * (100.f / (100.f + armor));
+    }
+    finalDamage = std::max(1.f, finalDamage);
+    hp -= finalDamage;
     if (hp < 0.f) hp = 0.f;
 }
 
 bool Enemy::isDead() const {
     return hp <= 0.f;
-}
-
-bool Enemy::reachedEnd() const {
-    return reachedEnd_;
 }
 
 Rect Enemy::getBounds() const {

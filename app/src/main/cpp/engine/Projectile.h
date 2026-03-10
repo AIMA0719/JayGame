@@ -20,6 +20,7 @@ public:
     float size = 16.f;
     int sourceUnitId = -1;   // unit def ID that fired this projectile
     int projType = 0;        // 0=arrow, 1=fireball, 2=ice, 3=poison, 4=lightning, 5=generic
+    bool isMagic = false;    // true if this is magic damage
 
     void init(Vec2 startPos, Enemy* target, float damage);
     void update(float dt);

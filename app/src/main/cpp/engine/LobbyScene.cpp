@@ -273,9 +273,11 @@ void LobbyScene::onRender(float alpha, SpriteBatch& batch) {
         if (pd.deck[i] >= 0 && pd.deck[i] < static_cast<int>(UNIT_TABLE_SIZE)) {
             const auto& def = getUnitDef(pd.deck[i]);
             switch (def.family) {
-                case UnitFamily::Fire: color = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-                case UnitFamily::Frost:    color = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-                case UnitFamily::Support:  color = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+                case UnitFamily::Fire:      color = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+                case UnitFamily::Frost:     color = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+                case UnitFamily::Poison:    color = {0.5f, 1.0f, 0.3f, 0.9f}; break;
+                case UnitFamily::Lightning: color = {0.8f, 0.8f, 1.0f, 0.9f}; break;
+                case UnitFamily::Support:   color = {0.4f, 1.0f, 0.5f, 0.9f}; break;
             }
 
             // Show unit level from PlayerData

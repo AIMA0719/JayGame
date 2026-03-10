@@ -1,21 +1,24 @@
 package com.example.jaygame.ui.battle
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.UNIT_DEFS_MAP
-import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.theme.*
 
@@ -125,48 +128,31 @@ fun BattleBottomHud() {
         modifier = Modifier
             .fillMaxWidth()
             .background(DarkNavy.copy(alpha = 0.85f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Deck units row
+        // SP + summon cost row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            battle.deckUnits.forEach { unitId ->
-                val unitDef = UNIT_DEFS_MAP[unitId]
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (unitDef != null) {
-                        Image(
-                            painter = painterResource(id = unitDef.iconRes),
-                            contentDescription = unitDef.name,
-                            modifier = Modifier.size(32.dp),
-                        )
-                        Text(
-                            text = unitDef.name,
-                            color = SubText,
-                            fontSize = 9.sp,
-                        )
-                    }
-                }
-            }
+            Text(
+                text = "SP ${battle.sp.toInt()}",
+                color = Gold,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "소환 비용: ${battle.summonCost}",
+                color = if (canSummon) NeonGreen else NeonRed,
+                fontSize = 12.sp,
+            )
+            Text(
+                text = "빈 타일을 터치하여 소환",
+                color = SubText.copy(alpha = 0.6f),
+                fontSize = 10.sp,
+            )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Summon button
-        NeonButton(
-            text = "소환 ${battle.summonCost} SP",
-            onClick = { BattleBridge.requestSummon() },
-            enabled = canSummon,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(44.dp),
-            fontSize = 16.sp,
-            accentColor = Gold,
-            accentColorDark = DarkGold,
-        )
     }
 }

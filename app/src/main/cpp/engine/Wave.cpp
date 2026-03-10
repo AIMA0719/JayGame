@@ -34,6 +34,10 @@ WaveConfig WaveManager::getWaveConfig(int wave) const {
     // Armor scales gently
     config.enemyArmor = static_cast<float>(wave) * 0.5f;
 
+    // Magic resist: bosses get 0.3 base, normal enemies scale gently
+    config.magicResist = boss ? 0.3f
+                              : std::min(0.3f, static_cast<float>(wave) * 0.005f);
+
     // Enemy count: 8 + wave/2 for normal; 1 for boss
     config.enemyCount = boss ? 1 : (8 + wave / 2);
 
@@ -71,6 +75,7 @@ void WaveManager::update(float dt, ObjectPool<Enemy>& enemies, const std::vector
         enemy->init(currentConfig_.enemyHP * hpMultiplier_,
                     currentConfig_.enemySpeed,
                     currentConfig_.enemyArmor,
+                    currentConfig_.magicResist,
                     currentConfig_.isBoss,
                     currentConfig_.spReward);
 
@@ -88,8 +93,9 @@ void WaveManager::update(float dt, ObjectPool<Enemy>& enemies, const std::vector
 
 bool WaveManager::isWaveComplete() const {
     if (!waveActive_) return false;
+    // Enemies loop now — wave complete only when all are killed
     return (enemiesSpawned_ >= totalEnemies_) &&
-           ((enemiesDefeated_ + enemiesEscaped_) >= totalEnemies_);
+           (enemiesDefeated_ >= totalEnemies_);
 }
 
 bool WaveManager::isSpawning() const {

@@ -1,5 +1,6 @@
 package com.example.jaygame.engine
 
+import com.example.jaygame.bridge.GridTileState
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -33,6 +34,14 @@ data class BattleConfig(
     val deck: List<Int> = listOf(0, 1, 2, 3, 4),
 )
 
+/**
+ * 데미지 타입 — 물리/마법 이원 체계
+ */
+enum class DamageType {
+    PHYSICAL,  // 방어력(Defense) 감산
+    MAGIC,     // 마법 저항(MagicResist) 비율 감산
+}
+
 data class BattleState(
     val phase: BattlePhase = BattlePhase.IDLE,
     val currentWave: Int = 0,
@@ -50,6 +59,7 @@ data class BattleState(
     val mergeCount: Int = 0,
     val isBossRound: Boolean = false,
     val bossTimeRemaining: Float = 0f, // 보스 라운드 제한 시간
+    val gridTiles: List<GridTileState> = List(15) { GridTileState() }, // 5x3 그리드 상태
 )
 
 enum class BattlePhase {
