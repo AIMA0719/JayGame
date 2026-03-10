@@ -82,7 +82,7 @@ fun ResultScreen(
             fontWeight = FontWeight.Bold,
             color = resultColor,
             textAlign = TextAlign.Center,
-            fontSize = 28.sp,
+            fontSize = 22.sp,
             modifier = Modifier.scale(pulseScale),
         )
 

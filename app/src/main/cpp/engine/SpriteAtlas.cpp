@@ -95,10 +95,10 @@ const SpriteFrame& SpriteAtlas::getWhitePixel() const {
     return whitePixel_;
 }
 
-// ---------- Init: Units (rows 0-1) ----------
-// 15 units, 4 frames each (idle0, idle1, attack0, attack1)
+// ---------- Init: Units (rows 0-3) ----------
+// 25 units, 4 frames each (idle0, idle1, attack0, attack1)
 // 8 units per row, 4 columns per unit
-// Row 0: units 0-7, Row 1: units 8-14
+// Row 0: units 0-7, Row 1: units 8-15, Row 2: units 16-23, Row 3: unit 24
 
 void SpriteAtlas::initUnits() {
     for (int i = 0; i < MAX_UNITS; i++) {

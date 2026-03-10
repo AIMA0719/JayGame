@@ -70,7 +70,7 @@ fun SettingsScreen(
             Text(
                 text = "설정",
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 color = Gold,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
@@ -78,7 +78,7 @@ fun SettingsScreen(
             Spacer(Modifier.width(56.dp))
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
 
         GameCard(
             modifier = Modifier.fillMaxWidth(),

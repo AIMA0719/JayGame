@@ -92,7 +92,7 @@ fun DeckScreen(repository: GameRepository) {
         Text(
             text = "덱 편집",
             fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
+            fontSize = 22.sp,
             color = LightText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -122,7 +122,7 @@ fun DeckScreen(repository: GameRepository) {
                         iconRes = def?.iconRes,
                         name = def?.name,
                         level = progress?.level,
-                        rarityColor = def?.rarity?.color,
+                        rarityColor = def?.grade?.color,
                         onClick = {
                             if (unitId >= 0) {
                                 deck[slotIndex] = -1
@@ -164,7 +164,7 @@ fun DeckScreen(repository: GameRepository) {
                     iconRes = def.iconRes,
                     name = def.name,
                     level = progress?.level ?: 1,
-                    rarityColor = def.rarity.color,
+                    rarityColor = def.grade.color,
                     isInDeck = isInDeck,
                     onClick = {
                         if (!isInDeck) {

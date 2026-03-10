@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.navigation.NavGraph
@@ -32,6 +33,7 @@ class ComposeActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         repository.refresh()
+        BattleBridge.clearResult()
         // Auto-unlock stages based on trophies
         val data = repository.gameData.value
         val newUnlocked = STAGES.filter { it.unlockTrophies <= data.trophies }.map { it.id }

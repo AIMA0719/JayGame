@@ -77,7 +77,7 @@ fun CollectionScreen(repository: GameRepository) {
         Text(
             text = "컬렉션",
             fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
+            fontSize = 22.sp,
             color = LightText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
@@ -171,7 +171,7 @@ private fun CollectionUnitCard(
     )
 
     GameCard(
-        borderColor = if (isSelected) NeonCyan else def.rarity.color,
+        borderColor = if (isSelected) NeonCyan else def.grade.color,
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
@@ -247,7 +247,7 @@ private fun UnitDetailPanel(
 
     GameCard(
         modifier = Modifier.fillMaxSize(),
-        borderColor = def.rarity.color,
+        borderColor = def.grade.color,
     ) {
         Column(
             modifier = Modifier
@@ -284,10 +284,10 @@ private fun UnitDetailPanel(
                         color = LightText,
                     )
                     Text(
-                        text = def.rarity.label,
+                        text = def.grade.label,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = def.rarity.color,
+                        color = def.grade.color,
                     )
                 }
             }
@@ -302,7 +302,7 @@ private fun UnitDetailPanel(
                 StatRow("ATK", fmt.format(calculatedATK), Gold)
                 StatRow("Speed", String.format("%.1f", def.baseSpeed), LightText)
                 StatRow("Range", String.format("%.0f", def.range), LightText)
-                StatRow("Element", def.element.label, def.element.color)
+                StatRow("계열", def.family.label, def.family.color)
                 StatRow("Ability", def.abilityName, NeonCyan)
             }
 

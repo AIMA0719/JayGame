@@ -124,6 +124,16 @@ class GameRepository(context: Context) {
             // difficulty
             root.put("difficulty", data.difficulty)
 
+            // gas
+            root.put("gas", data.gas)
+
+            // familyUpgrades
+            val familyObj = JSONObject()
+            for ((key, value) in data.familyUpgrades) {
+                familyObj.put(key, value)
+            }
+            root.put("familyUpgrades", familyObj)
+
             root.put("saveVersion", data.saveVersion)
 
             // Compute checksum on the JSON without checksum field
@@ -170,9 +180,9 @@ class GameRepository(context: Context) {
                     )
                 }
             }
-            // Pad to 15 if fewer entries
-            while (units.size < 15) {
-                units.add(UnitProgress(owned = units.size < 10, cards = 0, level = 1))
+            // Pad to 25 if fewer entries (LOW grade units 0-4 owned by default)
+            while (units.size < 25) {
+                units.add(UnitProgress(owned = units.size < 5, cards = 0, level = 1))
             }
 
             // deck
@@ -239,6 +249,20 @@ class GameRepository(context: Context) {
             // difficulty
             val difficulty = root.optInt("difficulty", 0)
 
+            // gas
+            val gas = root.optInt("gas", 0)
+
+            // familyUpgrades
+            val familyUpgrades = mutableMapOf<String, Int>()
+            val familyObj = root.optJSONObject("familyUpgrades")
+            if (familyObj != null) {
+                val keys = familyObj.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    familyUpgrades[key] = familyObj.optInt(key, 0)
+                }
+            }
+
             val saveVersion = root.optInt("saveVersion", 1)
 
             return GameData(
@@ -272,6 +296,8 @@ class GameRepository(context: Context) {
                 unlockedStages = unlockedStages,
                 stageBestWaves = stageBestWaves,
                 difficulty = difficulty,
+                gas = gas,
+                familyUpgrades = familyUpgrades,
                 saveVersion = saveVersion,
             )
         }

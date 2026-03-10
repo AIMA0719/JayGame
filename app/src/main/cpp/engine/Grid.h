@@ -85,6 +85,20 @@ public:
         return u;
     }
 
+    // Find a specific unit's position on the grid
+    bool findUnit(Unit* unit, int& outRow, int& outCol) const {
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                if (cells_[r * COLS + c] == unit) {
+                    outRow = r;
+                    outCol = c;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     int getEmptyCellCount() const {
         int count = 0;
         for (int i = 0; i < TOTAL_CELLS; i++)

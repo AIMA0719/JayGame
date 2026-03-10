@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.addRandomCardsToUnits
+import com.example.jaygame.ui.components.GachaProbabilityDialog
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.components.ResourceHeader
@@ -55,6 +57,11 @@ fun ShopScreen(repository: GameRepository) {
     val data by repository.gameData.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showProbabilityDialog by remember { mutableStateOf(false) }
+
+    if (showProbabilityDialog) {
+        GachaProbabilityDialog(onDismiss = { showProbabilityDialog = false })
+    }
 
     val tabNames = listOf("골드팩", "다이아팩", "스페셜")
 
@@ -182,17 +189,33 @@ fun ShopScreen(repository: GameRepository) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Title
-        Text(
-            text = "상점",
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            color = NeonRed,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // Title row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Spacer(modifier = Modifier.width(60.dp))
+            Text(
+                text = "상점",
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                color = NeonRed,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f),
+            )
+            NeonButton(
+                text = "확률 보기",
+                onClick = { showProbabilityDialog = true },
+                fontSize = 11.sp,
+                accentColor = SubText,
+                accentColorDark = DimText,
+            )
+        }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Tab Row
         Row(
@@ -213,7 +236,7 @@ fun ShopScreen(repository: GameRepository) {
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Item List
         LazyColumn(

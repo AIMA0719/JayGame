@@ -74,6 +74,15 @@ fun BattleTopHud() {
                 fontWeight = FontWeight.Bold,
             )
 
+            // Enemy count
+            val enemyColor = if (battle.enemyCount > 80) NeonRed else SubText
+            Text(
+                text = "적 ${battle.enemyCount}/100",
+                color = enemyColor,
+                fontSize = 13.sp,
+                fontWeight = if (battle.enemyCount > 80) FontWeight.Bold else FontWeight.Normal,
+            )
+
             // Timer
             val totalSeconds = battle.elapsedTime.toInt()
             val minutes = totalSeconds / 60
@@ -83,6 +92,26 @@ fun BattleTopHud() {
                 color = SubText,
                 fontSize = 13.sp,
             )
+        }
+
+        // Boss timer
+        if (battle.isBossRound) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val bossSeconds = battle.bossTimeRemaining.toInt()
+                val bossMin = bossSeconds / 60
+                val bossSec = bossSeconds % 60
+                Text(
+                    text = "BOSS %02d:%02d".format(bossMin, bossSec),
+                    color = NeonRed,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }

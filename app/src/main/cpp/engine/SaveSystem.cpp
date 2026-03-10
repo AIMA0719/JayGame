@@ -155,6 +155,7 @@ std::string SaveSystem::serializeToJson() {
     // Player
     ss << "\"gold\":" << pd.gold << ",\n";
     ss << "\"diamonds\":" << pd.diamonds << ",\n";
+    ss << "\"gas\":" << pd.gas << ",\n";
     ss << "\"trophies\":" << pd.trophies << ",\n";
     ss << "\"playerLevel\":" << pd.playerLevel << ",\n";
     ss << "\"totalXP\":" << pd.totalXP << ",\n";
@@ -202,6 +203,14 @@ std::string SaveSystem::serializeToJson() {
     // Season pass
     ss << "\"seasonXP\":" << pd.seasonXP << ",\n";
     ss << "\"seasonClaimedTier\":" << pd.seasonClaimedTier << ",\n";
+
+    // Family upgrades
+    ss << "\"familyUpgrade\":[";
+    for (int i = 0; i < 5; i++) {
+        if (i > 0) ss << ",";
+        ss << pd.familyUpgrade[i];
+    }
+    ss << "],\n";
 
     // Achievements
     ss << "\"achievements\":[";
@@ -289,6 +298,7 @@ bool SaveSystem::deserializeFromJson(const std::string& json) {
 
     pd.gold = jsonParseInt(json, "gold", 500);
     pd.diamonds = jsonParseInt(json, "diamonds", 0);
+    pd.gas = jsonParseInt(json, "gas", 0);
     pd.trophies = jsonParseInt(json, "trophies", 0);
     pd.playerLevel = jsonParseInt(json, "playerLevel", 1);
     pd.totalXP = jsonParseInt(json, "totalXP", 0);
@@ -337,6 +347,9 @@ bool SaveSystem::deserializeFromJson(const std::string& json) {
     // Season pass
     pd.seasonXP = jsonParseInt(json, "seasonXP", 0);
     pd.seasonClaimedTier = jsonParseInt(json, "seasonClaimedTier", 0);
+
+    // Family upgrades
+    jsonParseIntArray(json, "familyUpgrade", pd.familyUpgrade, 5);
 
     // Stage data
     {

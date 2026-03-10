@@ -1,18 +1,57 @@
 #include "BattleScene.h"
 #include "GameEngine.h"
 #include "UnitData.h"
-#include "CombinationTable.h"
 #include "ResultScene.h"
 #include "PlayerData.h"
+#include "Currency.h"
+#include "SeasonPass.h"
+#include "Achievement.h"
+#include "SaveSystem.h"
 #include "TextureAsset.h"
 #include "TextRenderer.h"
 #include "AndroidOut.h"
 
 #include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <jni.h>
 
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
+
+// Static member
+std::atomic<bool> BattleScene::summonRequested{false};
+
+// JNI state push — cached references
+static jclass g_bridgeClass = nullptr;
+static jmethodID g_updateMethod = nullptr;
+static jmethodID g_battleEndMethod = nullptr;
+static bool g_jniInitialized = false;
+static float g_statePushTimer = 0.f;
+static constexpr float STATE_PUSH_INTERVAL = 0.1f; // push 10 times/sec
+
+static jclass findClassViaLoader(JNIEnv* env, jobject activity, const char* className) {
+    jclass activityClass = env->GetObjectClass(activity);
+    jmethodID getClassLoader = env->GetMethodID(activityClass, "getClassLoader",
+        "()Ljava/lang/ClassLoader;");
+    jobject classLoader = env->CallObjectMethod(activity, getClassLoader);
+    env->DeleteLocalRef(activityClass);
+
+    jclass classLoaderClass = env->FindClass("java/lang/ClassLoader");
+    jmethodID loadClass = env->GetMethodID(classLoaderClass, "loadClass",
+        "(Ljava/lang/String;)Ljava/lang/Class;");
+    env->DeleteLocalRef(classLoaderClass);
+
+    jstring jClassName = env->NewStringUTF(className);
+    auto cls = (jclass)env->CallObjectMethod(classLoader, loadClass, jClassName);
+    env->DeleteLocalRef(jClassName);
+    env->DeleteLocalRef(classLoader);
+
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return nullptr;
+    }
+    return cls;
+}
 
 BattleScene::BattleScene(GameEngine& engine)
     : engine_(engine),
@@ -46,6 +85,8 @@ void BattleScene::onEnter() {
     mergeCount_ = 0;
     hpLost_ = 0;
     waveTimer_ = 0.f;
+    bossTimer_ = 0.f;
+    isBossRound_ = false;
     unitTypesUsed_.clear();
 
     // Copy deck and stage data from PlayerData
@@ -66,6 +107,27 @@ void BattleScene::onEnter() {
     // Start with wave delay before wave 1
     state_ = State::WaveDelay;
     waveDelayTimer_ = WAVE_DELAY;
+
+    // Initialize JNI bridge for BattleBridge state push
+    if (!g_jniInitialized) {
+        JNIEnv* env = nullptr;
+        engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+        if (env) {
+            jclass localCls = findClassViaLoader(env, engine_.getApp()->activity->javaGameActivity,
+                "com.example.jaygame.bridge.BattleBridge");
+            if (localCls) {
+                g_bridgeClass = (jclass)env->NewGlobalRef(localCls);
+                env->DeleteLocalRef(localCls);
+                g_updateMethod = env->GetStaticMethodID(g_bridgeClass, "updateState",
+                    "(IIIIFFIIIIF)V");
+                g_battleEndMethod = env->GetStaticMethodID(g_bridgeClass, "onBattleEnd",
+                    "(ZIIIIII)V");
+                g_jniInitialized = (g_updateMethod != nullptr && g_battleEndMethod != nullptr);
+                aout << "BattleBridge JNI initialized: " << g_jniInitialized << std::endl;
+            }
+        }
+    }
+    g_statePushTimer = 0.f;
 
     aout << "BattleScene initialized. Path waypoints: " << pathWaypoints_.size() << std::endl;
 }
@@ -94,6 +156,36 @@ void BattleScene::setupPath() {
 }
 
 void BattleScene::onUpdate(float dt) {
+    // Check summon request from Compose
+    if (summonRequested.exchange(false, std::memory_order_acq_rel)) {
+        summonUnit();
+    }
+
+    // Push state to Compose HUD periodically
+    g_statePushTimer -= dt;
+    if (g_statePushTimer <= 0.f && g_jniInitialized) {
+        g_statePushTimer = STATE_PUSH_INTERVAL;
+        JNIEnv* env = nullptr;
+        engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+        if (env && g_bridgeClass && g_updateMethod) {
+            // Count active enemies for JNI push
+            int activeEnemyCount = 0;
+            enemyPool_.forEach([&](Enemy& enemy) {
+                if (enemy.active) activeEnemyCount++;
+            });
+
+            env->CallStaticVoidMethod(g_bridgeClass, g_updateMethod,
+                currentWave_, maxWaves_,
+                playerHP_, 20,
+                sp_, waveTimer_,
+                static_cast<int>(state_),
+                static_cast<int>(getSummonCost()),
+                activeEnemyCount,
+                isBossRound_ ? 1 : 0,
+                bossTimer_);
+        }
+    }
+
     switch (state_) {
         case State::WaveDelay: {
             waveDelayTimer_ -= dt;
@@ -117,6 +209,32 @@ void BattleScene::onUpdate(float dt) {
 
             // Update enemies
             updateEnemies(dt);
+
+            // Check active enemy count — defeat if >= MAX_ENEMY_COUNT
+            {
+                int activeEnemyCount = 0;
+                enemyPool_.forEach([&](Enemy& enemy) {
+                    if (enemy.active) activeEnemyCount++;
+                });
+                if (activeEnemyCount >= MAX_ENEMY_COUNT) {
+                    state_ = State::Defeat;
+                    aout << "DEFEAT! Too many enemies (" << activeEnemyCount << ")" << std::endl;
+                    notifyBattleEnd(false, currentWave_, currentWave_ * 10, -15);
+                    break;
+                }
+            }
+
+            // Boss round timer — defeat if time runs out
+            if (isBossRound_) {
+                bossTimer_ -= dt;
+                if (bossTimer_ <= 0.f) {
+                    bossTimer_ = 0.f;
+                    state_ = State::Defeat;
+                    aout << "DEFEAT! Boss timer expired on wave " << currentWave_ << std::endl;
+                    notifyBattleEnd(false, currentWave_, currentWave_ * 10, -15);
+                    break;
+                }
+            }
 
             // Rebuild spatial hash for enemy queries
             rebuildSpatialHash();
@@ -166,15 +284,7 @@ void BattleScene::updateEnemies(float dt) {
             if (playerHP_ <= 0) {
                 state_ = State::Defeat;
                 aout << "DEFEAT! Wave " << currentWave_ << std::endl;
-                ResultScene::BattleResult result;
-                result.victory = false;
-                result.waveReached = currentWave_;
-                result.goldEarned = currentWave_ * 10;
-                result.trophyChange = -15;
-                result.killCount = killCount_;
-                result.mergeCount = mergeCount_;
-                engine_.getSceneManager().push(
-                    std::make_unique<ResultScene>(engine_, result));
+                notifyBattleEnd(false, currentWave_, currentWave_ * 10, -15);
             }
         }
     });
@@ -281,22 +391,51 @@ void BattleScene::checkWaveComplete() {
         if (currentWave_ >= maxWaves_) {
             state_ = State::Victory;
             aout << "VICTORY! All waves cleared!" << std::endl;
-            ResultScene::BattleResult result;
-            result.victory = true;
-            result.waveReached = currentWave_;
-            result.goldEarned = currentWave_ * 15;
-            result.trophyChange = 25;
-            result.killCount = killCount_;
-            result.mergeCount = mergeCount_;
-            result.perfectWin = (hpLost_ == 0);
-            result.monoTypeWin = (unitTypesUsed_.size() <= 1);
-            engine_.getSceneManager().push(
-                std::make_unique<ResultScene>(engine_, result));
+            notifyBattleEnd(true, currentWave_, currentWave_ * 15, 25);
         } else {
             state_ = State::WaveDelay;
             waveDelayTimer_ = WAVE_DELAY;
         }
     }
+}
+
+void BattleScene::notifyBattleEnd(bool victory, int waveReached, int goldEarned, int trophyChange) {
+    if (!g_jniInitialized || !g_battleEndMethod) {
+        aout << "BattleBridge JNI not ready — cannot notify battle end" << std::endl;
+        return;
+    }
+
+    // Apply rewards to PlayerData + save (same as ResultScene::onEnter did)
+    auto& pd = PlayerData::get();
+    Currency::addGold(goldEarned);
+    Currency::addTrophies(trophyChange);
+    int cardReward = waveReached / 5;
+    for (int i = 0; i < cardReward; i++) {
+        // Only give cards for LOW grade (summonable) units: IDs 0-4
+        int unitId = std::rand() % 5;
+        pd.units[unitId].cards++;
+    }
+    if (victory) pd.totalWins++; else pd.totalLosses++;
+    if (waveReached > pd.highestWave) pd.highestWave = waveReached;
+    pd.totalKills += killCount_;
+    pd.totalMerges += mergeCount_;
+    if (victory && hpLost_ == 0) pd.wonWithoutDamage = true;
+    if (victory && unitTypesUsed_.size() <= 1) pd.wonWithSingleType = true;
+    SeasonPass::addBattleXP();
+    AchievementSystem::get().checkAndUnlock();
+    SaveSystem::get().save();
+
+    // Notify Compose via JNI
+    JNIEnv* env = nullptr;
+    engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+    if (env) {
+        env->CallStaticVoidMethod(g_bridgeClass, g_battleEndMethod,
+            static_cast<jboolean>(victory),
+            waveReached, goldEarned, trophyChange,
+            killCount_, mergeCount_, cardReward);
+    }
+
+    aout << "Battle end notified to Compose: " << (victory ? "VICTORY" : "DEFEAT") << std::endl;
 }
 
 void BattleScene::startNextWave() {
@@ -305,6 +444,13 @@ void BattleScene::startNextWave() {
     waveManager_.startWave(currentWave_);
     waveTimer_ = 0.f;
     state_ = State::Playing;
+
+    // Boss round detection
+    isBossRound_ = (currentWave_ % 10 == 0) && (currentWave_ > 0);
+    if (isBossRound_) {
+        bossTimer_ = BOSS_TIME_LIMIT;
+        aout << "BOSS ROUND! Time limit: " << BOSS_TIME_LIMIT << "s" << std::endl;
+    }
 }
 
 // ---- Rendering ----
@@ -520,11 +666,7 @@ void BattleScene::onInput(const InputEvent& event) {
                 switch (result) {
                     case MergeSystem::MergeResult::Merged:
                         mergeCount_++;
-                        aout << "Merge successful!" << std::endl;
-                        break;
-                    case MergeSystem::MergeResult::Combined:
-                        mergeCount_++;
-                        aout << "Hidden combination!" << std::endl;
+                        aout << "3-unit merge successful!" << std::endl;
                         break;
                     default:
                         break;

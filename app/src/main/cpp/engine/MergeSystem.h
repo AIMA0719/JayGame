@@ -4,6 +4,7 @@
 #include "MathTypes.h"
 #include "Grid.h"
 #include "ObjectPool.h"
+#include "UnitData.h"
 
 class Unit;
 class SpriteBatch;
@@ -19,11 +20,10 @@ public:
 
     enum class MergeResult {
         None,
-        Merged,       // same type + same level → level up
-        Swapped,      // different type or level → swap positions
+        Merged,       // same family + same grade x3 → next grade
+        Swapped,      // different family or grade → swap positions
         Moved,        // dropped on empty cell
-        Cancelled,    // dropped outside grid
-        Combined      // hidden combination
+        Cancelled     // dropped outside grid
     };
 
     MergeSystem() = default;
@@ -57,7 +57,10 @@ private:
     int highlightRow_ = -1;
     int highlightCol_ = -1;
 
-    static constexpr int MAX_UNIT_LEVEL = 7;
+    static constexpr int MAX_GRADE = 4;  // Transcendent grade (unitDefId / 5)
+
+    Unit* findThirdUnit(const Grid& grid, int family, int grade,
+                        Unit* exclude1, Unit* exclude2) const;
 
     void renderGhost(SpriteBatch& batch, const TextureAsset& texture,
                      const SpriteFrame& wp) const;

@@ -53,6 +53,51 @@ inline int getDiamonds() {
     return PlayerData::get().diamonds;
 }
 
+// Gas operations (permanent upgrade currency)
+static constexpr int GAS_CAP = 99999;
+
+inline bool canSpendGas(int amount) {
+    return PlayerData::get().gas >= amount;
+}
+
+inline bool spendGas(int amount) {
+    auto& pd = PlayerData::get();
+    if (pd.gas < amount) return false;
+    pd.gas -= amount;
+    return true;
+}
+
+inline void addGas(int amount) {
+    auto& pd = PlayerData::get();
+    pd.gas += amount;
+    if (pd.gas > GAS_CAP) pd.gas = GAS_CAP;
+}
+
+inline int getGas() {
+    return PlayerData::get().gas;
+}
+
+// Family upgrade operations (영구 공격력 강화)
+inline int getFamilyUpgradeLevel(int familyIdx) {
+    if (familyIdx < 0 || familyIdx >= 5) return 0;
+    return PlayerData::get().familyUpgrade[familyIdx];
+}
+
+inline bool upgradeFamilyATK(int familyIdx, int gasCost) {
+    if (familyIdx < 0 || familyIdx >= 5) return false;
+    auto& pd = PlayerData::get();
+    if (pd.gas < gasCost) return false;
+    pd.gas -= gasCost;
+    pd.familyUpgrade[familyIdx]++;
+    return true;
+}
+
+// Family ATK bonus multiplier: each level = +5% ATK
+inline float getFamilyATKMultiplier(int familyIdx) {
+    int level = getFamilyUpgradeLevel(familyIdx);
+    return 1.0f + level * 0.05f;
+}
+
 // Trophy operations
 inline void addTrophies(int amount) {
     auto& pd = PlayerData::get();

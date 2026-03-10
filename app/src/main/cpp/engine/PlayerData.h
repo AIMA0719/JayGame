@@ -5,7 +5,7 @@
 #include <array>
 
 // Total units in the game
-static constexpr int TOTAL_UNITS = 15;
+static constexpr int TOTAL_UNITS = 25;
 static constexpr int MAX_UNIT_LEVEL = 7;
 
 // Trophy rank thresholds
@@ -42,6 +42,10 @@ struct PlayerData {
     // Currencies
     int gold = 500;
     int diamonds = 0;
+    int gas = 0;           // 영구 강화 재화
+
+    // Family ATK upgrade levels (계열별 영구 공격력 강화)
+    int familyUpgrade[5] = {0, 0, 0, 0, 0}; // 화염, 냉기, 독, 번개, 보조
 
     // Progression
     int trophies = 0;
@@ -95,6 +99,8 @@ struct PlayerData {
     void initDefaults() {
         gold = 500;
         diamonds = 0;
+        gas = 0;
+        for (int i = 0; i < 5; i++) familyUpgrade[i] = 0;
         trophies = 0;
         playerLevel = 1;
         totalXP = 0;

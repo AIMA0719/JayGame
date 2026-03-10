@@ -20,7 +20,7 @@ WaveConfig WaveManager::getWaveConfig(int wave) const {
     WaveConfig config{};
     config.waveNumber = wave;
 
-    bool boss = (wave % 5 == 0) && (wave > 0);
+    bool boss = (wave % 10 == 0) && (wave > 0);
     config.isBoss = boss;
 
     // HP: 100 * pow(1.12, wave-1) for normal; 5x for boss

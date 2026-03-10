@@ -29,14 +29,14 @@ void Unit::init(int defId, Vec2 pos) {
 
     // Color-code by element
     const UnitDef& def = getUnitDef(defId);
-    switch (def.element) {
-        case UnitElement::Physical:
+    switch (def.family) {
+        case UnitFamily::Fire:
             entity.sprite.color = {1.0f, 0.6f, 0.3f, 1.f}; // orange
             break;
-        case UnitElement::Magic:
+        case UnitFamily::Frost:
             entity.sprite.color = {0.4f, 0.6f, 1.0f, 1.f}; // blue
             break;
-        case UnitElement::Support:
+        case UnitFamily::Support:
             entity.sprite.color = {0.4f, 1.0f, 0.5f, 1.f}; // green
             break;
     }
@@ -96,60 +96,39 @@ void Unit::render(float alpha, SpriteBatch& batch, const SpriteAtlas& atlas) con
     if (!active) return;
 
     const auto& tex = *atlas.getTexture();
-    const auto& wp = atlas.getWhitePixel();
     float cx = position.x;
     float cy = position.y;
-    float radius = 24.f;
+    float spriteSize = 56.f; // unit sprite display size
 
-    // Unit type colors
-    static const Vec4 unitColors[] = {
-        {0.9f, 0.3f, 0.3f, 1.f},  // 0: red
-        {0.3f, 0.5f, 0.9f, 1.f},  // 1: blue
-        {0.3f, 0.9f, 0.4f, 1.f},  // 2: green
-        {0.9f, 0.9f, 0.3f, 1.f},  // 3: yellow
-        {0.8f, 0.3f, 0.9f, 1.f},  // 4: purple
-        {0.9f, 0.6f, 0.2f, 1.f},  // 5: orange
-        {0.3f, 0.9f, 0.9f, 1.f},  // 6: cyan
-        {0.9f, 0.5f, 0.6f, 1.f},  // 7: pink
-        {0.6f, 0.6f, 0.6f, 1.f},  // 8: gray
-        {1.0f, 0.8f, 0.4f, 1.f},  // 9: gold
-        {0.4f, 0.3f, 0.8f, 1.f},  // 10: indigo
-        {0.2f, 0.7f, 0.5f, 1.f},  // 11: emerald
-        {0.8f, 0.2f, 0.5f, 1.f},  // 12: magenta
-        {0.5f, 0.8f, 0.2f, 1.f},  // 13: lime
-        {0.7f, 0.4f, 0.2f, 1.f},  // 14: brown
-    };
+    // Get the actual unit sprite from atlas
+    const auto& unitSprite = atlas.getUnitSprite(unitDefId);
 
-    int colorIdx = unitDefId % 15;
-    Vec4 color = unitColors[colorIdx];
+    // Select animation: attack if attacking, otherwise idle
+    const SpriteFrame& frame = attacking_
+        ? unitSprite.attack.getFrame(attackAnimTimer_)
+        : unitSprite.idle.getFrame(animTime_);
 
     // Brightness increases with level
-    float brightness = 1.0f + (level - 1) * 0.05f;
-    color.x = std::min(color.x * brightness, 1.f);
-    color.y = std::min(color.y * brightness, 1.f);
-    color.z = std::min(color.z * brightness, 1.f);
+    float brightness = 1.0f + (level - 1) * 0.08f;
+    float r = std::min(brightness, 1.2f);
+    float g = std::min(brightness, 1.2f);
+    float b = std::min(brightness, 1.2f);
 
-    // Outer ring (darker border)
-    float outR = radius + 2.f;
+    // Draw unit sprite from atlas
     batch.draw(tex,
-               cx - outR, cy - outR, outR * 2.f, outR * 2.f,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               color.x * 0.5f, color.y * 0.5f, color.z * 0.5f, 0.8f);
+               {cx, cy}, {spriteSize, spriteSize},
+               frame.uvRect, {r, g, b, 1.f},
+               0.f, {0.5f, 0.5f});
 
-    // Inner filled circle (colored square)
-    batch.draw(tex,
-               cx - radius, cy - radius, radius * 2.f, radius * 2.f,
-               wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-               color.x, color.y, color.z, color.w);
-
-    // Attack animation pulse
+    // Attack animation: glow pulse behind sprite
     if (attacking_) {
+        const auto& wp = atlas.getWhitePixel();
         float pulse = 0.5f + 0.5f * std::sin(attackAnimTimer_ * 20.f);
-        float pR = radius + 4.f * pulse;
+        float glowSize = spriteSize + 8.f * pulse;
         batch.draw(tex,
-                   cx - pR, cy - pR, pR * 2.f, pR * 2.f,
+                   cx - glowSize * 0.5f, cy - glowSize * 0.5f, glowSize, glowSize,
                    wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-                   1.f, 1.f, 1.f, 0.2f * pulse);
+                   1.f, 1.f, 1.f, 0.15f * pulse);
     }
 }
 

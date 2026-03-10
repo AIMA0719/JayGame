@@ -132,10 +132,10 @@ void DeckEditScene::renderDeckSlots(SpriteBatch& batch) {
         if (deck_[i] >= 0 && deck_[i] < static_cast<int>(UNIT_TABLE_SIZE)) {
             const auto& def = getUnitDef(deck_[i]);
             Vec4 unitColor;
-            switch (def.element) {
-                case UnitElement::Physical: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-                case UnitElement::Magic:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-                case UnitElement::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+            switch (def.family) {
+                case UnitFamily::Fire: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+                case UnitFamily::Frost:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+                case UnitFamily::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
             }
 
             float unitSize = 60.f;
@@ -189,11 +189,11 @@ void DeckEditScene::renderInventory(SpriteBatch& batch) {
         // Border
         float bw = 2.f;
         Vec4 borderCol;
-        switch (def.rarity) {
-            case UnitRarity::Normal:    borderCol = {0.5f, 0.5f, 0.5f, 0.5f}; break;
-            case UnitRarity::Rare:      borderCol = {0.3f, 0.5f, 1.0f, 0.6f}; break;
-            case UnitRarity::Epic:      borderCol = {0.7f, 0.3f, 0.9f, 0.6f}; break;
-            case UnitRarity::Legendary: borderCol = {1.0f, 0.8f, 0.2f, 0.7f}; break;
+        switch (def.grade) {
+            case UnitGrade::Low:    borderCol = {0.5f, 0.5f, 0.5f, 0.5f}; break;
+            case UnitGrade::Medium:      borderCol = {0.3f, 0.5f, 1.0f, 0.6f}; break;
+            case UnitGrade::High:      borderCol = {0.7f, 0.3f, 0.9f, 0.6f}; break;
+            case UnitGrade::Supreme: borderCol = {1.0f, 0.8f, 0.2f, 0.7f}; break;
         }
         batch.draw(*whiteTexture_, x, y, cardW, bw,
                    0.f, 0.f, 1.f, 1.f, borderCol.x, borderCol.y, borderCol.z, borderCol.w);
@@ -206,10 +206,10 @@ void DeckEditScene::renderInventory(SpriteBatch& batch) {
 
         // Unit icon
         Vec4 unitColor;
-        switch (def.element) {
-            case UnitElement::Physical: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
-            case UnitElement::Magic:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
-            case UnitElement::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
+        switch (def.family) {
+            case UnitFamily::Fire: unitColor = {1.0f, 0.6f, 0.3f, 0.9f}; break;
+            case UnitFamily::Frost:    unitColor = {0.4f, 0.6f, 1.0f, 0.9f}; break;
+            case UnitFamily::Support:  unitColor = {0.4f, 1.0f, 0.5f, 0.9f}; break;
         }
         float iconSize = 50.f;
         batch.draw(*whiteTexture_,

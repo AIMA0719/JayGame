@@ -1,7 +1,6 @@
 #include "MergeSystem.h"
 #include "Unit.h"
 #include "UnitData.h"
-#include "CombinationTable.h"
 #include "SpriteBatch.h"
 #include "TextureAsset.h"
 #include "SpriteAtlas.h"
@@ -93,56 +92,53 @@ MergeSystem::MergeResult MergeSystem::onDragEnd(const Vec2& worldPos,
     }
 
     // Target cell has a unit
-    // Check hidden combination first
-    const CombinationRecipe* recipe = findCombination(
-        dragUnit_->unitDefId, targetUnit->unitDefId,
-        dragUnit_->level, targetUnit->level);
+    // 3-unit merge: same family + same grade → next grade
+    {
+        int dragFamily = dragUnit_->unitDefId % 5;
+        int dragGrade  = dragUnit_->unitDefId / 5;
+        int targetFamily = targetUnit->unitDefId % 5;
+        int targetGrade  = targetUnit->unitDefId / 5;
 
-    if (recipe) {
-        // Hidden combination!
-        aout << "Hidden combination! " << getUnitDef(dragUnit_->unitDefId).name
-             << " + " << getUnitDef(targetUnit->unitDefId).name
-             << " = " << getUnitDef(recipe->resultUnitId).name << std::endl;
+        if (dragFamily == targetFamily &&
+            dragGrade == targetGrade &&
+            dragGrade < MAX_GRADE) {
 
-        // Remove source unit from grid and pool
-        grid.removeUnit(dragSourceRow_, dragSourceCol_);
-        dragUnit_->active = false;
-        unitPool.release(dragUnit_);
+            // Find a 3rd unit of same family+grade on the grid
+            Unit* third = findThirdUnit(grid, dragFamily, dragGrade,
+                                        dragUnit_, targetUnit);
 
-        // Replace target unit with combination result
-        Vec2 targetPos = grid.cellCenter(targetRow, targetCol);
-        grid.removeUnit(targetRow, targetCol);
-        targetUnit->init(recipe->resultUnitId, targetPos);
-        targetUnit->level = recipe->resultLevel;
-        grid.placeUnit(targetRow, targetCol, targetUnit);
+            if (third) {
+                int mergeResultId = dragUnit_->unitDefId + 5;
+                if (mergeResultId >= 0 && mergeResultId < static_cast<int>(UNIT_TABLE_SIZE)) {
+                    aout << "3-unit merge! " << getUnitDef(dragUnit_->unitDefId).name
+                         << " x3 → " << getUnitDef(mergeResultId).name << std::endl;
 
-        state_ = DragState::Idle;
-        dragUnit_ = nullptr;
-        lastResult_ = MergeResult::Combined;
-        return lastResult_;
-    }
+                    // Remove source unit
+                    grid.removeUnit(dragSourceRow_, dragSourceCol_);
+                    dragUnit_->active = false;
+                    unitPool.release(dragUnit_);
 
-    // Standard merge: same type + same level
-    if (dragUnit_->unitDefId == targetUnit->unitDefId &&
-        dragUnit_->level == targetUnit->level &&
-        targetUnit->level < MAX_UNIT_LEVEL) {
+                    // Remove third unit from grid
+                    int thirdRow, thirdCol;
+                    if (grid.findUnit(third, thirdRow, thirdCol)) {
+                        grid.removeUnit(thirdRow, thirdCol);
+                    }
+                    third->active = false;
+                    unitPool.release(third);
 
-        aout << "Merge! " << getUnitDef(dragUnit_->unitDefId).name
-             << " lv" << dragUnit_->level << " → lv" << (dragUnit_->level + 1)
-             << std::endl;
+                    // Transform target into merge result
+                    Vec2 targetPos = grid.cellCenter(targetRow, targetCol);
+                    grid.removeUnit(targetRow, targetCol);
+                    targetUnit->init(mergeResultId, targetPos);
+                    grid.placeUnit(targetRow, targetCol, targetUnit);
 
-        // Remove source from grid and pool
-        grid.removeUnit(dragSourceRow_, dragSourceCol_);
-        dragUnit_->active = false;
-        unitPool.release(dragUnit_);
-
-        // Level up target
-        targetUnit->level++;
-
-        state_ = DragState::Idle;
-        dragUnit_ = nullptr;
-        lastResult_ = MergeResult::Merged;
-        return lastResult_;
+                    state_ = DragState::Idle;
+                    dragUnit_ = nullptr;
+                    lastResult_ = MergeResult::Merged;
+                    return lastResult_;
+                }
+            }
+        }
     }
 
     // Can't merge (different type, different level, or max level) — swap
@@ -177,6 +173,23 @@ void MergeSystem::onDragCancel(Grid& grid) {
     state_ = DragState::Idle;
     dragUnit_ = nullptr;
     lastResult_ = MergeResult::Cancelled;
+}
+
+Unit* MergeSystem::findThirdUnit(const Grid& grid, int family, int grade,
+                                  Unit* exclude1, Unit* exclude2) const {
+    for (int r = 0; r < Grid::ROWS; r++) {
+        for (int c = 0; c < Grid::COLS; c++) {
+            Unit* u = grid.getUnit(r, c);
+            if (!u || !u->active) continue;
+            if (u == exclude1 || u == exclude2) continue;
+            int uFamily = u->unitDefId % 5;
+            int uGrade  = u->unitDefId / 5;
+            if (uFamily == family && uGrade == grade) {
+                return u;
+            }
+        }
+    }
+    return nullptr;
 }
 
 void MergeSystem::render(SpriteBatch& batch, const SpriteAtlas& atlas,
@@ -231,18 +244,15 @@ void MergeSystem::renderHighlight(SpriteBatch& batch, const TextureAsset& textur
         // Empty cell — move (blue)
         hlColor = {0.3f, 0.5f, 1.0f, 0.3f};
     } else if (dragUnit_ && targetUnit) {
-        // Check combination
-        const CombinationRecipe* recipe = findCombination(
-            dragUnit_->unitDefId, targetUnit->unitDefId,
-            dragUnit_->level, targetUnit->level);
+        int dragFamily = dragUnit_->unitDefId % 5;
+        int dragGrade  = dragUnit_->unitDefId / 5;
+        int targetFamily = targetUnit->unitDefId % 5;
+        int targetGrade  = targetUnit->unitDefId / 5;
 
-        if (recipe) {
-            // Hidden combination (gold)
-            hlColor = {1.0f, 0.85f, 0.0f, 0.4f};
-        } else if (dragUnit_->unitDefId == targetUnit->unitDefId &&
-                   dragUnit_->level == targetUnit->level &&
-                   targetUnit->level < MAX_UNIT_LEVEL) {
-            // Merge possible (green)
+        if (dragFamily == targetFamily &&
+            dragGrade == targetGrade &&
+            dragGrade < MAX_GRADE) {
+            // 3-unit merge possible (green)
             hlColor = {0.2f, 1.0f, 0.3f, 0.4f};
         } else {
             // Swap (orange)

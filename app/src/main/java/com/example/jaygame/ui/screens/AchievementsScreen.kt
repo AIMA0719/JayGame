@@ -141,7 +141,7 @@ fun AchievementsScreen(
         // Resource Header
         ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Back button + title row
         Row(
@@ -161,7 +161,7 @@ fun AchievementsScreen(
             Text(
                 text = "업적",
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 color = Gold,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
@@ -169,14 +169,14 @@ fun AchievementsScreen(
             Spacer(Modifier.width(56.dp))
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Category tabs
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             categories.forEachIndexed { index, category ->
                 NeonButton(

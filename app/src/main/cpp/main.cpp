@@ -35,6 +35,14 @@ bool motion_event_filter_func(const GameActivityMotionEvent *motionEvent) {
             sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK);
 }
 
+// --- JNI Bridge: Compose → C++ ---
+// Called from Kotlin BattleBridge.nativeSummon() on UI thread.
+// Sets atomic flag; BattleScene::onUpdate() picks it up on game thread.
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeSummon(JNIEnv* /*env*/, jclass /*clazz*/) {
+    BattleScene::summonRequested.store(true, std::memory_order_release);
+}
+
 void android_main(struct android_app *pApp) {
     aout << "Welcome to JayGame" << std::endl;
 

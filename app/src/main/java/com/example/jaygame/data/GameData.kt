@@ -12,8 +12,9 @@ data class GameData(
     val trophies: Int = 0,
     val playerLevel: Int = 1,
     val totalXP: Int = 0,
-    val units: List<UnitProgress> = List(15) { i ->
-        UnitProgress(owned = i < 10, cards = 0, level = 1)
+    val units: List<UnitProgress> = List(25) { i ->
+        // LOW grade (0-4) owned by default, others unlocked via merge
+        UnitProgress(owned = i < 5, cards = 0, level = 1)
     },
     val deck: List<Int> = listOf(0, 1, 2, 3, 4),
     val totalWins: Int = 0,
@@ -42,6 +43,10 @@ data class GameData(
     val stageBestWaves: List<Int> = List(6) { 0 },
     // 난이도
     val difficulty: Int = 0,
+    // 가스
+    val gas: Int = 0,
+    // 패밀리 영구 업그레이드
+    val familyUpgrades: Map<String, Int> = emptyMap(),
     val saveVersion: Int = 1,
 ) {
     val rank: String get() = when {

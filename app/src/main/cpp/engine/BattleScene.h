@@ -18,6 +18,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include <atomic>
 
 class GameEngine;
 
@@ -31,6 +32,22 @@ public:
     void onUpdate(float dt) override;
     void onRender(float alpha, SpriteBatch& batch) override;
     void onInput(const InputEvent& event) override;
+
+    // Public methods for JNI bridge
+    void summonUnit();
+    float getSummonCost() const;
+
+    // Summon request flag — set from JNI (Compose thread), consumed on game thread
+    static std::atomic<bool> summonRequested;
+
+    // State getters for JNI bridge
+    int getCurrentWave() const { return currentWave_; }
+    int getMaxWaves() const { return maxWaves_; }
+    int getPlayerHP() const { return playerHP_; }
+    float getSP() const { return sp_; }
+    float getElapsedTime() const { return waveTimer_; }
+    int getStateInt() const { return static_cast<int>(state_); }
+    int getSummonCostInt() const { return static_cast<int>(getSummonCost()); }
 
 private:
     GameEngine& engine_;
@@ -79,6 +96,14 @@ private:
     // Summon button area (bottom-right)
     static constexpr Rect SUMMON_BUTTON = {1080.f, 620.f, 180.f, 80.f};
 
+    // Monster limit — defeat if active enemies reach this count
+    static constexpr int MAX_ENEMY_COUNT = 100;
+
+    // Boss round timer
+    float bossTimer_ = 0.f;
+    bool isBossRound_ = false;
+    static constexpr float BOSS_TIME_LIMIT = 60.f;
+
     // Ability aura timer
     float auraTimer_ = 0.f;
     static constexpr float AURA_INTERVAL = 0.5f;
@@ -91,8 +116,6 @@ private:
 
     // Methods
     void setupPath();
-    void summonUnit();
-    float getSummonCost() const;
     void updateEnemies(float dt);
     void updateUnits(float dt);
     void updateProjectiles(float dt);
@@ -102,6 +125,7 @@ private:
     void renderHUD(SpriteBatch& batch);
     void checkWaveComplete();
     void startNextWave();
+    void notifyBattleEnd(bool victory, int waveReached, int goldEarned, int trophyChange);
 };
 
 #endif // JAYGAME_BATTLESCENE_H

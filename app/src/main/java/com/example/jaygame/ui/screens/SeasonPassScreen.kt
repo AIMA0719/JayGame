@@ -99,7 +99,7 @@ fun SeasonPassScreen(
         // Resource Header
         ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Back button + title row
         Row(
@@ -119,7 +119,7 @@ fun SeasonPassScreen(
             Text(
                 text = "시즌패스",
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 color = NeonCyan,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
@@ -164,7 +164,7 @@ fun SeasonPassScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Claim All button
         if (claimableTiers > 0) {
@@ -212,7 +212,7 @@ fun SeasonPassScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         // Section title
