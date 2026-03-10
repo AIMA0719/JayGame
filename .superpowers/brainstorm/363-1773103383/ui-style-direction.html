@@ -1,0 +1,86 @@
+<h2>UI 스타일 방향 선택</h2>
+<p class="subtitle">운빨존많겜 / S2RD / 메이플 랜덤디펜스를 참고한 UI 디자인 톤 선택</p>
+
+<div class="section">
+  <h3>레퍼런스 게임 UI 특징 분석</h3>
+  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:24px;">
+    <div style="background:#1a1a2e; border-radius:12px; padding:16px; border:1px solid #333;">
+      <h4 style="color:#e94560; margin:0 0 8px;">운빨존많겜</h4>
+      <ul style="font-size:13px; color:#ccc; padding-left:16px; margin:0;">
+        <li>어두운 배경 (다크 네이비/블랙)</li>
+        <li>네온/글로우 액센트 (빨강, 노랑)</li>
+        <li>둥근 카드형 UI</li>
+        <li>하단 탭 네비게이션</li>
+        <li>배틀 화면: 상단 웨이브 바 + 하단 소환/합성 버튼</li>
+        <li>유닛 주사위 스타일 아이콘</li>
+      </ul>
+    </div>
+    <div style="background:#0d1b2a; border-radius:12px; padding:16px; border:1px solid #333;">
+      <h4 style="color:#00b4d8; margin:0 0 8px;">S2RD</h4>
+      <ul style="font-size:13px; color:#ccc; padding-left:16px; margin:0;">
+        <li>깔끔한 다크 테마</li>
+        <li>블루/시안 액센트</li>
+        <li>미니멀한 아이콘</li>
+        <li>그리드 기반 배틀 뷰</li>
+        <li>심플한 HUD</li>
+      </ul>
+    </div>
+    <div style="background:#1a0a2e; border-radius:12px; padding:16px; border:1px solid #333;">
+      <h4 style="color:#b388ff; margin:0 0 8px;">메이플 랜덤디펜스</h4>
+      <ul style="font-size:13px; color:#ccc; padding-left:16px; margin:0;">
+        <li>원작 스타크래프트 맵 기반</li>
+        <li>그리드에 유닛 배치</li>
+        <li>합성(머지) 시스템</li>
+        <li>웨이브 기반 진행</li>
+        <li>SP 기반 소환 경제</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>다크 네온 (운빨존많겜 스타일) - 추천</h3>
+      <div style="display:flex; gap:8px; margin:8px 0;">
+        <div style="width:40px;height:40px;border-radius:8px;background:#0f0f23;border:1px solid #333;" title="배경"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#1a1a3e;" title="카드"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#e94560;" title="액센트1"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#ffd700;" title="골드"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#00d4ff;" title="다이아"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#4ade80;" title="성공"></div>
+      </div>
+      <p>어두운 배경 + 강렬한 액센트 컬러. 게임 분위기와 가장 잘 어울리고, 유닛/이펙트가 돋보임.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>다크 블루 (S2RD 스타일)</h3>
+      <div style="display:flex; gap:8px; margin:8px 0;">
+        <div style="width:40px;height:40px;border-radius:8px;background:#0d1b2a;border:1px solid #333;" title="배경"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#1b2838;" title="카드"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#00b4d8;" title="액센트"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#48cae4;" title="하이라이트"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#f8f9fa;" title="텍스트"></div>
+      </div>
+      <p>깔끔하고 차분한 블루 톤. 미니멀하고 모던한 느낌.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>현재 중세 판타지 (유지)</h3>
+      <div style="display:flex; gap:8px; margin:8px 0;">
+        <div style="width:40px;height:40px;border-radius:8px;background:#2d1b00;border:1px solid #333;" title="배경"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#4a3520;" title="카드"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#c8a96e;" title="골드"></div>
+        <div style="width:40px;height:40px;border-radius:8px;background:#8b4513;" title="나무"></div>
+      </div>
+      <p>현재 MedievalButton/WoodFrame 기반. 레퍼런스 게임들과 스타일이 많이 다름.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,76 @@
+<h2>JayGame UI 리디자인 - 접근 방식 선택</h2>
+<p class="subtitle">현재 C++ OpenGL 렌더링의 픽셀 문제를 해결하고, 레퍼런스(운빨존많겜, S2RD) 수준의 UI를 구현하기 위한 방향</p>
+
+<div class="section">
+  <h3>현재 문제점</h3>
+  <ul>
+    <li><strong>GL_NEAREST 필터링</strong> — 텍스처가 확대될 때 픽셀이 그대로 보임</li>
+    <li><strong>5x7 비트맵 폰트</strong> — TextRenderer가 프로시저럴 도트 폰트 사용, 레퍼런스 게임과 큰 차이</li>
+    <li><strong>UISystem이 기본 색상 사각형</strong> — 버튼/패널이 단색 직사각형으로 렌더링</li>
+    <li><strong>64x64 스프라이트</strong> — 저해상도 아틀라스, 확대 시 깨짐</li>
+    <li><strong>배틀 HUD가 C++ 자체 렌더링</strong> — 운빨존많겜처럼 세련된 UI 구현이 어려움</li>
+  </ul>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>C++ 렌더링 개선 (현재 구조 유지)</h3>
+      <p><strong>방법:</strong> GL_LINEAR 필터링, 고해상도 아틀라스(128x128+), 9-patch UI 시스템, TTF 폰트 렌더링(FreeType) 추가</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>기존 코드 구조 유지</li>
+          <li>배틀 중 성능 최적화 용이</li>
+          <li>단일 렌더링 파이프라인</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>UI 개발 속도가 매우 느림</li>
+          <li>운빨존많겜 수준 UI 구현이 현실적으로 매우 어려움</li>
+          <li>FreeType, 9-patch 등 추가 라이브러리 필요</li>
+          <li>레이아웃/애니메이션 직접 구현 필요</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>하이브리드: 배틀=C++ + UI=Compose 오버레이 (추천)</h3>
+      <p><strong>방법:</strong> 배틀 로직/유닛/적/투사체는 C++에서 렌더링, HUD/버튼/패널/정보는 Compose View 오버레이로 처리. 메뉴 화면은 이미 Compose.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>배틀 성능 유지 (C++ 게임 루프)</li>
+          <li>UI는 Compose로 빠르게 레퍼런스 수준 구현 가능</li>
+          <li>이미 MainActivity에 ComposeView 오버레이 기반 있음</li>
+          <li>Material Design, 커스텀 폰트, 애니메이션 즉시 사용</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>C++↔Compose 간 실시간 통신 필요 (JNI 콜백)</li>
+          <li>오버레이 레이아웃 조정 필요</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>전면 Compose 전환</h3>
+      <p><strong>방법:</strong> 배틀 화면까지 포함해서 전부 Compose Canvas + 커스텀 드로잉으로 전환</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>단일 기술 스택 (Kotlin only)</li>
+          <li>UI 일관성 최고</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>C++ 엔진 코드 전체 재작성 (수천 줄)</li>
+          <li>60Hz 게임 루프 성능 보장 어려움</li>
+          <li>오브젝트 풀링, 공간 해싱 등 재구현 필요</li>
+          <li>가장 시간 소모가 큼</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
