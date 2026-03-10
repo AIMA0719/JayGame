@@ -370,8 +370,8 @@ void BattleScene::onRender(float alpha, SpriteBatch& batch) {
     // 6. Render merge system (ghost sprite, highlights)
     mergeSystem_.render(batch, atlas_, grid_);
 
-    // 7. Render HUD
-    renderHUD(batch);
+    // 7. HUD rendering disabled — now handled by Compose overlay
+    // renderHUD(batch);
 
     batch.end();
 }
