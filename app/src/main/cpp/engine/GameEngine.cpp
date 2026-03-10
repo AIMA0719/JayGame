@@ -60,7 +60,8 @@ void GameEngine::initGL() {
     graphics_.init(app_);
 
     // Global GL state
-    glClearColor(100.f / 255.f, 149.f / 255.f, 237.f / 255.f, 1.f);
+    // DeepDark #0f0f23 — matches the dark neon Compose theme
+    glClearColor(0x0f / 255.f, 0x0f / 255.f, 0x23 / 255.f, 1.f);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

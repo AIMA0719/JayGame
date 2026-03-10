@@ -56,7 +56,15 @@ object BattleBridge {
         _state.value = _state.value.copy(deckUnits = units)
     }
 
-    // Called from Compose UI
-    external fun nativeSummon(): Boolean
-    external fun nativePause()
+    // Callback-based approach — avoids JNI external functions that have no C++ impl
+    var onSummonRequested: (() -> Unit)? = null
+    var onPauseRequested: (() -> Unit)? = null
+
+    fun requestSummon() {
+        onSummonRequested?.invoke()
+    }
+
+    fun requestPause() {
+        onPauseRequested?.invoke()
+    }
 }

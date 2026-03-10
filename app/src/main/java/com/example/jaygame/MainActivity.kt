@@ -12,6 +12,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.ui.battle.BattleBottomHud
 import com.example.jaygame.ui.battle.BattleTopHud
 import com.example.jaygame.ui.theme.JayGameTheme
@@ -40,6 +41,11 @@ class MainActivity : GameActivity() {
                 }
             }
         })
+
+        // Set up BattleBridge callbacks
+        BattleBridge.onSummonRequested = {
+            // TODO: Connect to C++ GameEngine when JNI bridge is ready
+        }
 
         // Add Compose overlays on top of C++ SurfaceView
         addBattleOverlay()

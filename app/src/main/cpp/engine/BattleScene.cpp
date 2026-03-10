@@ -314,7 +314,7 @@ void BattleScene::onRender(float alpha, SpriteBatch& batch) {
 
     batch.begin();
 
-    // 0. Render grass background
+    // 0. Render grass background — dark tint to match neon theme
     {
         const auto& grassTile = atlas_.getTile("grass");
         const auto& tex = *atlas_.getTexture();
@@ -323,7 +323,7 @@ void BattleScene::onRender(float alpha, SpriteBatch& batch) {
                 batch.draw(tex, x, y, 64.f, 64.f,
                            grassTile.uvRect.x, grassTile.uvRect.y,
                            grassTile.uvRect.w, grassTile.uvRect.h,
-                           1.f, 1.f, 1.f, 1.f);
+                           0.08f, 0.08f, 0.15f, 0.9f);
             }
         }
     }
@@ -393,7 +393,7 @@ void BattleScene::renderPath(SpriteBatch& batch) {
             batch.draw(tex,
                        x0, a.y - PATH_WIDTH * 0.5f, w, PATH_WIDTH,
                        pathH.uvRect.x, pathH.uvRect.y, pathH.uvRect.w, pathH.uvRect.h,
-                       1.f, 1.f, 1.f, 0.7f);
+                       0.12f, 0.15f, 0.3f, 0.5f);
         } else {
             // Vertical segment
             float y0 = std::min(a.y, b.y);
@@ -401,7 +401,7 @@ void BattleScene::renderPath(SpriteBatch& batch) {
             batch.draw(tex,
                        a.x - PATH_WIDTH * 0.5f, y0, PATH_WIDTH, h,
                        pathV.uvRect.x, pathV.uvRect.y, pathV.uvRect.w, pathV.uvRect.h,
-                       1.f, 1.f, 1.f, 0.7f);
+                       0.12f, 0.15f, 0.3f, 0.5f);
         }
     }
 }

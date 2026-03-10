@@ -33,8 +33,8 @@ for (auto& extension: extensionList) {\
 aout << std::endl;\
 }
 
-//! Color for cornflower blue. Can be sent directly to glClearColor
-#define CORNFLOWER_BLUE 100 / 255.f, 149 / 255.f, 237 / 255.f, 1
+//! DeepDark background matching dark neon Compose theme (#0f0f23)
+#define CORNFLOWER_BLUE 0x0f / 255.f, 0x0f / 255.f, 0x23 / 255.f, 1
 
 // Vertex shader, you'd typically load this from assets
 static const char *vertex = R"vertex(#version 300 es

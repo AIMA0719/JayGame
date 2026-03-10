@@ -122,7 +122,7 @@ public:
         const auto& cellBg = atlas.getTile("grid_cell");
         const auto& wp = atlas.getWhitePixel();
 
-        // Draw cell backgrounds with subtle tile texture
+        // Draw cell backgrounds — dark navy tint to match neon theme
         for (int r = 0; r < ROWS; r++) {
             for (int c = 0; c < COLS; c++) {
                 float x = GRID_X + c * CELL_W;
@@ -130,23 +130,23 @@ public:
                 batch.draw(tex, x, y, CELL_W, CELL_H,
                            cellBg.uvRect.x, cellBg.uvRect.y,
                            cellBg.uvRect.w, cellBg.uvRect.h,
-                           1.f, 1.f, 1.f, 0.3f);
+                           0.06f, 0.07f, 0.14f, 0.4f);
             }
         }
 
-        // Draw grid lines using white pixel
-        constexpr float LINE_W = 2.f;
+        // Draw grid lines — subtle cyan-tinted borders
+        constexpr float LINE_W = 1.f;
         for (int c = 0; c <= COLS; c++) {
             float x = GRID_X + c * CELL_W - LINE_W * 0.5f;
             batch.draw(tex, x, GRID_Y, LINE_W, GRID_H,
                        wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-                       0.5f, 0.4f, 0.3f, 0.6f);
+                       0.2f, 0.35f, 0.5f, 0.35f);
         }
         for (int r = 0; r <= ROWS; r++) {
             float y = GRID_Y + r * CELL_H - LINE_W * 0.5f;
             batch.draw(tex, GRID_X, y, GRID_W, LINE_W,
                        wp.uvRect.x, wp.uvRect.y, wp.uvRect.w, wp.uvRect.h,
-                       0.5f, 0.4f, 0.3f, 0.6f);
+                       0.2f, 0.35f, 0.5f, 0.35f);
         }
     }
 

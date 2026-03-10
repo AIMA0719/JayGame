@@ -130,7 +130,7 @@ fun BattleBottomHud() {
         // Summon button
         NeonButton(
             text = "소환 ${battle.summonCost} SP",
-            onClick = { BattleBridge.nativeSummon() },
+            onClick = { BattleBridge.requestSummon() },
             enabled = canSummon,
             modifier = Modifier
                 .fillMaxWidth()
