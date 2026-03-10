@@ -89,7 +89,7 @@ private fun BattleOverlayContent() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(DarkBrown.copy(alpha = 0.9f))
+            .background(DeepDark.copy(alpha = 0.9f))
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -116,7 +116,7 @@ private fun BattleOverlayContent() {
                     text = tab,
                     onClick = { /* 준비 중 */ },
                     fontSize = 11.sp,
-                    accentColor = MetalGray,
+                    accentColor = SubText,
                 )
             }
         }

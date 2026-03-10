@@ -33,14 +33,13 @@ import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.ui.components.CurrencyHeader
 import com.example.jaygame.ui.components.MedievalButton
 import com.example.jaygame.ui.components.MedievalCard
-import com.example.jaygame.ui.theme.DarkBrown
-import com.example.jaygame.ui.theme.DarkGold
+import com.example.jaygame.ui.theme.BorderGlow
+import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.SubText
 
 private data class ShopItem(
     val name: String,
@@ -168,7 +167,7 @@ fun ShopScreen(repository: GameRepository) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown),
+            .background(DeepDark),
     ) {
         // Currency Header
         CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
@@ -178,8 +177,7 @@ fun ShopScreen(repository: GameRepository) {
         // Title
         Text(
             text = "상점",
-            fontFamily = MedievalFont,
-            fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold,
             fontSize = 24.sp,
             color = Gold,
             textAlign = TextAlign.Center,
@@ -201,7 +199,7 @@ fun ShopScreen(repository: GameRepository) {
                     onClick = { selectedTab = index },
                     modifier = Modifier.weight(1f),
                     fontSize = 14.sp,
-                    accentColor = if (selectedTab == index) Gold else MetalGray,
+                    accentColor = if (selectedTab == index) Gold else SubText,
                 )
             }
         }
@@ -262,17 +260,15 @@ private fun ShopItemCard(
             ) {
                 Text(
                     text = item.name,
-                    fontFamily = MedievalFont,
-                    fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = Gold,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = item.description,
-                    fontFamily = MedievalFont,
-                    fontSize = 12.sp,
-                    color = Parchment.copy(alpha = 0.7f),
+                                        fontSize = 12.sp,
+                    color = LightText.copy(alpha = 0.7f),
                 )
             }
 
@@ -284,10 +280,10 @@ private fun ShopItemCard(
                 fontSize = 12.sp,
                 enabled = item.onPurchase != null,
                 accentColor = when {
-                    item.onPurchase == null -> MetalGray
+                    item.onPurchase == null -> SubText
                     item.priceText.contains("다이아") -> DiamondBlue
                     item.priceText.contains("골드") -> GoldCoin
-                    else -> DarkGold
+                    else -> BorderGlow
                 },
             )
         }

@@ -17,7 +17,13 @@ import com.example.jaygame.data.GameRepository
 import com.example.jaygame.ui.components.MedievalButton
 import com.example.jaygame.ui.components.ScreenHeader
 import com.example.jaygame.ui.components.WoodFrame
-import com.example.jaygame.ui.theme.*
+import com.example.jaygame.ui.theme.DarkNavy
+import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.Gold
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NegativeRed
+import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.SubText
 
 @Composable
 fun SettingsScreen(
@@ -30,14 +36,13 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown)
+            .background(DeepDark)
             .padding(16.dp),
     ) {
         ScreenHeader(title = "설정", onBack = onBack)
 
         Spacer(Modifier.height(24.dp))
 
-        // Settings content in WoodFrame
         WoodFrame(
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -54,9 +59,8 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "\uD83D\uDD0A 사운드",
-                        fontFamily = MedievalFont,
                         fontSize = 18.sp,
-                        color = Parchment,
+                        color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
                     MedievalButton(
@@ -79,9 +83,8 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "\uD83C\uDFB5 음악",
-                        fontFamily = MedievalFont,
                         fontSize = 18.sp,
-                        color = Parchment,
+                        color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
                     MedievalButton(
@@ -97,7 +100,6 @@ fun SettingsScreen(
                     )
                 }
 
-                // Divider
                 HorizontalDivider(color = Gold.copy(alpha = 0.3f))
 
                 // Version
@@ -107,20 +109,17 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = "\uD83D\uDCF1 버전",
-                        fontFamily = MedievalFont,
                         fontSize = 18.sp,
-                        color = Parchment,
+                        color = LightText,
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
                         text = "v0.4.0",
-                        fontFamily = MedievalFont,
                         fontSize = 16.sp,
-                        color = LightLeather,
+                        color = SubText,
                     )
                 }
 
-                // Divider
                 HorizontalDivider(color = Gold.copy(alpha = 0.3f))
 
                 // Data reset button
@@ -139,24 +138,21 @@ fun SettingsScreen(
         }
     }
 
-    // Reset confirmation dialog
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            containerColor = MediumBrown,
+            containerColor = DarkNavy,
             titleContentColor = Gold,
-            textContentColor = Parchment,
+            textContentColor = LightText,
             title = {
                 Text(
                     text = "데이터 초기화",
-                    fontFamily = MedievalFont,
                     fontWeight = FontWeight.Bold,
                 )
             },
             text = {
                 Text(
                     text = "모든 게임 데이터가 초기화됩니다.\n이 작업은 되돌릴 수 없습니다.",
-                    fontFamily = MedievalFont,
                     fontSize = 14.sp,
                 )
             },

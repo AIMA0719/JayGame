@@ -28,21 +28,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
+import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
-import com.example.jaygame.ui.theme.LeatherBrown
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.StaminaGreen
-import com.example.jaygame.ui.theme.TrophyAmber
+import com.example.jaygame.ui.theme.SubText
 import java.text.NumberFormat
 
 @Composable
 fun AnimatedCounter(
     targetValue: Int,
     modifier: Modifier = Modifier,
-    color: Color = Parchment,
+    color: Color = LightText,
 ) {
     val animatedValue by animateIntAsState(
         targetValue = targetValue,
@@ -51,7 +50,6 @@ fun AnimatedCounter(
     )
     Text(
         text = NumberFormat.getNumberInstance().format(animatedValue),
-        fontFamily = MedievalFont,
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         color = color,
@@ -79,7 +77,7 @@ fun ResourceItem(
         Spacer(modifier = Modifier.width(4.dp))
         AnimatedCounter(
             targetValue = value,
-            color = Parchment,
+            color = LightText,
         )
     }
 }
@@ -94,7 +92,7 @@ fun ProfileHeader(
     maxStamina: Int,
     modifier: Modifier = Modifier,
 ) {
-    WoodFrame(
+    GameCard(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
@@ -105,34 +103,30 @@ fun ProfileHeader(
                 .fillMaxSize()
                 .padding(horizontal = 8.dp),
         ) {
-            // 프로필: 아바타 + 이름 + 레벨
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(LeatherBrown),
+                    .background(DarkNavy),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = playerName.take(1),
-                    fontFamily = MedievalFont,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = Parchment,
+                    color = LightText,
                 )
             }
             Spacer(modifier = Modifier.width(6.dp))
             Column {
                 Text(
                     text = playerName,
-                    fontFamily = MedievalFont,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
-                    color = Parchment,
+                    color = LightText,
                 )
                 Text(
                     text = "Lv.$level",
-                    fontFamily = MedievalFont,
                     fontSize = 11.sp,
                     color = Gold,
                 )
@@ -140,7 +134,6 @@ fun ProfileHeader(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 재화: 다이아 + 골드 + 스태미나
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -172,10 +165,9 @@ fun StaminaItem(
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = "$stamina/$maxStamina",
-            fontFamily = MedievalFont,
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp,
-            color = Parchment,
+            color = LightText,
         )
     }
 }
@@ -186,7 +178,7 @@ fun CurrencyHeader(
     diamonds: Int,
     modifier: Modifier = Modifier,
 ) {
-    WoodFrame(
+    GameCard(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp),

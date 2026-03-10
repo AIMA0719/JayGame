@@ -13,16 +13,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.jaygame.ui.theme.DarkBrown
-import com.example.jaygame.ui.theme.DarkGold
-import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.LeatherBrown
-import com.example.jaygame.ui.theme.MediumBrown
+import com.example.jaygame.ui.theme.BorderGlow
+import com.example.jaygame.ui.theme.DarkNavy
+import com.example.jaygame.ui.theme.DarkSurface
+import com.example.jaygame.ui.theme.Divider
+import com.example.jaygame.ui.theme.NeonCyan
 
+// Legacy component — kept for screens not yet migrated. Use GameCard for new code.
 @Composable
 fun WoodFrame(
     modifier: Modifier = Modifier,
-    borderWidth: Dp = 3.dp,
+    borderWidth: Dp = 2.dp,
     cornerRadius: Dp = 12.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -32,21 +33,19 @@ fun WoodFrame(
                 val cr = CornerRadius(cornerRadius.toPx())
                 val bw = borderWidth.toPx()
 
-                // Background: vertical gradient from MediumBrown(0.95) to DarkBrown(0.98)
                 drawRoundRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            MediumBrown.copy(alpha = 0.95f),
-                            DarkBrown.copy(alpha = 0.98f),
+                            DarkNavy.copy(alpha = 0.95f),
+                            DarkSurface.copy(alpha = 0.98f),
                         ),
                     ),
                     cornerRadius = cr,
                 )
 
-                // Border: LinearGradient of LeatherBrown -> DarkGold -> LeatherBrown
                 drawRoundRect(
                     brush = Brush.linearGradient(
-                        colors = listOf(LeatherBrown, DarkGold, LeatherBrown),
+                        colors = listOf(Divider, BorderGlow, Divider),
                         start = Offset.Zero,
                         end = Offset(size.width, size.height),
                     ),
@@ -54,10 +53,9 @@ fun WoodFrame(
                     style = Stroke(width = bw),
                 )
 
-                // Inner glow: Gold at 0.1 alpha, 1dp stroke
                 val inset = bw + 1.dp.toPx()
                 drawRoundRect(
-                    color = Gold.copy(alpha = 0.1f),
+                    color = NeonCyan.copy(alpha = 0.05f),
                     topLeft = Offset(inset, inset),
                     size = Size(size.width - inset * 2, size.height - inset * 2),
                     cornerRadius = CornerRadius(

@@ -28,9 +28,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,20 +42,23 @@ import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.data.UnitProgress
-import com.example.jaygame.ui.components.CurrencyHeader
-import com.example.jaygame.ui.components.MedievalCard
-import com.example.jaygame.ui.components.WoodFrame
-import com.example.jaygame.ui.theme.DarkBrown
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.ResourceHeader
+import com.example.jaygame.ui.theme.DarkNavy
+import com.example.jaygame.ui.theme.DarkSurface
+import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonRed
+import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.SubText
 
 @Composable
 fun DeckScreen(repository: GameRepository) {
     val data by repository.gameData.collectAsState()
 
-    // Mutable deck state: always 5 slots, -1 means empty
     val deck = remember(data) {
         mutableStateListOf<Int>().apply {
             val source = data.deck
@@ -71,7 +75,6 @@ fun DeckScreen(repository: GameRepository) {
         }
     }
 
-    // Owned units for inventory
     val ownedUnits = remember(data) {
         UNIT_DEFS.filter { def ->
             data.units.getOrNull(def.id)?.owned == true
@@ -81,71 +84,61 @@ fun DeckScreen(repository: GameRepository) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown),
+            .background(DeepDark),
     ) {
-        // Currency Header
-        CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
+        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Title
         Text(
             text = "덱 편집",
             style = MaterialTheme.typography.headlineLarge,
-            color = Gold,
+            color = LightText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Deck Slots in WoodFrame
-        WoodFrame(
+        // Deck Slots
+        GameCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
+            borderColor = NeonRed.copy(alpha = 0.6f),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    for (slotIndex in 0 until 5) {
-                        val unitId = deck[slotIndex]
-                        val def = if (unitId >= 0) UNIT_DEFS_MAP[unitId] else null
-                        val progress = if (unitId >= 0) data.units.getOrNull(unitId) else null
+                for (slotIndex in 0 until 5) {
+                    val unitId = deck[slotIndex]
+                    val def = if (unitId >= 0) UNIT_DEFS_MAP[unitId] else null
+                    val progress = if (unitId >= 0) data.units.getOrNull(unitId) else null
 
-                        DeckSlotItem(
-                            unitId = unitId,
-                            iconRes = def?.iconRes,
-                            name = def?.name,
-                            level = progress?.level,
-                            rarityColor = def?.rarity?.color,
-                            onClick = {
-                                // Tap deck slot to remove unit
-                                if (unitId >= 0) {
-                                    deck[slotIndex] = -1
-                                }
-                            },
-                        )
-                    }
+                    DeckSlotItem(
+                        unitId = unitId,
+                        iconRes = def?.iconRes,
+                        name = def?.name,
+                        level = progress?.level,
+                        rarityColor = def?.rarity?.color,
+                        onClick = {
+                            if (unitId >= 0) {
+                                deck[slotIndex] = -1
+                            }
+                        },
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Inventory title
         Text(
             text = "보유 유닛",
             style = MaterialTheme.typography.titleLarge,
-            color = Gold,
+            color = SubText,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,7 +147,6 @@ fun DeckScreen(repository: GameRepository) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Unit Inventory Grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier
@@ -175,7 +167,6 @@ fun DeckScreen(repository: GameRepository) {
                     isInDeck = isInDeck,
                     onClick = {
                         if (!isInDeck) {
-                            // Find first empty slot
                             val emptySlot = deck.indexOf(-1)
                             if (emptySlot >= 0) {
                                 deck[emptySlot] = def.id
@@ -203,43 +194,47 @@ private fun DeckSlotItem(
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(48.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .border(
-                    2.dp,
-                    rarityColor ?: MetalGray,
-                    RoundedCornerShape(8.dp),
+                .then(
+                    if (unitId >= 0) {
+                        Modifier.border(2.dp, rarityColor ?: DimText, RoundedCornerShape(8.dp))
+                    } else {
+                        Modifier.border(
+                            1.dp,
+                            DimText,
+                            RoundedCornerShape(8.dp),
+                        )
+                    }
                 )
-                .background(DarkBrown),
+                .background(DarkSurface),
             contentAlignment = Alignment.Center,
         ) {
             if (unitId >= 0 && iconRes != null) {
                 Image(
                     painter = painterResource(id = iconRes),
                     contentDescription = name,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(36.dp),
                 )
             } else {
                 Text(
                     text = "+",
-                    fontFamily = MedievalFont,
-                    fontSize = 20.sp,
-                    color = MetalGray,
+                    fontSize = 18.sp,
+                    color = DimText,
                 )
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = name ?: "빈 슬롯",
-            fontFamily = MedievalFont,
-            fontSize = 11.sp,
-            color = if (unitId >= 0) Parchment else MetalGray,
+            fontSize = 10.sp,
+            color = if (unitId >= 0) LightText else DimText,
             textAlign = TextAlign.Center,
         )
         if (unitId >= 0 && level != null) {
             Text(
                 text = "Lv.$level",
-                fontSize = 10.sp,
+                fontSize = 9.sp,
                 color = Gold,
                 textAlign = TextAlign.Center,
             )
@@ -256,12 +251,9 @@ private fun InventoryUnitCard(
     isInDeck: Boolean,
     onClick: () -> Unit,
 ) {
-    MedievalCard(
+    GameCard(
         borderColor = rarityColor,
         onClick = if (!isInDeck) onClick else null,
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (isInDeck) Modifier.alpha(0.4f) else Modifier),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -271,7 +263,7 @@ private fun InventoryUnitCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(DarkBrown),
+                    .background(DarkSurface),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
@@ -279,14 +271,29 @@ private fun InventoryUnitCard(
                     contentDescription = name,
                     modifier = Modifier.size(36.dp),
                 )
+                // Checkmark overlay if in deck
+                if (isInDeck) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(DeepDark.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "\u2713",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PositiveGreen,
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = name,
-                fontFamily = MedievalFont,
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                color = Parchment,
+                fontSize = 11.sp,
+                color = LightText,
                 textAlign = TextAlign.Center,
             )
             Text(
@@ -297,9 +304,9 @@ private fun InventoryUnitCard(
             )
             if (isInDeck) {
                 Text(
-                    text = "덱에 배치됨",
+                    text = "배치됨",
                     fontSize = 9.sp,
-                    color = MetalGray,
+                    color = NeonCyan,
                     textAlign = TextAlign.Center,
                 )
             }

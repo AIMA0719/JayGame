@@ -47,16 +47,18 @@ import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.data.UPGRADE_COSTS
 import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitProgress
-import com.example.jaygame.ui.components.CurrencyHeader
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.components.MedievalCard
-import com.example.jaygame.ui.components.WoodFrame
-import com.example.jaygame.ui.theme.DarkBrown
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.ResourceHeader
+import com.example.jaygame.ui.theme.DarkSurface
+import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.SubText
 import java.text.NumberFormat
 
 @Composable
@@ -67,25 +69,23 @@ fun CollectionScreen(repository: GameRepository) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown),
+            .background(DeepDark),
     ) {
-        // Currency Header
-        CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
+        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Title
         Text(
             text = "컬렉션",
             style = MaterialTheme.typography.headlineLarge,
-            color = Gold,
+            color = LightText,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Top half: Unit Grid
+        // Unit Grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier
@@ -108,7 +108,7 @@ fun CollectionScreen(repository: GameRepository) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Bottom half: Detail Panel
+        // Detail Panel
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -139,16 +139,14 @@ fun CollectionScreen(repository: GameRepository) {
                     },
                 )
             } else {
-                // Empty state
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "유닛을 선택하세요",
-                        fontFamily = MedievalFont,
                         fontSize = 16.sp,
-                        color = MetalGray,
+                        color = DimText,
                     )
                 }
             }
@@ -172,8 +170,8 @@ private fun CollectionUnitCard(
         label = "cardScale",
     )
 
-    MedievalCard(
-        borderColor = if (isSelected) Gold else def.rarity.color,
+    GameCard(
+        borderColor = if (isSelected) NeonCyan else def.rarity.color,
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
@@ -187,12 +185,11 @@ private fun CollectionUnitCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            // Unit icon with lock overlay if not owned
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(DarkBrown),
+                    .background(DarkSurface),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
@@ -212,17 +209,14 @@ private fun CollectionUnitCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Unit name
             Text(
                 text = if (owned) def.name else "미보유",
-                fontFamily = MedievalFont,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
-                color = if (owned) Parchment else MetalGray,
+                color = if (owned) LightText else DimText,
                 textAlign = TextAlign.Center,
             )
 
-            // Level as stars
             if (owned) {
                 Text(
                     text = buildStarString(level),
@@ -251,32 +245,32 @@ private fun UnitDetailPanel(
             && gold >= upgradeCost.second
     val fmt = NumberFormat.getNumberInstance()
 
-    WoodFrame(
+    GameCard(
         modifier = Modifier.fillMaxSize(),
+        borderColor = def.rarity.color,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(8.dp),
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Large icon + name + rarity badge
+            // Large icon + name + rarity
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(56.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(DarkBrown),
+                        .background(DarkSurface),
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
                         painter = painterResource(id = def.iconRes),
                         contentDescription = def.name,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(42.dp),
                     )
                 }
 
@@ -285,15 +279,12 @@ private fun UnitDetailPanel(
                 Column {
                     Text(
                         text = def.name,
-                        fontFamily = MedievalFont,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Parchment,
+                        fontSize = 18.sp,
+                        color = LightText,
                     )
-                    // Rarity badge
                     Text(
                         text = def.rarity.label,
-                        fontFamily = MedievalFont,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = def.rarity.color,
@@ -301,66 +292,72 @@ private fun UnitDetailPanel(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Stats
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 StatRow("ATK", fmt.format(calculatedATK), Gold)
-                StatRow("Speed", String.format("%.1f", def.baseSpeed), Parchment)
-                StatRow("Range", String.format("%.0f", def.range), Parchment)
+                StatRow("Speed", String.format("%.1f", def.baseSpeed), LightText)
+                StatRow("Range", String.format("%.0f", def.range), LightText)
                 StatRow("Element", def.element.label, def.element.color)
-                StatRow("Ability", def.abilityName, Parchment)
+                StatRow("Ability", def.abilityName, NeonCyan)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Level with stars
             Text(
                 text = "레벨 $level  ${buildStarString(level)}",
-                fontFamily = MedievalFont,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
                 color = Gold,
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Card progress
             if (upgradeCost != null) {
                 Text(
                     text = "카드: ${progress.cards} / ${upgradeCost.first}",
-                    fontFamily = MedievalFont,
-                    fontSize = 13.sp,
-                    color = if (progress.cards >= upgradeCost.first) PositiveGreen else Parchment,
+                    fontSize = 12.sp,
+                    color = if (progress.cards >= upgradeCost.first) PositiveGreen else SubText,
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Upgrade button
             if (!progress.owned) {
-                MedievalButton(
+                NeonButton(
                     text = "미보유",
                     onClick = {},
                     enabled = false,
                     modifier = Modifier.fillMaxWidth(),
+                    accentColor = DimText,
+                    accentColorDark = DimText,
                 )
             } else if (level >= 7) {
-                MedievalButton(
+                NeonButton(
                     text = "최대 레벨",
                     onClick = {},
                     enabled = false,
                     modifier = Modifier.fillMaxWidth(),
+                    accentColor = DimText,
+                    accentColorDark = DimText,
                 )
             } else {
                 val goldCost = upgradeCost?.second ?: 0
-                MedievalButton(
+                NeonButton(
                     text = "업그레이드 (골드 ${fmt.format(goldCost)})",
                     onClick = onUpgrade,
                     enabled = canUpgrade,
                     modifier = Modifier.fillMaxWidth(),
+                    fontSize = 14.sp,
+                    accentColor = NeonGreen,
+                    accentColorDark = NeonGreen.copy(alpha = 0.5f),
                 )
             }
         }
@@ -375,13 +372,11 @@ private fun StatRow(label: String, value: String, valueColor: Color) {
     ) {
         Text(
             text = label,
-            fontFamily = MedievalFont,
             fontSize = 12.sp,
-            color = MetalGray,
+            color = SubText,
         )
         Text(
             text = value,
-            fontFamily = MedievalFont,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = valueColor,

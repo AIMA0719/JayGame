@@ -41,25 +41,27 @@ import androidx.compose.ui.window.Dialog
 import com.example.jaygame.R
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.addRandomCardsToUnits
-import com.example.jaygame.ui.theme.DarkBrown
+import com.example.jaygame.ui.theme.DarkNavy
+import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.SubText
 import java.time.LocalDate
 
 data class DayReward(val gold: Int, val diamonds: Int, val cards: Int)
 
 val DAILY_REWARDS = listOf(
-    DayReward(100, 0, 1),   // Day 1
-    DayReward(150, 0, 1),   // Day 2
-    DayReward(200, 0, 2),   // Day 3
-    DayReward(250, 1, 2),   // Day 4
-    DayReward(300, 1, 3),   // Day 5
-    DayReward(400, 2, 3),   // Day 6
-    DayReward(1000, 5, 5),  // Day 7 bonus
+    DayReward(100, 0, 1),
+    DayReward(150, 0, 1),
+    DayReward(200, 0, 2),
+    DayReward(250, 1, 2),
+    DayReward(300, 1, 3),
+    DayReward(400, 2, 3),
+    DayReward(1000, 5, 5),
 )
 
 fun canClaim(data: GameData): Boolean {
@@ -102,7 +104,6 @@ fun DailyLoginDialog(
     val currentDayIndex = getClaimDayIndex(data)
     val currentReward = DAILY_REWARDS[currentDayIndex]
 
-    // How many days have been claimed in the current 7-day cycle
     val claimedInCycle = if (data.loginStreak == 0) 0 else {
         val cycleStart = ((data.loginStreak - 1) / 7) * 7
         data.loginStreak - cycleStart
@@ -117,19 +118,18 @@ fun DailyLoginDialog(
             enter = scaleIn(animationSpec = tween(300)),
             exit = scaleOut(animationSpec = tween(200)),
         ) {
-        WoodFrame(
+        GameCard(
             modifier = Modifier.fillMaxWidth(),
+            borderColor = NeonCyan,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Title
                 Text(
-                    text = "\uC77C\uC77C \uCD9C\uC11D \uBCF4\uC0C1",
-                    fontFamily = MedievalFont,
+                    text = "일일 출석 보상",
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     color = Gold,
@@ -139,7 +139,6 @@ fun DailyLoginDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 7-day grid
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -165,13 +164,11 @@ fun DailyLoginDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Today's reward summary
                 Text(
-                    text = "\uC624\uB298\uC758 \uBCF4\uC0C1:",
-                    fontFamily = MedievalFont,
+                    text = "오늘의 보상:",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = Parchment,
+                    color = LightText,
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -189,18 +186,13 @@ fun DailyLoginDialog(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${currentReward.gold} \uACE8\uB4DC",
-                        fontFamily = MedievalFont,
+                        text = "${currentReward.gold} 골드",
                         fontSize = 13.sp,
-                        color = Parchment,
+                        color = LightText,
                     )
                     if (currentReward.diamonds > 0) {
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "+",
-                            fontSize = 13.sp,
-                            color = Parchment,
-                        )
+                        Text(text = "+", fontSize = 13.sp, color = LightText)
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
                             painter = painterResource(id = R.drawable.ic_diamond),
@@ -210,42 +202,35 @@ fun DailyLoginDialog(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${currentReward.diamonds} \uB2E4\uC774\uC544",
-                            fontFamily = MedievalFont,
+                            text = "${currentReward.diamonds} 다이아",
                             fontSize = 13.sp,
-                            color = Parchment,
+                            color = LightText,
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "+",
-                        fontSize = 13.sp,
-                        color = Parchment,
-                    )
+                    Text(text = "+", fontSize = 13.sp, color = LightText)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "\uD83C\uDCCF ${currentReward.cards} \uCE74\uB4DC",
-                        fontFamily = MedievalFont,
+                        text = "\uD83C\uDCCF ${currentReward.cards} 카드",
                         fontSize = 13.sp,
-                        color = Parchment,
+                        color = LightText,
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Claim button
-                MedievalButton(
-                    text = if (claimable) "\uC218\uB839\uD558\uAE30" else "\uC218\uB839 \uC644\uB8CC",
+                NeonButton(
+                    text = if (claimable) "수령하기" else "수령 완료",
                     onClick = {
                         if (claimable) onClaim()
                     },
                     enabled = claimable,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .height(48.dp),
+                        .padding(horizontal = 24.dp),
                     fontSize = 18.sp,
-                    accentColor = Gold,
+                    accentColor = NeonCyan,
+                    accentColorDark = NeonCyan.copy(alpha = 0.5f),
                 )
             }
         }
@@ -262,14 +247,14 @@ private fun DayBox(
     isBonus: Boolean,
 ) {
     val borderColor = when {
-        isCurrentDay -> Gold
+        isCurrentDay -> NeonCyan
         isClaimed -> PositiveGreen
-        else -> Parchment.copy(alpha = 0.3f)
+        else -> SubText.copy(alpha = 0.3f)
     }
     val bgColor = when {
-        isCurrentDay -> Gold.copy(alpha = 0.15f)
+        isCurrentDay -> NeonCyan.copy(alpha = 0.15f)
         isClaimed -> PositiveGreen.copy(alpha = 0.1f)
-        else -> DarkBrown.copy(alpha = 0.5f)
+        else -> DeepDark.copy(alpha = 0.5f)
     }
 
     Column(
@@ -285,19 +270,16 @@ private fun DayBox(
             .background(bgColor)
             .padding(6.dp),
     ) {
-        // Day label
         Text(
             text = if (isBonus) "Day$dayNum\u2605" else "Day$dayNum",
-            fontFamily = MedievalFont,
             fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
-            color = if (isBonus) Gold else Parchment,
+            color = if (isBonus) Gold else LightText,
             textAlign = TextAlign.Center,
         )
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Gold amount
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_gold),
@@ -309,11 +291,10 @@ private fun DayBox(
             Text(
                 text = "${reward.gold}",
                 fontSize = 10.sp,
-                color = Parchment,
+                color = LightText,
             )
         }
 
-        // Diamond amount (if any)
         if (reward.diamonds > 0) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -326,19 +307,17 @@ private fun DayBox(
                 Text(
                     text = "${reward.diamonds}",
                     fontSize = 10.sp,
-                    color = Parchment,
+                    color = LightText,
                 )
             }
         }
 
-        // Cards
         Text(
             text = "\uD83C\uDCCF${reward.cards}",
             fontSize = 10.sp,
-            color = Parchment,
+            color = LightText,
         )
 
-        // Claimed check
         if (isClaimed) {
             Text(
                 text = "\u2713",

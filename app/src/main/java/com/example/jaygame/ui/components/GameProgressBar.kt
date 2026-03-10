@@ -10,10 +10,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.jaygame.ui.theme.DarkGold
+import com.example.jaygame.ui.theme.BorderGlow
+import com.example.jaygame.ui.theme.DarkSurface
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.LeatherBrown
 
+// Legacy progress bar — use NeonProgressBar for new code.
 @Composable
 fun GameProgressBar(
     progress: Float,
@@ -22,7 +23,7 @@ fun GameProgressBar(
 ) {
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
         val cornerRadius = CornerRadius(size.height / 2)
-        drawRoundRect(color = LeatherBrown, cornerRadius = cornerRadius)
+        drawRoundRect(color = DarkSurface, cornerRadius = cornerRadius)
         if (progress > 0f) {
             drawRoundRect(
                 color = Gold,
@@ -30,6 +31,6 @@ fun GameProgressBar(
                 cornerRadius = cornerRadius,
             )
         }
-        drawRoundRect(color = DarkGold, cornerRadius = cornerRadius, style = Stroke(1.dp.toPx()))
+        drawRoundRect(color = BorderGlow, cornerRadius = cornerRadius, style = Stroke(1.dp.toPx()))
     }
 }

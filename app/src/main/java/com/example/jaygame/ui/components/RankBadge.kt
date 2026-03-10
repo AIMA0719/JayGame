@@ -20,13 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jaygame.ui.theme.DarkBrown
+import com.example.jaygame.ui.theme.DarkNavy
+import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MediumBrown
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.SubText
 
 data class RankInfo(
     val name: String,
@@ -37,7 +37,7 @@ fun getRankInfo(trophies: Int): RankInfo = when {
     trophies >= 4000 -> RankInfo("마스터", Color(0xFFFF6F00))
     trophies >= 3000 -> RankInfo("다이아몬드", DiamondBlue)
     trophies >= 2000 -> RankInfo("골드", Gold)
-    trophies >= 1000 -> RankInfo("실버", MetalGray)
+    trophies >= 1000 -> RankInfo("실버", SubText)
     else -> RankInfo("브론즈", Color(0xFFCD7F32))
 }
 
@@ -51,7 +51,7 @@ fun RankBadge(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(MediumBrown)
+            .background(DarkNavy)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Text(
@@ -61,14 +61,12 @@ fun RankBadge(
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = "RANK",
-            fontFamily = MedievalFont,
             fontSize = 10.sp,
-            color = Parchment.copy(alpha = 0.6f),
+            color = SubText,
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = rank.name,
-            fontFamily = MedievalFont,
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp,
             color = rank.color,
@@ -92,7 +90,6 @@ fun DifficultyDialog(
         title = {
             Text(
                 text = "난이도 선택",
-                fontFamily = MedievalFont,
                 fontWeight = FontWeight.Bold,
                 color = Gold,
             )
@@ -101,12 +98,13 @@ fun DifficultyDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 options.forEach { (id, name, desc) ->
                     val isSelected = id == currentDifficulty
-                    MedievalButton(
+                    NeonButton(
                         text = "$name — $desc",
                         onClick = { onSelect(id) },
                         modifier = Modifier.fillMaxWidth(),
                         fontSize = 13.sp,
-                        accentColor = if (isSelected) Gold else MetalGray,
+                        accentColor = if (isSelected) NeonCyan else SubText,
+                        accentColorDark = if (isSelected) NeonCyan.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
                     )
                 }
             }
@@ -114,9 +112,9 @@ fun DifficultyDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("닫기", color = Parchment)
+                Text("닫기", color = LightText)
             }
         },
-        containerColor = DarkBrown,
+        containerColor = DeepDark,
     )
 }

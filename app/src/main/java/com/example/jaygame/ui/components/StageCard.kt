@@ -30,20 +30,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.StageDef
 import com.example.jaygame.data.STAGES
-import com.example.jaygame.ui.theme.DarkBrown
-import com.example.jaygame.ui.theme.DarkMetal
+import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.SubText
 
 private val stageColors = listOf(
-    listOf(Color(0xFF2E7D32), Color(0xFF4CAF50)),  // 초원
-    listOf(Color(0xFF1B5E20), Color(0xFF388E3C)),  // 정글
-    listOf(Color(0xFFE65100), Color(0xFFFF9800)),  // 사막
-    listOf(Color(0xFF42A5F5), Color(0xFFBBDEFB)),  // 설산
-    listOf(Color(0xFFBF360C), Color(0xFFFF5722)),  // 화산
-    listOf(Color(0xFF311B92), Color(0xFF7C4DFF)),  // 심연
+    listOf(Color(0xFF2E7D32), Color(0xFF4CAF50)),
+    listOf(Color(0xFF1B5E20), Color(0xFF388E3C)),
+    listOf(Color(0xFFE65100), Color(0xFFFF9800)),
+    listOf(Color(0xFF42A5F5), Color(0xFFBBDEFB)),
+    listOf(Color(0xFFBF360C), Color(0xFFFF5722)),
+    listOf(Color(0xFF311B92), Color(0xFF7C4DFF)),
 )
 
 @Composable
@@ -93,7 +93,6 @@ fun StageCardPager(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 페이지 인디케이터
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -104,8 +103,8 @@ fun StageCardPager(
                         .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
                         .clip(CircleShape)
                         .background(
-                            if (index == pagerState.currentPage) Gold
-                            else Parchment.copy(alpha = 0.4f)
+                            if (index == pagerState.currentPage) NeonCyan
+                            else SubText.copy(alpha = 0.4f)
                         ),
                 )
             }
@@ -135,13 +134,12 @@ private fun StageCardItem(
             .background(
                 Brush.verticalGradient(
                     colors = if (isUnlocked) gradientColors
-                    else listOf(DarkMetal, MetalGray),
+                    else listOf(DimText, SubText),
                 )
             )
             .padding(16.dp),
     ) {
         if (bestWave > 0) {
-            // BEST 뱃지
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -151,10 +149,9 @@ private fun StageCardItem(
             ) {
                 Text(
                     text = "BEST",
-                    fontFamily = MedievalFont,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    color = DarkBrown,
+                    color = DeepDark,
                 )
             }
         }
@@ -166,10 +163,9 @@ private fun StageCardItem(
         ) {
             Text(
                 text = stage.name,
-                fontFamily = MedievalFont,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                color = Parchment,
+                color = LightText,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -178,19 +174,17 @@ private fun StageCardItem(
                 } else {
                     "\uD83C\uDFC6 ${stage.unlockTrophies} 필요"
                 },
-                fontFamily = MedievalFont,
                 fontWeight = FontWeight.Bold,
                 fontSize = 32.sp,
-                color = if (isUnlocked) Parchment else Parchment.copy(alpha = 0.5f),
+                color = if (isUnlocked) LightText else LightText.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,
             )
             if (isUnlocked) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "난이도: $difficultyText",
-                    fontFamily = MedievalFont,
                     fontSize = 13.sp,
-                    color = Parchment.copy(alpha = 0.7f),
+                    color = LightText.copy(alpha = 0.7f),
                 )
             }
         }

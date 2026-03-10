@@ -11,14 +11,15 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.example.jaygame.ui.theme.DarkGold
-import com.example.jaygame.ui.theme.MediumBrown
+import com.example.jaygame.ui.theme.BorderGlow
+import com.example.jaygame.ui.theme.DarkNavy
 
+// Legacy component — kept for screens not yet migrated. Use GameCard for new code.
 @Composable
 fun MedievalCard(
     modifier: Modifier = Modifier,
-    borderColor: Color = DarkGold,
-    backgroundColor: Color = MediumBrown,
+    borderColor: Color = BorderGlow,
+    backgroundColor: Color = DarkNavy,
     onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {

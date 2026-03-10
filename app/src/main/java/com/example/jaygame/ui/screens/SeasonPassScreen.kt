@@ -40,14 +40,13 @@ import com.example.jaygame.ui.components.GameProgressBar
 import com.example.jaygame.ui.components.MedievalButton
 import com.example.jaygame.ui.components.MedievalCard
 import com.example.jaygame.ui.components.ScreenHeader
-import com.example.jaygame.ui.theme.DarkBrown
+import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.SubText
 
 private data class TierReward(
     val tier: Int,
@@ -94,7 +93,7 @@ fun SeasonPassScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown),
+            .background(DeepDark),
     ) {
         // Currency Header
         CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
@@ -119,10 +118,9 @@ fun SeasonPassScreen(
             ) {
                 Text(
                     text = "\uC2DC\uC98C XP: $totalXP / $nextTierXP",
-                    fontFamily = MedievalFont,
-                    fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = Parchment,
+                    color = LightText,
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -133,8 +131,7 @@ fun SeasonPassScreen(
 
                 Text(
                     text = "\uD604\uC7AC \uD2F0\uC5B4: $currentTier / 30",
-                    fontFamily = MedievalFont,
-                    fontSize = 14.sp,
+                                        fontSize = 14.sp,
                     color = Gold,
                 )
             }
@@ -191,9 +188,8 @@ fun SeasonPassScreen(
         // Section title
         Text(
             text = "\u2500\u2500 \uBCF4\uC0C1 \uD2B8\uB799 \u2500\u2500",
-            fontFamily = MedievalFont,
-            fontSize = 14.sp,
-            color = Parchment.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+            color = LightText.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -258,7 +254,7 @@ private fun TierCard(
         isCurrent -> Gold
         isClaimed -> PositiveGreen.copy(alpha = 0.6f)
         isClaimable -> Gold.copy(alpha = 0.8f)
-        else -> MetalGray.copy(alpha = 0.4f)
+        else -> SubText.copy(alpha = 0.4f)
     }
 
     val cardModifier = Modifier
@@ -287,10 +283,9 @@ private fun TierCard(
             // Tier number
             Text(
                 text = "\uD2F0\uC5B4 ${reward.tier}",
-                fontFamily = MedievalFont,
-                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                color = if (isCurrent) Gold else Parchment,
+                color = if (isCurrent) Gold else LightText,
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -306,9 +301,8 @@ private fun TierCard(
                 Spacer(Modifier.width(3.dp))
                 Text(
                     text = "${reward.gold}",
-                    fontFamily = MedievalFont,
-                    fontSize = 12.sp,
-                    color = if (isLocked) Parchment.copy(alpha = 0.5f) else Parchment,
+                                        fontSize = 12.sp,
+                    color = if (isLocked) LightText.copy(alpha = 0.5f) else LightText,
                 )
             }
 
@@ -324,9 +318,8 @@ private fun TierCard(
                     Spacer(Modifier.width(3.dp))
                     Text(
                         text = "${reward.diamonds}",
-                        fontFamily = MedievalFont,
-                        fontSize = 12.sp,
-                        color = if (isLocked) Parchment.copy(alpha = 0.5f) else Parchment,
+                                                fontSize = 12.sp,
+                        color = if (isLocked) LightText.copy(alpha = 0.5f) else LightText,
                     )
                 }
             }
@@ -341,9 +334,8 @@ private fun TierCard(
                     Spacer(Modifier.width(3.dp))
                     Text(
                         text = "${reward.cards}",
-                        fontFamily = MedievalFont,
-                        fontSize = 12.sp,
-                        color = if (isLocked) Parchment.copy(alpha = 0.5f) else Parchment,
+                                                fontSize = 12.sp,
+                        color = if (isLocked) LightText.copy(alpha = 0.5f) else LightText,
                     )
                 }
             }
@@ -373,7 +365,7 @@ private fun TierCard(
                     Text(
                         text = "\uD83D\uDD12",
                         fontSize = 18.sp,
-                        color = MetalGray.copy(alpha = 0.5f),
+                        color = SubText.copy(alpha = 0.5f),
                     )
                 }
             }

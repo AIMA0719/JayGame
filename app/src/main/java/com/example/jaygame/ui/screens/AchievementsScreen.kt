@@ -39,16 +39,15 @@ import com.example.jaygame.ui.components.GameProgressBar
 import com.example.jaygame.ui.components.MedievalButton
 import com.example.jaygame.ui.components.MedievalCard
 import com.example.jaygame.ui.components.ScreenHeader
-import com.example.jaygame.ui.theme.DarkBrown
-import com.example.jaygame.ui.theme.DarkGold
+import com.example.jaygame.ui.theme.BorderGlow
+import com.example.jaygame.ui.theme.DarkNavy
+import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.MetalGray
-import com.example.jaygame.ui.theme.MediumBrown
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.PositiveGreen
+import com.example.jaygame.ui.theme.SubText
 
 // ── Achievement definitions ──
 
@@ -139,7 +138,7 @@ fun AchievementsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown),
+            .background(DeepDark),
     ) {
         // Currency Header
         CurrencyHeader(gold = data.gold, diamonds = data.diamonds)
@@ -153,8 +152,8 @@ fun AchievementsScreen(
         // Category tabs
         ScrollableTabRow(
             selectedTabIndex = selectedTabIndex,
-            containerColor = MediumBrown,
-            contentColor = Parchment,
+            containerColor = DarkNavy,
+            contentColor = LightText,
             edgePadding = 8.dp,
             divider = {},
         ) {
@@ -165,10 +164,9 @@ fun AchievementsScreen(
                     text = {
                         Text(
                             text = category.label,
-                            fontFamily = MedievalFont,
-                            fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                                        fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 14.sp,
-                            color = if (selectedTabIndex == index) Gold else Parchment.copy(alpha = 0.7f),
+                            color = if (selectedTabIndex == index) Gold else LightText.copy(alpha = 0.7f),
                         )
                     },
                 )
@@ -208,7 +206,7 @@ private fun AchievementItem(
     progress: Int,
     isCompleted: Boolean,
 ) {
-    val borderColor = if (isCompleted) PositiveGreen.copy(alpha = 0.8f) else DarkGold
+    val borderColor = if (isCompleted) PositiveGreen.copy(alpha = 0.8f) else BorderGlow
 
     MedievalCard(
         modifier = Modifier.fillMaxWidth(),
@@ -222,7 +220,7 @@ private fun AchievementItem(
             Text(
                 text = "\uD83C\uDFC6",
                 fontSize = 28.sp,
-                color = if (isCompleted) Gold else MetalGray,
+                color = if (isCompleted) Gold else SubText,
                 modifier = Modifier.padding(end = 10.dp),
             )
 
@@ -232,19 +230,17 @@ private fun AchievementItem(
             ) {
                 Text(
                     text = achievement.name,
-                    fontFamily = MedievalFont,
-                    fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = if (isCompleted) Gold else Parchment,
+                    color = if (isCompleted) Gold else LightText,
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
                     text = achievement.description,
-                    fontFamily = MedievalFont,
-                    fontSize = 12.sp,
-                    color = Parchment.copy(alpha = 0.7f),
+                                        fontSize = 12.sp,
+                    color = LightText.copy(alpha = 0.7f),
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -262,9 +258,8 @@ private fun AchievementItem(
 
                 Text(
                     text = "$clampedProgress / ${achievement.threshold}",
-                    fontFamily = MedievalFont,
-                    fontSize = 11.sp,
-                    color = if (isCompleted) PositiveGreen else Parchment.copy(alpha = 0.6f),
+                                        fontSize = 11.sp,
+                    color = if (isCompleted) PositiveGreen else LightText.copy(alpha = 0.6f),
                 )
             }
 
@@ -286,9 +281,8 @@ private fun AchievementItem(
                         Spacer(Modifier.width(2.dp))
                         Text(
                             text = "${achievement.goldReward}",
-                            fontFamily = MedievalFont,
-                            fontSize = 12.sp,
-                            color = Parchment,
+                                                        fontSize = 12.sp,
+                            color = LightText,
                         )
                     }
                 }
@@ -303,9 +297,8 @@ private fun AchievementItem(
                         Spacer(Modifier.width(2.dp))
                         Text(
                             text = "${achievement.diamondReward}",
-                            fontFamily = MedievalFont,
-                            fontSize = 12.sp,
-                            color = Parchment,
+                                                        fontSize = 12.sp,
+                            color = LightText,
                         )
                     }
                 }

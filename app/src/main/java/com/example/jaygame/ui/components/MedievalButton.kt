@@ -23,11 +23,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.MediumBrown
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
 
+// Legacy component — kept for screens not yet migrated. Use NeonButton for new code.
 @Composable
 fun MedievalButton(
     text: String,
@@ -35,7 +35,7 @@ fun MedievalButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     fontSize: TextUnit = 16.sp,
-    baseColor: Color = MediumBrown,
+    baseColor: Color = DarkNavy,
     accentColor: Color = Gold,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -85,10 +85,9 @@ fun MedievalButton(
     ) {
         Text(
             text = text,
-            fontFamily = MedievalFont,
             fontWeight = FontWeight.Bold,
             fontSize = fontSize,
-            color = Parchment,
+            color = LightText,
         )
     }
 }

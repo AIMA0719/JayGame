@@ -28,16 +28,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jaygame.ui.components.MedievalButton
-import com.example.jaygame.ui.components.WoodFrame
-import com.example.jaygame.ui.theme.DarkBrown
-import com.example.jaygame.ui.theme.DarkGold
+import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.theme.DeepDark
+import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.GoldCoin
 import com.example.jaygame.ui.theme.JayGameTheme
-import com.example.jaygame.ui.theme.MedievalFont
-import com.example.jaygame.ui.theme.NegativeRed
-import com.example.jaygame.ui.theme.Parchment
+import com.example.jaygame.ui.theme.LightText
+import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.theme.NeonGreen
+import com.example.jaygame.ui.theme.NeonRed
+import com.example.jaygame.ui.theme.NeonRedDark
+import com.example.jaygame.ui.theme.SubText
 import com.example.jaygame.ui.theme.TrophyAmber
 
 @Composable
@@ -62,19 +65,19 @@ fun ResultScreen(
     )
 
     val resultText = if (victory) "승리!" else "패배..."
-    val resultColor = if (victory) Gold else NegativeRed
+    val resultColor = if (victory) NeonGreen else NeonRed
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBrown)
+            .background(DeepDark)
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        // Victory / Defeat title with pulsing animation
+        // Victory / Defeat title with pulse animation
         Text(
             text = resultText,
             style = MaterialTheme.typography.displayLarge,
@@ -87,15 +90,15 @@ fun ResultScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         // Stats panel
-        WoodFrame(
+        GameCard(
             modifier = Modifier.fillMaxWidth(),
+            borderColor = if (victory) NeonGreen.copy(alpha = 0.4f) else NeonRed.copy(alpha = 0.4f),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(4.dp),
             ) {
-                // Battle stats
                 StatRow(label = "웨이브", value = "$waveReached")
                 Spacer(modifier = Modifier.height(8.dp))
                 StatRow(label = "처치", value = "$killCount")
@@ -103,13 +106,12 @@ fun ResultScreen(
                 StatRow(label = "합성", value = "$mergeCount")
 
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = DarkGold.copy(alpha = 0.5f))
+                HorizontalDivider(color = Divider)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Rewards
                 Text(
                     text = "보상",
-                    fontFamily = MedievalFont,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = Gold,
@@ -128,13 +130,15 @@ fun ResultScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         // Home button
-        MedievalButton(
+        NeonButton(
             text = "홈으로",
             onClick = onGoHome,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            fontSize = 20.sp,
+                .height(48.dp),
+            fontSize = 18.sp,
+            accentColor = NeonCyan,
+            accentColorDark = NeonCyan.copy(alpha = 0.5f),
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -149,16 +153,14 @@ private fun StatRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            fontFamily = MedievalFont,
             fontSize = 15.sp,
-            color = Parchment.copy(alpha = 0.8f),
+            color = SubText,
         )
         Text(
             text = value,
-            fontFamily = MedievalFont,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
-            color = Parchment,
+            color = LightText,
         )
     }
 }
@@ -174,7 +176,6 @@ private fun RewardRow(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = label,
-            fontFamily = MedievalFont,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
             color = color,
