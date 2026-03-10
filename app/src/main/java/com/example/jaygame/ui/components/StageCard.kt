@@ -1,0 +1,198 @@
+package com.example.jaygame.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.jaygame.data.StageDef
+import com.example.jaygame.data.STAGES
+import com.example.jaygame.ui.theme.DarkBrown
+import com.example.jaygame.ui.theme.DarkMetal
+import com.example.jaygame.ui.theme.Gold
+import com.example.jaygame.ui.theme.MedievalFont
+import com.example.jaygame.ui.theme.MetalGray
+import com.example.jaygame.ui.theme.Parchment
+
+private val stageColors = listOf(
+    listOf(Color(0xFF2E7D32), Color(0xFF4CAF50)),  // 초원
+    listOf(Color(0xFF1B5E20), Color(0xFF388E3C)),  // 정글
+    listOf(Color(0xFFE65100), Color(0xFFFF9800)),  // 사막
+    listOf(Color(0xFF42A5F5), Color(0xFFBBDEFB)),  // 설산
+    listOf(Color(0xFFBF360C), Color(0xFFFF5722)),  // 화산
+    listOf(Color(0xFF311B92), Color(0xFF7C4DFF)),  // 심연
+)
+
+@Composable
+fun StageCardPager(
+    currentStageId: Int,
+    unlockedStages: List<Int>,
+    stageBestWaves: List<Int>,
+    difficulty: Int,
+    onStageChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val pagerState = rememberPagerState(
+        initialPage = currentStageId.coerceIn(0, STAGES.size - 1),
+        pageCount = { STAGES.size },
+    )
+
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            onStageChanged(page)
+        }
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .padding(horizontal = 24.dp),
+        ) { page ->
+            val stage = STAGES[page]
+            val isUnlocked = page in unlockedStages
+            val bestWave = stageBestWaves.getOrElse(page) { 0 }
+            val colors = stageColors.getOrElse(page) { stageColors[0] }
+
+            StageCardItem(
+                stage = stage,
+                isUnlocked = isUnlocked,
+                bestWave = bestWave,
+                difficulty = difficulty,
+                gradientColors = colors,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 페이지 인디케이터
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            STAGES.forEachIndexed { index, _ ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index == pagerState.currentPage) Gold
+                            else Parchment.copy(alpha = 0.4f)
+                        ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StageCardItem(
+    stage: StageDef,
+    isUnlocked: Boolean,
+    bestWave: Int,
+    difficulty: Int,
+    gradientColors: List<Color>,
+) {
+    val difficultyText = when (difficulty) {
+        0 -> "쉬움"
+        1 -> "보통"
+        2 -> "어려움"
+        else -> "보통"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = if (isUnlocked) gradientColors
+                    else listOf(DarkMetal, MetalGray),
+                )
+            )
+            .padding(16.dp),
+    ) {
+        if (bestWave > 0) {
+            // BEST 뱃지
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Gold.copy(alpha = 0.9f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = "BEST",
+                    fontFamily = MedievalFont,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    color = DarkBrown,
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stage.name,
+                fontFamily = MedievalFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Parchment,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (isUnlocked) {
+                    if (bestWave > 0) "ROUND $bestWave" else "미도전"
+                } else {
+                    "\uD83C\uDFC6 ${stage.unlockTrophies} 필요"
+                },
+                fontFamily = MedievalFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 32.sp,
+                color = if (isUnlocked) Parchment else Parchment.copy(alpha = 0.5f),
+                textAlign = TextAlign.Center,
+            )
+            if (isUnlocked) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "난이도: $difficultyText",
+                    fontFamily = MedievalFont,
+                    fontSize = 13.sp,
+                    color = Parchment.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
