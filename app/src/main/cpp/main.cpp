@@ -58,6 +58,17 @@ Java_com_example_jaygame_bridge_BattleBridge_nativeSellUnit(JNIEnv* /*env*/, jcl
     BattleScene::sellRequestTileIndex.store(tileIndex, std::memory_order_release);
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeUpgradeUnit(JNIEnv* /*env*/, jclass /*clazz*/, jint tileIndex) {
+    BattleScene::upgradeRequestTileIndex.store(tileIndex, std::memory_order_release);
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeSwapUnits(JNIEnv* /*env*/, jclass /*clazz*/, jint fromTile, jint toTile) {
+    BattleScene::swapRequestFrom.store(fromTile, std::memory_order_release);
+    BattleScene::swapRequestTo.store(toTile, std::memory_order_release);
+}
+
 void android_main(struct android_app *pApp) {
     aout << "Welcome to JayGame" << std::endl;
 

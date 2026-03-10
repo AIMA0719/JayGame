@@ -209,6 +209,14 @@ fun HomeScreen(
                 accentColor = NeonCyan,
                 accentColorDark = NeonCyan.copy(alpha = 0.5f),
             )
+            NeonButton(
+                text = "도감",
+                onClick = { onNavigate(Routes.UNIT_CODEX) },
+                modifier = Modifier.weight(1f),
+                fontSize = 11.sp,
+                accentColor = Gold,
+                accentColorDark = Gold.copy(alpha = 0.5f),
+            )
         }
 
         Spacer(modifier = Modifier.weight(1f))

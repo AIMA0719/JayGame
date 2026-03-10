@@ -27,8 +27,8 @@ WaveConfig WaveManager::getWaveConfig(int wave) const {
     float baseHP = 100.f * std::pow(1.12f, static_cast<float>(wave - 1));
     config.enemyHP = boss ? baseHP * 5.f : baseHP;
 
-    // Speed: 60 + wave*1.5 for normal; 0.6x for boss
-    float baseSpeed = 60.f + static_cast<float>(wave) * 1.5f;
+    // Speed: 120 + wave*2 for normal; 0.6x for boss (faster base for donut path)
+    float baseSpeed = 120.f + static_cast<float>(wave) * 2.f;
     config.enemySpeed = boss ? baseSpeed * 0.6f : baseSpeed;
 
     // Armor scales gently

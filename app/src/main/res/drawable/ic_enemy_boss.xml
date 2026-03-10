@@ -1,0 +1,43 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <!-- Left horn -->
+    <path
+        android:pathData="M16,20L10,4L22,16Z"
+        android:fillColor="#8B0000"/>
+    <!-- Right horn -->
+    <path
+        android:pathData="M48,20L54,4L42,16Z"
+        android:fillColor="#8B0000"/>
+    <!-- Body -->
+    <path
+        android:pathData="M32,58C18,58 6,50 6,40C6,30 10,22 16,16C22,10 27,8 32,8C37,8 42,10 48,16C54,22 58,30 58,40C58,50 46,58 32,58Z"
+        android:fillColor="#D32F2F"/>
+    <!-- Shadow -->
+    <path
+        android:pathData="M32,58C18,58 6,50 6,40C12,46 22,50 32,50C42,50 52,46 58,40C58,50 46,58 32,58Z"
+        android:fillColor="#B71C1C"
+        android:fillAlpha="0.5"/>
+    <!-- Left eye -->
+    <path
+        android:pathData="M20,34A4,4 0,1 1,28,34A4,4 0,1 1,20,34Z"
+        android:fillColor="#FFEB3B"/>
+    <path
+        android:pathData="M22.5,34A2,2 0,1 1,26.5,34A2,2 0,1 1,22.5,34Z"
+        android:fillColor="#333333"/>
+    <!-- Right eye -->
+    <path
+        android:pathData="M36,34A4,4 0,1 1,44,34A4,4 0,1 1,36,34Z"
+        android:fillColor="#FFEB3B"/>
+    <path
+        android:pathData="M38.5,34A2,2 0,1 1,42.5,34A2,2 0,1 1,38.5,34Z"
+        android:fillColor="#333333"/>
+    <!-- Angry mouth -->
+    <path
+        android:pathData="M22,44L26,40L30,44L34,40L38,44L42,40"
+        android:strokeColor="#FFEB3B"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"/>
+</vector>

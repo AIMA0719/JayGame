@@ -13,13 +13,13 @@ public:
     static constexpr int ROWS = 3;
     static constexpr int TOTAL_CELLS = COLS * ROWS;
 
-    // Grid area in logical coordinates (center-bottom of 1280x720 screen)
-    static constexpr float GRID_X = 140.f;
-    static constexpr float GRID_Y = 320.f;
-    static constexpr float GRID_W = 1000.f;
-    static constexpr float GRID_H = 360.f;
-    static constexpr float CELL_W = GRID_W / COLS;   // 200
-    static constexpr float CELL_H = GRID_H / ROWS;   // 120
+    // Grid area centered on screen with room for monster track
+    static constexpr float GRID_X = 290.f;    // centered: (1280 - 700) / 2
+    static constexpr float GRID_Y = 190.f;    // centered: (720 - 340) / 2
+    static constexpr float GRID_W = 700.f;
+    static constexpr float GRID_H = 340.f;
+    static constexpr float CELL_W = GRID_W / COLS;   // 140
+    static constexpr float CELL_H = GRID_H / ROWS;   // ~113
 
     Grid() { clear(); }
 

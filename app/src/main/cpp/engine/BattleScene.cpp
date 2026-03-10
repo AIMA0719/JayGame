@@ -23,12 +23,19 @@ std::atomic<bool> BattleScene::summonRequested{false};
 std::atomic<int> BattleScene::clickedTileIndex{-1};
 std::atomic<int> BattleScene::mergeRequestUnitId{-1};
 std::atomic<int> BattleScene::sellRequestTileIndex{-1};
+std::atomic<int> BattleScene::upgradeRequestTileIndex{-1};
+std::atomic<int> BattleScene::swapRequestFrom{-1};
+std::atomic<int> BattleScene::swapRequestTo{-1};
 
 // JNI state push — cached references
 static jclass g_bridgeClass = nullptr;
 static jmethodID g_updateMethod = nullptr;
 static jmethodID g_battleEndMethod = nullptr;
 static jmethodID g_pushGridMethod = nullptr;
+static jmethodID g_onSummonMethod = nullptr;
+static jmethodID g_pushEnemiesMethod = nullptr;
+static jmethodID g_pushProjectilesMethod = nullptr;
+static jmethodID g_onDamageMethod = nullptr;
 static bool g_jniInitialized = false;
 static float g_statePushTimer = 0.f;
 static constexpr float STATE_PUSH_INTERVAL = 0.1f; // push 10 times/sec
@@ -96,6 +103,9 @@ void BattleScene::onEnter() {
     clickedTileIndex.store(-1, std::memory_order_release);
     mergeRequestUnitId.store(-1, std::memory_order_release);
     sellRequestTileIndex.store(-1, std::memory_order_release);
+    upgradeRequestTileIndex.store(-1, std::memory_order_release);
+    swapRequestFrom.store(-1, std::memory_order_release);
+    swapRequestTo.store(-1, std::memory_order_release);
 
     // Copy deck and stage data from PlayerData
     auto& pd = PlayerData::get();
@@ -131,7 +141,15 @@ void BattleScene::onEnter() {
                 g_battleEndMethod = env->GetStaticMethodID(g_bridgeClass, "onBattleEnd",
                     "(ZIIIIII)V");
                 g_pushGridMethod = env->GetStaticMethodID(g_bridgeClass, "updateGridState",
-                    "([I[I[I[Z)V");
+                    "([I[I[I[Z[I)V");
+                g_onSummonMethod = env->GetStaticMethodID(g_bridgeClass, "onSummonResult",
+                    "(II)V");
+                g_pushEnemiesMethod = env->GetStaticMethodID(g_bridgeClass, "updateEnemyPositions",
+                    "([F[F[I[FI)V");
+                g_pushProjectilesMethod = env->GetStaticMethodID(g_bridgeClass, "updateProjectiles",
+                    "([F[F[F[F[II)V");
+                g_onDamageMethod = env->GetStaticMethodID(g_bridgeClass, "onDamageDealt",
+                    "(FFIZ)V");
                 g_jniInitialized = (g_updateMethod != nullptr && g_battleEndMethod != nullptr);
                 aout << "BattleBridge JNI initialized: " << g_jniInitialized
                      << " gridMethod: " << (g_pushGridMethod != nullptr) << std::endl;
@@ -153,15 +171,22 @@ void BattleScene::onExit() {
 }
 
 void BattleScene::setupPath() {
-    // S-shape path in top area (y: 30-280) — monsters traverse above the grid
+    // Donut path: rectangular loop around the unit grid
+    // Grid is at (290, 190) size (700, 340)
+    // Path runs clockwise with 80px margin outside grid
     pathWaypoints_.clear();
-    pathWaypoints_.push_back({40.f,   60.f});   // start left
-    pathWaypoints_.push_back({1240.f, 60.f});   // go right
-    pathWaypoints_.push_back({1240.f, 160.f});  // down
-    pathWaypoints_.push_back({40.f,   160.f});  // go left
-    pathWaypoints_.push_back({40.f,   260.f});  // down
-    pathWaypoints_.push_back({1240.f, 260.f});  // go right
-    // Path ends here, monsters loop back to start
+    float margin = 80.f;
+    float left   = Grid::GRID_X - margin;          // 210
+    float right  = Grid::GRID_X + Grid::GRID_W + margin;  // 1070
+    float top    = Grid::GRID_Y - margin;           // 110
+    float bottom = Grid::GRID_Y + Grid::GRID_H + margin;  // 610
+
+    // Clockwise rectangular loop
+    pathWaypoints_.push_back({left,  top});     // top-left
+    pathWaypoints_.push_back({right, top});     // top-right
+    pathWaypoints_.push_back({right, bottom});  // bottom-right
+    pathWaypoints_.push_back({left,  bottom});  // bottom-left
+    pathWaypoints_.push_back({left,  top});     // back to start (close loop)
 }
 
 void BattleScene::onUpdate(float dt) {
@@ -182,6 +207,15 @@ void BattleScene::onUpdate(float dt) {
     {
         int tile = sellRequestTileIndex.exchange(-1, std::memory_order_acq_rel);
         if (tile >= 0) handleSellRequest(tile);
+    }
+    {
+        int tile = upgradeRequestTileIndex.exchange(-1, std::memory_order_acq_rel);
+        if (tile >= 0) handleUpgradeRequest(tile);
+    }
+    {
+        int from = swapRequestFrom.exchange(-1, std::memory_order_acq_rel);
+        int to = swapRequestTo.exchange(-1, std::memory_order_acq_rel);
+        if (from >= 0 && to >= 0) handleSwapRequest(from, to);
     }
 
     // Push state to Compose HUD periodically
@@ -214,6 +248,8 @@ void BattleScene::onUpdate(float dt) {
     if (gridPushTimer_ <= 0.f) {
         gridPushTimer_ = GRID_PUSH_INTERVAL;
         pushGridState();
+        pushEnemyPositions();
+        pushProjectilePositions();
     }
 
     switch (state_) {
@@ -317,6 +353,11 @@ void BattleScene::updateUnits(float dt) {
 }
 
 void BattleScene::updateProjectiles(float dt) {
+    JNIEnv* env = nullptr;
+    if (g_jniInitialized && g_onDamageMethod) {
+        engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+    }
+
     projectilePool_.forEach([&](Projectile& proj) {
         if (!proj.active) return;
 
@@ -330,6 +371,17 @@ void BattleScene::updateProjectiles(float dt) {
                 Enemy* hitEnemy = proj.getHitTarget();
                 if (hitEnemy->active && !hitEnemy->isDead()) {
                     hitEnemy->takeDamage(proj.damage, proj.isMagic);
+
+                    // Notify Compose of damage hit for visual effect
+                    if (env && g_onDamageMethod) {
+                        constexpr float SW = 1280.f;
+                        constexpr float SH = 720.f;
+                        env->CallStaticVoidMethod(g_bridgeClass, g_onDamageMethod,
+                            hitEnemy->position.x / SW,
+                            hitEnemy->position.y / SH,
+                            static_cast<jint>(proj.damage),
+                            static_cast<jboolean>(false));
+                    }
 
                     // Find source unit to apply ability effects
                     unitPool_.forEach([&](Unit& unit) {
@@ -400,6 +452,8 @@ void BattleScene::summonUnit() {
 
     aout << "Summoned " << def.name << " at (" << row << "," << col
          << ") cost=" << cost << " SP=" << sp_ << std::endl;
+
+    notifySummonResult(def.id, def.id / 5);
 }
 
 float BattleScene::getSummonCost() const {
@@ -499,49 +553,22 @@ void BattleScene::onRender(float alpha, SpriteBatch& batch) {
         }
     }
 
-    // 1. Render grid
-    grid_.render(batch, atlas_);
-
-    // 2. Render path
+    // 1. Render path
     renderPath(batch);
 
-    // 3. Render enemies
-    enemyPool_.forEach([&](Enemy& enemy) {
-        if (enemy.active) {
-            enemy.render(alpha, batch, atlas_);
-        }
-    });
+    // 2. Enemies are now rendered by Compose overlay via pushEnemyPositions()
 
-    // 4. Render units
-    unitPool_.forEach([&](Unit& unit) {
-        if (unit.active) {
-            unit.render(alpha, batch, atlas_);
-        }
-    });
-
-    // 4.5. Render unit level text
-    {
-        auto& tr = engine_.getTextRenderer();
-        char buf[8];
-        unitPool_.forEach([&](Unit& unit) {
-            if (!unit.active) return;
-            snprintf(buf, sizeof(buf), "%d", unit.level);
-            tr.drawText(batch, buf, unit.position.x, unit.position.y + 14.f, 2.f,
-                        {1.f, 1.f, 1.f, 0.9f}, TextAlign::Center);
-        });
-    }
-
-    // 5. Render projectiles
+    // 3. Render projectiles
     projectilePool_.forEach([&](Projectile& proj) {
         if (proj.active) {
             proj.render(alpha, batch, atlas_);
         }
     });
 
-    // 6. Merge system rendering removed — now click-based via Compose overlay
-
-    // 7. HUD rendering disabled — now handled by Compose overlay
-    // renderHUD(batch);
+    // 4. Wave delay overlay
+    if (state_ == State::WaveDelay) {
+        renderHUD(batch);
+    }
 
     batch.end();
 }
@@ -634,6 +661,8 @@ void BattleScene::summonUnitAt(int tileIndex) {
 
     aout << "Summoned " << def.name << " at tile " << tileIndex
          << " cost=" << cost << " SP=" << sp_ << std::endl;
+
+    notifySummonResult(def.id, def.id / 5);
 }
 
 void BattleScene::handleTileClick(int tileIndex) {
@@ -679,6 +708,68 @@ void BattleScene::handleSellRequest(int tileIndex) {
     }
 }
 
+void BattleScene::handleUpgradeRequest(int tileIndex) {
+    int row = tileIndex / Grid::COLS;
+    int col = tileIndex % Grid::COLS;
+    if (!grid_.isValid(row, col)) return;
+
+    Unit* unit = grid_.getUnit(row, col);
+    if (!unit || !unit->active) return;
+
+    // Max level is 7
+    if (unit->level >= 7) return;
+
+    // Get upgrade cost
+    int costIndex = unit->level - 1; // level 1 -> index 0
+    if (costIndex < 0 || costIndex >= 6) return;
+    float cost = UPGRADE_COSTS[costIndex];
+
+    if (sp_ < cost) return;
+
+    sp_ -= cost;
+    unit->level++;
+
+    aout << "Upgraded unit at tile " << tileIndex << " to level " << unit->level
+         << " cost=" << cost << " SP=" << sp_ << std::endl;
+}
+
+void BattleScene::handleSwapRequest(int fromTile, int toTile) {
+    if (fromTile < 0 || fromTile >= 15 || toTile < 0 || toTile >= 15) return;
+    if (fromTile == toTile) return;
+
+    int fromRow = fromTile / 5, fromCol = fromTile % 5;
+    int toRow = toTile / 5, toCol = toTile % 5;
+
+    Unit* unitA = grid_.getUnit(fromRow, fromCol);
+    Unit* unitB = grid_.getUnit(toRow, toCol);
+
+    // At least source must have a unit
+    if (!unitA) return;
+
+    // Remove both
+    grid_.removeUnit(fromRow, fromCol);
+    if (unitB) grid_.removeUnit(toRow, toCol);
+
+    // Place swapped
+    grid_.placeUnit(toRow, toCol, unitA);
+    unitA->position = grid_.cellCenter(toRow, toCol);
+    unitA->gridRow = toRow;
+    unitA->gridCol = toCol;
+    unitA->entity.transform.position = unitA->position;
+    unitA->entity.transform.syncPrevious();
+
+    if (unitB) {
+        grid_.placeUnit(fromRow, fromCol, unitB);
+        unitB->position = grid_.cellCenter(fromRow, fromCol);
+        unitB->gridRow = fromRow;
+        unitB->gridCol = fromCol;
+        unitB->entity.transform.position = unitB->position;
+        unitB->entity.transform.syncPrevious();
+    }
+
+    aout << "Swapped tile " << fromTile << " <-> " << toTile << std::endl;
+}
+
 void BattleScene::pushGridState() {
     if (!g_jniInitialized || !g_pushGridMethod) return;
 
@@ -690,8 +781,9 @@ void BattleScene::pushGridState() {
     jintArray grades = env->NewIntArray(15);
     jintArray families = env->NewIntArray(15);
     jbooleanArray canMerge = env->NewBooleanArray(15);
+    jintArray levels = env->NewIntArray(15);
 
-    int ids[15], grd[15], fam[15];
+    int ids[15], grd[15], fam[15], lvls[15];
     jboolean merge[15];
 
     for (int i = 0; i < 15; i++) {
@@ -701,6 +793,7 @@ void BattleScene::pushGridState() {
             ids[i] = u->unitDefId;
             grd[i] = u->unitDefId / 5;  // grade
             fam[i] = u->unitDefId % 5;  // family
+            lvls[i] = u->level;
             // Can merge if 3+ same family+grade exist
             int count = 0;
             int grade = u->unitDefId / 5;
@@ -716,6 +809,7 @@ void BattleScene::pushGridState() {
             ids[i] = -1;
             grd[i] = -1;
             fam[i] = -1;
+            lvls[i] = 0;
             merge[i] = JNI_FALSE;
         }
     }
@@ -724,11 +818,150 @@ void BattleScene::pushGridState() {
     env->SetIntArrayRegion(grades, 0, 15, grd);
     env->SetIntArrayRegion(families, 0, 15, fam);
     env->SetBooleanArrayRegion(canMerge, 0, 15, merge);
+    env->SetIntArrayRegion(levels, 0, 15, lvls);
 
-    env->CallStaticVoidMethod(g_bridgeClass, g_pushGridMethod, unitIds, grades, families, canMerge);
+    env->CallStaticVoidMethod(g_bridgeClass, g_pushGridMethod, unitIds, grades, families, canMerge, levels);
 
     env->DeleteLocalRef(unitIds);
     env->DeleteLocalRef(grades);
     env->DeleteLocalRef(families);
     env->DeleteLocalRef(canMerge);
+    env->DeleteLocalRef(levels);
+}
+
+void BattleScene::notifySummonResult(int unitDefId, int grade) {
+    if (!g_jniInitialized || !g_onSummonMethod) return;
+    JNIEnv* env = nullptr;
+    engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+    if (env && g_bridgeClass) {
+        env->CallStaticVoidMethod(g_bridgeClass, g_onSummonMethod, unitDefId, grade);
+    }
+}
+
+void BattleScene::pushProjectilePositions() {
+    if (!g_jniInitialized || !g_pushProjectilesMethod) return;
+
+    JNIEnv* env = nullptr;
+    engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+    if (!env || !g_bridgeClass) return;
+
+    int count = 0;
+    projectilePool_.forEach([&](Projectile& proj) {
+        if (proj.active) count++;
+    });
+
+    if (count == 0) {
+        jfloatArray emptyF = env->NewFloatArray(0);
+        jintArray emptyI = env->NewIntArray(0);
+        env->CallStaticVoidMethod(g_bridgeClass, g_pushProjectilesMethod,
+            emptyF, emptyF, emptyF, emptyF, emptyI, 0);
+        env->DeleteLocalRef(emptyF);
+        env->DeleteLocalRef(emptyI);
+        return;
+    }
+
+    constexpr float SCREEN_W = 1280.f;
+    constexpr float SCREEN_H = 720.f;
+
+    std::vector<float> srcXs(count), srcYs(count), dstXs(count), dstYs(count);
+    std::vector<int> types(count);
+    int idx = 0;
+
+    projectilePool_.forEach([&](Projectile& proj) {
+        if (!proj.active || idx >= count) return;
+        srcXs[idx] = proj.position.x / SCREEN_W;
+        srcYs[idx] = proj.position.y / SCREEN_H;
+        // Target position (where projectile is heading)
+        if (proj.target && proj.target->active) {
+            dstXs[idx] = proj.target->position.x / SCREEN_W;
+            dstYs[idx] = proj.target->position.y / SCREEN_H;
+        } else {
+            dstXs[idx] = srcXs[idx];
+            dstYs[idx] = srcYs[idx];
+        }
+        types[idx] = proj.projType;
+        idx++;
+    });
+
+    jfloatArray jsrcX = env->NewFloatArray(count);
+    jfloatArray jsrcY = env->NewFloatArray(count);
+    jfloatArray jdstX = env->NewFloatArray(count);
+    jfloatArray jdstY = env->NewFloatArray(count);
+    jintArray jtypes = env->NewIntArray(count);
+
+    env->SetFloatArrayRegion(jsrcX, 0, count, srcXs.data());
+    env->SetFloatArrayRegion(jsrcY, 0, count, srcYs.data());
+    env->SetFloatArrayRegion(jdstX, 0, count, dstXs.data());
+    env->SetFloatArrayRegion(jdstY, 0, count, dstYs.data());
+    env->SetIntArrayRegion(jtypes, 0, count, types.data());
+
+    env->CallStaticVoidMethod(g_bridgeClass, g_pushProjectilesMethod,
+        jsrcX, jsrcY, jdstX, jdstY, jtypes, count);
+
+    env->DeleteLocalRef(jsrcX);
+    env->DeleteLocalRef(jsrcY);
+    env->DeleteLocalRef(jdstX);
+    env->DeleteLocalRef(jdstY);
+    env->DeleteLocalRef(jtypes);
+}
+
+void BattleScene::pushEnemyPositions() {
+    if (!g_jniInitialized || !g_pushEnemiesMethod) return;
+
+    JNIEnv* env = nullptr;
+    engine_.getApp()->activity->vm->AttachCurrentThread(&env, nullptr);
+    if (!env || !g_bridgeClass) return;
+
+    // Count active enemies first
+    int count = 0;
+    enemyPool_.forEach([&](Enemy& enemy) {
+        if (enemy.active && !enemy.isDead()) count++;
+    });
+
+    if (count == 0) {
+        // Push empty
+        jfloatArray emptyF = env->NewFloatArray(0);
+        jintArray emptyI = env->NewIntArray(0);
+        env->CallStaticVoidMethod(g_bridgeClass, g_pushEnemiesMethod,
+            emptyF, emptyF, emptyI, emptyF, 0);
+        env->DeleteLocalRef(emptyF);
+        env->DeleteLocalRef(emptyI);
+        return;
+    }
+
+    // Allocate arrays
+    std::vector<float> xs(count), ys(count), hpRatios(count);
+    std::vector<int> types(count);
+    int idx = 0;
+
+    // Screen dimensions for normalization
+    constexpr float SCREEN_W = 1280.f;
+    constexpr float SCREEN_H = 720.f;
+
+    enemyPool_.forEach([&](Enemy& enemy) {
+        if (!enemy.active || enemy.isDead() || idx >= count) return;
+        xs[idx] = enemy.position.x / SCREEN_W;  // normalize 0-1
+        ys[idx] = enemy.position.y / SCREEN_H;  // normalize 0-1
+        types[idx] = enemy.isBoss ? 99 : enemy.enemyType;
+        hpRatios[idx] = (enemy.maxHp > 0.f) ? (enemy.hp / enemy.maxHp) : 0.f;
+        idx++;
+    });
+
+    jfloatArray jxs = env->NewFloatArray(count);
+    jfloatArray jys = env->NewFloatArray(count);
+    jintArray jtypes = env->NewIntArray(count);
+    jfloatArray jhp = env->NewFloatArray(count);
+
+    env->SetFloatArrayRegion(jxs, 0, count, xs.data());
+    env->SetFloatArrayRegion(jys, 0, count, ys.data());
+    env->SetIntArrayRegion(jtypes, 0, count, types.data());
+    env->SetFloatArrayRegion(jhp, 0, count, hpRatios.data());
+
+    env->CallStaticVoidMethod(g_bridgeClass, g_pushEnemiesMethod,
+        jxs, jys, jtypes, jhp, count);
+
+    env->DeleteLocalRef(jxs);
+    env->DeleteLocalRef(jys);
+    env->DeleteLocalRef(jtypes);
+    env->DeleteLocalRef(jhp);
 }

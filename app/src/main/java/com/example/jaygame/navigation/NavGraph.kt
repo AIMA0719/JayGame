@@ -26,6 +26,7 @@ import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.SeasonPassScreen
 import com.example.jaygame.ui.screens.ShopScreen
+import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
@@ -102,6 +103,11 @@ fun NavGraph(
             composable(Routes.ACHIEVEMENTS) {
                 AchievementsScreen(
                     repository = repository,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.UNIT_CODEX) {
+                UnitCollectionScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

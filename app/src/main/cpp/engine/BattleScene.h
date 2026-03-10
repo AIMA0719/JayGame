@@ -45,6 +45,9 @@ public:
     static std::atomic<int> clickedTileIndex;     // -1 = no click, 0-14 = tile
     static std::atomic<int> mergeRequestUnitId;   // -1 = no request (tile index actually)
     static std::atomic<int> sellRequestTileIndex;  // -1 = no request
+    static std::atomic<int> upgradeRequestTileIndex;  // -1 = no request
+    static std::atomic<int> swapRequestFrom;   // -1 = no request
+    static std::atomic<int> swapRequestTo;     // -1 = no request
 
     // State getters for JNI bridge
     int getCurrentWave() const { return currentWave_; }
@@ -134,7 +137,13 @@ private:
     void handleTileClick(int tileIndex);
     void handleMergeRequest(int tileIndex);
     void handleSellRequest(int tileIndex);
+    void handleUpgradeRequest(int tileIndex);
+    void handleSwapRequest(int fromTile, int toTile);
+    static constexpr float UPGRADE_COSTS[] = {30.f, 60.f, 100.f, 150.f, 220.f, 300.f}; // level 1->2 through 6->7
     void pushGridState();
+    void pushEnemyPositions();
+    void pushProjectilePositions();
+    void notifySummonResult(int unitDefId, int grade);
 };
 
 #endif // JAYGAME_BATTLESCENE_H
