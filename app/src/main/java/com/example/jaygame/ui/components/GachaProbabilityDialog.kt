@@ -30,11 +30,13 @@ private data class GradeRow(
 )
 
 private val gradeRows = listOf(
-    GradeRow(UnitGrade.LOW, "80%"),
-    GradeRow(UnitGrade.MEDIUM, "15%"),
-    GradeRow(UnitGrade.HIGH, "5%"),
-    GradeRow(UnitGrade.SUPREME, "조합으로만 획득"),
-    GradeRow(UnitGrade.TRANSCENDENT, "조합으로만 획득"),
+    GradeRow(UnitGrade.COMMON, "60%"),
+    GradeRow(UnitGrade.RARE, "25%"),
+    GradeRow(UnitGrade.HERO, "12%"),
+    GradeRow(UnitGrade.LEGEND, "3%"),
+    GradeRow(UnitGrade.ANCIENT, "조합으로만 획득"),
+    GradeRow(UnitGrade.MYTHIC, "조합으로만 획득"),
+    GradeRow(UnitGrade.IMMORTAL, "조합으로만 획득"),
 )
 
 @Composable

@@ -40,6 +40,8 @@ fun MonsterPathOverlay() {
     val bgColorLast = remember(stageId) { stage.bgColors.last() }
     val pathGradientColors = remember(stageId) { listOf(pathColor05, pathColor06) }
 
+    // Path and ground are now rendered by C++ engine (BattleScene::renderPath).
+    // Only draw semi-transparent borders/dashes on top for visual polish.
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
@@ -59,22 +61,20 @@ fun MonsterPathOverlay() {
         val gridW = gridRight - gridLeft
         val gridH = gridBottom - gridTop
 
-        // Outer path background (stage-themed)
+        // Path fill (gradient)
         drawRoundRect(
             brush = Brush.verticalGradient(pathGradientColors),
             topLeft = Offset(pathLeft, pathTop),
             size = Size(pathW, pathH),
             cornerRadius = CornerRadius(16f),
         )
-
-        // Inner cutout (match stage background)
+        // Inner cutout (grid area background)
         drawRoundRect(
             color = bgColorLast,
             topLeft = Offset(gridLeft, gridTop),
             size = Size(gridW, gridH),
             cornerRadius = CornerRadius(12f),
         )
-
         // Outer border
         drawRoundRect(
             color = pathColor04,

@@ -14,7 +14,7 @@ class SaveBridge {
         fun save(context: Context, json: String) {
             try {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                prefs.edit().putString(KEY_SAVE_DATA, json).apply()
+                prefs.edit().putString(KEY_SAVE_DATA, json).commit()
             } catch (e: Exception) {
                 android.util.Log.e("SaveBridge", "Failed to save: ${e.message}")
             }

@@ -14,6 +14,8 @@
 #include "SpriteBatch.h"
 #include "MathTypes.h"
 #include "SpriteAtlas.h"
+#include "ParticleSystem.h"
+#include "FloatingText.h"
 
 #include <vector>
 #include <memory>
@@ -104,6 +106,12 @@ private:
     // Sprite atlas (single texture for all rendering)
     SpriteAtlas atlas_;
 
+    // Particle system for all visual effects
+    ParticleSystem particles_;
+
+    // Floating damage numbers
+    FloatingTextSystem floatingText_;
+
     // Monster limit — defeat if active enemies reach this count
     static constexpr int MAX_ENEMY_COUNT = 100;
 
@@ -112,9 +120,13 @@ private:
     bool isBossRound_ = false;
     static constexpr float BOSS_TIME_LIMIT = 60.f;
 
-    // Ability aura timer
+    // Ability aura timer (buff/shield application)
     float auraTimer_ = 0.f;
     static constexpr float AURA_INTERVAL = 0.5f;
+
+    // Visual aura particle spawn timer
+    float visualAuraTimer_ = 0.f;
+    static constexpr float VISUAL_AURA_INTERVAL = 0.1f; // 10Hz for smooth flames
 
     // Grid state push timer
     float gridPushTimer_ = 0.f;

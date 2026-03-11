@@ -8,24 +8,50 @@ data class UnitSpec(
     val id: Int,
     val name: String,
     val grade: UnitGrade,
-    val family: String,       // 계열 (화염, 냉기 등) — 같은 계열끼리 머지
+    val family: String,
     val baseATK: Float,
-    val atkSpeed: Float,      // 초당 공격 횟수
-    val range: Float,         // 사거리 (논리 좌표)
+    val atkSpeed: Float,
+    val range: Float,
     val abilityType: AbilityType = AbilityType.NONE,
     val description: String = "",
-    val mergeResultId: Int = -1, // 3개 머지 시 결과 유닛 ID (-1 = 머지 불가)
+    val mergeResultId: Int = -1,
 )
 
 enum class AbilityType {
     NONE,
-    SPLASH,      // 범위 피해
-    SLOW,        // 이동속도 감소
-    DOT,         // 지속 피해
-    CHAIN,       // 연쇄 공격
-    BUFF,        // 아군 버프
-    SHIELD,      // 보호막
-    EXECUTE,     // 처형 (HP % 이하 즉사)
+    SPLASH,
+    SLOW,
+    DOT,
+    CHAIN,
+    BUFF,
+    SHIELD,
+    EXECUTE,
+    // 고유 능력 타입 (영웅 등급 이상)
+    LINGERING_FIRE,
+    FIRESTORM,
+    VOLCANIC_ERUPTION,
+    PHOENIX_REBIRTH,
+    SUPERNOVA,
+    FROST_NOVA,
+    ABSOLUTE_ZERO,
+    ICE_AGE,
+    ETERNAL_WINTER,
+    TIME_STOP,
+    CONTAGION,
+    CORROSION,
+    TOXIC_DOMAIN,
+    VENOMOUS_BREATH,
+    UNIVERSAL_DECAY,
+    OVERCHARGE,
+    STATIC_FIELD,
+    THUNDERSTORM,
+    MJOLNIR,
+    DIVINE_PUNISHMENT,
+    FORESIGHT,
+    WAR_SONG,
+    RESURRECTION,
+    UNIVERSAL_HARMONY,
+    GENESIS,
 }
 
 /**

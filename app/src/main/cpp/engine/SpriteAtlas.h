@@ -57,7 +57,7 @@ private:
     static constexpr float ATLAS_SIZE = 2048.f;
     static constexpr float CELL_SIZE  = 64.f;
 
-    static constexpr int MAX_UNITS       = 25;
+    static constexpr int MAX_UNITS       = 35;
     static constexpr int MAX_ENEMIES     = 6;
     static constexpr int MAX_PROJECTILES = 6;
 

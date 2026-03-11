@@ -20,7 +20,7 @@ class GameRepository(context: Context) {
 
     fun save(data: GameData) {
         val json = serialize(data)
-        prefs.edit().putString("save_data", json).apply()
+        prefs.edit().putString("save_data", json).commit()
         _gameData.value = data
     }
 
@@ -180,8 +180,8 @@ class GameRepository(context: Context) {
                     )
                 }
             }
-            // Pad to 25 if fewer entries (LOW grade units 0-4 owned by default)
-            while (units.size < 25) {
+            // Pad to 35 if fewer entries (COMMON grade units 0-4 owned by default)
+            while (units.size < 35) {
                 units.add(UnitProgress(owned = units.size < 5, cards = 0, level = 1))
             }
 

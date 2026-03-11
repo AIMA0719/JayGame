@@ -300,6 +300,52 @@ private fun CollectionUnitDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
+                // Unique Ability section (Hero grade and above)
+                if (def.uniqueAbility != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                def.grade.color.copy(alpha = 0.08f),
+                                RoundedCornerShape(8.dp),
+                            )
+                            .padding(10.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "\u2726 ",
+                                fontSize = 13.sp,
+                                color = def.grade.color,
+                            )
+                            Text(
+                                text = def.uniqueAbility.name,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = def.grade.color,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (def.uniqueAbility.cooldown > 0)
+                                "[${def.uniqueAbility.type}] 쿨타임: ${def.uniqueAbility.cooldown}초"
+                            else
+                                "[${def.uniqueAbility.type}]",
+                            fontSize = 10.sp,
+                            color = SubText,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = def.uniqueAbility.description,
+                            fontSize = 11.sp,
+                            color = LightText.copy(alpha = 0.9f),
+                            lineHeight = 16.sp,
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Level with stars

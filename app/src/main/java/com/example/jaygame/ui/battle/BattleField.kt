@@ -1,6 +1,5 @@
 package com.example.jaygame.ui.battle
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -33,13 +32,8 @@ private val BadgeBorderStroke = Stroke(width = 1f)
 private val AttackGlow = Color.White.copy(alpha = 0.4f)
 private val DragGhost = Color(0xFF00D4FF).copy(alpha = 0.3f)
 
-private val GradeColors = arrayOf(
-    Color(0xFF9E9E9E), // 0 Normal
-    Color(0xFF42A5F5), // 1 Rare
-    Color(0xFFAB47BC), // 2 Epic
-    Color(0xFFFF8F00), // 3 Legendary
-    Color(0xFFE94560), // 4 Transcendent
-)
+private val GradeColors = GradeColorsByIndex
+private val FamilyAuraColors = FamilyColorsByIndex
 
 // C++ grid area in 1280x720 space
 private const val GRID_NORM_X = 290f / 1280f
@@ -48,9 +42,8 @@ private const val GRID_NORM_W = 700f / 1280f
 private const val GRID_NORM_H = 340f / 720f
 
 /**
- * Canvas-based battlefield — "Summon Ground" with free-moving units.
- * Draws a raised grassy platform, renders units at dynamic positions from C++.
- * Long-press drag to reposition units within the field.
+ * Battlefield overlay — unit sprites rendered in Compose (proper drawable icons),
+ * aura/particle effects rendered by C++ engine behind this layer.
  */
 @Composable
 fun BattleField() {
@@ -68,24 +61,13 @@ fun BattleField() {
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
     val fieldBorderColor = remember(stageId) { stage.fieldColors.last().copy(alpha = 0.6f) }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "fieldPulse")
-    val breathe by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "breathe",
-    )
-
-    // Smooth unit positions (same approach as EnemyOverlay)
+    // Smooth unit positions
     val smoothXs = remember { mutableStateOf(FloatArray(0)) }
     val smoothYs = remember { mutableStateOf(FloatArray(0)) }
 
     LaunchedEffect(Unit) {
         while (true) {
-            androidx.compose.runtime.withFrameNanos { _ ->
+            withFrameNanos { _ ->
                 val data = BattleBridge.unitPositions.value
                 val sx = smoothXs.value
                 val sy = smoothYs.value
@@ -155,7 +137,6 @@ fun BattleField() {
                             val h = size.height.toFloat()
                             val normX = dragOffset.x / w
                             val normY = dragOffset.y / h
-                            // Relocate unit to drop position
                             BattleBridge.requestRelocate(dragFromTile, normX, normY)
                         }
                         isDragging = false
@@ -263,7 +244,8 @@ fun BattleField() {
             style = GroundBorderStroke,
         )
 
-        // ── Draw Units at Dynamic Positions ──
+        // ── Draw unit sprites (Compose drawable icons) ──
+        // Aura particles are rendered by C++ behind this layer
         val data = unitPositions
         val sxArr = smoothXs.value
         val syArr = smoothYs.value
@@ -272,6 +254,7 @@ fun BattleField() {
         val unitSize = gridW / 6f * 0.55f
         val pedestalRx = unitSize * 0.4f
         val pedestalRy = pedestalRx * 0.35f
+        val gridState = BattleBridge.gridState.value
 
         for (i in 0 until data.count) {
             val screenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
@@ -280,6 +263,7 @@ fun BattleField() {
             val tileIdx = data.tileIndices[i]
             val isSelected = selectedTile == tileIdx
             val isAttacking = data.isAttacking.getOrElse(i) { false }
+            val family = data.unitDefIds[i] % 5
 
             // Skip dragged unit at original position
             if (isDragging && dragFromTile == tileIdx) continue
@@ -291,8 +275,14 @@ fun BattleField() {
                 size = Size(pedestalRx * 2, pedestalRy * 2),
             )
 
-            // Pedestal glow
-            val pedestalColor = if (isSelected) NeonCyan else gradeColor
+            // Pedestal glow (grade + family blend)
+            val familyTint = FamilyAuraColors.getOrElse(family) { FamilyAuraColors[0] }
+            val pedestalColor = if (isSelected) NeonCyan else Color(
+                red = gradeColor.red * 0.65f + familyTint.red * 0.35f,
+                green = gradeColor.green * 0.65f + familyTint.green * 0.35f,
+                blue = gradeColor.blue * 0.65f + familyTint.blue * 0.35f,
+                alpha = 1f,
+            )
             drawOval(
                 brush = Brush.radialGradient(
                     colors = listOf(
@@ -308,7 +298,7 @@ fun BattleField() {
             // Selected ring
             if (isSelected) {
                 drawOval(
-                    color = NeonCyan.copy(alpha = 0.5f + breathe * 0.3f),
+                    color = NeonCyan.copy(alpha = 0.7f),
                     topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.3f),
                     size = Size(pedestalRx * 2.2f, pedestalRy * 2.2f),
                     style = SelectedStroke,
@@ -324,23 +314,16 @@ fun BattleField() {
                 )
             }
 
-            // Unit sprite
+            // Unit sprite (proper drawable icon)
             val bitmap = unitBitmaps[data.unitDefIds[i]]
             if (bitmap != null) {
                 val spriteSize = unitSize * 0.85f
-                val spriteY = screenY - spriteSize - pedestalRy * 0.3f - breathe * 2f
+                val spriteY = screenY - spriteSize - pedestalRy * 0.3f
                 drawImage(
                     image = bitmap,
                     topLeft = Offset(screenX - spriteSize / 2, spriteY),
                 )
             }
-
-            // Grade dot
-            drawCircle(
-                color = gradeColor,
-                radius = 4f,
-                center = Offset(screenX - unitSize * 0.35f, screenY - unitSize * 0.7f),
-            )
 
             // Level badge
             if (data.levels[i] > 1) {
@@ -361,7 +344,6 @@ fun BattleField() {
             }
 
             // Merge indicator
-            val gridState = BattleBridge.gridState.value
             val tile = gridState.getOrNull(tileIdx)
             if (tile != null && tile.canMerge) {
                 drawCircle(
@@ -387,7 +369,6 @@ fun BattleField() {
                         alpha = 0.7f,
                     )
                 }
-                // Drop target indicator
                 drawCircle(
                     color = DragGhost,
                     radius = unitSize * 0.6f,

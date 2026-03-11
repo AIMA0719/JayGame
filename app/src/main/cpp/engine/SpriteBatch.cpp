@@ -1,4 +1,5 @@
 #include "SpriteBatch.h"
+#include "ParticleSystem.h" // for BlendMode enum
 #include "TextureAsset.h"
 #include "AndroidOut.h"
 
@@ -301,11 +302,24 @@ void SpriteBatch::flush() {
     vertices_.clear();
 }
 
+void SpriteBatch::setBlendMode(BlendMode mode) {
+    if (!drawing_) return;
+    flush(); // flush current batch before changing GL state
+    if (mode == BlendMode::Additive) {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    } else {
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+}
+
 void SpriteBatch::end() {
     if (!drawing_) return;
 
     flush();
     drawing_ = false;
+
+    // Ensure normal blend is restored
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindVertexArray(0);
     glUseProgram(0);

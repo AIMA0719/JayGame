@@ -27,7 +27,7 @@ public:
     SmartMergeResult trySmartMerge(int tileIndex, Grid& grid, ObjectPool<Unit>& unitPool);
 
 private:
-    static constexpr int MAX_GRADE = 4;  // Transcendent grade (unitDefId / 5)
+    static constexpr int MAX_GRADE = 6;  // Immortal grade (unitDefId / 5)
 };
 
 #endif // JAYGAME_MERGESYSTEM_H

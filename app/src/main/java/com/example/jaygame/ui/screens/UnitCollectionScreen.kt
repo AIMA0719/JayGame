@@ -397,6 +397,55 @@ private fun UnitDetailDialog(
                     )
                 }
 
+                // Unique Ability (Hero grade and above)
+                if (unit.uniqueAbility != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(gradeColor.copy(alpha = 0.08f))
+                            .padding(12.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "\u2728 ",
+                                fontSize = 14.sp,
+                            )
+                            Text(
+                                text = unit.uniqueAbility.name,
+                                color = gradeColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        if (unit.uniqueAbility.cooldown > 0) {
+                            Text(
+                                text = "${unit.uniqueAbility.type} \u00B7 쿨타임 ${unit.uniqueAbility.cooldown}초",
+                                color = NeonCyan,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        } else {
+                            Text(
+                                text = unit.uniqueAbility.type,
+                                color = NeonCyan,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = unit.uniqueAbility.description,
+                            color = LightText.copy(alpha = 0.9f),
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp,
+                        )
+                    }
+                }
+
                 // Merge info
                 if (unit.mergeResultId >= 0) {
                     val nextUnit = com.example.jaygame.data.UNIT_DEFS_MAP[unit.mergeResultId]

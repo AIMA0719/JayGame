@@ -120,6 +120,41 @@ fun UnitDetailPopup() {
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            // Unique Ability (Hero grade and above)
+            if (unitDef.uniqueAbility != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            unitDef.grade.color.copy(alpha = 0.1f),
+                            RoundedCornerShape(6.dp),
+                        )
+                        .padding(8.dp),
+                ) {
+                    Text(
+                        text = "\u2726 ${unitDef.uniqueAbility.name}",
+                        color = unitDef.grade.color,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (unitDef.uniqueAbility.cooldown > 0) {
+                        Text(
+                            text = "쿨타임: ${unitDef.uniqueAbility.cooldown}초",
+                            color = NeonCyan,
+                            fontSize = 9.sp,
+                        )
+                    }
+                    Text(
+                        text = unitDef.uniqueAbility.description,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+
             // Slot info
             val slotRow = data.tileIndex / BattleBridge.GRID_COLS + 1
             val slotCol = data.tileIndex % BattleBridge.GRID_COLS + 1

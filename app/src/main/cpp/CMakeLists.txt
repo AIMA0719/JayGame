@@ -35,7 +35,8 @@ add_library(jaygame SHARED
     engine/ResultScene.cpp
     engine/SettingsScene.cpp
     engine/Achievement.cpp
-    engine/SaveSystem.cpp )
+    engine/SaveSystem.cpp
+    engine/ParticleSystem.cpp )
 
 # Include engine headers
 target_include_directories(jaygame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
