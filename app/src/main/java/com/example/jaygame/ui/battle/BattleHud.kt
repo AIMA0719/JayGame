@@ -1,5 +1,6 @@
 package com.example.jaygame.ui.battle
 
+import android.graphics.BitmapFactory
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -7,6 +8,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,171 +39,155 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.ui.theme.*
 
-// ── Top HUD ──────────────────────────────────────────────────
+// ── Warm medieval theme colors ──
+private val WoodBrown = Color(0xFF5C3A1E)
+private val WoodBrownLight = Color(0xFF7B5230)
+private val WoodBrownDark = Color(0xFF3E2510)
+private val PanelBg = Color(0xFF2A1A0C).copy(alpha = 0.88f)
+private val PanelBgDark = Color(0xFF1A0F06).copy(alpha = 0.92f)
+private val BadgeBg = Color(0xFF1E1208).copy(alpha = 0.9f)
+private val GoldBright = Color(0xFFFFD700)
+private val GoldDark = Color(0xFFB8860B)
+private val GreenTeal = Color(0xFF2E8B57)
+private val GreenTealDark = Color(0xFF1B5E3A)
+private val BlueSky = Color(0xFF4A90D9)
+private val BlueSkyDark = Color(0xFF2C5F99)
+private val OrangeBright = Color(0xFFFF8C00)
+private val OrangeDark = Color(0xFFCC6600)
+
+// ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
 
 @Composable
 fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
+    val gridState by BattleBridge.gridState.collectAsState()
+    val unitCount = gridState.count { it.unitDefId >= 0 }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Main top panel
+    val totalSeconds = battle.elapsedTime.toInt()
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        // Centered compact badge
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF1A1025).copy(alpha = 0.92f),
-                            Color(0xFF0D0815).copy(alpha = 0.88f),
-                        )
-                    )
-                )
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black.copy(alpha = 0.65f))
+                .border(1.dp, WoodBrown.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // Pause button
+            // WAVE number
+            Text(
+                text = "WAVE ${battle.currentWave}",
+                color = GoldBright,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+
+            // Divider
             Box(
                 modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF3A2E45), Color(0xFF2A1F35))
-                        )
-                    )
-                    .border(1.dp, Color(0xFF6B5A80).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable(onClick = onPauseClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("☰", color = Gold, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(Color.White.copy(alpha = 0.2f)),
+            )
 
-            // Center info panel: WAVE + Timer + Enemy count
-            Row(
+            // Timer
+            Text(
+                text = "%02d:%02d".format(minutes, seconds),
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+
+            // Divider
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color(0xFF2A1F35).copy(alpha = 0.6f),
-                                Color(0xFF3A2855).copy(alpha = 0.8f),
-                                Color(0xFF2A1F35).copy(alpha = 0.6f),
-                            )
-                        ),
-                        RoundedCornerShape(10.dp),
-                    )
-                    .border(1.dp, Color(0xFF6B5A80).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                // WAVE badge
-                Text(
-                    text = "WAVE",
-                    color = NeonCyan.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${battle.currentWave}",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(Color.White.copy(alpha = 0.2f)),
+            )
 
-                Spacer(modifier = Modifier.width(16.dp))
+            // Enemy count with skull
+            Text(
+                text = "\uD83D\uDC80 ${battle.enemyCount}/${battle.maxEnemyCount}",
+                color = if (battle.enemyCount > 80) NeonRed else Color.White.copy(alpha = 0.9f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
 
-                // Timer
-                val totalSeconds = battle.elapsedTime.toInt()
-                val minutes = totalSeconds / 60
-                val seconds = totalSeconds % 60
-                Text(
-                    text = "%02d:%02d".format(minutes, seconds),
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+            // Divider
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(14.dp)
+                    .background(Color.White.copy(alpha = 0.2f)),
+            )
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // Enemy count with skull
-                Text(
-                    text = "\uD83D\uDC80",
-                    fontSize = 12.sp,
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${battle.enemyCount}/${battle.maxEnemyCount}",
-                    color = if (battle.enemyCount > 80) NeonRed else Color.White.copy(alpha = 0.9f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            // HP bar
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .width(44.dp)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(Color(0xFF1A1025)),
-                ) {
-                    val hpFrac = if (battle.maxHP > 0)
-                        (battle.playerHP.toFloat() / battle.maxHP).coerceIn(0f, 1f) else 1f
-                    val hpColor = when {
-                        battle.playerHP <= battle.maxHP / 4 -> NeonRed
-                        battle.playerHP <= battle.maxHP / 2 -> WarningYellow
-                        else -> NeonGreen
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(hpFrac)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(hpColor),
-                    )
-                }
-                Text(
-                    text = "HP ${battle.playerHP}",
-                    color = if (battle.playerHP <= battle.maxHP / 4) NeonRed
-                    else Color.White.copy(alpha = 0.6f),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            // Unit count
+            Text(
+                text = "\u2694 $unitCount/${BattleBridge.GRID_TOTAL}",
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
 
-        // Thin separator glow
+        // Pause button — top-left
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 8.dp)
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.5f))
+                .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
+                .clickable(onClick = onPauseClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("\u2699", fontSize = 14.sp)
+        }
+    }
+
+    // Boss timer
+    if (battle.isBossRound) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color(0xFF8B6AFF).copy(alpha = 0.4f),
-                            Color(0xFF8B6AFF).copy(alpha = 0.4f),
-                            Color.Transparent,
-                        )
-                    )
-                ),
-        )
+                .background(NeonRed.copy(alpha = 0.15f))
+                .padding(vertical = 2.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "\u26A0 BOSS ${battle.bossTimeRemaining.toInt()}s",
+                color = NeonRed,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
     }
 }
 
-// ── Bottom HUD ───────────────────────────────────────────────
+// ── Bottom HUD — matches reference: resource bar → [신화][소환][도박] → [강화] ──
 
 @Composable
 fun BattleBottomHud(
@@ -213,207 +200,210 @@ fun BattleBottomHud(
     val gridFull = gridState.all { it.unitDefId >= 0 }
     val canSummon = battle.sp >= battle.summonCost && !gridFull
     val canGamble = battle.sp >= 10
+    val canMerge = gridState.any { it.canMerge }
+    val context = LocalContext.current
+
+    val goldIcon = remember { loadAssetBitmap(context, "raw/ui/icon_gold.png") }
+    val btnSummonImg = remember { loadAssetBitmap(context, "raw/ui/btn_summon.png") }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Separator glow
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Gold.copy(alpha = 0.4f),
-                            Gold.copy(alpha = 0.4f),
-                            Color.Transparent,
-                        )
-                    )
-                ),
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF0D0815).copy(alpha = 0.88f),
-                            Color(0xFF1A1025).copy(alpha = 0.92f),
-                        )
-                    )
-                )
-                .padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // SP bar
+        // ── Resource row: SP bar + merge floating button ──
+        Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.Center,
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "\uD83D\uDC8E",
-                    fontSize = 14.sp,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+                if (goldIcon != null) {
+                    Image(bitmap = goldIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(Color(0xFF1A1025)),
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(WoodBrownDark)
+                        .border(1.dp, WoodBrown.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth((battle.sp / 500f).coerceIn(0f, 1f))
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        Color(0xFFFF8F00),
-                                        Gold,
-                                        Color(0xFFFFDD44),
-                                    )
-                                )
-                            ),
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Brush.horizontalGradient(listOf(GoldDark, GoldBright, Color(0xFFFFEE88)))),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth((battle.sp / 500f).coerceIn(0f, 1f))
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "${battle.sp.toInt()}",
-                    color = Gold,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("${battle.sp.toInt()}", color = GoldBright, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
             }
 
-            // Main buttons row: [구매] [소환] [도박]
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                // 구매 (Buy) — orange
-                HudActionButton(
-                    topText = "\uD83D\uDED2",
-                    bottomText = "구매",
-                    enabled = true,
-                    gradientColors = listOf(Color(0xFFFF6D00), Color(0xFFE65100)),
-                    borderColor = Color(0xFFFFAB40),
-                    onClick = onBuyClick,
-                    modifier = Modifier.weight(1f),
-                    buttonHeight = 52.dp,
-                )
-
-                // 소환 (Summon) — gold/yellow, bigger
-                SummonButton(
-                    cost = battle.summonCost,
-                    enabled = canSummon,
-                    gridFull = gridFull,
-                    onClick = { BattleBridge.requestSummon() },
-                    modifier = Modifier.weight(1.6f),
-                )
-
-                // 도박 (Gamble) — green
-                HudActionButton(
-                    topText = "\uD83C\uDFB2",
-                    bottomText = "도박",
-                    subText = "10SP",
-                    enabled = canGamble,
-                    gradientColors = listOf(Color(0xFF2E7D32), Color(0xFF1B5E20)),
-                    borderColor = Color(0xFF66BB6A),
-                    onClick = onGambleClick,
-                    modifier = Modifier.weight(1f),
-                    buttonHeight = 52.dp,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // 강화 (Upgrade) button — below summon, full width
-            HudActionButton(
-                topText = "\u2B06",
-                bottomText = "강화",
-                enabled = true,
-                gradientColors = listOf(Color(0xFF1565C0), Color(0xFF0D47A1)),
-                borderColor = Color(0xFF42A5F5),
-                onClick = onUpgradeClick,
-                modifier = Modifier
-                    .fillMaxWidth(0.5f)
-                    .padding(horizontal = 4.dp),
-                buttonHeight = 40.dp,
-            )
-
-            // Boss timer — fixed height slot
-            Spacer(modifier = Modifier.height(4.dp))
-            Box(modifier = Modifier.height(14.dp)) {
-                if (battle.isBossRound) {
+            // Floating merge button — above SP bar, right side
+            if (canMerge) {
+                val inf = rememberInfiniteTransition(label = "mg")
+                val glow by inf.animateFloat(0.7f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "mg")
+                val mergeShape = RoundedCornerShape(14.dp)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 12.dp)
+                        .graphicsLayer { translationY = -52.dp.toPx(); alpha = glow }
+                        .shadow(8.dp, mergeShape, ambientColor = GoldBright.copy(alpha = 0.3f), spotColor = GoldBright.copy(alpha = 0.4f))
+                        .clip(mergeShape)
+                        .background(Brush.verticalGradient(listOf(GoldBright, GoldDark)))
+                        .border(2.dp, Color(0xFFFFEE88).copy(alpha = 0.8f), mergeShape)
+                        .clickable {
+                            val tiles = BattleBridge.gridState.value
+                            for (i in tiles.indices) { if (tiles[i].canMerge) BattleBridge.requestMerge(i) }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
-                        text = "BOSS ${battle.bossTimeRemaining.toInt()}s",
-                        color = NeonRed,
-                        fontSize = 12.sp,
+                        "\u2728 조합",
+                        color = WoodBrownDark,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.ExtraBold,
                     )
                 }
             }
         }
+
+        // ── Floating action buttons ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            // 신화 (Buy) — orange
+            WarmButton(
+                topText = "\uD83D\uDECD",
+                bottomText = "\uC2E0\uD654",
+                enabled = true,
+                gradientTop = OrangeBright, gradientBot = OrangeDark,
+                borderColor = Color(0xFFFFAA44),
+                onClick = onBuyClick,
+                modifier = Modifier.weight(1f),
+                buttonHeight = 58.dp,
+            )
+
+            // 소환 (Summon) — BIG gold center
+            SummonButton(
+                cost = battle.summonCost,
+                enabled = canSummon,
+                gridFull = gridFull,
+                onClick = { BattleBridge.requestSummon() },
+                modifier = Modifier.weight(1.6f),
+                goldIcon = goldIcon,
+            )
+
+            // 도박 (Gamble) — green
+            WarmButton(
+                topText = "\uD83C\uDFB2",
+                bottomText = "\uB3C4\uBC15",
+                enabled = canGamble,
+                gradientTop = GreenTeal, gradientBot = GreenTealDark,
+                borderColor = Color(0xFF66CC88),
+                onClick = onGambleClick,
+                modifier = Modifier.weight(1f),
+                buttonHeight = 58.dp,
+            )
+
+            // 강화 (Upgrade) — blue
+            WarmButton(
+                topText = "\u2B06",
+                bottomText = "\uAC15\uD654",
+                enabled = true,
+                gradientTop = BlueSky, gradientBot = BlueSkyDark,
+                borderColor = Color(0xFF6AB0FF),
+                onClick = onUpgradeClick,
+                modifier = Modifier.weight(1f),
+                buttonHeight = 58.dp,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
     }
 }
 
-// ── Reusable HUD action button ───────────────────────────────
+/** Load a bitmap from assets, returns null on failure */
+private fun loadAssetBitmap(
+    context: android.content.Context,
+    path: String,
+): androidx.compose.ui.graphics.ImageBitmap? {
+    return try {
+        context.assets.open(path).use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
+    } catch (e: Exception) { null }
+}
+
+// ── Warm-themed action button ──────────────────────────────
 
 @Composable
-private fun HudActionButton(
+private fun WarmButton(
     topText: String,
     bottomText: String,
     enabled: Boolean,
-    gradientColors: List<Color>,
+    gradientTop: Color,
+    gradientBot: Color,
     borderColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    subText: String = "",
-    buttonHeight: androidx.compose.ui.unit.Dp = 48.dp,
+    buttonHeight: Dp = 48.dp,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1f,
+        targetValue = if (isPressed) 0.93f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
-        label = "actionScale",
+        label = "btnScale",
     )
 
-    val bgColors = if (enabled) gradientColors
-    else listOf(Color(0xFF2A2A3A), Color(0xFF1A1A28))
-    val actualBorder = if (enabled) borderColor.copy(alpha = 0.6f) else Color(0xFF3A3A4A)
+    val bgTop = if (enabled) gradientTop else Color(0xFF3A3A3A)
+    val bgBot = if (enabled) gradientBot else Color(0xFF2A2A2A)
+    val border = if (enabled) borderColor.copy(alpha = 0.7f) else Color(0xFF4A4A4A)
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .height(buttonHeight)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(if (enabled) 4.dp else 1.dp, RoundedCornerShape(12.dp))
+            .shadow(
+                if (enabled) 10.dp else 2.dp,
+                RoundedCornerShape(12.dp),
+                ambientColor = if (enabled) gradientBot.copy(alpha = 0.4f) else Color.Black,
+                spotColor = if (enabled) gradientBot.copy(alpha = 0.5f) else Color.Black,
+            )
             .clip(RoundedCornerShape(12.dp))
             .drawBehind {
                 drawRoundRect(
-                    brush = Brush.verticalGradient(bgColors),
+                    brush = Brush.verticalGradient(listOf(bgTop, bgBot)),
                     cornerRadius = CornerRadius(12.dp.toPx()),
                 )
+                // Top highlight
                 drawRoundRect(
                     brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.08f), Color.Transparent)
+                        listOf(Color.White.copy(alpha = 0.15f), Color.Transparent)
                     ),
                     cornerRadius = CornerRadius(12.dp.toPx()),
+                    size = androidx.compose.ui.geometry.Size(size.width, size.height * 0.4f),
                 )
+                // Border
                 drawRoundRect(
-                    color = actualBorder,
+                    color = border,
                     cornerRadius = CornerRadius(12.dp.toPx()),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f.dp.toPx()),
                 )
@@ -429,26 +419,19 @@ private fun HudActionButton(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = topText,
-                fontSize = 16.sp,
+                fontSize = 18.sp,
             )
             Text(
                 text = bottomText,
-                color = if (enabled) Color.White else Color(0xFF666680),
-                fontSize = 12.sp,
+                color = if (enabled) Color.White else Color(0xFF888888),
+                fontSize = 13.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
-            if (subText.isNotEmpty()) {
-                Text(
-                    text = subText,
-                    color = if (enabled) Color.White.copy(alpha = 0.7f) else Color(0xFF555570),
-                    fontSize = 9.sp,
-                )
-            }
         }
     }
 }
 
-// ── Summon Button (center, larger, with glow) ────────────────
+// ── Summon Button (center, large, gold with coin icon) ──────
 
 @Composable
 fun SummonButton(
@@ -457,20 +440,21 @@ fun SummonButton(
     gridFull: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    goldIcon: androidx.compose.ui.graphics.ImageBitmap? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1f,
+        targetValue = if (isPressed) 0.93f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
         label = "summonScale",
     )
 
     val infiniteTransition = rememberInfiniteTransition(label = "summonGlow")
     val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.8f,
+        initialValue = 0.5f,
+        targetValue = 0.9f,
         animationSpec = infiniteRepeatable(
             animation = tween(800),
             repeatMode = RepeatMode.Reverse,
@@ -478,41 +462,39 @@ fun SummonButton(
         label = "glowPulse",
     )
 
-    val bgColors = if (enabled) {
-        if (isPressed) listOf(Color(0xFFB8860B), Color(0xFF8B6914))
-        else listOf(Color(0xFFDAA520), Color(0xFFB8860B))
-    } else {
-        listOf(Color(0xFF2A2A3A), Color(0xFF1A1A28))
-    }
-
-    val glowBorderColor = if (enabled) Gold.copy(alpha = glowAlpha) else Color(0xFF3A3A4A)
+    val bgTop = if (enabled) GoldBright else Color(0xFF3A3A3A)
+    val bgBot = if (enabled) GoldDark else Color(0xFF2A2A2A)
+    val borderCol = if (enabled) Color(0xFFFFEE88).copy(alpha = glowAlpha) else Color(0xFF4A4A4A)
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .height(62.dp)
+            .height(70.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(
-                if (enabled) 8.dp else 2.dp,
+                if (enabled) 12.dp else 2.dp,
                 RoundedCornerShape(14.dp),
-                ambientColor = if (enabled) Gold.copy(alpha = 0.3f) else Color.Black,
-                spotColor = if (enabled) Gold.copy(alpha = 0.4f) else Color.Black,
+                ambientColor = if (enabled) GoldBright.copy(alpha = 0.4f) else Color.Black,
+                spotColor = if (enabled) GoldBright.copy(alpha = 0.5f) else Color.Black,
             )
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .drawBehind {
                 drawRoundRect(
-                    brush = Brush.verticalGradient(bgColors),
-                    cornerRadius = CornerRadius(14.dp.toPx()),
+                    brush = Brush.verticalGradient(listOf(bgTop, bgBot)),
+                    cornerRadius = CornerRadius(12.dp.toPx()),
                 )
+                // Glossy highlight
                 drawRoundRect(
                     brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.15f), Color.Transparent)
+                        listOf(Color.White.copy(alpha = 0.25f), Color.Transparent)
                     ),
-                    cornerRadius = CornerRadius(14.dp.toPx()),
+                    cornerRadius = CornerRadius(12.dp.toPx()),
+                    size = androidx.compose.ui.geometry.Size(size.width, size.height * 0.45f),
                 )
+                // Border
                 drawRoundRect(
-                    color = glowBorderColor,
-                    cornerRadius = CornerRadius(14.dp.toPx()),
+                    color = borderCol,
+                    cornerRadius = CornerRadius(12.dp.toPx()),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
                 )
             }
@@ -526,19 +508,29 @@ fun SummonButton(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "\u2694\uFE0F 소환",
-                color = Color.White,
+                text = "소환",
+                color = if (enabled) WoodBrownDark else Color(0xFF888888),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
-            Text(
-                text = if (gridFull) "FULL" else "\uD83D\uDC8E$cost",
-                color = if (gridFull) NeonRed
-                else if (enabled) Color.White.copy(alpha = 0.9f)
-                else Color(0xFF555570),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (goldIcon != null) {
+                    Image(
+                        bitmap = goldIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                }
+                Text(
+                    text = if (gridFull) "FULL" else "$cost",
+                    color = if (gridFull) NeonRed
+                    else if (enabled) WoodBrownDark.copy(alpha = 0.8f)
+                    else Color(0xFF666666),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }

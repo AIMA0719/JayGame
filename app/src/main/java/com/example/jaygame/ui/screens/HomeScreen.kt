@@ -1,5 +1,9 @@
 package com.example.jaygame.ui.screens
 
+import android.graphics.BitmapFactory
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,19 +83,49 @@ fun HomeScreen(
         STAGES.getOrNull(data.currentStageId) ?: STAGES[0]
     }
 
+    // Pre-load all stage background bitmaps
+    val context = LocalContext.current
+    val stageBitmaps = remember {
+        STAGES.associate { s ->
+            s.id to BitmapFactory.decodeStream(context.assets.open(s.bgAsset)).asImageBitmap()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF0A0A1A),
-                        Color(0xFF0F1A2A),
-                        Color(0xFF0A0A1A),
+            .background(Color(0xFF0A0A1A)),
+    ) {
+        // Background image with crossfade
+        Crossfade(
+            targetState = data.currentStageId,
+            animationSpec = tween(durationMillis = 500),
+            label = "bg",
+        ) { stageId ->
+            stageBitmaps[stageId]?.let { bitmap ->
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    alpha = 0.4f,
+                )
+            }
+        }
+        // Dark overlay gradient for readability
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xCC0A0A1A),
+                            Color(0x800A0A1A),
+                            Color(0xCC0A0A1A),
+                        ),
                     ),
                 ),
-            ),
-    ) {
+        )
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,

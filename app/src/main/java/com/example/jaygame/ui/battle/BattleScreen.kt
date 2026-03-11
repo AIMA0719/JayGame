@@ -1,6 +1,9 @@
 package com.example.jaygame.ui.battle
 
+import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,7 +18,6 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
@@ -27,8 +29,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,19 +52,56 @@ fun BattleScreen(
 ) {
     val stageId by BattleBridge.stageId.collectAsState()
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
+    val context = LocalContext.current
 
     var showQuitDialog by remember { mutableStateOf(false) }
     var showGambleDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
 
+    // Load background image from assets
+    val bgAssetName = remember(stageId) {
+        when (stageId) {
+            1 -> "bg_jungle"
+            2 -> "bg_desert"
+            3 -> "bg_glacier"
+            4 -> "bg_volcano"
+            5 -> "bg_abyss"
+            else -> "bg_plains"
+        }
+    }
+    val bgBitmap = remember(bgAssetName) {
+        try {
+            context.assets.open("backgrounds/$bgAssetName.png").use {
+                BitmapFactory.decodeStream(it)?.asImageBitmap()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     BackHandler { showQuitDialog = true }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(stage.bgColors)),
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Layer 0: Full-screen background image
+        if (bgBitmap != null) {
+            Image(
+                bitmap = bgBitmap,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            // Fallback gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(stage.bgColors)
+                    ),
+            )
+        }
+
         // Layer 1: Game area matching C++ 1280x720 aspect ratio
         Box(
             modifier = Modifier
@@ -76,7 +117,7 @@ fun BattleScreen(
             BattleParticleOverlay()
         }
 
-        // Layer 2: HUD overlays (on top of game)
+        // Layer 2: HUD overlays
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,7 +138,7 @@ fun BattleScreen(
         MergeEffectOverlay()
         SummonEffectOverlay()
 
-        // Layer 3.5: New feature sheets
+        // Layer 3.5: Feature sheets
         if (showGambleDialog) {
             GambleDialog(onDismiss = { showGambleDialog = false })
         }
@@ -121,7 +162,7 @@ fun BattleScreen(
             )
         }
 
-        // Layer 5: Quit confirmation dialog
+        // Layer 5: Quit confirmation
         if (showQuitDialog) {
             QuitBattleDialog(
                 onConfirm = onGoHome,

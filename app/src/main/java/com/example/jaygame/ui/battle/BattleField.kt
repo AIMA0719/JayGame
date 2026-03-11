@@ -51,11 +51,13 @@ private val CellHighlightBright = Color.White.copy(alpha = 0.06f)
 private val GradeColors = GradeColorsByIndex
 private val FamilyAuraColors = FamilyColorsByIndex
 
-// C++ grid area in 1280x720 space (ratio-based — auto-adapts to any resolution)
-private const val GRID_NORM_X = 200f / 1280f
-private const val GRID_NORM_Y = 140f / 720f
-private const val GRID_NORM_W = 880f / 1280f
-private const val GRID_NORM_H = 440f / 720f
+// C++ grid area in 1280x720 space — must match Grid.h (880x440 centered)
+private const val CPP_GRID_W = 880f
+private const val CPP_GRID_H = 440f
+private const val GRID_NORM_X = (1280f - CPP_GRID_W) / 2f / 1280f   // 0.15625
+private const val GRID_NORM_Y = (720f - CPP_GRID_H) / 2f / 720f     // 0.19444
+private const val GRID_NORM_W = CPP_GRID_W / 1280f                   // 0.6875
+private const val GRID_NORM_H = CPP_GRID_H / 720f                    // 0.61111
 
 private const val GRID_COLS = 6
 private const val GRID_ROWS = 5
@@ -72,7 +74,7 @@ fun BattleField() {
 
     val unitBitmaps = remember {
         UNIT_DEFS_MAP.mapValues { (_, def) ->
-            ContextCompat.getDrawable(context, def.iconRes)?.toBitmap(64, 64)?.asImageBitmap()
+            ContextCompat.getDrawable(context, def.iconRes)?.toBitmap(128, 128)?.asImageBitmap()
         }
     }
 
@@ -212,132 +214,17 @@ fun BattleField() {
         val gridW = GRID_NORM_W * w
         val gridH = GRID_NORM_H * h
 
-        // ── Raised Ground Platform ──
-        val groundThickness = gridH * 0.08f
-
-        // Side face
-        drawRoundRect(
-            color = GroundEdgeDark,
-            topLeft = Offset(gridLeft, gridTop + gridH),
-            size = Size(gridW, groundThickness),
-            cornerRadius = CornerRadius(8f),
-        )
-        drawRoundRect(
-            color = GroundEdgeLight,
-            topLeft = Offset(gridLeft, gridTop + gridH),
-            size = Size(gridW, groundThickness * 0.3f),
-            cornerRadius = CornerRadius(4f),
-        )
-
-        // Drop shadow
-        drawRoundRect(
-            color = GroundShadow,
-            topLeft = Offset(gridLeft + 6f, gridTop + gridH + groundThickness * 0.5f),
-            size = Size(gridW, groundThickness * 0.5f),
-            cornerRadius = CornerRadius(12f),
-        )
-
-        // Main ground surface
-        drawRoundRect(
-            brush = Brush.verticalGradient(
-                colors = stage.fieldColors,
-                startY = gridTop,
-                endY = gridTop + gridH,
-            ),
-            topLeft = Offset(gridLeft, gridTop),
-            size = Size(gridW, gridH),
-            cornerRadius = CornerRadius(12f),
-        )
-
-        // ── Grid cell subtle highlights ──
-        val cellW = gridW / GRID_COLS
-        val cellH = gridH / GRID_ROWS
-        for (row in 0 until GRID_ROWS) {
-            for (col in 0 until GRID_COLS) {
-                val cx = gridLeft + col * cellW
-                val cy = gridTop + row * cellH
-                // Subtle inner gradient per cell
-                val cellGlow = if ((row + col) % 2 == 0) CellHighlight else CellHighlightBright
-                drawRect(
-                    color = cellGlow,
-                    topLeft = Offset(cx + 2f, cy + 2f),
-                    size = Size(cellW - 4f, cellH - 4f),
-                )
-            }
-        }
-
-        // Top highlight
-        drawRoundRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(Color.White.copy(alpha = 0.08f), Color.Transparent),
-                startY = gridTop,
-                endY = gridTop + gridH * 0.3f,
-            ),
-            topLeft = Offset(gridLeft, gridTop),
-            size = Size(gridW, gridH * 0.3f),
-            cornerRadius = CornerRadius(12f),
-        )
-
-        // Ground border
-        drawRoundRect(
-            color = fieldBorderColor,
-            topLeft = Offset(gridLeft, gridTop),
-            size = Size(gridW, gridH),
-            cornerRadius = CornerRadius(12f),
-            style = GroundBorderStroke,
-        )
-
-        // ── Vignette effect (darken edges) ──
-        // Top vignette
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(VignetteColor, Color.Transparent),
-                startY = 0f,
-                endY = h * 0.12f,
-            ),
-            topLeft = Offset.Zero,
-            size = Size(w, h * 0.12f),
-        )
-        // Bottom vignette
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(Color.Transparent, VignetteColor),
-                startY = h * 0.88f,
-                endY = h,
-            ),
-            topLeft = Offset(0f, h * 0.88f),
-            size = Size(w, h * 0.12f),
-        )
-        // Left vignette
-        drawRect(
-            brush = Brush.horizontalGradient(
-                colors = listOf(VignetteColor, Color.Transparent),
-                startX = 0f,
-                endX = w * 0.08f,
-            ),
-            topLeft = Offset.Zero,
-            size = Size(w * 0.08f, h),
-        )
-        // Right vignette
-        drawRect(
-            brush = Brush.horizontalGradient(
-                colors = listOf(Color.Transparent, VignetteColor),
-                startX = w * 0.92f,
-                endX = w,
-            ),
-            topLeft = Offset(w * 0.92f, 0f),
-            size = Size(w * 0.08f, h),
-        )
-
         // ── Draw unit sprites (Compose drawable icons) ──
         val data = unitPositions
         val sxArr = smoothXs.value
         val syArr = smoothYs.value
         val useSmooth = sxArr.size == data.count && data.count > 0
 
-        val unitSize = gridW / 6f * 0.7f
-        val pedestalRx = unitSize * 0.4f
-        val pedestalRy = pedestalRx * 0.35f
+        // Size based on cell height (grid is 880x440, 6cols x 5rows → cells are 146x88)
+        val cellH = gridH / GRID_ROWS.toFloat()
+        val unitSize = cellH * 0.85f
+        val pedestalRx = unitSize * 0.45f
+        val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
 
         for (i in 0 until data.count) {

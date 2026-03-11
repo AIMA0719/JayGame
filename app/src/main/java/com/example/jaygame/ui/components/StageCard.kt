@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,10 +67,11 @@ fun StageCardPager(
     ) {
         HorizontalPager(
             state = pagerState,
+            contentPadding = PaddingValues(horizontal = 32.dp),
+            pageSpacing = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp)
-                .padding(horizontal = 16.dp),
+                .height(200.dp),
         ) { page ->
             val stage = STAGES[page]
             val isUnlocked = page in unlockedStages
