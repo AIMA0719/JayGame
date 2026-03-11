@@ -63,6 +63,7 @@ class ComposeActivity : ComponentActivity() {
     private fun launchBattle() {
         val data = repository.gameData.value
         BattleBridge.setStageId(data.currentStageId)
+        BattleBridge.setDifficulty(data.difficulty)
         startActivity(android.content.Intent(this, MainActivity::class.java))
     }
 }

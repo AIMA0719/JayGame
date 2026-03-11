@@ -165,6 +165,12 @@ object BattleBridge {
 
     fun setStageId(id: Int) { _stageId.value = id }
 
+    /** 현재 난이도 (0=쉬움, 1=보통, 2=어려움) */
+    private val _difficulty = MutableStateFlow(1)
+    val difficulty: StateFlow<Int> = _difficulty.asStateFlow()
+
+    fun setDifficulty(diff: Int) { _difficulty.value = diff }
+
     /** 선택된 타일 인덱스 (-1 = 없음) */
     private val _selectedTile = MutableStateFlow(-1)
     val selectedTile: StateFlow<Int> = _selectedTile.asStateFlow()

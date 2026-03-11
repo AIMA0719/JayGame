@@ -82,89 +82,114 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp),
+            .padding(top = 4.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
-        // Centered compact badge
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.Black.copy(alpha = 0.65f))
-                .border(1.dp, WoodBrown.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                .padding(horizontal = 14.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // WAVE number
-            Text(
-                text = "WAVE ${battle.currentWave}",
-                color = GoldBright,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
-
-            // Divider
+            // ── WAVE badge (sits on top of main box) ──
             Box(
                 modifier = Modifier
-                    .width(1.dp)
-                    .height(14.dp)
-                    .background(Color.White.copy(alpha = 0.2f)),
-            )
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF5C3A1E), Color(0xFF3D2510))
+                        )
+                    )
+                    .border(1.5.dp, Color(0xFFAA7744), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "WAVE ${battle.currentWave}",
+                    color = GoldBright,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
 
-            // Timer
-            Text(
-                text = "%02d:%02d".format(minutes, seconds),
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            Spacer(modifier = Modifier.height((-4).dp))
 
-            // Divider
+            // ── Main box: timer + difficulty ──
             Box(
                 modifier = Modifier
-                    .width(1.dp)
-                    .height(14.dp)
-                    .background(Color.White.copy(alpha = 0.2f)),
-            )
+                    .width(160.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF4A3018), Color(0xFF2E1C0C))
+                        )
+                    )
+                    .border(1.5.dp, Color(0xFF8B6040), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    // Timer
+                    Text(
+                        text = "%02d:%02d".format(minutes, seconds),
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
 
-            // Enemy count with skull
-            Text(
-                text = "\uD83D\uDC80 ${battle.enemyCount}/${battle.maxEnemyCount}",
-                color = if (battle.enemyCount > 80) NeonRed else Color.White.copy(alpha = 0.9f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-            )
+                    // Difficulty
+                    val difficultyText = when (BattleBridge.difficulty.value) {
+                        0 -> "\uC26C\uC6C0"
+                        2 -> "\uC5B4\uB824\uC6C0"
+                        else -> "\uBCF4\uD1B5"
+                    }
+                    Text(
+                        text = difficultyText,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
 
-            // Divider
-            Box(
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // ── Enemy count bar (skull + count) ──
+            Row(
                 modifier = Modifier
-                    .width(1.dp)
-                    .height(14.dp)
-                    .background(Color.White.copy(alpha = 0.2f)),
-            )
-
-            // Unit count
-            Text(
-                text = "\u2694 $unitCount/${BattleBridge.GRID_TOTAL}",
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-            )
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = "\uD83D\uDC80",
+                    fontSize = 14.sp,
+                )
+                Text(
+                    text = "${battle.enemyCount} / ${battle.maxEnemyCount}",
+                    color = if (battle.enemyCount > 80) NeonRed else Color.White.copy(alpha = 0.9f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
 
-        // Pause button — top-left
+        // Pause button — top-left (1.5x)
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 8.dp)
-                .size(30.dp)
+                .size(45.dp)
                 .clip(CircleShape)
                 .background(Color.Black.copy(alpha = 0.5f))
                 .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
                 .clickable(onClick = onPauseClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text("\u2699", fontSize = 14.sp)
+            Text("\u2699", fontSize = 21.sp)
         }
     }
 
@@ -281,58 +306,72 @@ fun BattleBottomHud(
         }
 
         // ── Floating action buttons ──
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 신화 (Buy) — orange
-            WarmButton(
-                topText = "\uD83D\uDECD",
-                bottomText = "\uC2E0\uD654",
-                enabled = true,
-                gradientTop = OrangeBright, gradientBot = OrangeDark,
-                borderColor = Color(0xFFFFAA44),
-                onClick = onBuyClick,
-                modifier = Modifier.weight(1f),
-                buttonHeight = 58.dp,
-            )
+            // Top row: 구매 | 소환 | 도박
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                // 구매 (Buy) — orange
+                WarmButton(
+                    topText = "\uD83D\uDECD",
+                    bottomText = "\uAD6C\uB9E4",
+                    enabled = true,
+                    gradientTop = OrangeBright, gradientBot = OrangeDark,
+                    borderColor = Color(0xFFFFAA44),
+                    onClick = onBuyClick,
+                    modifier = Modifier.weight(1f),
+                    buttonHeight = 58.dp,
+                )
 
-            // 소환 (Summon) — BIG gold center
-            SummonButton(
-                cost = battle.summonCost,
-                enabled = canSummon,
-                gridFull = gridFull,
-                onClick = { BattleBridge.requestSummon() },
-                modifier = Modifier.weight(1.6f),
-                goldIcon = goldIcon,
-            )
+                // 소환 (Summon) — BIG gold center
+                SummonButton(
+                    cost = battle.summonCost,
+                    enabled = canSummon,
+                    gridFull = gridFull,
+                    onClick = { BattleBridge.requestSummon() },
+                    modifier = Modifier.weight(1.6f),
+                    goldIcon = goldIcon,
+                )
 
-            // 도박 (Gamble) — green
-            WarmButton(
-                topText = "\uD83C\uDFB2",
-                bottomText = "\uB3C4\uBC15",
-                enabled = canGamble,
-                gradientTop = GreenTeal, gradientBot = GreenTealDark,
-                borderColor = Color(0xFF66CC88),
-                onClick = onGambleClick,
-                modifier = Modifier.weight(1f),
-                buttonHeight = 58.dp,
-            )
+                // 도박 (Gamble) — green
+                WarmButton(
+                    topText = "\uD83C\uDFB2",
+                    bottomText = "\uB3C4\uBC15",
+                    enabled = canGamble,
+                    gradientTop = GreenTeal, gradientBot = GreenTealDark,
+                    borderColor = Color(0xFF66CC88),
+                    onClick = onGambleClick,
+                    modifier = Modifier.weight(1f),
+                    buttonHeight = 58.dp,
+                )
+            }
 
-            // 강화 (Upgrade) — blue
-            WarmButton(
-                topText = "\u2B06",
-                bottomText = "\uAC15\uD654",
-                enabled = true,
-                gradientTop = BlueSky, gradientBot = BlueSkyDark,
-                borderColor = Color(0xFF6AB0FF),
-                onClick = onUpgradeClick,
-                modifier = Modifier.weight(1f),
-                buttonHeight = 58.dp,
-            )
+            // Bottom row: 강화 (same width as 소환)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Spacer(modifier = Modifier.weight(1f))
+                WarmButton(
+                    topText = "\u2B06",
+                    bottomText = "\uAC15\uD654",
+                    enabled = true,
+                    gradientTop = BlueSky, gradientBot = BlueSkyDark,
+                    borderColor = Color(0xFF6AB0FF),
+                    onClick = onUpgradeClick,
+                    modifier = Modifier.weight(1.6f),
+                    buttonHeight = 44.dp,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+            }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
