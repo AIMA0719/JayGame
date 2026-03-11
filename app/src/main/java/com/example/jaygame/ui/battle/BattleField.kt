@@ -18,6 +18,8 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.ui.theme.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 // Pre-allocated constants
 private val GroundShadow = Color.Black.copy(alpha = 0.35f)
@@ -32,14 +34,31 @@ private val BadgeBorderStroke = Stroke(width = 1f)
 private val AttackGlow = Color.White.copy(alpha = 0.4f)
 private val DragGhost = Color(0xFF00D4FF).copy(alpha = 0.3f)
 
+// Star badge colors
+private val StarColor = Color(0xFFFFD700)
+private val StarBgGlow = Color(0xFF1A1A2E).copy(alpha = 0.9f)
+
+// Pedestal particle colors (pre-allocated per grade)
+private val PedestalParticleAlpha = 0.4f
+
+// Vignette
+private val VignetteColor = Color.Black.copy(alpha = 0.4f)
+
+// Grid cell glow
+private val CellHighlight = Color.White.copy(alpha = 0.03f)
+private val CellHighlightBright = Color.White.copy(alpha = 0.06f)
+
 private val GradeColors = GradeColorsByIndex
 private val FamilyAuraColors = FamilyColorsByIndex
 
-// C++ grid area in 1280x720 space
-private const val GRID_NORM_X = 290f / 1280f
-private const val GRID_NORM_Y = 190f / 720f
-private const val GRID_NORM_W = 700f / 1280f
-private const val GRID_NORM_H = 340f / 720f
+// C++ grid area in 1280x720 space (ratio-based — auto-adapts to any resolution)
+private const val GRID_NORM_X = 200f / 1280f
+private const val GRID_NORM_Y = 140f / 720f
+private const val GRID_NORM_W = 880f / 1280f
+private const val GRID_NORM_H = 440f / 720f
+
+private const val GRID_COLS = 6
+private const val GRID_ROWS = 5
 
 /**
  * Battlefield overlay — unit sprites rendered in Compose (proper drawable icons),
@@ -65,9 +84,15 @@ fun BattleField() {
     val smoothXs = remember { mutableStateOf(FloatArray(0)) }
     val smoothYs = remember { mutableStateOf(FloatArray(0)) }
 
+    // Animation time for idle bounce, attack pulse, pedestal particles
+    val animTime = remember { mutableFloatStateOf(0f) }
+
     LaunchedEffect(Unit) {
         while (true) {
-            withFrameNanos { _ ->
+            withFrameNanos { frameTimeNanos ->
+                val dt = 1f / 60f // approximate
+                animTime.floatValue += dt
+
                 val data = BattleBridge.unitPositions.value
                 val sx = smoothXs.value
                 val sy = smoothYs.value
@@ -180,6 +205,7 @@ fun BattleField() {
     ) {
         val w = size.width
         val h = size.height
+        val t = animTime.floatValue
 
         val gridLeft = GRID_NORM_X * w
         val gridTop = GRID_NORM_Y * h
@@ -223,6 +249,23 @@ fun BattleField() {
             cornerRadius = CornerRadius(12f),
         )
 
+        // ── Grid cell subtle highlights ──
+        val cellW = gridW / GRID_COLS
+        val cellH = gridH / GRID_ROWS
+        for (row in 0 until GRID_ROWS) {
+            for (col in 0 until GRID_COLS) {
+                val cx = gridLeft + col * cellW
+                val cy = gridTop + row * cellH
+                // Subtle inner gradient per cell
+                val cellGlow = if ((row + col) % 2 == 0) CellHighlight else CellHighlightBright
+                drawRect(
+                    color = cellGlow,
+                    topLeft = Offset(cx + 2f, cy + 2f),
+                    size = Size(cellW - 4f, cellH - 4f),
+                )
+            }
+        }
+
         // Top highlight
         drawRoundRect(
             brush = Brush.verticalGradient(
@@ -244,14 +287,55 @@ fun BattleField() {
             style = GroundBorderStroke,
         )
 
+        // ── Vignette effect (darken edges) ──
+        // Top vignette
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(VignetteColor, Color.Transparent),
+                startY = 0f,
+                endY = h * 0.12f,
+            ),
+            topLeft = Offset.Zero,
+            size = Size(w, h * 0.12f),
+        )
+        // Bottom vignette
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(Color.Transparent, VignetteColor),
+                startY = h * 0.88f,
+                endY = h,
+            ),
+            topLeft = Offset(0f, h * 0.88f),
+            size = Size(w, h * 0.12f),
+        )
+        // Left vignette
+        drawRect(
+            brush = Brush.horizontalGradient(
+                colors = listOf(VignetteColor, Color.Transparent),
+                startX = 0f,
+                endX = w * 0.08f,
+            ),
+            topLeft = Offset.Zero,
+            size = Size(w * 0.08f, h),
+        )
+        // Right vignette
+        drawRect(
+            brush = Brush.horizontalGradient(
+                colors = listOf(Color.Transparent, VignetteColor),
+                startX = w * 0.92f,
+                endX = w,
+            ),
+            topLeft = Offset(w * 0.92f, 0f),
+            size = Size(w * 0.08f, h),
+        )
+
         // ── Draw unit sprites (Compose drawable icons) ──
-        // Aura particles are rendered by C++ behind this layer
         val data = unitPositions
         val sxArr = smoothXs.value
         val syArr = smoothYs.value
         val useSmooth = sxArr.size == data.count && data.count > 0
 
-        val unitSize = gridW / 6f * 0.55f
+        val unitSize = gridW / 6f * 0.7f
         val pedestalRx = unitSize * 0.4f
         val pedestalRy = pedestalRx * 0.35f
         val gridState = BattleBridge.gridState.value
@@ -259,16 +343,29 @@ fun BattleField() {
         for (i in 0 until data.count) {
             val screenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
             val screenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
-            val gradeColor = GradeColors.getOrElse(data.grades[i]) { Color.Gray }
+            val grade = data.grades[i]
+            val gradeColor = GradeColors.getOrElse(grade) { Color.Gray }
             val tileIdx = data.tileIndices[i]
             val isSelected = selectedTile == tileIdx
             val isAttacking = data.isAttacking.getOrElse(i) { false }
             val family = data.unitDefIds[i] % 5
+            val unitDefId = data.unitDefIds[i]
+            val level = data.levels[i]
 
             // Skip dragged unit at original position
             if (isDragging && dragFromTile == tileIdx) continue
 
-            // Ground shadow
+            // ── Idle Bounce ──
+            val bounceOffset = sin(t * 2.5f + unitDefId * 0.7f) * 3f
+
+            // ── Attack Scale Pulse ──
+            val attackScale = if (isAttacking) {
+                1f + sin(t * 15f) * 0.15f
+            } else {
+                1f
+            }
+
+            // Ground shadow (bounces slightly with unit)
             drawOval(
                 color = PedestalShadow,
                 topLeft = Offset(screenX - pedestalRx, screenY + unitSize * 0.05f),
@@ -295,6 +392,21 @@ fun BattleField() {
                 size = Size(pedestalRx * 2.4f, pedestalRy * 2.5f),
             )
 
+            // ── Pedestal Particles (grade 3+) ──
+            if (grade >= 3) {
+                val particleCount = (grade - 1) * 2
+                for (p in 0 until particleCount.coerceAtMost(12)) {
+                    val px = screenX + cos(t * 1.5f + p * 1.2f) * pedestalRx * 0.8f
+                    val py = screenY + sin(t * 2f + p * 0.9f) * pedestalRy * 0.5f
+                    val pAlpha = (0.3f + sin(t * 3f + p * 0.5f) * 0.15f).coerceIn(0.1f, 0.5f)
+                    drawCircle(
+                        color = gradeColor.copy(alpha = pAlpha),
+                        radius = 2f + sin(t * 4f + p * 1.7f) * 0.8f,
+                        center = Offset(px, py),
+                    )
+                }
+            }
+
             // Selected ring
             if (isSelected) {
                 drawOval(
@@ -305,51 +417,81 @@ fun BattleField() {
                 )
             }
 
-            // Attack glow
+            // Attack glow (pulsing with family color)
             if (isAttacking) {
+                val glowAlpha = 0.3f + sin(t * 12f) * 0.15f
+                drawCircle(
+                    color = familyTint.copy(alpha = glowAlpha),
+                    radius = unitSize * 0.55f,
+                    center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                )
                 drawCircle(
                     color = AttackGlow,
-                    radius = unitSize * 0.5f,
-                    center = Offset(screenX, screenY - unitSize * 0.3f),
+                    radius = unitSize * 0.35f,
+                    center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
                 )
             }
 
-            // Unit sprite (proper drawable icon)
-            val bitmap = unitBitmaps[data.unitDefIds[i]]
+            // Unit sprite (proper drawable icon) with bounce + attack scale
+            val bitmap = unitBitmaps[unitDefId]
             if (bitmap != null) {
-                val spriteSize = unitSize * 0.85f
-                val spriteY = screenY - spriteSize - pedestalRy * 0.3f
+                val spriteSize = unitSize * 0.85f * attackScale
+                val spriteY = screenY - spriteSize - pedestalRy * 0.3f + bounceOffset
+
                 drawImage(
                     image = bitmap,
-                    topLeft = Offset(screenX - spriteSize / 2, spriteY),
+                    dstOffset = androidx.compose.ui.unit.IntOffset(
+                        (screenX - spriteSize / 2).toInt(),
+                        spriteY.toInt(),
+                    ),
+                    dstSize = androidx.compose.ui.unit.IntSize(
+                        spriteSize.toInt(),
+                        spriteSize.toInt(),
+                    ),
                 )
             }
 
-            // Level badge
-            if (data.levels[i] > 1) {
+            // ── Level badge: Stars instead of number ──
+            if (level > 1) {
                 val badgeY = screenY + pedestalRy * 1.2f
+                val starCount = (level - 1).coerceAtMost(6)
+                val badgeWidth = 8f + starCount * 8f
+                val badgeHeight = 13f
+
+                // Badge background
                 drawRoundRect(
-                    color = BadgeBg,
-                    topLeft = Offset(screenX - 14f, badgeY),
-                    size = Size(28f, 12f),
+                    color = gradeColor.copy(alpha = 0.8f),
+                    topLeft = Offset(screenX - badgeWidth / 2, badgeY),
+                    size = Size(badgeWidth, badgeHeight),
                     cornerRadius = CornerRadius(6f),
                 )
                 drawRoundRect(
-                    color = BadgeBorder,
-                    topLeft = Offset(screenX - 14f, badgeY),
-                    size = Size(28f, 12f),
-                    cornerRadius = CornerRadius(6f),
-                    style = BadgeBorderStroke,
+                    color = StarBgGlow,
+                    topLeft = Offset(screenX - badgeWidth / 2 + 1f, badgeY + 1f),
+                    size = Size(badgeWidth - 2f, badgeHeight - 2f),
+                    cornerRadius = CornerRadius(5f),
                 )
+
+                // Stars
+                for (s in 0 until starCount) {
+                    val sx = screenX - badgeWidth / 2 + 6f + s * 8f
+                    val sy = badgeY + badgeHeight / 2
+                    drawCircle(
+                        color = StarColor,
+                        radius = 2.5f,
+                        center = Offset(sx, sy),
+                    )
+                }
             }
 
-            // Merge indicator
+            // Merge indicator (pulsing)
             val tile = gridState.getOrNull(tileIdx)
             if (tile != null && tile.canMerge) {
+                val mergeAlpha = 0.7f + sin(t * 6f) * 0.3f
                 drawCircle(
-                    color = Gold,
-                    radius = 5f,
-                    center = Offset(screenX + unitSize * 0.35f, screenY - unitSize * 0.7f),
+                    color = Gold.copy(alpha = mergeAlpha),
+                    radius = 5f + sin(t * 4f) * 1.5f,
+                    center = Offset(screenX + unitSize * 0.35f, screenY - unitSize * 0.7f + bounceOffset),
                 )
             }
         }

@@ -3,6 +3,7 @@ package com.example.jaygame.ui.battle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkGold
 import com.example.jaygame.ui.theme.DarkNavy
@@ -49,23 +52,46 @@ fun UnitDetailPopup() {
 
     val unitDef = UNIT_DEFS_MAP[data.unitDefId] ?: return
 
-    // Semi-transparent backdrop
+    // Semi-transparent backdrop — dismiss on tap
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
-            .clickable { BattleBridge.dismissPopup() },
-        contentAlignment = Alignment.BottomCenter,
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            ) { BattleBridge.dismissPopup() },
+        contentAlignment = Alignment.Center,
     ) {
-        // Bottom card popup - prevent click-through
-        Column(
+        // Center dialog card — prevent click-through
+        GameCard(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = false, onClick = {})
-                .background(DarkNavy, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .width(300.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) {},
+            borderColor = Gold.copy(alpha = 0.4f),
         ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // X close button (top-right)
+            Text(
+                text = "\u2715",
+                color = SubText,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .clickable { BattleBridge.dismissPopup() }
+                    .padding(4.dp),
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
             // Unit header: icon + name + grade badge
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
@@ -198,6 +224,8 @@ fun UnitDetailPopup() {
                     accentColorDark = NeonRed.copy(alpha = 0.5f),
                 )
             }
+        }
+        }
         }
     }
 }

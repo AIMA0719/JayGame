@@ -50,6 +50,9 @@ fun BattleScreen(
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
 
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showGambleDialog by remember { mutableStateOf(false) }
+    var showBuySheet by remember { mutableStateOf(false) }
+    var showUpgradeSheet by remember { mutableStateOf(false) }
 
     BackHandler { showQuitDialog = true }
 
@@ -70,6 +73,7 @@ fun BattleScreen(
             EnemyOverlay()
             ProjectileOverlay()
             DamageNumberOverlay()
+            BattleParticleOverlay()
         }
 
         // Layer 2: HUD overlays (on top of game)
@@ -81,13 +85,28 @@ fun BattleScreen(
         ) {
             BattleTopHud(onPauseClick = { showQuitDialog = true })
             Spacer(modifier = Modifier.weight(1f))
-            BattleBottomHud()
+            BattleBottomHud(
+                onGambleClick = { showGambleDialog = true },
+                onBuyClick = { showBuySheet = true },
+                onUpgradeClick = { showUpgradeSheet = true },
+            )
         }
 
         // Layer 3: Popups
         UnitDetailPopup()
         MergeEffectOverlay()
         SummonEffectOverlay()
+
+        // Layer 3.5: New feature sheets
+        if (showGambleDialog) {
+            GambleDialog(onDismiss = { showGambleDialog = false })
+        }
+        if (showBuySheet) {
+            BuyUnitSheet(onDismiss = { showBuySheet = false })
+        }
+        if (showUpgradeSheet) {
+            UpgradeSheet(onDismiss = { showUpgradeSheet = false })
+        }
 
         // Layer 4: Result screen
         result?.let { data ->

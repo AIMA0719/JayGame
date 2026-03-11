@@ -142,6 +142,6 @@ fun SplashScreen() {
                 fontFamily = FontFamily.Serif,
                 letterSpacing = 2.sp,
             ),
-        )}
+        )
     }
 }

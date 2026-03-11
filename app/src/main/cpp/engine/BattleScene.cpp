@@ -31,6 +31,19 @@ std::atomic<int> BattleScene::swapRequestTo{-1};
 std::atomic<int> BattleScene::relocateRequestTile{-1};
 std::atomic<int> BattleScene::relocateRequestX{0};
 std::atomic<int> BattleScene::relocateRequestY{0};
+std::atomic<int> BattleScene::gambleNewSp{-1};
+std::atomic<int> BattleScene::buyUnitId{-1};
+std::atomic<int> BattleScene::buyUnitCost{0};
+std::atomic<int> BattleScene::upgradeTypePending{-1};
+std::atomic<int> BattleScene::upgradeLevelPending{0};
+std::atomic<int> BattleScene::upgradeCostPending{0};
+
+// Battle upgrade multipliers
+float BattleScene::upgradeAtkMult_ = 1.f;
+float BattleScene::upgradeSpdMult_ = 1.f;
+float BattleScene::upgradeCritRate_ = 0.f;
+float BattleScene::upgradeRangeMult_ = 1.f;
+float BattleScene::upgradeSpRegen_ = 0.f;
 
 // JNI state push — cached references
 static jclass g_bridgeClass = nullptr;
@@ -107,6 +120,13 @@ void BattleScene::onEnter() {
     gridPushTimer_ = 0.f;
     unitTypesUsed_.clear();
 
+    // Reset battle upgrades
+    upgradeAtkMult_ = 1.f;
+    upgradeSpdMult_ = 1.f;
+    upgradeCritRate_ = 0.f;
+    upgradeRangeMult_ = 1.f;
+    upgradeSpRegen_ = 0.f;
+
     // Reset atomic flags
     clickedTileIndex.store(-1, std::memory_order_release);
     mergeRequestUnitId.store(-1, std::memory_order_release);
@@ -117,6 +137,12 @@ void BattleScene::onEnter() {
     relocateRequestTile.store(-1, std::memory_order_release);
     relocateRequestX.store(0, std::memory_order_release);
     relocateRequestY.store(0, std::memory_order_release);
+    gambleNewSp.store(-1, std::memory_order_release);
+    buyUnitId.store(-1, std::memory_order_release);
+    buyUnitCost.store(0, std::memory_order_release);
+    upgradeTypePending.store(-1, std::memory_order_release);
+    upgradeLevelPending.store(0, std::memory_order_release);
+    upgradeCostPending.store(0, std::memory_order_release);
 
     // Copy deck and stage data from PlayerData
     auto& pd = PlayerData::get();
@@ -190,10 +216,10 @@ void BattleScene::onExit() {
 
 void BattleScene::setupPath() {
     // Donut path: rectangular loop around the unit grid
-    // Grid is at (290, 190) size (700, 340)
-    // Path runs clockwise with 80px margin outside grid
+    // Grid is at (200, 140) size (880, 440)
+    // Path runs clockwise with 70px margin outside grid
     pathWaypoints_.clear();
-    float margin = 80.f;
+    float margin = 70.f;
     float left   = Grid::GRID_X - margin;          // 210
     float right  = Grid::GRID_X + Grid::GRID_W + margin;  // 1070
     float top    = Grid::GRID_Y - margin;           // 110
@@ -244,6 +270,11 @@ void BattleScene::onUpdate(float dt) {
         }
     }
 
+    // Handle gamble, buy, upgrade requests
+    handleGamble();
+    handleBuyUnit();
+    handleBattleUpgrade();
+
     // Push state to Compose HUD periodically
     g_statePushTimer -= dt;
     if (g_statePushTimer <= 0.f && g_jniInitialized) {
@@ -284,7 +315,7 @@ void BattleScene::onUpdate(float dt) {
             waveDelayTimer_ -= dt;
 
             // SP regen during delay
-            sp_ += SP_REGEN_RATE * dt;
+            sp_ += (SP_REGEN_RATE + upgradeSpRegen_) * dt;
 
             if (waveDelayTimer_ <= 0.f) {
                 startNextWave();
@@ -294,7 +325,7 @@ void BattleScene::onUpdate(float dt) {
 
         case State::Playing: {
             // SP regen
-            sp_ += SP_REGEN_RATE * dt;
+            sp_ += (SP_REGEN_RATE + upgradeSpRegen_) * dt;
             waveTimer_ += dt;
 
             // Update wave spawner
@@ -352,9 +383,9 @@ void BattleScene::onUpdate(float dt) {
             break;
     }
 
-    // Update particle system (always, even during wave delay for visual effects)
-    particles_.update(dt);
-    floatingText_.update(dt);
+    // Particle/FloatingText updates skipped — Compose handles all visual effects.
+    // particles_.update(dt);
+    // floatingText_.update(dt);
 }
 
 void BattleScene::updateEnemies(float dt) {
@@ -432,9 +463,8 @@ void BattleScene::updateProjectiles(float dt) {
                             case 3: dmgColor = {1.f, 1.f, 0.6f, 1.f}; break; // Lightning: yellow-white
                             default: dmgColor = {1.f, 0.9f, 0.4f, 1.f}; break; // Support: gold
                         }
-                        floatingText_.spawn(hitEnemy->position,
-                                           static_cast<int>(actualDmg), dmgColor,
-                                           2.5f, isBigHit);
+                        // C++ floating text disabled — Compose DamageNumberOverlay handles this.
+                        // floatingText_.spawn(hitEnemy->position, ...);
                     }
 
                     // Notify Compose of damage hit for visual effect
@@ -514,28 +544,8 @@ void BattleScene::summonUnit() {
     grid_.placeUnit(row, col, unit);
     unitTypesUsed_.insert(def.id);
 
-    // Summon particle burst — family-colored
-    {
-        int familyIdx = def.id % 5;
-        int grade = def.id / 5;
-        Vec4 col = getFamilyColor(familyIdx);
-        col.w = 0.9f;
-        Vec4 colEnd = col;
-        colEnd.w = 0.f;
-        int count = 12 + grade * 4;
-        particles_.burst(cellPos, count, 80.f + grade * 15.f, 30.f,
-                        col, colEnd, 0.5f, 6.f, 1.f, BlendMode::Additive);
-        // Upward sparkle column
-        for (int i = 0; i < 6; i++) {
-            particles_.spawn(
-                {cellPos.x + ParticleSystem::randRange(-10.f, 10.f), cellPos.y + 20.f},
-                {ParticleSystem::randRange(-8.f, 8.f), ParticleSystem::randRange(-100.f, -50.f)},
-                brighten(col, 0.4f), colEnd,
-                ParticleSystem::randRange(0.3f, 0.6f), 4.f, 0.f,
-                0.f, BlendMode::Additive
-            );
-        }
-    }
+    // C++ particle effects disabled — Compose BattleParticleOverlay handles summon visuals.
+    // particles_.burst / particles_.spawn skipped.
 
     aout << "Summoned " << def.name << " at (" << row << "," << col
          << ") cost=" << cost << " SP=" << sp_ << std::endl;
@@ -788,34 +798,7 @@ void BattleScene::handleMergeRequest(int tileIndex) {
         mergeCount_++;
 
         // Merge particle burst at tile position
-        {
-            int row = tileIndex / Grid::COLS;
-            int col = tileIndex % Grid::COLS;
-            Vec2 pos = grid_.cellCenter(row, col);
-            int grade = result.resultUnitId / 5;
-            Vec4 gradeCol = getGradeColor(grade);
-            gradeCol.w = 1.f;
-            Vec4 endCol = gradeCol;
-            endCol.w = 0.f;
-
-            // Big grade-colored burst
-            int count = 16 + grade * 6;
-            particles_.burst(pos, count, 100.f + grade * 20.f, 40.f,
-                            gradeCol, endCol, 0.6f, 8.f + grade, 1.f, BlendMode::Additive);
-
-            // Lucky merge: extra golden sparkle ring
-            if (result.lucky) {
-                particles_.burst(pos, 24, 120.f, 30.f,
-                                {1.f, 0.9f, 0.3f, 1.f}, {1.f, 1.f, 0.6f, 0.f},
-                                0.8f, 6.f, 0.f, BlendMode::Additive);
-            }
-
-            // Central white flash
-            particles_.spawn(pos, {0.f, 0.f},
-                            {1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 0.f},
-                            0.2f, 30.f + grade * 5.f, 0.f,
-                            0.f, BlendMode::Additive);
-        }
+        // C++ merge particle effects disabled — Compose MergeEffectOverlay + BattleParticleOverlay handles visuals.
 
         notifyMergeComplete(tileIndex, result.lucky, result.resultUnitId);
         aout << "Smart merge! Result unit: " << result.resultUnitId
@@ -1228,4 +1211,80 @@ void BattleScene::handleRelocateUnit(int tileIndex, float normX, float normY) {
     unit->entity.transform.position = unit->position;
 
     aout << "Relocated unit at tile " << tileIndex << " to (" << worldX << ", " << worldY << ")" << std::endl;
+}
+
+void BattleScene::handleGamble() {
+    int newSpRaw = gambleNewSp.exchange(-1, std::memory_order_acq_rel);
+    if (newSpRaw < 0) return;
+    sp_ = newSpRaw / 100.f;
+    aout << "Gamble! SP set to " << sp_ << std::endl;
+}
+
+void BattleScene::handleBuyUnit() {
+    int unitId = buyUnitId.exchange(-1, std::memory_order_acq_rel);
+    if (unitId < 0) return;
+    float cost = buyUnitCost.load(std::memory_order_acquire) / 100.f;
+
+    if (sp_ < cost) return;
+    if (unitId < 0 || unitId >= static_cast<int>(UNIT_TABLE_SIZE)) return;
+
+    spawnSpecificUnit(unitId);
+    sp_ -= cost;
+    aout << "Bought unit " << getUnitDef(unitId).name << " for " << cost << " SP" << std::endl;
+}
+
+void BattleScene::spawnSpecificUnit(int unitDefId) {
+    if (grid_.getEmptyCellCount() == 0) return;
+    if (unitDefId < 0 || unitDefId >= static_cast<int>(UNIT_TABLE_SIZE)) return;
+
+    const UnitDef& def = getUnitDef(unitDefId);
+
+    int row, col;
+    if (!grid_.getRandomEmptyCell(row, col)) return;
+
+    Unit* unit = unitPool_.acquire();
+    if (!unit) return;
+
+    Vec2 cellPos = grid_.cellCenter(row, col);
+    unit->init(def.id, cellPos);
+    unit->gridRow = row;
+    unit->gridCol = col;
+    unit->homePosition = cellPos;
+    grid_.placeUnit(row, col, unit);
+    unitTypesUsed_.insert(def.id);
+
+    notifySummonResult(def.id, def.id / 5);
+}
+
+void BattleScene::handleBattleUpgrade() {
+    int type = upgradeTypePending.exchange(-1, std::memory_order_acq_rel);
+    if (type < 0) return;
+
+    int level = upgradeLevelPending.load(std::memory_order_acquire);
+    float cost = upgradeCostPending.load(std::memory_order_acquire) / 100.f;
+
+    if (sp_ < cost) return;
+    sp_ -= cost;
+
+    // Apply upgrade based on type
+    switch (type) {
+        case 0: // ATK
+            upgradeAtkMult_ = 1.f + level * 0.15f;
+            break;
+        case 1: // Attack Speed
+            upgradeSpdMult_ = 1.f + level * 0.12f;
+            break;
+        case 2: // Crit Rate
+            upgradeCritRate_ = level * 0.08f;
+            break;
+        case 3: // Range
+            upgradeRangeMult_ = 1.f + level * 0.10f;
+            break;
+        case 4: // SP Regen
+            upgradeSpRegen_ = level * 1.f;
+            break;
+    }
+
+    aout << "Battle upgrade type=" << type << " level=" << level
+         << " cost=" << cost << " SP=" << sp_ << std::endl;
 }

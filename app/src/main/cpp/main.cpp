@@ -77,6 +77,27 @@ Java_com_example_jaygame_bridge_BattleBridge_nativeRelocateUnit(JNIEnv* /*env*/,
     BattleScene::relocateRequestTile.store(tileIndex, std::memory_order_release);
 }
 
+// --- Gamble: set SP to new value after Kotlin-side random calculation ---
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeGamble(JNIEnv* /*env*/, jclass /*clazz*/, jfloat newSp) {
+    BattleScene::gambleNewSp.store(static_cast<int>(newSp * 100.f), std::memory_order_release);
+}
+
+// --- Buy Unit: spawn specific unit by ID, deduct cost ---
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeBuyUnit(JNIEnv* /*env*/, jclass /*clazz*/, jint unitDefId, jfloat cost) {
+    BattleScene::buyUnitCost.store(static_cast<int>(cost * 100.f), std::memory_order_release);
+    BattleScene::buyUnitId.store(unitDefId, std::memory_order_release);
+}
+
+// --- Battle Upgrade: apply permanent buff, deduct cost ---
+JNIEXPORT void JNICALL
+Java_com_example_jaygame_bridge_BattleBridge_nativeApplyBattleUpgrade(JNIEnv* /*env*/, jclass /*clazz*/, jint upgradeType, jint level, jfloat cost) {
+    BattleScene::upgradeTypePending.store(upgradeType, std::memory_order_release);
+    BattleScene::upgradeLevelPending.store(level, std::memory_order_release);
+    BattleScene::upgradeCostPending.store(static_cast<int>(cost * 100.f), std::memory_order_release);
+}
+
 void android_main(struct android_app *pApp) {
     aout << "Welcome to JayGame" << std::endl;
 

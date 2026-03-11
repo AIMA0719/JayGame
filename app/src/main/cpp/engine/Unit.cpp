@@ -8,6 +8,7 @@
 #include "TextureAsset.h"
 #include "AuraEffect.h"
 #include "ParticleSystem.h"
+#include "BattleScene.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -58,13 +59,13 @@ void Unit::init(int defId, Vec2 pos) {
             break;
     }
 
-    // Move speed by family (pixels/sec)
+    // Move speed by family (pixels/sec) — boosted for snappier feel
     switch (def.family) {
-        case UnitFamily::Fire:      moveSpeed = 60.f; break;
-        case UnitFamily::Frost:     moveSpeed = 30.f; break;
-        case UnitFamily::Poison:    moveSpeed = 40.f; break;
-        case UnitFamily::Lightning: moveSpeed = 35.f; break;
-        case UnitFamily::Support:   moveSpeed = 50.f; break;
+        case UnitFamily::Fire:      moveSpeed = 110.f; break;
+        case UnitFamily::Frost:     moveSpeed = 55.f;  break;
+        case UnitFamily::Poison:    moveSpeed = 75.f;  break;
+        case UnitFamily::Lightning: moveSpeed = 65.f;  break;
+        case UnitFamily::Support:   moveSpeed = 90.f;  break;
     }
 }
 
@@ -228,20 +229,20 @@ float Unit::getDamage() const {
     int idx = (level >= 1 && level <= 7) ? (level - 1) : 0;
     float baseDmg = def.baseATK * LEVEL_MULTIPLIER[idx];
     float atkBonus = unitBuffs.getAtkBonus();
-    return baseDmg * (1.f + atkBonus);
+    return baseDmg * (1.f + atkBonus) * BattleScene::upgradeAtkMult_;
 }
 
 float Unit::getRange() const {
     int grade = unitDefId / 5;
     // Legendary and Transcendent: map-wide attack range
     if (grade >= 3) return 2000.f;
-    return getUnitDef(unitDefId).range;
+    return getUnitDef(unitDefId).range * BattleScene::upgradeRangeMult_;
 }
 
 float Unit::getAtkSpeed() const {
     float baseSpd = getUnitDef(unitDefId).atkSpeed;
     float spdBonus = unitBuffs.getSpdBonus();
-    return baseSpd * (1.f + spdBonus);
+    return baseSpd * (1.f + spdBonus) * BattleScene::upgradeSpdMult_;
 }
 
 bool Unit::isMagicDamage() const {

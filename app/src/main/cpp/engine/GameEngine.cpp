@@ -172,15 +172,10 @@ void GameEngine::run() {
             accumulator -= FIXED_DT;
         }
 
-        // Render with interpolation alpha
-        float alpha = static_cast<float>(accumulator / FIXED_DT);
-
+        // Render phase: C++ rendering disabled — Compose handles all visuals.
+        // Keep glClear + swap to maintain EGL surface alive for GameActivity.
         glClear(GL_COLOR_BUFFER_BIT);
-
-        if (scene) {
-            scene->onRender(alpha, spriteBatch_);
-        }
-
+        // scene->onRender() intentionally skipped: all rendering done by Compose overlay.
         graphics_.swapBuffers();
     }
 }

@@ -1,8 +1,10 @@
 package com.example.jaygame.bridge
 
+import com.example.jaygame.ui.battle.GambleResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.random.Random
 
 data class BattleState(
     val currentWave: Int = 0,
@@ -342,6 +344,7 @@ object BattleBridge {
         _mergeEffect.value = null
         _summonResult.value = null
         _stageId.value = 0
+        _battleUpgradeLevels.value = IntArray(5) { 0 }
     }
 
     // JNI native methods — implemented in main.cpp
@@ -403,4 +406,64 @@ object BattleBridge {
         val idx = currentLevel - 1
         return if (idx in UPGRADE_COSTS.indices) UPGRADE_COSTS[idx] else -1
     }
+
+    // ── Gamble ──────────────────────────────────────────────
+
+    private const val GAMBLE_COST = 10f
+
+    /**
+     * Perform gamble: costs 10 SP, random -100% to +100% of remaining SP.
+     * Returns result for UI display.
+     * Note: This modifies SP via C++ nativeGamble() JNI call.
+     */
+    fun performGamble(): GambleResult {
+        val currentSp = _state.value.sp
+        if (currentSp < GAMBLE_COST) return GambleResult(0f, currentSp, 0f)
+
+        val spAfterCost = currentSp - GAMBLE_COST
+        // Random percentage from -100% to +100%
+        val percentage = Random.nextFloat() * 2f - 1f  // -1.0 to 1.0
+        val spChange = spAfterCost * percentage
+        val newSp = (spAfterCost + spChange).coerceAtLeast(0f)
+
+        // Tell C++ to set SP to new value
+        nativeGamble(newSp)
+
+        return GambleResult(spChange, newSp, percentage)
+    }
+
+    // ── Buy Unit ────────────────────────────────────────────
+
+    fun requestBuyUnit(unitDefId: Int, cost: Int) {
+        nativeBuyUnit(unitDefId, cost.toFloat())
+    }
+
+    // ── Battle Upgrades ─────────────────────────────────────
+
+    private val _battleUpgradeLevels = MutableStateFlow(IntArray(5) { 0 })
+    val battleUpgradeLevels: StateFlow<IntArray> = _battleUpgradeLevels.asStateFlow()
+
+    fun requestBattleUpgrade(upgradeType: Int, cost: Int) {
+        val currentSp = _state.value.sp
+        if (currentSp < cost) return
+
+        // Update local upgrade level
+        val levels = _battleUpgradeLevels.value.copyOf()
+        levels[upgradeType]++
+        _battleUpgradeLevels.value = levels
+
+        // Tell C++ to apply and deduct SP
+        nativeApplyBattleUpgrade(upgradeType, levels[upgradeType], cost.toFloat())
+    }
+
+    // ── Additional JNI methods ──────────────────────────────
+
+    @JvmStatic
+    private external fun nativeGamble(newSp: Float)
+
+    @JvmStatic
+    private external fun nativeBuyUnit(unitDefId: Int, cost: Float)
+
+    @JvmStatic
+    private external fun nativeApplyBattleUpgrade(upgradeType: Int, level: Int, cost: Float)
 }

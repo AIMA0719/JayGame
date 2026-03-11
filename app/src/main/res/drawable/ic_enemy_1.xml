@@ -3,33 +3,110 @@
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <!-- Body -->
+    <!-- Ice Golem (Blue) - Crystal ice creature -->
+
+    <!-- Ground shadow -->
     <path
-        android:pathData="M24,44C13,44 4,38 4,30C4,22 8,16 12,12C16,8 20,6 24,6C28,6 32,8 36,12C40,16 44,22 44,30C44,38 35,44 24,44Z"
-        android:fillColor="#64B5F6"/>
-    <!-- Shadow -->
+        android:pathData="M10,44C10,42 14,40 24,40C34,40 38,42 38,44C38,46 34,46 24,46C14,46 10,46 10,44Z"
+        android:fillColor="#000000"
+        android:fillAlpha="0.15"/>
+
+    <!-- Ice crystal spikes (back) -->
     <path
-        android:pathData="M24,44C13,44 4,38 4,30C8,34 16,38 24,38C32,38 40,34 44,30C44,38 35,44 24,44Z"
+        android:pathData="M8,24L4,10L14,20Z"
+        android:fillColor="#90CAF9"/>
+    <path
+        android:pathData="M40,24L44,10L34,20Z"
+        android:fillColor="#90CAF9"/>
+    <path
+        android:pathData="M24,14L20,2L22,12Z"
+        android:fillColor="#BBDEFB"/>
+    <path
+        android:pathData="M24,14L28,2L26,12Z"
+        android:fillColor="#BBDEFB"/>
+    <!-- Small spike -->
+    <path
+        android:pathData="M14,18L10,6L16,16Z"
+        android:fillColor="#64B5F6"
+        android:fillAlpha="0.7"/>
+    <path
+        android:pathData="M34,18L38,6L32,16Z"
+        android:fillColor="#64B5F6"
+        android:fillAlpha="0.7"/>
+
+    <!-- Main body (angular/crystalline) -->
+    <path
+        android:pathData="M24,42C14,42 8,36 8,28C8,20 12,14 16,12L20,10L24,9L28,10L32,12C36,14 40,20 40,28C40,36 34,42 24,42Z"
+        android:fillColor="#42A5F5"/>
+    <!-- Crystal facets -->
+    <path
+        android:pathData="M24,9L16,12L8,28L12,20Z"
+        android:fillColor="#64B5F6"
+        android:fillAlpha="0.4"/>
+    <path
+        android:pathData="M24,9L32,12L40,28L36,20Z"
+        android:fillColor="#1E88E5"
+        android:fillAlpha="0.3"/>
+    <!-- Ice highlight -->
+    <path
+        android:pathData="M18,14C16,16 14,20 12,24C16,18 20,14 24,12C22,13 20,13 18,14Z"
+        android:fillColor="#E3F2FD"
+        android:fillAlpha="0.6"/>
+    <!-- Bottom frost -->
+    <path
+        android:pathData="M24,42C14,42 8,36 8,28C12,34 18,38 24,38C30,38 36,34 40,28C40,36 34,42 24,42Z"
         android:fillColor="#1565C0"
         android:fillAlpha="0.4"/>
-    <!-- Left eye -->
+
+    <!-- Frost particles -->
     <path
-        android:pathData="M16,26A3,3 0,1 1,22,26A3,3 0,1 1,16,26Z"
+        android:pathData="M6,20A1,1 0,1 1,8,20A1,1 0,1 1,6,20Z"
+        android:fillColor="#E3F2FD"
+        android:fillAlpha="0.6"/>
+    <path
+        android:pathData="M40,18A0.8,0.8 0,1 1,41.6,18A0.8,0.8 0,1 1,40,18Z"
+        android:fillColor="#E3F2FD"
+        android:fillAlpha="0.5"/>
+    <path
+        android:pathData="M42,26A0.6,0.6 0,1 1,43.2,26A0.6,0.6 0,1 1,42,26Z"
+        android:fillColor="#E3F2FD"
+        android:fillAlpha="0.4"/>
+
+    <!-- Left eye (glowing) -->
+    <path
+        android:pathData="M14,24A4.5,5 0,1 1,23,24A4.5,5 0,1 1,14,24Z"
+        android:fillColor="#E3F2FD"/>
+    <path
+        android:pathData="M16,24.5A3,3.5 0,1 1,22,24.5A3,3.5 0,1 1,16,24.5Z"
+        android:fillColor="#0D47A1"/>
+    <path
+        android:pathData="M17.5,23.5A1.5,2 0,1 1,20.5,23.5A1.5,2 0,1 1,17.5,23.5Z"
+        android:fillColor="#BBDEFB"/>
+    <!-- Glow -->
+    <path
+        android:pathData="M19.5,22.5A0.7,0.7 0,1 1,20.9,22.5A0.7,0.7 0,1 1,19.5,22.5Z"
         android:fillColor="#FFFFFF"/>
+
+    <!-- Right eye (glowing) -->
     <path
-        android:pathData="M18,26A1.5,1.5 0,1 1,21,26A1.5,1.5 0,1 1,18,26Z"
-        android:fillColor="#333333"/>
-    <!-- Right eye -->
+        android:pathData="M25,24A4.5,5 0,1 1,34,24A4.5,5 0,1 1,25,24Z"
+        android:fillColor="#E3F2FD"/>
     <path
-        android:pathData="M26,26A3,3 0,1 1,32,26A3,3 0,1 1,26,26Z"
+        android:pathData="M27,24.5A3,3.5 0,1 1,33,24.5A3,3.5 0,1 1,27,24.5Z"
+        android:fillColor="#0D47A1"/>
+    <path
+        android:pathData="M28.5,23.5A1.5,2 0,1 1,31.5,23.5A1.5,2 0,1 1,28.5,23.5Z"
+        android:fillColor="#BBDEFB"/>
+    <!-- Glow -->
+    <path
+        android:pathData="M30.5,22.5A0.7,0.7 0,1 1,31.9,22.5A0.7,0.7 0,1 1,30.5,22.5Z"
         android:fillColor="#FFFFFF"/>
+
+    <!-- Frown mouth (angry) -->
     <path
-        android:pathData="M28,26A1.5,1.5 0,1 1,31,26A1.5,1.5 0,1 1,28,26Z"
-        android:fillColor="#333333"/>
-    <!-- Mouth -->
-    <path
-        android:pathData="M19,32Q24,36 29,32"
-        android:strokeColor="#333333"
-        android:strokeWidth="1.5"
-        android:fillColor="#00000000"/>
+        android:pathData="M18,34Q24,30 30,34"
+        android:strokeColor="#0D47A1"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
 </vector>

@@ -64,10 +64,18 @@ fun SummonEffectOverlay() {
     val gradeName = SummonGradeNames.getOrElse(data.grade) { "" }
     val isRare = data.grade >= 3
 
+    // Card scale with spring bounce
     val scale by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = spring(dampingRatio = 0.4f, stiffness = 300f),
+        animationSpec = spring(dampingRatio = 0.35f, stiffness = 250f),
         label = "summonScale",
+    )
+
+    // Card rotation (entrance spin)
+    val rotation by animateFloatAsState(
+        targetValue = 0f,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
+        label = "summonRotation",
     )
 
     // Burst expand animation
@@ -86,6 +94,17 @@ fun SummonEffectOverlay() {
             repeatMode = RepeatMode.Restart,
         ),
         label = "summonFxTime",
+    )
+
+    // Icon bounce
+    val iconBounce by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "iconBounce",
     )
 
     Box(
@@ -166,21 +185,41 @@ fun SummonEffectOverlay() {
                     }
                 }
 
-                // Full screen flash for grade 5+
-                if (grade >= 5 && bp < 0.3f) {
-                    val flashAlpha = (0.3f - bp) / 0.3f * 0.4f
-                    drawRect(
-                        color = gradeColor.copy(alpha = flashAlpha),
-                        size = size,
-                    )
+                // Full screen radial light rays for grade 5+
+                if (grade >= 5) {
+                    val rayCount = 12
+                    for (i in 0 until rayCount) {
+                        val angle = (i.toFloat() / rayCount) * 2f * Math.PI.toFloat() + fxTime * 1.5f
+                        val rayLen = size.maxDimension * 0.6f * bp
+                        val rayAlpha = (1f - bp * 0.5f) * 0.2f
+                        drawLine(
+                            color = gradeColor.copy(alpha = rayAlpha),
+                            start = Offset(cx, cy),
+                            end = Offset(cx + cos(angle) * rayLen, cy + sin(angle) * rayLen),
+                            strokeWidth = 8f + sin(fxTime * 6f + i) * 4f,
+                            cap = StrokeCap.Round,
+                        )
+                    }
+                    // Screen flash
+                    if (bp < 0.3f) {
+                        val flashAlpha = (0.3f - bp) / 0.3f * 0.4f
+                        drawRect(
+                            color = gradeColor.copy(alpha = flashAlpha),
+                            size = size,
+                        )
+                    }
                 }
             }
         }
 
-        // Summon result card
+        // Summon result card with rotation + spring
         Column(
             modifier = Modifier
-                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    rotationZ = rotation
+                }
                 .clip(RoundedCornerShape(16.dp))
                 .background(
                     Brush.verticalGradient(
@@ -204,10 +243,18 @@ fun SummonEffectOverlay() {
             }
 
             if (unitDef != null) {
+                // Icon with bounce effect
+                val bounceOffset = (iconBounce - 0.5f) * 6f
                 Image(
                     painter = painterResource(id = unitDef.iconRes),
                     contentDescription = unitDef.name,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier
+                        .size(64.dp)
+                        .graphicsLayer {
+                            translationY = bounceOffset
+                            scaleX = 1f + (iconBounce - 0.5f) * 0.1f
+                            scaleY = 1f + (iconBounce - 0.5f) * 0.1f
+                        },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }

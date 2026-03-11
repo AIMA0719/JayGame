@@ -3,33 +3,97 @@
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <!-- Body -->
+    <!-- Slime Monster (Orange) - Gooey dripping slime -->
+
+    <!-- Ground shadow -->
     <path
-        android:pathData="M24,44C13,44 4,38 4,30C4,22 8,16 12,12C16,8 20,6 24,6C28,6 32,8 36,12C40,16 44,22 44,30C44,38 35,44 24,44Z"
-        android:fillColor="#FF6B35"/>
-    <!-- Shadow -->
+        android:pathData="M10,44C10,42 14,40 24,40C34,40 38,42 38,44C38,46 34,46 24,46C14,46 10,46 10,44Z"
+        android:fillColor="#000000"
+        android:fillAlpha="0.15"/>
+
+    <!-- Drip left -->
     <path
-        android:pathData="M24,44C13,44 4,38 4,30C8,34 16,38 24,38C32,38 40,34 44,30C44,38 35,44 24,44Z"
-        android:fillColor="#CC4400"
-        android:fillAlpha="0.4"/>
+        android:pathData="M10,30Q9,34 10,38Q11,42 12,38Q13,34 12,30Z"
+        android:fillColor="#E65100"/>
+    <!-- Drip right -->
+    <path
+        android:pathData="M36,28Q35,33 36,37Q37,41 38,37Q39,33 38,28Z"
+        android:fillColor="#E65100"/>
+    <!-- Small drip -->
+    <path
+        android:pathData="M17,34Q16,37 17,40Q18,37 17,34Z"
+        android:fillColor="#E65100"/>
+
+    <!-- Main body -->
+    <path
+        android:pathData="M24,42C12,42 6,36 6,28C6,18 12,10 18,8C20,7 22,7 24,7C26,7 28,7 30,8C36,10 42,18 42,28C42,36 36,42 24,42Z"
+        android:fillColor="#FF8F00"/>
+    <!-- Body highlight (top) -->
+    <path
+        android:pathData="M24,9C20,9 16,12 14,16C12,20 10,24 10,28C14,24 18,14 24,12C30,14 34,24 38,28C38,24 36,20 34,16C32,12 28,9 24,9Z"
+        android:fillColor="#FFB300"
+        android:fillAlpha="0.5"/>
+    <!-- Body shadow (bottom) -->
+    <path
+        android:pathData="M24,42C12,42 6,36 6,28C10,34 16,38 24,38C32,38 38,34 42,28C42,36 36,42 24,42Z"
+        android:fillColor="#E65100"
+        android:fillAlpha="0.5"/>
+
+    <!-- Shine blob -->
+    <path
+        android:pathData="M16,16A3,4 -20,1 1,20,14A3,4 -20,1 1,16,16Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.5"/>
+    <!-- Small shine -->
+    <path
+        android:pathData="M14,22A1.5,2 0,1 1,16,21A1.5,2 0,1 1,14,22Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.3"/>
+
     <!-- Left eye -->
     <path
-        android:pathData="M16,26A3,3 0,1 1,22,26A3,3 0,1 1,16,26Z"
+        android:pathData="M15,25A4,4.5 0,1 1,23,25A4,4.5 0,1 1,15,25Z"
         android:fillColor="#FFFFFF"/>
     <path
-        android:pathData="M18,26A1.5,1.5 0,1 1,21,26A1.5,1.5 0,1 1,18,26Z"
-        android:fillColor="#333333"/>
+        android:pathData="M17,25.5A2.5,3 0,1 1,22,25.5A2.5,3 0,1 1,17,25.5Z"
+        android:fillColor="#1B5E20"/>
+    <path
+        android:pathData="M18.5,24.5A1,1.5 0,1 1,20.5,24.5A1,1.5 0,1 1,18.5,24.5Z"
+        android:fillColor="#000000"/>
+    <!-- Eye shine -->
+    <path
+        android:pathData="M20,23.5A0.8,0.8 0,1 1,21.6,23.5A0.8,0.8 0,1 1,20,23.5Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+
     <!-- Right eye -->
     <path
-        android:pathData="M26,26A3,3 0,1 1,32,26A3,3 0,1 1,26,26Z"
+        android:pathData="M25,25A4,4.5 0,1 1,33,25A4,4.5 0,1 1,25,25Z"
         android:fillColor="#FFFFFF"/>
     <path
-        android:pathData="M28,26A1.5,1.5 0,1 1,31,26A1.5,1.5 0,1 1,28,26Z"
-        android:fillColor="#333333"/>
-    <!-- Mouth -->
+        android:pathData="M27,25.5A2.5,3 0,1 1,32,25.5A2.5,3 0,1 1,27,25.5Z"
+        android:fillColor="#1B5E20"/>
     <path
-        android:pathData="M19,32Q24,36 29,32"
-        android:strokeColor="#333333"
-        android:strokeWidth="1.5"
-        android:fillColor="#00000000"/>
+        android:pathData="M28.5,24.5A1,1.5 0,1 1,30.5,24.5A1,1.5 0,1 1,28.5,24.5Z"
+        android:fillColor="#000000"/>
+    <!-- Eye shine -->
+    <path
+        android:pathData="M30,23.5A0.8,0.8 0,1 1,31.6,23.5A0.8,0.8 0,1 1,30,23.5Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+
+    <!-- Wide grin mouth -->
+    <path
+        android:pathData="M16,32Q20,38 24,36Q28,38 32,32"
+        android:strokeColor="#4E342E"
+        android:strokeWidth="1.8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Teeth -->
+    <path
+        android:pathData="M20,33L21,35L22,33"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M26,33L27,35L28,33"
+        android:fillColor="#FFFFFF"/>
 </vector>

@@ -3,33 +3,124 @@
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <!-- Body -->
+    <!-- Shadow Wraith (Purple) - Ghostly dark spirit -->
+
+    <!-- Ground shadow -->
     <path
-        android:pathData="M24,44C13,44 4,38 4,30C4,22 8,16 12,12C16,8 20,6 24,6C28,6 32,8 36,12C40,16 44,22 44,30C44,38 35,44 24,44Z"
-        android:fillColor="#CE93D8"/>
-    <!-- Shadow -->
+        android:pathData="M10,44C10,42 14,40 24,40C34,40 38,42 38,44C38,46 34,46 24,46C14,46 10,46 10,44Z"
+        android:fillColor="#000000"
+        android:fillAlpha="0.2"/>
+
+    <!-- Wispy tail trails -->
     <path
-        android:pathData="M24,44C13,44 4,38 4,30C8,34 16,38 24,38C32,38 40,34 44,30C44,38 35,44 24,44Z"
+        android:pathData="M14,40Q10,44 8,46Q12,44 14,42Q12,46 10,48Q14,44 16,42Z"
         android:fillColor="#7B1FA2"
+        android:fillAlpha="0.3"/>
+    <path
+        android:pathData="M34,40Q38,44 40,46Q36,44 34,42Q36,46 38,48Q34,44 32,42Z"
+        android:fillColor="#7B1FA2"
+        android:fillAlpha="0.3"/>
+    <path
+        android:pathData="M22,42Q20,46 18,48Q22,46 24,44Q26,46 28,48Q26,46 24,42Z"
+        android:fillColor="#9C27B0"
+        android:fillAlpha="0.2"/>
+
+    <!-- Outer aura -->
+    <path
+        android:pathData="M24,4C12,4 4,16 4,28C4,38 12,44 24,44C36,44 44,38 44,28C44,16 36,4 24,4Z"
+        android:fillColor="#CE93D8"
+        android:fillAlpha="0.15"/>
+
+    <!-- Main body -->
+    <path
+        android:pathData="M24,42C12,42 6,34 6,26C6,16 12,8 24,8C36,8 42,16 42,26C42,34 36,42 24,42Z"
+        android:fillColor="#9C27B0"/>
+    <!-- Inner highlight -->
+    <path
+        android:pathData="M24,12C16,12 10,18 10,26C14,18 18,14 24,14C30,14 34,18 38,26C38,18 32,12 24,12Z"
+        android:fillColor="#CE93D8"
         android:fillAlpha="0.4"/>
-    <!-- Left eye -->
+    <!-- Dark core shadow -->
     <path
-        android:pathData="M16,26A3,3 0,1 1,22,26A3,3 0,1 1,16,26Z"
+        android:pathData="M24,42C12,42 6,34 6,26C10,34 16,38 24,38C32,38 38,34 42,26C42,34 36,42 24,42Z"
+        android:fillColor="#4A148C"
+        android:fillAlpha="0.5"/>
+
+    <!-- Hood/cloak shape -->
+    <path
+        android:pathData="M24,8C18,8 14,10 12,14L10,20L8,26C8,20 12,12 18,10C20,9 22,8 24,8C26,8 28,9 30,10C36,12 40,20 40,26L38,20L36,14C34,10 30,8 24,8Z"
+        android:fillColor="#7B1FA2"
+        android:fillAlpha="0.5"/>
+
+    <!-- Floating rune marks -->
+    <path
+        android:pathData="M12,30L14,28L16,30L14,32Z"
+        android:fillColor="#E1BEE7"
+        android:fillAlpha="0.4"/>
+    <path
+        android:pathData="M32,30L34,28L36,30L34,32Z"
+        android:fillColor="#E1BEE7"
+        android:fillAlpha="0.4"/>
+
+    <!-- Left eye (glowing menacing) -->
+    <path
+        android:pathData="M14,22A5,5 0,1 1,24,22A5,5 0,1 1,14,22Z"
+        android:fillColor="#E040FB"
+        android:fillAlpha="0.3"/>
+    <path
+        android:pathData="M15,22A4,4 0,1 1,23,22A4,4 0,1 1,15,22Z"
+        android:fillColor="#EA80FC"/>
+    <path
+        android:pathData="M17,22A2.5,2.5 0,1 1,22,22A2.5,2.5 0,1 1,17,22Z"
+        android:fillColor="#4A148C"/>
+    <path
+        android:pathData="M18,21A1.2,1.2 0,1 1,20.4,21A1.2,1.2 0,1 1,18,21Z"
+        android:fillColor="#E040FB"/>
+    <path
+        android:pathData="M19.5,20.5A0.5,0.5 0,1 1,20.5,20.5A0.5,0.5 0,1 1,19.5,20.5Z"
         android:fillColor="#FFFFFF"/>
+
+    <!-- Right eye (glowing menacing) -->
     <path
-        android:pathData="M18,26A1.5,1.5 0,1 1,21,26A1.5,1.5 0,1 1,18,26Z"
-        android:fillColor="#333333"/>
-    <!-- Right eye -->
+        android:pathData="M24,22A5,5 0,1 1,34,22A5,5 0,1 1,24,22Z"
+        android:fillColor="#E040FB"
+        android:fillAlpha="0.3"/>
     <path
-        android:pathData="M26,26A3,3 0,1 1,32,26A3,3 0,1 1,26,26Z"
+        android:pathData="M25,22A4,4 0,1 1,33,22A4,4 0,1 1,25,22Z"
+        android:fillColor="#EA80FC"/>
+    <path
+        android:pathData="M27,22A2.5,2.5 0,1 1,32,22A2.5,2.5 0,1 1,27,22Z"
+        android:fillColor="#4A148C"/>
+    <path
+        android:pathData="M28,21A1.2,1.2 0,1 1,30.4,21A1.2,1.2 0,1 1,28,21Z"
+        android:fillColor="#E040FB"/>
+    <path
+        android:pathData="M29.5,20.5A0.5,0.5 0,1 1,30.5,20.5A0.5,0.5 0,1 1,29.5,20.5Z"
         android:fillColor="#FFFFFF"/>
+
+    <!-- Creepy smile -->
     <path
-        android:pathData="M28,26A1.5,1.5 0,1 1,31,26A1.5,1.5 0,1 1,28,26Z"
-        android:fillColor="#333333"/>
-    <!-- Mouth -->
-    <path
-        android:pathData="M19,32Q24,36 29,32"
-        android:strokeColor="#333333"
+        android:pathData="M18,30Q21,34 24,32Q27,34 30,30"
+        android:strokeColor="#E040FB"
         android:strokeWidth="1.5"
-        android:fillColor="#00000000"/>
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+
+    <!-- Floating particles -->
+    <path
+        android:pathData="M6,14A1,1 0,1 1,8,14A1,1 0,1 1,6,14Z"
+        android:fillColor="#CE93D8"
+        android:fillAlpha="0.5"/>
+    <path
+        android:pathData="M40,10A0.8,0.8 0,1 1,41.6,10A0.8,0.8 0,1 1,40,10Z"
+        android:fillColor="#CE93D8"
+        android:fillAlpha="0.4"/>
+    <path
+        android:pathData="M4,24A0.6,0.6 0,1 1,5.2,24A0.6,0.6 0,1 1,4,24Z"
+        android:fillColor="#E1BEE7"
+        android:fillAlpha="0.5"/>
+    <path
+        android:pathData="M44,20A0.7,0.7 0,1 1,45.4,20A0.7,0.7 0,1 1,44,20Z"
+        android:fillColor="#E1BEE7"
+        android:fillAlpha="0.4"/>
 </vector>

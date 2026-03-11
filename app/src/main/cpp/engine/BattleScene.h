@@ -54,6 +54,18 @@ public:
     static std::atomic<int> relocateRequestX;     // normX * 10000
     static std::atomic<int> relocateRequestY;     // normY * 10000
 
+    // Gamble: new SP value * 100 (-1 = no request)
+    static std::atomic<int> gambleNewSp;
+
+    // Buy unit: specific unit ID to spawn (-1 = no request)
+    static std::atomic<int> buyUnitId;
+    static std::atomic<int> buyUnitCost;  // cost * 100
+
+    // Battle upgrade: type + level + cost (-1 = no request)
+    static std::atomic<int> upgradeTypePending;
+    static std::atomic<int> upgradeLevelPending;
+    static std::atomic<int> upgradeCostPending;
+
     // State getters for JNI bridge
     int getCurrentWave() const { return currentWave_; }
     int getMaxWaves() const { return maxWaves_; }
@@ -163,6 +175,18 @@ private:
     void notifyUnitClicked(int tileIndex, Unit* unit);
     void notifyMergeComplete(int tileIndex, bool lucky, int resultUnitId);
     void handleRelocateUnit(int tileIndex, float normX, float normY);
+    void handleGamble();
+    void handleBuyUnit();
+    void handleBattleUpgrade();
+    void spawnSpecificUnit(int unitDefId);
+
+public:
+    // Battle upgrade multipliers (applied to all units, accessible globally)
+    static float upgradeAtkMult_;
+    static float upgradeSpdMult_;
+    static float upgradeCritRate_;
+    static float upgradeRangeMult_;
+    static float upgradeSpRegen_;
 };
 
 #endif // JAYGAME_BATTLESCENE_H
