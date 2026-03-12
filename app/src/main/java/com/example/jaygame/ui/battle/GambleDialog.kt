@@ -3,10 +3,8 @@ package com.example.jaygame.ui.battle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,12 +66,26 @@ fun GambleDialog(
             ) {
                 if (gambleResult == null) {
                     // ── Confirmation state ──
-                    Text(
-                        text = "\uD83C\uDFB2 도박",
-                        color = NeonGreen,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    // Title row with X close button
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "\uD83C\uDFB2 도박",
+                            color = NeonGreen,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                        Text(
+                            text = "\u2715",
+                            color = SubText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .clickable { onDismiss() }
+                                .padding(4.dp),
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "10 SP를 걸고 도박합니다!\n현재 SP의 -100% ~ +100% 변동",
@@ -90,31 +102,19 @@ fun GambleDialog(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        NeonButton(
-                            text = "취소",
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            accentColor = SubText,
-                            accentColorDark = DimText,
-                        )
-                        NeonButton(
-                            text = "도박!",
-                            onClick = {
-                                if (battle.sp >= 10) {
-                                    val result = BattleBridge.performGamble()
-                                    gambleResult = result
-                                }
-                            },
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            accentColor = NeonGreen,
-                            accentColorDark = Color(0xFF1B5E20),
-                            enabled = battle.sp >= 10,
-                        )
-                    }
+                    NeonButton(
+                        text = "도박",
+                        onClick = {
+                            if (battle.sp >= 10) {
+                                val result = BattleBridge.performGamble()
+                                gambleResult = result
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                        accentColor = NeonGreen,
+                        accentColorDark = Color(0xFF1B5E20),
+                        enabled = battle.sp >= 10,
+                    )
                 } else {
                     // ── Result state ──
                     val result = gambleResult!!

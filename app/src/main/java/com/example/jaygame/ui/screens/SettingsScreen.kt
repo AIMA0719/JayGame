@@ -175,43 +175,48 @@ private fun SettingsMain(
         )
         Spacer(Modifier.height(20.dp))
 
-        GameCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_settings_audio,
                     title = "오디오",
                     iconTint = NeonCyan,
                     onClick = { onPageSelected(SettingsPage.AUDIO) },
                 )
-                HorizontalDivider(color = Divider)
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_settings_gameplay,
                     title = "게임플레이",
                     iconTint = NeonCyan,
                     onClick = { onPageSelected(SettingsPage.GAMEPLAY) },
                 )
-                HorizontalDivider(color = Divider)
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_settings_reward,
                     title = "주간보상",
                     iconTint = Gold,
                     onClick = onShowDailyLogin,
                 )
-                HorizontalDivider(color = Divider)
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_achievement,
                     title = "업적",
                     iconTint = Gold,
                     onClick = { onNavigate(Routes.ACHIEVEMENTS) },
                 )
-                HorizontalDivider(color = Divider)
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_nav_collection,
                     title = "영웅 도감",
                     iconTint = Gold,
                     onClick = { onNavigate(Routes.UNIT_CODEX) },
                 )
-                HorizontalDivider(color = Divider)
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_settings_data,
                     title = "데이터 관리",
