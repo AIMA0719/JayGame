@@ -1,71 +1,76 @@
 package com.example.jaygame
 
-import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.view.WindowManager
-import android.widget.FrameLayout
-import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.data.GameRepository
+import com.example.jaygame.data.STAGES
+import com.example.jaygame.engine.BattleEngine
 import com.example.jaygame.ui.battle.BattleScreen
 import com.example.jaygame.ui.theme.JayGameTheme
-import com.google.androidgamesdk.GameActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
-class MainActivity : GameActivity() {
-    companion object {
-        init {
-            System.loadLibrary("jaygame")
-        }
-    }
+class MainActivity : ComponentActivity() {
+    private lateinit var repository: GameRepository
+    private var engine: BattleEngine? = null
+    private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        repository = GameRepository(this)
 
         BattleBridge.reset()
 
-        // Single full-screen Compose overlay on top of C++ SurfaceView
-        addBattleOverlay()
-    }
+        // Create and start Kotlin battle engine
+        val stageId = BattleBridge.stageId.value
+        val difficulty = BattleBridge.difficulty.value
+        val stage = STAGES.getOrNull(stageId) ?: STAGES[0]
+        val data = repository.gameData.value
+        engine = BattleEngine(
+            stageId = stageId,
+            difficulty = difficulty,
+            maxWaves = stage.maxWaves,
+            deck = data.deck.toIntArray(),
+        ).also {
+            BattleBridge.engine = it
+            it.start(engineScope)
+        }
 
-    private fun addBattleOverlay() {
-        val composeView = ComposeView(this).apply {
-            setViewTreeLifecycleOwner(this@MainActivity)
-            setViewTreeSavedStateRegistryOwner(this@MainActivity)
-            // Transparent background so C++ GL surface shows through
-            setBackgroundColor(AndroidColor.TRANSPARENT)
-            setContent {
-                JayGameTheme {
-                    val result by BattleBridge.result.collectAsState()
+        // Play battle BGM
+        if (data.musicEnabled) {
+            BgmManager.play(this, "audio/battle_bgm.mp3")
+        }
 
-                    BattleScreen(
-                        result = result,
-                        onGoHome = {
-                            BattleBridge.clearResult()
-                            finish()
-                        },
-                    )
-                }
+        setContent {
+            JayGameTheme {
+                val result by BattleBridge.result.collectAsState()
+                BattleScreen(
+                    result = result,
+                    onGoHome = {
+                        BattleBridge.clearResult()
+                        finish()
+                    },
+                )
             }
         }
-        addContentView(
-            composeView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            ),
-        )
+    }
+
+    override fun onDestroy() {
+        engine?.stop()
+        BattleBridge.engine = null
+        BgmManager.stop()
+        super.onDestroy()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

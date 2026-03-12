@@ -26,12 +26,10 @@
         <activity
             android:name=".MainActivity"
             android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|density|uiMode|smallestScreenSize|navigation"
-            android:launchMode="singleTop">
-            <meta-data
-                android:name="android.app.lib_name"
-                android:value="jaygame" />
-        </activity>
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.JayGame" />
+
     </application>
 
 </manifest>
