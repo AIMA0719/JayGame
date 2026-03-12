@@ -2,6 +2,9 @@ package com.example.jaygame.engine
 
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS
+import com.example.jaygame.data.unitFamilyOf
+import com.example.jaygame.data.unitGradeOf
+import com.example.jaygame.data.unitIdOf
 import com.example.jaygame.engine.math.GameRect
 import com.example.jaygame.engine.math.Vec2
 import kotlinx.coroutines.*
@@ -21,7 +24,7 @@ class BattleEngine(
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
         const val SP_REGEN_PER_SEC = 2f
-        const val BASE_SUMMON_COST = 50
+        const val BASE_SUMMON_COST = 10
         const val WAVE_DELAY = 3f
     }
 
@@ -57,11 +60,15 @@ class BattleEngine(
 
     private var gridPushTimer = 0f
 
+    // Path midpoints between outer path edge and grid edge
+    // Grid: (200,140)~(1080,580), Path margin: 70px outside grid
+    // midX left=(130+200)/2=165, midX right=(1080+1150)/2=1115
+    // midY top=(70+140)/2=105, midY bottom=(580+650)/2=615
     val enemyPath: List<Vec2> = listOf(
-        Vec2(40f, 40f),
-        Vec2(W - 40f, 40f),
-        Vec2(W - 40f, H - 40f),
-        Vec2(40f, H - 40f),
+        Vec2(165f, 105f),
+        Vec2(1115f, 105f),
+        Vec2(1115f, 615f),
+        Vec2(165f, 615f),
     )
 
     private var job: Job? = null
@@ -250,8 +257,8 @@ class BattleEngine(
         sp -= summonCost
 
         val grade = rollGrade()
-        val familyIndex = deck.random()
-        val unitDefId = grade * 5 + familyIndex
+        val familyIndex = deck.random()  // deck stores family ordinals directly
+        val unitDefId = unitIdOf(grade, familyIndex) ?: return
 
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
@@ -283,6 +290,7 @@ class BattleEngine(
         2 -> 3 to 10f      // Poison: DoT
         3 -> 4 to 3f       // Lightning: Chain
         4 -> 5 to 0.15f    // Support: Buff
+        5 -> 10 to 50f     // Wind: Knockback
         else -> 0 to 0f
     }
 
@@ -293,8 +301,8 @@ class BattleEngine(
             if (u != null) units.release(u)
         }
         val def = UNIT_DEFS.find { it.id == result.resultUnitDefId } ?: return
-        val newGrade = result.resultUnitDefId / 5
-        val newFamily = result.resultUnitDefId % 5
+        val newGrade = unitGradeOf(result.resultUnitDefId)
+        val newFamily = unitFamilyOf(result.resultUnitDefId)
         val unit = units.acquire() ?: return
         val abilityInfo = abilityForFamily(newFamily)
         unit.init(
@@ -362,8 +370,8 @@ class BattleEngine(
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
         val def = UNIT_DEFS.find { it.id == unitDefId } ?: return
-        val grade = unitDefId / 5
-        val family = unitDefId % 5
+        val grade = unitGradeOf(unitDefId)
+        val family = unitFamilyOf(unitDefId)
         val unit = units.acquire() ?: return
         val abilityInfo = abilityForFamily(family)
         unit.init(

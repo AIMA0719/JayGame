@@ -84,13 +84,13 @@ fun UnitCollectionScreen(
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                NeonButton(
-                    text = "\u2190",
-                    onClick = onBack,
-                    modifier = Modifier.height(36.dp),
-                    fontSize = 14.sp,
-                    accentColor = NeonRed,
-                    accentColorDark = NeonRedDark,
+                androidx.compose.material3.Icon(
+                    painter = painterResource(id = com.example.jaygame.R.drawable.ic_arrow_back),
+                    contentDescription = "뒤로",
+                    tint = LightText,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable(onClick = onBack),
                 )
                 Text(
                     text = "\uD83D\uDCD6 영웅 도감",

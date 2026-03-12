@@ -51,7 +51,7 @@ fun MergeEffectOverlay() {
     val data = effect ?: return
 
     val unitDef = UNIT_DEFS_MAP[data.resultUnitId]
-    val grade = if (data.resultUnitId >= 0) data.resultUnitId / 5 else -1
+    val grade = if (data.resultUnitId >= 0) com.example.jaygame.data.unitGradeOf(data.resultUnitId) else -1
     val gradeColor = GradeColors.getOrElse(grade) { Color.White }
     val gradeName = GradeNames.getOrElse(grade) { "" }
 

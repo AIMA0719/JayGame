@@ -1,0 +1,56 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Body - small wind spirit silhouette -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,12 C27,12 29,14 29,17 C29,19 28,20 27,21 L28,24 L30,32 C30,34 28,36 24,36 C20,36 18,34 18,32 L20,24 L21,21 C20,20 19,19 19,17 C19,14 21,12 24,12Z" />
+
+    <!-- Face accent -->
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M22,16 C22,15.5 22.5,15 23,15 L25,15 C25.5,15 26,15.5 26,16 C26,16.5 25.5,17 25,17 L23,17 C22.5,17 22,16.5 22,16Z" />
+
+    <!-- Small wings -->
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M18,22 C15,20 13,18 14,16 C15,17 17,19 19,21Z" />
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M30,22 C33,20 35,18 34,16 C33,17 31,19 29,21Z" />
+
+    <!-- Wind swirl left -->
+    <path
+        android:fillColor="#80CBC4"
+        android:strokeColor="#80CBC4"
+        android:strokeWidth="0.8"
+        android:pathData="M10,28 Q7,24 10,22 Q13,20 14,24 Q15,27 12,28 Q9,29 10,28Z" />
+
+    <!-- Wind swirl right -->
+    <path
+        android:fillColor="#80CBC4"
+        android:strokeColor="#80CBC4"
+        android:strokeWidth="0.8"
+        android:pathData="M38,28 Q41,24 38,22 Q35,20 34,24 Q33,27 36,28 Q39,29 38,28Z" />
+
+    <!-- Small wind lines -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#80CBC4"
+        android:strokeWidth="1"
+        android:pathData="M6,30 Q10,28 14,30" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#80CBC4"
+        android:strokeWidth="1"
+        android:pathData="M34,30 Q38,28 42,30" />
+
+    <!-- Wispy tail / lower wind -->
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M22,36 Q20,40 18,42 Q22,40 24,38 Q26,40 30,42 Q28,40 26,36Z" />
+
+</vector>

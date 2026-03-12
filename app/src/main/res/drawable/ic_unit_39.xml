@@ -1,0 +1,161 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Divine aura - outer glow -->
+    <path
+        android:fillColor="#80CBC4"
+        android:fillAlpha="0.1"
+        android:pathData="M24,0 Q46,0 48,22 Q48,46 24,48 Q0,46 0,22 Q2,0 24,0Z" />
+    <path
+        android:fillColor="#4DB6AC"
+        android:fillAlpha="0.12"
+        android:pathData="M24,3 Q42,3 44,22 Q44,42 24,44 Q4,42 4,22 Q6,3 24,3Z" />
+
+    <!-- Grand wings - left -->
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M16,18 C12,14 6,10 2,8 Q4,12 6,16 Q8,20 10,22 L14,20Z" />
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M14,20 C10,18 4,14 1,12 Q3,16 6,20 Q8,22 12,24Z" />
+    <path
+        android:fillColor="#4DB6AC"
+        android:pathData="M12,24 C8,22 3,20 0,18 Q2,22 5,24 Q8,26 12,26Z" />
+
+    <!-- Grand wings - right -->
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M32,18 C36,14 42,10 46,8 Q44,12 42,16 Q40,20 38,22 L34,20Z" />
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M34,20 C38,18 44,14 47,12 Q45,16 42,20 Q40,22 36,24Z" />
+    <path
+        android:fillColor="#4DB6AC"
+        android:pathData="M36,24 C40,22 45,20 48,18 Q46,22 43,24 Q40,26 36,26Z" />
+
+    <!-- Feather details on wings -->
+    <path
+        android:fillColor="#E0F2F1"
+        android:fillAlpha="0.5"
+        android:pathData="M8,12 L10,16 L6,14Z" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:fillAlpha="0.5"
+        android:pathData="M40,12 L38,16 L42,14Z" />
+
+    <!-- Divine body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,8 C27.5,8 30,10.5 30,14 C30,16.5 28.5,18 26.5,18.5 L29,22 L32,28 L33,38 C33,40 29,42 24,42 C19,42 15,40 15,38 L16,28 L19,22 L21.5,18.5 C19.5,18 18,16.5 18,14 C18,10.5 20.5,8 24,8Z" />
+
+    <!-- Crown / divine halo -->
+    <path
+        android:fillColor="#4DB6AC"
+        android:pathData="M24,5 C28,5 31,7 31,10 L29,12 L24,11 L19,12 L17,10 C17,7 20,5 24,5Z" />
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M20,6 L18,2 L20,5Z M24,5 L24,1 L24,5Z M28,6 L30,2 L28,5Z" />
+    <!-- Crown jewels -->
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M18,3 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M24,2 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M30,3 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+
+    <!-- Divine eyes -->
+    <path
+        android:fillColor="#00897B"
+        android:pathData="M22,12 m-1.2,0 a1.2,0.8 0 1,1 2.4,0 a1.2,0.8 0 1,1 -2.4,0" />
+    <path
+        android:fillColor="#00897B"
+        android:pathData="M26,12 m-1.2,0 a1.2,0.8 0 1,1 2.4,0 a1.2,0.8 0 1,1 -2.4,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M22,12 m-0.5,0 a0.5,0.4 0 1,1 1,0 a0.5,0.4 0 1,1 -1,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M26,12 m-0.5,0 a0.5,0.4 0 1,1 1,0 a0.5,0.4 0 1,1 -1,0" />
+
+    <!-- Ornate chest plate -->
+    <path
+        android:fillColor="#4DB6AC"
+        android:pathData="M21,22 L24,20 L27,22 L27,28 L24,30 L21,28Z" />
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M24,21 L25.5,23 L24,25 L22.5,23Z" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M24,22.5 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
+
+    <!-- Divine robes flowing -->
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M15,30 C12,36 8,40 4,46 Q8,44 12,40 Q14,36 16,32Z" />
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M33,30 C36,36 40,40 44,46 Q40,44 36,40 Q34,36 32,32Z" />
+    <path
+        android:fillColor="#80CBC4"
+        android:fillAlpha="0.4"
+        android:pathData="M15,30 C10,38 6,42 2,48 Q6,46 10,42 Q12,38 14,34Z" />
+    <path
+        android:fillColor="#80CBC4"
+        android:fillAlpha="0.4"
+        android:pathData="M33,30 C38,38 42,42 46,48 Q42,46 38,42 Q36,38 34,34Z" />
+
+    <!-- Majestic wind spirals -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4DB6AC"
+        android:strokeWidth="1.5"
+        android:pathData="M2,20 Q8,16 14,20 Q20,24 26,20 Q32,16 38,20 Q44,24 46,20" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#80CBC4"
+        android:strokeWidth="1.2"
+        android:pathData="M0,30 Q6,26 12,30 Q18,34 24,30 Q30,26 36,30 Q42,26 48,30" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#4DB6AC"
+        android:strokeWidth="1"
+        android:pathData="M2,38 Q8,34 14,38 Q20,42 26,38 Q32,34 38,38 Q44,34 46,38" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#B2DFDB"
+        android:strokeWidth="0.8"
+        android:pathData="M4,44 Q10,40 16,44 Q22,48 28,44 Q34,40 40,44" />
+
+    <!-- Divine particles -->
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M6,16 m-1.5,0 a1.5,1.5 0 1,1 3,0 a1.5,1.5 0 1,1 -3,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M42,16 m-1.5,0 a1.5,1.5 0 1,1 3,0 a1.5,1.5 0 1,1 -3,0" />
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M4,28 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+    <path
+        android:fillColor="#80CBC4"
+        android:pathData="M44,28 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M8,36 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
+    <path
+        android:fillColor="#B2DFDB"
+        android:pathData="M40,36 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M12,42 m-0.6,0 a0.6,0.6 0 1,1 1.2,0 a0.6,0.6 0 1,1 -1.2,0" />
+    <path
+        android:fillColor="#E0F2F1"
+        android:pathData="M36,42 m-0.6,0 a0.6,0.6 0 1,1 1.2,0 a0.6,0.6 0 1,1 -1.2,0" />
+
+</vector>

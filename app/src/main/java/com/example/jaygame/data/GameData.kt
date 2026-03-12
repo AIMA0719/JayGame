@@ -7,16 +7,16 @@ data class UnitProgress(
 )
 
 data class GameData(
-    val gold: Int = 500,
+    val gold: Int = 10000,
     val diamonds: Int = 0,
     val trophies: Int = 0,
     val playerLevel: Int = 1,
     val totalXP: Int = 0,
-    val units: List<UnitProgress> = List(35) { i ->
-        // COMMON grade (0-4) owned by default, others unlocked via merge
-        UnitProgress(owned = i < 5, cards = 0, level = 1)
+    val units: List<UnitProgress> = List(42) { i ->
+        // COMMON grade of each family owned by default (IDs 0-4 + 35)
+        UnitProgress(owned = i in 0..4 || i == 35, cards = 0, level = 1)
     },
-    val deck: List<Int> = listOf(0, 1, 2, 3, 4),
+    val deck: List<Int> = listOf(0, 1, 2, 3, 4),  // family ordinals (0=화염,1=냉기,2=독,3=번개,4=보조,5=바람)
     val totalWins: Int = 0,
     val totalLosses: Int = 0,
     val totalKills: Int = 0,
@@ -34,8 +34,8 @@ data class GameData(
     val seasonXP: Int = 0,
     val seasonClaimedTier: Int = 0,
     // 스태미나
-    val stamina: Int = 30,
-    val maxStamina: Int = 30,
+    val stamina: Int = 100,
+    val maxStamina: Int = 100,
     val lastStaminaRegenTime: Long = System.currentTimeMillis(),
     // 스테이지
     val currentStageId: Int = 0,

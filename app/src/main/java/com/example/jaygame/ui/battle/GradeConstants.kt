@@ -10,5 +10,5 @@ val GradeColorsByIndex: Array<Color> = UnitGrade.entries.map { it.color }.toType
 /** Grade display names indexed by grade ordinal. */
 val GradeNamesByIndex: Array<String> = UnitGrade.entries.map { it.label }.toTypedArray()
 
-/** Family tint colors indexed by family ordinal (0=Fire … 4=Support). */
+/** Family tint colors indexed by family ordinal (0=Fire … 5=Wind). */
 val FamilyColorsByIndex: Array<Color> = UnitFamily.entries.map { it.color }.toTypedArray()

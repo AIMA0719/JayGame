@@ -66,10 +66,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        BgmManager.stop()
+    }
+
     override fun onDestroy() {
         engine?.stop()
         BattleBridge.engine = null
-        BgmManager.stop()
         super.onDestroy()
     }
 

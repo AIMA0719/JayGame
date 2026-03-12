@@ -13,6 +13,8 @@ private val UNIT_ICONS = mapOf(
     18 to R.drawable.ic_unit_18, 19 to R.drawable.ic_unit_19, 20 to R.drawable.ic_unit_20,
     21 to R.drawable.ic_unit_21, 22 to R.drawable.ic_unit_22, 23 to R.drawable.ic_unit_23,
     24 to R.drawable.ic_unit_24,
+    35 to R.drawable.ic_unit_35, 36 to R.drawable.ic_unit_36, 37 to R.drawable.ic_unit_37,
+    38 to R.drawable.ic_unit_38, 39 to R.drawable.ic_unit_39,
 )
 private fun iconFor(id: Int) = UNIT_ICONS[id] ?: R.drawable.ic_unit_0
 
@@ -32,7 +34,10 @@ enum class UnitFamily(val label: String, val color: Color) {
     POISON("독", Color(0xFF81C784)),
     LIGHTNING("번개", Color(0xFFFFD54F)),
     SUPPORT("보조", Color(0xFFCE93D8)),
+    WIND("바람", Color(0xFF80CBC4)),
 }
+
+val NUM_FAMILIES = UnitFamily.entries.size
 
 /**
  * 고유 능력 정보 (영웅 등급 이상)
@@ -308,6 +313,64 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 60,
             description = "[패시브] 전 아군 ATK/공속/사거리 +25%. 유닛 제거 방지 1회 (120초 쿨). 골드 수입 +20%.\n[액티브] 60초 쿨 — 창세 15초: 전체 쿨 초기화 + ATK +100%, 공속 +50%. 적 전체 이속/방어/공격 -30%. 처치 시 20% 확률 보너스 골드. 종료 후 5초간 점진 해제."
         )),
+
+    // ===== 바람 계열 (Knockback → 고유 능력) =====
+    UnitDef(id = 35, name = "제피르", grade = UnitGrade.COMMON, family = UnitFamily.WIND,
+        baseATK = 18, baseSpeed = 1.1f, range = 160f, iconRes = iconFor(35),
+        abilityName = "돌풍", description = "산들바람을 모아 쏘는 바람의 견습생. 적을 밀쳐낸다.", mergeResultId = 36),
+    UnitDef(id = 36, name = "게일", grade = UnitGrade.RARE, family = UnitFamily.WIND,
+        baseATK = 38, baseSpeed = 1.2f, range = 170f, iconRes = iconFor(36),
+        abilityName = "질풍참", description = "바람을 두른 칼날로 적을 베어넘긴다. 넉백 강화.", mergeResultId = 37),
+    UnitDef(id = 37, name = "사이클론", grade = UnitGrade.HERO, family = UnitFamily.WIND,
+        baseATK = 75, baseSpeed = 1.3f, range = 180f, iconRes = iconFor(37),
+        abilityName = "회오리", description = "회오리바람을 일으키는 마법사.",
+        uniqueAbility = UniqueAbility(
+            name = "회오리 / 진공파 (Cyclone)",
+            type = "패시브 + 액티브", cooldown = 10,
+            description = "[패시브] 공격 시 25% 확률로 소형 회오리 생성 (2초간 범위 내 적 끌어당김 + ATK 30%).\n[액티브] 10초 쿨 — 지정 위치에 회오리 3초: 적 끌어당기며 ATK 150% + 40% 둔화."
+        ), mergeResultId = 38),
+    UnitDef(id = 38, name = "태풍", grade = UnitGrade.LEGEND, family = UnitFamily.WIND,
+        baseATK = 150, baseSpeed = 1.4f, range = 200f, iconRes = iconFor(38),
+        abilityName = "폭풍의 눈", description = "태풍을 부르는 군주.",
+        uniqueAbility = UniqueAbility(
+            name = "폭풍의 눈 / 초속의 칼날 (Eye of Storm)",
+            type = "패시브 + 액티브", cooldown = 14,
+            description = "[패시브] 범위 내 아군 이속/공속 +15%. 적 투사체 20% 확률 빗나감.\n[액티브] 14초 쿨 — 폭풍의 눈 6초: 범위 내 적 ATK 200% + 지속 넉백 + 아군 회피 +30%."
+        ), mergeResultId = 39),
+    UnitDef(id = 39, name = "하늘군주", grade = UnitGrade.ANCIENT, family = UnitFamily.WIND,
+        baseATK = 270, baseSpeed = 1.5f, range = 220f, iconRes = iconFor(39),
+        abilityName = "진공의 지배", description = "하늘을 지배하는 바람의 왕.",
+        uniqueAbility = UniqueAbility(
+            name = "하늘의 지배 / 진공 절단 (Sky Dominion)",
+            type = "패시브 + 액티브", cooldown = 20,
+            description = "[패시브] 바람 계열 전체 공속 +20%. 공격 적중 시 적 방어력 10% 무시.\n[액티브] 20초 쿨 — 진공 절단 8초: 직선 범위 ATK 300% + 방어 무시 + 3초 침묵. 바람 계열 ATK +40%."
+        ), mergeResultId = 40),
+    UnitDef(id = 40, name = "실프", grade = UnitGrade.MYTHIC, family = UnitFamily.WIND,
+        baseATK = 430, baseSpeed = 1.6f, range = 240f, iconRes = iconFor(39),
+        abilityName = "천공의 날개", description = "바람의 정령왕. 공간을 찢는다.",
+        uniqueAbility = UniqueAbility(
+            name = "천공의 날개 / 차원 절단 (Dimensional Slash)",
+            type = "패시브 + 액티브", cooldown = 28,
+            description = "[패시브] 회피 30%. 3회 공격마다 분신 공격 (ATK 60%). 액티브 후 5초간 공속 2배.\n[액티브] 28초 쿨 — 차원 절단: 전장 관통 ATK 400%. 적 버프 제거 + 3초 침묵. 분신 3체 5초 소환 (ATK 40%)."
+        ), mergeResultId = 41),
+    UnitDef(id = 41, name = "바유", grade = UnitGrade.IMMORTAL, family = UnitFamily.WIND,
+        baseATK = 720, baseSpeed = 1.8f, range = 250f, iconRes = iconFor(39),
+        abilityName = "만물의 숨결", description = "바람의 신. 만물의 숨결을 지배한다.",
+        uniqueAbility = UniqueAbility(
+            name = "만물의 숨결 / 종극의 바람 (Breath of All)",
+            type = "패시브 + 액티브", cooldown = 50,
+            description = "[패시브] 전 아군 공속 +15%. 범위 내 적 회피 불가. 처치 시 SP +5 회복.\n[액티브] 50초 쿨 — 종극의 바람 10초: 전 적 ATK 700% + 넉백 + 3초 스턴. 아군 전체 ATK +60%, 공속 +40%. 보스 최대HP 8% 추가."
+        )),
 )
 
 val UNIT_DEFS_MAP: Map<Int, UnitDef> = UNIT_DEFS.associateBy { it.id }
+
+/** Look up grade ordinal from unitDefId (replaces id / 5) */
+fun unitGradeOf(id: Int): Int = UNIT_DEFS_MAP[id]?.grade?.ordinal ?: 0
+
+/** Look up family ordinal from unitDefId (replaces id % 5) */
+fun unitFamilyOf(id: Int): Int = UNIT_DEFS_MAP[id]?.family?.ordinal ?: 0
+
+/** Find unitDefId for a given grade+family combination */
+fun unitIdOf(grade: Int, familyOrdinal: Int): Int? =
+    UNIT_DEFS.find { it.grade.ordinal == grade && it.family.ordinal == familyOrdinal }?.id

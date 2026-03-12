@@ -91,6 +91,8 @@ class ComposeActivity : ComponentActivity() {
         val data = repository.gameData.value
         BattleBridge.setStageId(data.currentStageId)
         BattleBridge.setDifficulty(data.difficulty)
+        // Stop main BGM before launching battle
+        BgmManager.stop()
         startActivity(android.content.Intent(this, MainActivity::class.java))
     }
 }

@@ -59,6 +59,7 @@ class GameUnit {
             2 -> 75f
             3 -> 65f
             4 -> 90f
+            5 -> 100f   // Wind: fast
             else -> 75f
         }
     }

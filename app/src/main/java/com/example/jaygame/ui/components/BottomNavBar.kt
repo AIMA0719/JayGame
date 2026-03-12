@@ -28,10 +28,10 @@ import com.example.jaygame.ui.theme.SubText
 
 enum class NavTab(val label: String, val iconRes: Int) {
     DECK("덱", R.drawable.ic_nav_deck),
-    HOME("홈", R.drawable.ic_nav_home),
     COLLECTION("컬렉션", R.drawable.ic_nav_collection),
+    HOME("홈", R.drawable.ic_nav_home),
     SHOP("상점", R.drawable.ic_nav_shop),
-    SETTINGS("설정", R.drawable.ic_settings),
+    SETTINGS("설정", R.drawable.ic_nav_settings),
 }
 
 @Composable
@@ -43,7 +43,7 @@ fun GameBottomNavBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(64.dp)
             .drawBehind {
                 drawRect(color = DarkNavy)
                 drawLine(
@@ -75,7 +75,7 @@ fun GameBottomNavBar(
                     painter = painterResource(id = tab.iconRes),
                     contentDescription = tab.label,
                     tint = color,
-                    modifier = Modifier.size(if (tab == NavTab.HOME) 26.dp else 22.dp),
+                    modifier = Modifier.size(if (tab == NavTab.HOME) 30.dp else 26.dp),
                 )
                 Text(
                     text = tab.label,

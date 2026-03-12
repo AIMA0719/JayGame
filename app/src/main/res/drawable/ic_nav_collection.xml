@@ -1,18 +1,15 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
+    android:width="28dp"
+    android:height="28dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- Grid of 4 cards -->
     <path
-        android:fillColor="#5D4037"
-        android:pathData="M6,2h10c1.1,0 2,0.9 2,2v16c0,1.1 -0.9,2 -2,2H6c-1.1,0 -2,-0.9 -2,-2V4c0,-1.1 0.9,-2 2,-2z"/>
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,3h8v8H3zM13,3h8v8h-8zM3,13h8v8H3zM13,13h8v8h-8z"/>
+    <!-- Inner details -->
     <path
-        android:fillColor="#8D6E63"
-        android:pathData="M7,3h8c0.55,0 1,0.45 1,1v14c0,0.55 -0.45,1 -1,1H7c-0.55,0 -1,-0.45 -1,-1V4c0,-0.55 0.45,-1 1,-1z"/>
-    <path
-        android:fillColor="#D7CCC8"
-        android:pathData="M8,5h6v3H8z"/>
-    <path
-        android:fillColor="#4E342E"
-        android:pathData="M4,4v16h1V4zM18,4h1v16h-1z"/>
+        android:fillColor="#000000"
+        android:fillAlpha="0.2"
+        android:pathData="M4.5,4.5h5v5h-5zM14.5,4.5h5v5h-5zM4.5,14.5h5v5h-5zM14.5,14.5h5v5h-5z"/>
 </vector>

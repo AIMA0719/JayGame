@@ -1,6 +1,7 @@
 package com.example.jaygame.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -150,13 +151,13 @@ fun AchievementsScreen(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NeonButton(
-                text = "\u2190",
-                onClick = onBack,
-                modifier = Modifier.height(36.dp),
-                fontSize = 14.sp,
-                accentColor = NeonRed,
-                accentColorDark = NeonRedDark,
+            Icon(
+                painter = painterResource(id = com.example.jaygame.R.drawable.ic_arrow_back),
+                contentDescription = "뒤로",
+                tint = LightText,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable(onClick = onBack),
             )
             Text(
                 text = "업적",

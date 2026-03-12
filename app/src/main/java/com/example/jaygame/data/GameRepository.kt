@@ -180,17 +180,20 @@ class GameRepository(context: Context) {
                     )
                 }
             }
-            // Pad to 35 if fewer entries (COMMON grade units 0-4 owned by default)
-            while (units.size < 35) {
-                units.add(UnitProgress(owned = units.size < 5, cards = 0, level = 1))
+            // Pad to 42 if fewer entries (COMMON grade units 0-4 + 35 owned by default)
+            while (units.size < 42) {
+                units.add(UnitProgress(owned = units.size == 35, cards = 0, level = 1))
             }
 
-            // deck
+            // deck (stores family ordinals 0-5)
             val deck = mutableListOf<Int>()
             val deckArr = root.optJSONArray("deck")
             if (deckArr != null) {
                 for (i in 0 until deckArr.length()) {
-                    deck.add(deckArr.getInt(i))
+                    val v = deckArr.getInt(i)
+                    // Migration: old saves stored unit IDs, convert to family ordinal
+                    val familyOrdinal = if (v in 0 until NUM_FAMILIES) v else unitFamilyOf(v)
+                    deck.add(familyOrdinal)
                 }
             }
             if (deck.isEmpty()) deck.addAll(listOf(0, 1, 2, 3, 4))

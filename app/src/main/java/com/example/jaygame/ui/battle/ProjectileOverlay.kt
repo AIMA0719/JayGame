@@ -164,8 +164,8 @@ fun ProjectileOverlay() {
             val dstX = data.dstXs[i] * w
             val dstY = data.dstYs[i] * h
             val unitId = data.types[i]
-            val family = unitId % 5
-            val grade = unitId / 5
+            val family = com.example.jaygame.data.unitFamilyOf(unitId)
+            val grade = com.example.jaygame.data.unitGradeOf(unitId)
 
             when (family) {
                 0 -> drawFireEffect(srcX, srcY, dstX, dstY, grade, fxTime, i)

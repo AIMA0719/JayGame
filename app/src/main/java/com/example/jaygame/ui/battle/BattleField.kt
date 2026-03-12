@@ -235,7 +235,7 @@ fun BattleField() {
             val tileIdx = data.tileIndices[i]
             val isSelected = selectedTile == tileIdx
             val isAttacking = data.isAttacking.getOrElse(i) { false }
-            val family = data.unitDefIds[i] % 5
+            val family = com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
             val unitDefId = data.unitDefIds[i]
             val level = data.levels[i]
 

@@ -1,18 +1,20 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
+    android:width="28dp"
+    android:height="28dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <!-- House body -->
     <path
-        android:fillColor="#78909C"
-        android:pathData="M7,22V10L12,4l5,6v12H7z"/>
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,3L2,12h3v8h6v-6h2v6h6v-8h3L12,3z"/>
+    <!-- Door -->
     <path
-        android:fillColor="#546E7A"
-        android:pathData="M10,2h4l-2,-0.01zM9,8h6l-3,-3.5zM5,10l7,-8l7,8v12H5z"/>
+        android:fillColor="#000000"
+        android:fillAlpha="0.25"
+        android:pathData="M11,14h2v6h-2z"/>
+    <!-- Windows -->
     <path
-        android:fillColor="#37474F"
-        android:pathData="M10,15h4v7h-4z"/>
-    <path
-        android:fillColor="#90A4AE"
-        android:pathData="M9,11h2v2H9zM13,11h2v2h-2z"/>
+        android:fillColor="#000000"
+        android:fillAlpha="0.2"
+        android:pathData="M7,13h3v3H7zM14,13h3v3h-3z"/>
 </vector>

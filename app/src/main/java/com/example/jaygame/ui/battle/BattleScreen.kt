@@ -110,8 +110,8 @@ fun BattleScreen(
                 .align(Alignment.Center),
         ) {
             MonsterPathOverlay()
-            BattleField()
             EnemyOverlay()
+            BattleField()
             ProjectileOverlay()
             DamageNumberOverlay()
             BattleParticleOverlay()

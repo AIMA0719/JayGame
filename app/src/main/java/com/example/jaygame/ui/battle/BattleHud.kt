@@ -137,18 +137,27 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                         fontWeight = FontWeight.ExtraBold,
                     )
 
-                    // Difficulty
-                    val difficultyText = when (BattleBridge.difficulty.value) {
-                        0 -> "\uC26C\uC6C0"
-                        2 -> "\uC5B4\uB824\uC6C0"
-                        else -> "\uBCF4\uD1B5"
+                    // Difficulty badge (settings-style)
+                    val diffInfo = when (BattleBridge.difficulty.value) {
+                        0 -> "\uC26C\uC6C0" to NeonGreen
+                        2 -> "\uC5B4\uB824\uC6C0" to NeonRed
+                        else -> "\uBCF4\uD1B5" to NeonCyan
                     }
-                    Text(
-                        text = difficultyText,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(1.dp, diffInfo.second.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .background(diffInfo.second.copy(alpha = 0.15f))
+                            .padding(horizontal = 10.dp, vertical = 2.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = diffInfo.first,
+                            color = diffInfo.second,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
                 }
             }
 

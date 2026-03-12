@@ -59,6 +59,16 @@ object AbilitySystem {
                     enemy.takeDamage(proj.damage * 2f, proj.isMagic)
                 }
             }
+            10 -> { // Knockback (Wind)
+                val dir = enemy.position - proj.sourcePos
+                val len = dir.length
+                if (len > 0.01f) {
+                    val nx = dir.x / len
+                    val ny = dir.y / len
+                    enemy.position.x += nx * proj.abilityValue
+                    enemy.position.y += ny * proj.abilityValue
+                }
+            }
         }
     }
 
