@@ -82,7 +82,7 @@ class BattleEngine(
                 val now = System.nanoTime()
                 val frameDt = ((now - lastTime) / 1_000_000_000f).coerceAtMost(0.1f)
                 lastTime = now
-                accumulator += frameDt
+                accumulator += frameDt * BattleBridge.battleSpeed.value
 
                 while (accumulator >= FIXED_DT) {
                     update(FIXED_DT)

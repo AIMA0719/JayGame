@@ -333,6 +333,19 @@ object BattleBridge {
         _result.value = null
     }
 
+    /** 배속 (1f, 2f, 4f, 8f) */
+    private val _battleSpeed = MutableStateFlow(1f)
+    val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
+
+    fun cycleBattleSpeed() {
+        _battleSpeed.value = when (_battleSpeed.value) {
+            1f -> 2f
+            2f -> 4f
+            4f -> 8f
+            else -> 1f
+        }
+    }
+
     /** 새 배틀 시작 시 상태 초기화 */
     fun reset() {
         _state.value = BattleState()
@@ -351,6 +364,7 @@ object BattleBridge {
         _summonResult.value = null
         _stageId.value = 0
         _battleUpgradeLevels.value = IntArray(5) { 0 }
+        _battleSpeed.value = 1f
     }
 
     // Kotlin engine reference (replaces C++ JNI)

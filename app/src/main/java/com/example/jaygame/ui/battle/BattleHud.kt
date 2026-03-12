@@ -74,6 +74,7 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
     val unitCount = gridState.count { it.unitDefId >= 0 }
+    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
 
     val totalSeconds = battle.elapsedTime.toInt()
     val minutes = totalSeconds / 60
@@ -186,19 +187,55 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             }
         }
 
-        // Menu button — top-right
-        Box(
+        // Top-right buttons: speed + menu
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 8.dp)
-                .size(45.dp)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.5f))
-                .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
-                .clickable(onClick = onPauseClick),
-            contentAlignment = Alignment.Center,
+                .padding(end = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("\u2630", fontSize = 21.sp, color = Color.White)
+            // Speed button
+            val speedLabel = when (battleSpeed) {
+                2f -> "x2"
+                4f -> "x4"
+                8f -> "x8"
+                else -> "x1"
+            }
+            val speedColor = when (battleSpeed) {
+                2f -> GoldBright
+                4f -> Color(0xFFFF6B6B)
+                8f -> Color(0xFFFF3333)
+                else -> Color.White
+            }
+            Box(
+                modifier = Modifier
+                    .size(45.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .border(1.dp, speedColor.copy(alpha = 0.6f), CircleShape)
+                    .clickable(onClick = { BattleBridge.cycleBattleSpeed() }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    speedLabel,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = speedColor,
+                )
+            }
+
+            // Menu button
+            Box(
+                modifier = Modifier
+                    .size(45.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
+                    .clickable(onClick = onPauseClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("\u2630", fontSize = 21.sp, color = Color.White)
+            }
         }
     }
 
