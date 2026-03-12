@@ -6,11 +6,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
@@ -29,10 +31,21 @@ class ComposeActivity : ComponentActivity() {
         setContent {
             JayGameTheme {
                 var showSplash by remember { mutableStateOf(true) }
+                val data by repository.gameData.collectAsState()
 
                 LaunchedEffect(Unit) {
                     delay(1500L)
                     showSplash = false
+                }
+
+                // Default BGM for all non-battle screens
+                androidx.compose.runtime.DisposableEffect(data.musicEnabled) {
+                    if (data.musicEnabled) {
+                        BgmManager.play(this@ComposeActivity, "audio/home_bgm.mp3")
+                    } else {
+                        BgmManager.stop()
+                    }
+                    onDispose { }
                 }
 
                 if (showSplash) {
@@ -48,8 +61,22 @@ class ComposeActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        BgmManager.pause()
+    }
+
+    override fun onDestroy() {
+        BgmManager.stop()
+        super.onDestroy()
+    }
+
     override fun onResume() {
         super.onResume()
+        // Resume default BGM when coming back from battle
+        if (repository.gameData.value.musicEnabled) {
+            BgmManager.play(this, "audio/home_bgm.mp3")
+        }
         repository.refresh()
         BattleBridge.clearResult()
         // Auto-unlock stages based on trophies

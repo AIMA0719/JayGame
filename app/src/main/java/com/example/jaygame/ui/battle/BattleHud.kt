@@ -177,11 +177,11 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             }
         }
 
-        // Pause button — top-left (1.5x)
+        // Menu button — top-right
         Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 8.dp)
+                .align(Alignment.TopEnd)
+                .padding(end = 8.dp)
                 .size(45.dp)
                 .clip(CircleShape)
                 .background(Color.Black.copy(alpha = 0.5f))
@@ -189,7 +189,7 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                 .clickable(onClick = onPauseClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text("\u2699", fontSize = 21.sp)
+            Text("\u2630", fontSize = 21.sp, color = Color.White)
         }
     }
 

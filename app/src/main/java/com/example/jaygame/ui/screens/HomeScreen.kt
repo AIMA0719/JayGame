@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,7 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.StaminaManager
@@ -54,18 +52,6 @@ fun HomeScreen(
     val data by repository.gameData.collectAsState()
     var showDailyLogin by remember { mutableStateOf(false) }
     val context = LocalContext.current
-
-    // BGM control
-    DisposableEffect(data.musicEnabled) {
-        if (data.musicEnabled) {
-            BgmManager.play(context, "audio/home_bgm.mp3")
-        } else {
-            BgmManager.stop()
-        }
-        onDispose {
-            BgmManager.stop()
-        }
-    }
 
     LaunchedEffect(data) {
         if (canClaim(data)) showDailyLogin = true
