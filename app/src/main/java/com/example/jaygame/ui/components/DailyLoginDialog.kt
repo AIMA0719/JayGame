@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.jaygame.R
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.addRandomCardsToUnits
@@ -103,41 +102,50 @@ fun DailyLoginDialog(
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
         AnimatedVisibility(
             visible = visible,
             enter = scaleIn(animationSpec = tween(300)),
             exit = scaleOut(animationSpec = tween(200)),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+            GameCard(
+                modifier = Modifier.fillMaxWidth(),
+                borderColor = Gold,
             ) {
-                GameCard(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp), // space for X button
-                    borderColor = Gold,
+                        .padding(horizontal = 12.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        // Title
+                    // Title + Close button
+                    Box(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = "일일 출석 보상",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
                             color = Gold,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.align(Alignment.Center),
                         )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(DarkSurface)
+                                .border(1.dp, SubText.copy(alpha = 0.5f), RoundedCornerShape(50))
+                                .clickable(onClick = onDismiss),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "\u2715",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = LightText,
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "연속 출석 ${data.loginStreak}일",
@@ -252,27 +260,6 @@ fun DailyLoginDialog(
                         fontSize = 15.sp,
                         accentColor = if (claimable) Gold else SubText,
                         accentColorDark = if (claimable) DarkGold else DimText,
-                    )
-                }
-                }
-
-                // X button — top-right corner, overlapping the card
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(end = 4.dp)
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(DarkSurface)
-                        .border(1.dp, SubText.copy(alpha = 0.5f), RoundedCornerShape(50))
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "\u2715",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = LightText,
                     )
                 }
             }
