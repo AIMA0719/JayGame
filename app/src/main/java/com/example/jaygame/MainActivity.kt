@@ -20,6 +20,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
+// A4: Smooth fade transition when returning to home
+
 class MainActivity : ComponentActivity() {
     private lateinit var repository: GameRepository
     private var engine: BattleEngine? = null
@@ -64,6 +66,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    // A4: Apply smooth fade when finishing (Result→Home)
+    override fun finish() {
+        super.finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     override fun onPause() {

@@ -19,19 +19,31 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.STAGES
+import kotlin.math.abs
 import kotlin.math.sin
 
 // Pre-allocated constants
-private val DashLineColor = Color.White.copy(alpha = 0.1f)
 private val OuterStroke = Stroke(width = 2.5f)
 private val InnerStroke = Stroke(width = 1.5f)
-private val ArrowColor = Color.White.copy(alpha = 0.15f)
+
+// Z8: Corner fill colors
+private val CornerFillDark = Color.Black.copy(alpha = 0.08f)
+private val CornerFillLight = Color.White.copy(alpha = 0.04f)
+
+// Z9: Light particle colors
+private val ParticleBright = Color.White.copy(alpha = 0.35f)
+private val ParticleMid = Color.White.copy(alpha = 0.2f)
+private val ParticleDim = Color.White.copy(alpha = 0.1f)
+
+// Z10: Stone/pebble colors
+private val StoneColor1 = Color.White.copy(alpha = 0.1f)
+private val StoneColor2 = Color.Black.copy(alpha = 0.12f)
+private val StoneColor3 = Color.White.copy(alpha = 0.06f)
 
 // Cliff/elevation colors
 private val CliffDark = Color(0xFF1A0F08)
@@ -282,32 +294,24 @@ fun MonsterPathOverlay() {
         }
 
         // ═══════════════════════════════════════════
-        // 3. PATH FLOW INDICATORS
+        // 3. CORNER VISUAL TREATMENT (Z8)
         // ═══════════════════════════════════════════
+        drawCornerFills(pL, pT, pR, pB, gL, gT, gR, gB)
 
-        val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 12f), dashOffset)
-        val reverseDashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 12f), 40f - dashOffset)
-
+        // ═══════════════════════════════════════════
+        // 4. ANIMATED LIGHT PARTICLES (Z9)
+        // ═══════════════════════════════════════════
         val midTopY = (pT + gT) / 2
         val midRightX = (gR + pR) / 2
         val midBottomY = (gB + pB) / 2
         val midLeftX = (pL + gL) / 2
 
-        // Dashed flow lines
-        drawLine(DashLineColor, Offset(pL + 20f, midTopY), Offset(pR - 20f, midTopY),
-            strokeWidth = 1.5f, pathEffect = dashEffect)
-        drawLine(DashLineColor, Offset(midRightX, pT + 20f), Offset(midRightX, pB - 20f),
-            strokeWidth = 1.5f, pathEffect = dashEffect)
-        drawLine(DashLineColor, Offset(pR - 20f, midBottomY), Offset(pL + 20f, midBottomY),
-            strokeWidth = 1.5f, pathEffect = reverseDashEffect)
-        drawLine(DashLineColor, Offset(midLeftX, pB - 20f), Offset(midLeftX, pT + 20f),
-            strokeWidth = 1.5f, pathEffect = reverseDashEffect)
+        drawFlowParticles(pL, pT, pR, pB, midTopY, midRightX, midBottomY, midLeftX, dashOffset)
 
-        // Direction arrows
-        val arrowSize = 6f
-        val arrowCount = 5
-        drawDirectionArrows(pL, pT, pR, pB, midTopY, midRightX, midBottomY, midLeftX,
-            arrowSize, arrowCount, dashOffset)
+        // ═══════════════════════════════════════════
+        // 5. PATH EDGE STONE DECORATIONS (Z10)
+        // ═══════════════════════════════════════════
+        drawEdgeStones(pL, pT, pR, pB, gL, gT, gR, gB)
     }
 }
 
@@ -394,62 +398,273 @@ private fun DrawScope.drawPathTiles(
 }
 
 /**
- * Draws directional arrows along the path.
+ * Z8: Fills the 4 corner areas where the path turns with smooth rounded shapes.
+ * Corners are the areas between the outer path rect and the inner grid rect at each corner.
  */
-private fun DrawScope.drawDirectionArrows(
+private fun DrawScope.drawCornerFills(
+    pL: Float, pT: Float, pR: Float, pB: Float,
+    gL: Float, gT: Float, gR: Float, gB: Float,
+) {
+    val cornerRadius = 20f
+
+    // Top-left corner: quarter arc from top strip into left strip
+    val tlPath = Path().apply {
+        moveTo(pL + 16f, gT)
+        lineTo(gL, gT)
+        lineTo(gL, pT + 16f)
+        // Arc curving inward
+        cubicTo(gL, pT + 16f, pL + 16f + cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, pL + 16f, gT)
+        close()
+    }
+    drawPath(tlPath, CornerFillDark)
+    // Inner highlight arc
+    val tlHighlight = Path().apply {
+        moveTo(pL + 18f, gT - 2f)
+        cubicTo(pL + 18f, pT + 18f + cornerRadius * 0.3f, gL - 2f, pT + 18f, gL - 2f, pT + 18f)
+    }
+    drawPath(tlHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+
+    // Top-right corner
+    val trPath = Path().apply {
+        moveTo(gR, pT + 16f)
+        lineTo(gR, gT)
+        lineTo(pR - 16f, gT)
+        cubicTo(pR - 16f, gT, pR - 16f - cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, gR, pT + 16f)
+        close()
+    }
+    drawPath(trPath, CornerFillDark)
+    val trHighlight = Path().apply {
+        moveTo(gR + 2f, pT + 18f)
+        cubicTo(gR + 2f, pT + 18f, pR - 18f, pT + 18f + cornerRadius * 0.3f, pR - 18f, gT - 2f)
+    }
+    drawPath(trHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+
+    // Bottom-right corner
+    val brPath = Path().apply {
+        moveTo(pR - 16f, gB)
+        lineTo(gR, gB)
+        lineTo(gR, pB - 16f)
+        cubicTo(gR, pB - 16f, pR - 16f - cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, pR - 16f, gB)
+        close()
+    }
+    drawPath(brPath, CornerFillDark)
+    val brHighlight = Path().apply {
+        moveTo(pR - 18f, gB + 2f)
+        cubicTo(pR - 18f, gB + 2f, pR - 18f - cornerRadius * 0.3f, pB - 18f, gR + 2f, pB - 18f)
+    }
+    drawPath(brHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+
+    // Bottom-left corner
+    val blPath = Path().apply {
+        moveTo(gL, pB - 16f)
+        lineTo(gL, gB)
+        lineTo(pL + 16f, gB)
+        cubicTo(pL + 16f, gB, pL + 16f + cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, gL, pB - 16f)
+        close()
+    }
+    drawPath(blPath, CornerFillDark)
+    val blHighlight = Path().apply {
+        moveTo(gL - 2f, pB - 18f)
+        cubicTo(gL - 2f, pB - 18f, pL + 18f + cornerRadius * 0.3f, pB - 18f, pL + 18f, gB + 2f)
+    }
+    drawPath(blHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+}
+
+/**
+ * Z9: Animated light particles flowing along the path direction.
+ * Replaces the old dash lines and direction arrows.
+ */
+private fun DrawScope.drawFlowParticles(
     pL: Float, pT: Float, pR: Float, pB: Float,
     midTopY: Float, midRightX: Float, midBottomY: Float, midLeftX: Float,
-    arrowSize: Float, arrowCount: Int, dashOffset: Float,
+    animOffset: Float,
 ) {
-    // Top: left → right
-    for (i in 0 until arrowCount) {
-        val frac = (i + 0.5f) / arrowCount
-        val phase = (frac + dashOffset / 40f) % 1f
-        val ax = pL + 30f + (pR - pL - 60f) * frac
-        val ay = midTopY
-        val alpha = (0.15f + sin(phase * 3.14f) * 0.1f).coerceIn(0.05f, 0.3f)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax - arrowSize, ay - arrowSize), Offset(ax, ay),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax, ay), Offset(ax - arrowSize, ay + arrowSize),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
+    val particleCount = 8
+    val normalizedOffset = animOffset / 40f  // 0..1 animated cycle
+
+    // Top strip: left → right
+    for (i in 0 until particleCount) {
+        val baseFrac = i.toFloat() / particleCount
+        val frac = (baseFrac + normalizedOffset) % 1f
+        val px = pL + 20f + (pR - pL - 40f) * frac
+        val py = midTopY
+        val fadeAlpha = sin(frac * 3.1416f)  // fade in/out at edges
+        val radius = 1.5f + fadeAlpha * 1.5f
+        val color = when {
+            fadeAlpha > 0.7f -> ParticleBright
+            fadeAlpha > 0.3f -> ParticleMid
+            else -> ParticleDim
+        }
+        drawCircle(color = color, radius = radius, center = Offset(px, py))
+        // Small trailing glow
+        if (frac > 0.02f) {
+            drawCircle(color = ParticleDim, radius = radius * 0.6f,
+                center = Offset(px - (pR - pL) * 0.015f, py))
+        }
     }
 
-    // Right: top → bottom
-    for (i in 0 until arrowCount) {
-        val frac = (i + 0.5f) / arrowCount
-        val phase = (frac + dashOffset / 40f) % 1f
-        val ax = midRightX
-        val ay = pT + 30f + (pB - pT - 60f) * frac
-        val alpha = (0.15f + sin(phase * 3.14f) * 0.1f).coerceIn(0.05f, 0.3f)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax - arrowSize, ay - arrowSize), Offset(ax, ay),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax, ay), Offset(ax + arrowSize, ay - arrowSize),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
+    // Right strip: top → bottom
+    for (i in 0 until particleCount) {
+        val baseFrac = i.toFloat() / particleCount
+        val frac = (baseFrac + normalizedOffset) % 1f
+        val px = midRightX
+        val py = pT + 20f + (pB - pT - 40f) * frac
+        val fadeAlpha = sin(frac * 3.1416f)
+        val radius = 1.5f + fadeAlpha * 1.5f
+        val color = when {
+            fadeAlpha > 0.7f -> ParticleBright
+            fadeAlpha > 0.3f -> ParticleMid
+            else -> ParticleDim
+        }
+        drawCircle(color = color, radius = radius, center = Offset(px, py))
+        if (frac > 0.02f) {
+            drawCircle(color = ParticleDim, radius = radius * 0.6f,
+                center = Offset(px, py - (pB - pT) * 0.015f))
+        }
     }
 
-    // Bottom: right → left
-    for (i in 0 until arrowCount) {
-        val frac = (i + 0.5f) / arrowCount
-        val phase = (frac + dashOffset / 40f) % 1f
-        val ax = pR - 30f - (pR - pL - 60f) * frac
-        val ay = midBottomY
-        val alpha = (0.15f + sin(phase * 3.14f) * 0.1f).coerceIn(0.05f, 0.3f)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax + arrowSize, ay - arrowSize), Offset(ax, ay),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax, ay), Offset(ax + arrowSize, ay + arrowSize),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
+    // Bottom strip: right → left
+    for (i in 0 until particleCount) {
+        val baseFrac = i.toFloat() / particleCount
+        val frac = (baseFrac + normalizedOffset) % 1f
+        val px = pR - 20f - (pR - pL - 40f) * frac
+        val py = midBottomY
+        val fadeAlpha = sin(frac * 3.1416f)
+        val radius = 1.5f + fadeAlpha * 1.5f
+        val color = when {
+            fadeAlpha > 0.7f -> ParticleBright
+            fadeAlpha > 0.3f -> ParticleMid
+            else -> ParticleDim
+        }
+        drawCircle(color = color, radius = radius, center = Offset(px, py))
+        if (frac > 0.02f) {
+            drawCircle(color = ParticleDim, radius = radius * 0.6f,
+                center = Offset(px + (pR - pL) * 0.015f, py))
+        }
     }
 
-    // Left: bottom → top
-    for (i in 0 until arrowCount) {
-        val frac = (i + 0.5f) / arrowCount
-        val phase = (frac + dashOffset / 40f) % 1f
-        val ax = midLeftX
-        val ay = pB - 30f - (pB - pT - 60f) * frac
-        val alpha = (0.15f + sin(phase * 3.14f) * 0.1f).coerceIn(0.05f, 0.3f)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax - arrowSize, ay + arrowSize), Offset(ax, ay),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
-        drawLine(ArrowColor.copy(alpha = alpha), Offset(ax, ay), Offset(ax + arrowSize, ay + arrowSize),
-            strokeWidth = 1.5f, cap = StrokeCap.Round)
+    // Left strip: bottom → top
+    for (i in 0 until particleCount) {
+        val baseFrac = i.toFloat() / particleCount
+        val frac = (baseFrac + normalizedOffset) % 1f
+        val px = midLeftX
+        val py = pB - 20f - (pB - pT - 40f) * frac
+        val fadeAlpha = sin(frac * 3.1416f)
+        val radius = 1.5f + fadeAlpha * 1.5f
+        val color = when {
+            fadeAlpha > 0.7f -> ParticleBright
+            fadeAlpha > 0.3f -> ParticleMid
+            else -> ParticleDim
+        }
+        drawCircle(color = color, radius = radius, center = Offset(px, py))
+        if (frac > 0.02f) {
+            drawCircle(color = ParticleDim, radius = radius * 0.6f,
+                center = Offset(px, py + (pB - pT) * 0.015f))
+        }
+    }
+}
+
+/**
+ * Z10: Small stone/pebble decorations along the outer and inner edges of the path.
+ * Uses deterministic pseudo-random placement based on position hashing.
+ */
+private fun DrawScope.drawEdgeStones(
+    pL: Float, pT: Float, pR: Float, pB: Float,
+    gL: Float, gT: Float, gR: Float, gB: Float,
+) {
+    val stoneSpacing = 18f
+    val maxStoneRadius = 2.5f
+    val minStoneRadius = 1.0f
+
+    // Helper: deterministic pseudo-random from position
+    fun hash(x: Float, y: Float, seed: Int): Float {
+        val v = (x * 73.137f + y * 131.29f + seed * 47.53f)
+        return abs(sin(v.toDouble()).toFloat()) // 0..1
+    }
+
+    fun stoneColor(h: Float): Color = when {
+        h < 0.33f -> StoneColor1
+        h < 0.66f -> StoneColor2
+        else -> StoneColor3
+    }
+
+    // Outer top edge stones
+    var sx = pL + 10f
+    while (sx < pR - 10f) {
+        val h = hash(sx, pT, 1)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val yOff = hash(sx, pT, 2) * 5f + 3f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(sx, pT + yOff))
+        sx += stoneSpacing + hash(sx, pT, 3) * 8f
+    }
+
+    // Outer bottom edge stones
+    sx = pL + 10f
+    while (sx < pR - 10f) {
+        val h = hash(sx, pB, 4)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val yOff = hash(sx, pB, 5) * 5f + 3f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(sx, pB - yOff))
+        sx += stoneSpacing + hash(sx, pB, 6) * 8f
+    }
+
+    // Outer left edge stones
+    var sy = pT + 10f
+    while (sy < pB - 10f) {
+        val h = hash(pL, sy, 7)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val xOff = hash(pL, sy, 8) * 5f + 3f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(pL + xOff, sy))
+        sy += stoneSpacing + hash(pL, sy, 9) * 8f
+    }
+
+    // Outer right edge stones
+    sy = pT + 10f
+    while (sy < pB - 10f) {
+        val h = hash(pR, sy, 10)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val xOff = hash(pR, sy, 11) * 5f + 3f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(pR - xOff, sy))
+        sy += stoneSpacing + hash(pR, sy, 12) * 8f
+    }
+
+    // Inner top edge stones (along grid top)
+    sx = gL + 5f
+    while (sx < gR - 5f) {
+        val h = hash(sx, gT, 13)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val yOff = hash(sx, gT, 14) * 4f + 2f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(sx, gT - yOff))
+        sx += stoneSpacing + hash(sx, gT, 15) * 8f
+    }
+
+    // Inner bottom edge stones (along grid bottom)
+    sx = gL + 5f
+    while (sx < gR - 5f) {
+        val h = hash(sx, gB, 16)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val yOff = hash(sx, gB, 17) * 4f + 2f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(sx, gB + yOff))
+        sx += stoneSpacing + hash(sx, gB, 18) * 8f
+    }
+
+    // Inner left edge stones (along grid left)
+    sy = gT + 5f
+    while (sy < gB - 5f) {
+        val h = hash(gL, sy, 19)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val xOff = hash(gL, sy, 20) * 4f + 2f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(gL - xOff, sy))
+        sy += stoneSpacing + hash(gL, sy, 21) * 8f
+    }
+
+    // Inner right edge stones (along grid right)
+    sy = gT + 5f
+    while (sy < gB - 5f) {
+        val h = hash(gR, sy, 22)
+        val r = minStoneRadius + h * (maxStoneRadius - minStoneRadius)
+        val xOff = hash(gR, sy, 23) * 4f + 2f
+        drawCircle(color = stoneColor(h), radius = r, center = Offset(gR + xOff, sy))
+        sy += stoneSpacing + hash(gR, sy, 24) * 8f
     }
 }

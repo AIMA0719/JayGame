@@ -4,6 +4,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,6 +22,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
@@ -20,6 +32,7 @@ import com.example.jaygame.navigation.NavGraph
 import com.example.jaygame.ui.screens.SplashScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import kotlinx.coroutines.delay
+import kotlin.math.max
 
 class ComposeActivity : ComponentActivity() {
     lateinit var repository: GameRepository
@@ -33,9 +46,32 @@ class ComposeActivity : ComponentActivity() {
                 var showSplash by remember { mutableStateOf(true) }
                 val data by repository.gameData.collectAsState()
 
+                // A2: Battle launch zoom-in wipe state
+                var battleTransitionActive by remember { mutableStateOf(false) }
+                val battleWipeProgress = remember { Animatable(0f) }
+
                 LaunchedEffect(Unit) {
                     delay(1500L)
                     showSplash = false
+                }
+
+                // A2: Trigger battle after wipe animation completes
+                LaunchedEffect(battleTransitionActive) {
+                    if (battleTransitionActive) {
+                        battleWipeProgress.snapTo(0f)
+                        battleWipeProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = 500,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        )
+                        actuallyLaunchBattle()
+                        // Reset after a short delay so overlay persists during activity switch
+                        delay(300L)
+                        battleTransitionActive = false
+                        battleWipeProgress.snapTo(0f)
+                    }
                 }
 
                 // Default BGM for all non-battle screens
@@ -48,14 +84,46 @@ class ComposeActivity : ComponentActivity() {
                     onDispose { }
                 }
 
-                if (showSplash) {
-                    SplashScreen()
-                } else {
-                    NavGraph(
-                        repository = repository,
-                        onStartBattle = { launchBattle() },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // A1: Splash→Home fade+slide transition
+                    AnimatedContent(
+                        targetState = showSplash,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(600)) +
+                                slideInVertically(
+                                    animationSpec = tween(600),
+                                    initialOffsetY = { it / 8 },
+                                ))
+                                .togetherWith(fadeOut(animationSpec = tween(400)))
+                        },
+                        label = "splashToHome",
+                    ) { isSplash ->
+                        if (isSplash) {
+                            SplashScreen()
+                        } else {
+                            NavGraph(
+                                repository = repository,
+                                onStartBattle = { battleTransitionActive = true },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                    }
+
+                    // A2: Battle zoom-in wipe overlay
+                    val wipeVal = battleWipeProgress.value
+                    if (wipeVal > 0f) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            val maxRadius = max(size.width, size.height) * 1.5f
+                            val radius = maxRadius * wipeVal
+                            drawCircle(
+                                color = Color.Black,
+                                radius = radius,
+                                center = Offset(cx, cy),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -87,12 +155,15 @@ class ComposeActivity : ComponentActivity() {
         }
     }
 
-    private fun launchBattle() {
+    private fun actuallyLaunchBattle() {
         val data = repository.gameData.value
         BattleBridge.setStageId(data.currentStageId)
         BattleBridge.setDifficulty(data.difficulty)
         // Stop main BGM before launching battle
         BgmManager.stop()
         startActivity(android.content.Intent(this, MainActivity::class.java))
+        // A2: No default activity animation (we handle it with the wipe overlay)
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
     }
 }

@@ -29,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -38,12 +40,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.BattleResultData
 import com.example.jaygame.data.STAGES
@@ -51,6 +55,8 @@ import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.theme.*
+import kotlinx.coroutines.launch
+import kotlin.math.max
 import kotlin.math.sin
 
 @Composable
@@ -199,17 +205,21 @@ fun BattleScreen(
             UpgradeSheet(onDismiss = { showUpgradeSheet = false })
         }
 
-        // Layer 4: Result screen
+        // Layer 4: Result screen with A3 transition
         result?.let { data ->
-            ResultScreen(
+            BattleResultTransition(
                 victory = data.victory,
-                waveReached = data.waveReached,
-                goldEarned = data.goldEarned,
-                trophyChange = data.trophyChange,
-                killCount = data.killCount,
-                mergeCount = data.mergeCount,
-                onGoHome = onGoHome,
-            )
+            ) {
+                ResultScreen(
+                    victory = data.victory,
+                    waveReached = data.waveReached,
+                    goldEarned = data.goldEarned,
+                    trophyChange = data.trophyChange,
+                    killCount = data.killCount,
+                    mergeCount = data.mergeCount,
+                    onGoHome = onGoHome,
+                )
+            }
         }
 
         // Layer 5: Quit confirmation
@@ -218,6 +228,95 @@ fun BattleScreen(
                 onConfirm = onGoHome,
                 onDismiss = { showQuitDialog = false },
             )
+        }
+    }
+}
+
+// Pre-allocated colors for A3 transition Canvas (avoid GC)
+private val VictoryGoldBright = Color(0xFFFFD700)
+private val VictoryGoldDim = Color(0xFFB8860B)
+private val DefeatBlack = Color.Black
+
+/**
+ * A3: Battle→Result transition.
+ * Victory = expanding gold radial burst, Defeat = darken + fade overlay.
+ */
+@Composable
+private fun BattleResultTransition(
+    victory: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val overlayAlpha = remember { Animatable(0f) }
+    val contentAlpha = remember { Animatable(0f) }
+    val burstProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(victory) {
+        // Phase 1: Overlay effect
+        if (victory) {
+            // Gold burst expanding outward (concurrent animations)
+            launch {
+                burstProgress.animateTo(
+                    1f,
+                    animationSpec = tween(600, easing = FastOutSlowInEasing),
+                )
+            }
+            overlayAlpha.animateTo(
+                0.7f,
+                animationSpec = tween(400),
+            )
+            // Phase 2: Fade overlay down and show content
+            launch {
+                overlayAlpha.animateTo(0f, animationSpec = tween(400))
+            }
+            contentAlpha.animateTo(1f, animationSpec = tween(500))
+        } else {
+            // Defeat: darken screen
+            overlayAlpha.animateTo(
+                0.75f,
+                animationSpec = tween(600),
+            )
+            // Then show result content over dark backdrop
+            contentAlpha.animateTo(1f, animationSpec = tween(500))
+            // Reduce overlay but keep it dark
+            overlayAlpha.animateTo(0.4f, animationSpec = tween(300))
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Transition overlay
+        val oAlpha = overlayAlpha.value
+        val burst = burstProgress.value
+        if (oAlpha > 0.01f || burst > 0.01f) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                if (victory) {
+                    // Gold radial burst
+                    val cx = size.width / 2f
+                    val cy = size.height / 2f
+                    val maxR = max(size.width, size.height) * 0.8f
+                    val radius = maxR * burst
+                    drawCircle(
+                        color = VictoryGoldBright.copy(alpha = oAlpha * 0.6f),
+                        radius = radius,
+                        center = Offset(cx, cy),
+                    )
+                    drawCircle(
+                        color = VictoryGoldDim.copy(alpha = oAlpha * 0.4f),
+                        radius = radius * 0.6f,
+                        center = Offset(cx, cy),
+                    )
+                } else {
+                    // Defeat: dark overlay
+                    drawRect(
+                        color = DefeatBlack.copy(alpha = oAlpha),
+                        size = size,
+                    )
+                }
+            }
+        }
+
+        // Result content fading in
+        Box(modifier = Modifier.fillMaxSize().alpha(contentAlpha.value)) {
+            content()
         }
     }
 }
