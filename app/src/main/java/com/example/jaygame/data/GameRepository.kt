@@ -88,6 +88,10 @@ class GameRepository(context: Context) {
             val settings = JSONObject()
             settings.put("soundEnabled", if (data.soundEnabled) 1 else 0)
             settings.put("musicEnabled", if (data.musicEnabled) 1 else 0)
+            settings.put("defaultBattleSpeed", data.defaultBattleSpeed.toDouble())
+            settings.put("showDamageNumbers", if (data.showDamageNumbers) 1 else 0)
+            settings.put("healthBarMode", data.healthBarMode)
+            settings.put("autoSummon", if (data.autoSummon) 1 else 0)
             root.put("settings", settings)
 
             // dailyLogin
@@ -224,6 +228,10 @@ class GameRepository(context: Context) {
             val settings = root.optJSONObject("settings")
             val soundEnabled = (settings?.optInt("soundEnabled", 1) ?: 1) != 0
             val musicEnabled = (settings?.optInt("musicEnabled", 1) ?: 1) != 0
+            val defaultBattleSpeed = settings?.optDouble("defaultBattleSpeed", 1.0)?.toFloat() ?: 1f
+            val showDamageNumbers = (settings?.optInt("showDamageNumbers", 1) ?: 1) != 0
+            val healthBarMode = settings?.optInt("healthBarMode", 0) ?: 0
+            val autoSummon = (settings?.optInt("autoSummon", 0) ?: 0) != 0
 
             // dailyLogin
             val dailyLogin = root.optJSONObject("dailyLogin")
@@ -307,6 +315,10 @@ class GameRepository(context: Context) {
                 wonWithSingleType = wonWithSingleType,
                 soundEnabled = soundEnabled,
                 musicEnabled = musicEnabled,
+                defaultBattleSpeed = defaultBattleSpeed,
+                showDamageNumbers = showDamageNumbers,
+                healthBarMode = healthBarMode,
+                autoSummon = autoSummon,
                 lastLoginDate = lastLoginDate,
                 loginStreak = loginStreak,
                 lastClaimedDay = lastClaimedDay,
