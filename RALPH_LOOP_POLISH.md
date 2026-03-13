@@ -193,12 +193,12 @@
 > 영웅~불멸 등급 고유 스킬은 UnitDefs.kt에 설명만 있고 로직 0% 구현.
 > 아래 순서대로: 인프라 → 가족별 공통 → 개별 유닛 순.
 
-- [ ] M1. **SkillEvent 시스템** — `BattleBridge`에 `skillEvents: StateFlow<List<SkillEvent>>` 추가. SkillEvent data class: `(type: SkillVfxType, x, y, radius, grade, family, startTime, duration)`
-- [ ] M2. **SkillEffectOverlay.kt** 생성 — BattleScreen 레이어에 추가, skillEvents를 구독하여 Canvas로 렌더링하는 프레임워크
+- [x] M1. **SkillEvent 시스템** — `BattleBridge`에 `skillEvents: StateFlow<List<SkillEvent>>` 추가. SkillEvent data class: `(type: SkillVfxType, x, y, radius, grade, family, startTime, duration)`
+- [x] M2. **SkillEffectOverlay.kt** 생성 — BattleScreen 레이어에 추가, skillEvents를 구독하여 Canvas로 렌더링하는 프레임워크
 - [ ] M3. **UniqueAbilitySystem.kt** 생성 — GameUnit에 `uniqueAbilityCooldown`, `uniqueAbilityReady` 필드 추가. BattleEngine.updateUnits()에서 쿨타임 관리 + 발동 조건 체크
 - [ ] M4. **GameUnit 확장** — `uniqueAbilityType: Int`, `uniqueAbilityCooldown: Float`, `passiveCounter: Int` 필드 추가
 - [ ] M5. **지속 장판 시스템** — `ZoneEffect` data class (위치, 반경, 지속시간, 틱 피해, 디버프). BattleEngine에 `zones: ObjectPool<ZoneEffect>` 추가, 매 프레임 영역 내 적에게 효과 적용
-- [ ] M6. **스킬 VFX 타입 enum** 정의:
+- [x] M6. **스킬 VFX 타입 enum** 정의:
   ```
   LINGERING_FLAME, FIRESTORM_METEOR, VOLCANIC_ERUPTION, PHOENIX_CARPET_BOMB, PHOENIX_REVIVE, SUPERNOVA,
   FROST_NOVA, ABSOLUTE_ZERO, ICE_AGE_BLIZZARD, ETERNAL_WINTER, TIME_STOP,

@@ -119,6 +119,44 @@ data class GridTileState(
     val level: Int = 0,
 )
 
+/**
+ * 스킬 VFX 타입 — 각 고유 스킬에 대응하는 시각 효과 종류.
+ */
+enum class SkillVfxType {
+    // Fire family
+    LINGERING_FLAME, FIRESTORM_METEOR, VOLCANIC_ERUPTION,
+    PHOENIX_CARPET_BOMB, PHOENIX_REVIVE, SUPERNOVA,
+    // Frost family
+    FROST_NOVA, ABSOLUTE_ZERO, ICE_AGE_BLIZZARD,
+    ETERNAL_WINTER, TIME_STOP,
+    // Poison family
+    POISON_CLOUD, ACID_SPRAY, TOXIC_DOMAIN,
+    NIDHOGG_BREATH, UNIVERSAL_DECAY,
+    // Lightning family
+    LIGHTNING_STRIKE, STATIC_FIELD, THUNDERSTORM,
+    MJOLNIR_THROW, DIVINE_PUNISHMENT,
+    // Support family
+    HEAL_PULSE, WAR_SONG_AURA, DIVINE_SHIELD,
+    HARMONY_FIELD, GENESIS_LIGHT,
+    // Wind family
+    CYCLONE_PULL, EYE_OF_STORM, VACUUM_SLASH,
+    DIMENSIONAL_SLASH, BREATH_OF_ALL,
+}
+
+/**
+ * 스킬 이벤트 — 엔진에서 발생하여 Compose 오버레이에서 렌더링.
+ */
+data class SkillEvent(
+    val type: SkillVfxType,
+    val x: Float,           // normalized 0-1
+    val y: Float,           // normalized 0-1
+    val radius: Float = 0f, // normalized radius (0-1)
+    val grade: Int = 0,
+    val family: Int = 0,
+    val startTime: Long = System.currentTimeMillis(),
+    val duration: Float = 1f, // seconds
+)
+
 object BattleBridge {
     private var enemyFrameCounter = 0L
     private var projFrameCounter = 0L
@@ -333,6 +371,23 @@ object BattleBridge {
         _result.value = null
     }
 
+    /** 스킬 이벤트 목록 — SkillEffectOverlay에서 렌더링 */
+    private val _skillEvents = MutableStateFlow<List<SkillEvent>>(emptyList())
+    val skillEvents: StateFlow<List<SkillEvent>> = _skillEvents.asStateFlow()
+
+    fun emitSkillEvent(event: SkillEvent) {
+        val current = _skillEvents.value.toMutableList()
+        current.add(event)
+        _skillEvents.value = current
+    }
+
+    fun clearExpiredSkillEvents() {
+        val now = System.currentTimeMillis()
+        _skillEvents.value = _skillEvents.value.filter {
+            (now - it.startTime) < (it.duration * 1000f).toLong()
+        }
+    }
+
     /** 배속 (1f, 2f, 4f, 8f) */
     private val _battleSpeed = MutableStateFlow(1f)
     val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
@@ -362,6 +417,7 @@ object BattleBridge {
         _unitPopup.value = null
         _mergeEffect.value = null
         _summonResult.value = null
+        _skillEvents.value = emptyList()
         _stageId.value = 0
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _battleSpeed.value = 1f

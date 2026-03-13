@@ -142,6 +142,7 @@ fun BattleScreen(
             ProjectileOverlay()
             DamageNumberOverlay()
             BattleParticleOverlay()
+            SkillEffectOverlay()
             WaveAnnouncementOverlay()
 
             // Boss red vignette overlay
