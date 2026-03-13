@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Text
@@ -195,11 +196,12 @@ fun BattleScreen(
             )
         }
 
-        // Layer 1: Game area matching C++ 1280x720 aspect ratio
+        // Layer 1: Game area — square (720x720), 25dp margin each side
         Box(
             modifier = Modifier
+                .padding(horizontal = 25.dp)
                 .fillMaxWidth()
-                .aspectRatio(1280f / 720f)
+                .aspectRatio(1f)
                 .align(Alignment.Center)
                 .offset(x = shakeOffsetX.value.dp, y = shakeOffsetY.value.dp),
         ) {

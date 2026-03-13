@@ -13,7 +13,7 @@ import com.example.jaygame.data.UNIT_DEFS_MAP
  */
 object UniqueAbilitySystem {
 
-    private const val W = 1280f
+    private const val W = 720f
     private const val H = 720f
 
     /**

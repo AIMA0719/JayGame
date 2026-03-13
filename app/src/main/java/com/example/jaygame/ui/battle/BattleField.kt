@@ -89,12 +89,12 @@ private data class UnitDissolutionEffect(
     val startTime: Float,
 )
 
-// Grid area in 1280x720 space — must match Grid.kt (480x480 centered)
+// Grid area in 720x720 space — must match Grid.kt (480x480 centered)
 private const val CPP_GRID_W = 480f
 private const val CPP_GRID_H = 480f
-private const val GRID_NORM_X = 400f / 1280f   // 0.3125  (Grid.ORIGIN_X / 1280)
+private const val GRID_NORM_X = 120f / 720f    // 0.16667 (Grid.ORIGIN_X / 720)
 private const val GRID_NORM_Y = 120f / 720f    // 0.16667 (Grid.ORIGIN_Y / 720)
-private const val GRID_NORM_W = CPP_GRID_W / 1280f  // 0.375
+private const val GRID_NORM_W = CPP_GRID_W / 720f   // 0.66667
 private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
 
 private const val GRID_COLS = 5
@@ -429,8 +429,8 @@ fun BattleField() {
 
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
             if (family == 4 && grade >= 2) {
-                // AURA_RADIUS=150 in C++ world (1280x720), convert to screen
-                val auraRadiusScreen = (150f / 1280f) * w
+                // AURA_RADIUS=150 in game world (720x720), convert to screen
+                val auraRadiusScreen = (150f / 720f) * w
                 val auraPulse = 0.08f + sin(t * 2f + unitDefId * 0.5f) * 0.04f
                 drawCircle(
                     brush = Brush.radialGradient(

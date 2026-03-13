@@ -63,10 +63,10 @@ private val GroundInnerShadow = Color.Black.copy(alpha = 0.15f)
 private val GroundEdgeLight = Color.White.copy(alpha = 0.15f)
 private val GroundEdgeDark = Color.Black.copy(alpha = 0.2f)
 
-// Coordinates in 1280x720 space — matching Grid.kt (480x480 centered)
-private const val GRID_LEFT = 400f
+// Coordinates in 720x720 space — matching Grid.kt (480x480 centered)
+private const val GRID_LEFT = 120f
 private const val GRID_TOP = 120f
-private const val GRID_RIGHT = 880f
+private const val GRID_RIGHT = 600f
 private const val GRID_BOTTOM = 600f
 private const val PATH_MARGIN = 60f
 private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 340
@@ -74,7 +74,7 @@ private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 60
 private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN   // 940
 private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN // 660
 
-// Cliff depth in pixels (1280x720 space)
+// Cliff depth in pixels (720x720 space)
 private const val CLIFF_DEPTH = 25f
 
 /**
@@ -128,14 +128,14 @@ fun MonsterPathOverlay() {
         val w = size.width
         val h = size.height
 
-        // Convert 1280x720 → screen coords
-        val pL = (PATH_LEFT / 1280f) * w
+        // Convert 720x720 → screen coords
+        val pL = (PATH_LEFT / 720f) * w
         val pT = (PATH_TOP / 720f) * h
-        val pR = (PATH_RIGHT / 1280f) * w
+        val pR = (PATH_RIGHT / 720f) * w
         val pB = (PATH_BOTTOM / 720f) * h
-        val gL = (GRID_LEFT / 1280f) * w
+        val gL = (GRID_LEFT / 720f) * w
         val gT = (GRID_TOP / 720f) * h
-        val gR = (GRID_RIGHT / 1280f) * w
+        val gR = (GRID_RIGHT / 720f) * w
         val gB = (GRID_BOTTOM / 720f) * h
         val pW = pR - pL
         val pH = pB - pT

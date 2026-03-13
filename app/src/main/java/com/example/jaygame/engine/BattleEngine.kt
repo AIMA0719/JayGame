@@ -19,7 +19,7 @@ class BattleEngine(
     private val deck: IntArray,
 ) {
     companion object {
-        const val W = 1280f
+        const val W = 720f
         const val H = 720f
         const val FIXED_DT = 1f / 60f
         const val MAX_ENEMIES = 256
