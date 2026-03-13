@@ -18,6 +18,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.ui.components.GameBottomNavBar
 import com.example.jaygame.ui.components.NavTab
+import com.example.jaygame.engine.PetManager
 import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.screens.CollectionScreen
 import com.example.jaygame.ui.screens.DeckScreen
@@ -28,6 +29,7 @@ import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.DungeonScreen
+import com.example.jaygame.ui.screens.PetScreen
 import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
@@ -95,6 +97,11 @@ fun NavGraph(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToPet = {
+                        navController.navigate(Routes.PET) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(Routes.DECK) {
@@ -158,6 +165,38 @@ fun NavGraph(
                     onUnequip = { relicId ->
                         val mgr = RelicManager(repository.gameData.value)
                         repository.save(mgr.unequipRelic(relicId))
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.PET) {
+                val data by repository.gameData.collectAsState()
+                val petMgr = remember { PetManager(repository.gameData.value) }
+                PetScreen(
+                    gameData = data,
+                    onPull = {
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.pullPet()
+                        if (updated != null) repository.save(updated)
+                    },
+                    onPull10 = {
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.pullPet10()
+                        if (updated != null) repository.save(updated)
+                    },
+                    onUpgrade = { petId ->
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.upgradePet(petId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onEquip = { petId ->
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.equipPet(petId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onUnequip = { petId ->
+                        petMgr.syncData(repository.gameData.value)
+                        repository.save(petMgr.unequipPet(petId))
                     },
                     onBack = { navController.popBackStack() },
                 )

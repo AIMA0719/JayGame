@@ -86,6 +86,7 @@ fun HomeScreen(
     onNavigateToRelic: (() -> Unit)? = null,
     onNavigateToDungeon: (() -> Unit)? = null,
     onNavigateToProfile: (() -> Unit)? = null,
+    onNavigateToPet: (() -> Unit)? = null,
 ) {
     val data by repository.gameData.collectAsState()
     var showDailyLogin by remember { mutableStateOf(false) }
@@ -308,6 +309,18 @@ fun HomeScreen(
                         fontSize = 15.sp,
                         accentColor = Gold,
                         accentColorDark = DarkGold,
+                    )
+                }
+
+                if (onNavigateToPet != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NeonButton(
+                        text = "\uD83D\uDC3E 펫",
+                        onClick = onNavigateToPet,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = 15.sp,
+                        accentColor = NeonCyan,
+                        accentColorDark = NeonCyan.copy(alpha = 0.6f),
                     )
                 }
             }

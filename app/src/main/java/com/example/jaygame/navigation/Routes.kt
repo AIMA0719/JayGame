@@ -12,4 +12,5 @@ object Routes {
     const val RELIC = "relic"
     const val DUNGEON = "dungeon"
     const val PROFILE = "profile"
+    const val PET = "pet"
 }
