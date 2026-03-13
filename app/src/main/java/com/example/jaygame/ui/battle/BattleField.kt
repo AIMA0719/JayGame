@@ -315,7 +315,7 @@ fun BattleField() {
 
         // Size based on cell height (grid is 880x440, 6cols x 5rows -> cells are 146x88)
         val cellH = gridH / GRID_ROWS.toFloat()
-        val unitSize = cellH * 0.85f
+        val unitSize = cellH * 0.65f
         val pedestalRx = unitSize * 0.45f
         val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
