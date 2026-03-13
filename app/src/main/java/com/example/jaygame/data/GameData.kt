@@ -6,6 +6,13 @@ data class UnitProgress(
     val level: Int = 1,
 )
 
+data class RelicProgress(
+    val relicId: Int = 0,
+    val grade: Int = 0,      // RelicGrade.ordinal
+    val level: Int = 1,
+    val owned: Boolean = false,
+)
+
 data class GameData(
     val gold: Int = 10000,
     val diamonds: Int = 0,
@@ -56,7 +63,16 @@ data class GameData(
     // 업적 수령 기록
     val claimedAchievements: Set<Int> = emptySet(),
     val saveVersion: Int = 1,
+    // 유물
+    val relics: List<RelicProgress> = List(12) { RelicProgress(relicId = it) },
+    val equippedRelics: List<Int> = emptyList(),
 ) {
+    val equippedSlotCount: Int get() = when {
+        trophies >= 3000 -> 4
+        trophies >= 1500 -> 3
+        trophies >= 500 -> 2
+        else -> 1
+    }
     val rank: String get() = when {
         trophies >= 4000 -> "마스터"
         trophies >= 3000 -> "다이아몬드"
