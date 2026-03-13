@@ -454,8 +454,8 @@ private fun SettingsGameplay(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("자동 소환", fontSize = 14.sp, color = LightText)
-                    Text("SP가 충분하면 자동으로 유닛 소환", fontSize = 11.sp, color = SubText)
+                    Text("자동 소환 & 조합", fontSize = 14.sp, color = LightText)
+                    Text("SP 충분 시 자동 소환 + 조합", fontSize = 11.sp, color = SubText)
                 }
                 NeonButton(
                     text = if (data.autoSummon) "ON" else "OFF",

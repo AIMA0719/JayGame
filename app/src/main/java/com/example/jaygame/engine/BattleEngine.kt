@@ -153,8 +153,14 @@ class BattleEngine(
         elapsedTime += dt
         sp += (SP_REGEN_PER_SEC + upgradeSpRegen) * dt
 
-        // Auto-summon: automatically summon when SP is enough
+        // Auto-summon & auto-merge
         if (BattleBridge.autoSummon.value && state == State.Playing) {
+            // Auto-merge first: merge any available units
+            val mergeable = MergeSystem.findMergeableTiles(grid)
+            if (mergeable.isNotEmpty()) {
+                requestMerge(mergeable.first())
+            }
+            // Auto-summon: summon when SP is enough
             if (sp >= summonCost && !grid.isFull()) {
                 requestSummon()
             }
