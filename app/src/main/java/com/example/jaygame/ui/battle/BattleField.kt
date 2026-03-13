@@ -242,6 +242,31 @@ fun BattleField() {
             // Skip dragged unit at original position
             if (isDragging && dragFromTile == tileIdx) continue
 
+            // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
+            if (family == 4 && grade >= 2) {
+                // AURA_RADIUS=150 in C++ world (1280x720), convert to screen
+                val auraRadiusScreen = (150f / 1280f) * w
+                val auraPulse = 0.08f + sin(t * 2f + unitDefId * 0.5f) * 0.04f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            FamilyAuraColors[4].copy(alpha = auraPulse * 0.5f),
+                            FamilyAuraColors[4].copy(alpha = auraPulse),
+                            Color.Transparent,
+                        ),
+                    ),
+                    radius = auraRadiusScreen,
+                    center = Offset(screenX, screenY),
+                )
+                // Aura ring border
+                drawCircle(
+                    color = FamilyAuraColors[4].copy(alpha = auraPulse * 1.5f),
+                    radius = auraRadiusScreen,
+                    center = Offset(screenX, screenY),
+                    style = Stroke(width = 1f),
+                )
+            }
+
             // ── Idle Bounce ──
             val bounceOffset = sin(t * 2.5f + unitDefId * 0.7f) * 3f
 
