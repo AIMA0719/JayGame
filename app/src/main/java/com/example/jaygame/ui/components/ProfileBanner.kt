@@ -1,5 +1,12 @@
 package com.example.jaygame.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,12 +23,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -40,6 +50,10 @@ import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.SubText
 import com.example.jaygame.ui.theme.TrophyAmber
 import java.text.NumberFormat
+
+// ── Pre-allocated shimmer colors ──
+private val ShimmerTransparent = Color(0x00FFFFFF)
+private val ShimmerHighlight = Color(0x22FFFFFF)
 
 private val PatternFill = Gold.copy(alpha = 0.08f)
 private val PatternAccent = NeonCyan.copy(alpha = 0.06f)
@@ -63,6 +77,34 @@ fun ProfileBanner(
     val xpForCurrentLevel = totalXP % 100
     val xpProgress = xpForCurrentLevel / 100f
 
+    // ── B4: Animated currency counters ──
+    val animatedGold by animateIntAsState(
+        targetValue = gold,
+        animationSpec = tween(durationMillis = 500),
+        label = "gold",
+    )
+    val animatedDiamonds by animateIntAsState(
+        targetValue = diamonds,
+        animationSpec = tween(durationMillis = 500),
+        label = "diamonds",
+    )
+    val animatedTrophies by animateIntAsState(
+        targetValue = trophies,
+        animationSpec = tween(durationMillis = 500),
+        label = "trophies",
+    )
+
+    // ── B5: Shimmer animation ──
+    val shimmerTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerProgress by shimmerTransition.animateFloat(
+        initialValue = -0.3f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+        ),
+        label = "shimmerProgress",
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -75,6 +117,20 @@ fun ProfileBanner(
                     brush = Brush.horizontalGradient(
                         colors = listOf(BannerOverlayStart, BannerOverlayMid, BannerOverlayStart),
                     ),
+                )
+            }
+            .drawWithContent {
+                drawContent()
+                // Shimmer highlight strip
+                val stripWidth = size.width * 0.25f
+                val x = shimmerProgress * (size.width + stripWidth) - stripWidth
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(ShimmerTransparent, ShimmerHighlight, ShimmerTransparent),
+                        start = Offset(x, 0f),
+                        end = Offset(x + stripWidth, size.height),
+                    ),
+                    blendMode = BlendMode.SrcOver,
                 )
             }
             .border(1.dp, BannerBorder, RoundedCornerShape(16.dp))
@@ -111,7 +167,7 @@ fun ProfileBanner(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = fmt.format(trophies),
+                    text = fmt.format(animatedTrophies),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = TrophyAmber,
@@ -133,7 +189,7 @@ fun ProfileBanner(
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
-                    text = fmt.format(gold),
+                    text = fmt.format(animatedGold),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = GoldCoin,
@@ -147,7 +203,7 @@ fun ProfileBanner(
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
-                    text = fmt.format(diamonds),
+                    text = fmt.format(animatedDiamonds),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = DiamondBlue,

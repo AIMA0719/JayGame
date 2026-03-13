@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,7 +45,14 @@ fun GambleDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.55f),
+                        Color.Black.copy(alpha = 0.8f),
+                    ),
+                )
+            )
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },

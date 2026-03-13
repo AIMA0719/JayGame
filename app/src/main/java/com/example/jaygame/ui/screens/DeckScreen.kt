@@ -1,11 +1,19 @@
 package com.example.jaygame.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +52,11 @@ import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.SubText
+
+// ── Pre-allocated glow colors ──
+private val EmptySlotGlowDim = Color(0xFF555555)
+private val EmptySlotGlowBright = Color(0xFFAAAAAA)
+private val SynergyHighlightAlpha = 0.2f
 
 private data class FamilyInfo(
     val family: UnitFamily,
@@ -150,7 +164,10 @@ fun DeckScreen(repository: GameRepository) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // ── Synergy Preview ──
+        SynergyPreview(deck = deck)
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = "계열 선택",
@@ -197,13 +214,31 @@ private fun DeckSlotChip(
     onClick: () -> Unit,
 ) {
     val color = info?.family?.color ?: DimText
+
+    // Pulsing glow for empty slots
+    val glowBorderColor = if (info == null) {
+        val transition = rememberInfiniteTransition(label = "slotGlow")
+        val pulse by transition.animateFloat(
+            initialValue = 0.2f,
+            targetValue = 0.7f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "slotGlowPulse",
+        )
+        Gold.copy(alpha = pulse)
+    } else {
+        color.copy(alpha = 0.8f)
+    }
+
     Box(
         modifier = Modifier
             .size(52.dp)
             .clip(RoundedCornerShape(12.dp))
             .border(
-                width = if (info != null) 2.dp else 1.dp,
-                color = if (info != null) color.copy(alpha = 0.8f) else DimText.copy(alpha = 0.4f),
+                width = if (info != null) 2.dp else 1.5.dp,
+                color = glowBorderColor,
                 shape = RoundedCornerShape(12.dp),
             )
             .background(
@@ -306,6 +341,74 @@ private fun FamilyCard(
                         fontWeight = FontWeight.ExtraBold,
                         color = color,
                     )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SynergyPreview(deck: List<Int>) {
+    // Count families in deck
+    val familyCounts = remember(deck.toList()) {
+        val counts = mutableMapOf<Int, Int>()
+        for (ordinal in deck) {
+            if (ordinal >= 0) {
+                counts[ordinal] = (counts[ordinal] ?: 0) + 1
+            }
+        }
+        counts
+    }
+
+    val activeSynergies = familyCounts.filter { it.value >= 2 }
+
+    if (activeSynergies.isNotEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "시너지 활성",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Gold,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                activeSynergies.forEach { (ordinal, count) ->
+                    val info = FAMILY_INFOS.getOrNull(ordinal) ?: return@forEach
+                    val familyColor = info.family.color
+                    val isHighlighted = count >= 2
+
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (isHighlighted) familyColor.copy(alpha = SynergyHighlightAlpha)
+                                else Color.Transparent,
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isHighlighted) familyColor.copy(alpha = 0.6f)
+                                else DimText.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(6.dp),
+                            )
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = "${info.icon} ${info.family.label} x$count",
+                            fontSize = 11.sp,
+                            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isHighlighted) familyColor else SubText,
+                        )
+                    }
                 }
             }
         }

@@ -193,6 +193,8 @@ private fun DrawScope.drawParticleTrail(
     if (len < 1f) return
     val px = -dy / len; val py = dx / len
     for (j in 0 until count) {
+        // LOD: skip particles when system is under load
+        if (ParticleLOD.shouldSkipParticle(j)) continue
         val t = j.toFloat() / count
         val wobble = sin(t * 10f + time * 8f + seed + j) * spread * sin(t * PI.toFloat())
         val x = srcX + dx * t + px * wobble

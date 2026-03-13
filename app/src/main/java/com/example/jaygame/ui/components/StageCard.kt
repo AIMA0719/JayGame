@@ -19,14 +19,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.StageDef
@@ -123,9 +131,40 @@ private fun StageCardItem(
         else -> "보통"
     }
 
+    // ── B2: 3D tilt/parallax ──
+    var tiltX by remember { mutableFloatStateOf(0f) }
+    var tiltY by remember { mutableFloatStateOf(0f) }
+    var cardSize by remember { mutableFloatStateOf(1f) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onSizeChanged { size: IntSize ->
+                cardSize = size.width.toFloat().coerceAtLeast(1f)
+            }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pos = event.changes.firstOrNull()?.position
+                        if (pos != null) {
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            tiltX = ((pos.x - cx) / cx).coerceIn(-1f, 1f)
+                            tiltY = ((pos.y - cy) / cy).coerceIn(-1f, 1f)
+                        }
+                        if (event.changes.all { !it.pressed }) {
+                            tiltX = 0f
+                            tiltY = 0f
+                        }
+                    }
+                }
+            }
+            .graphicsLayer {
+                rotationY = tiltX * 8f
+                rotationX = -tiltY * 8f
+                cameraDistance = 12f * density
+            }
             .clip(RoundedCornerShape(16.dp))
             .background(
                 Brush.verticalGradient(

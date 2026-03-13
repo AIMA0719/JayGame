@@ -128,6 +128,11 @@ fun NavGraph(
                             popUpTo(Routes.HOME) { inclusive = true }
                         }
                     },
+                    onRetry = {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                        }
+                    },
                 )
             }
         }

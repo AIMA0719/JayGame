@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -177,22 +178,46 @@ fun ShopScreen(repository: GameRepository) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tab Row
-        Row(
+        // Tab Row with sliding indicator
+        val tabCount = tabNames.size
+        val indicatorOffset by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = selectedTab.toFloat(),
+            animationSpec = androidx.compose.animation.core.tween(250),
+            label = "tabIndicator",
+        )
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            tabNames.forEachIndexed { index, name ->
-                NeonButton(
-                    text = name,
-                    onClick = { selectedTab = index },
-                    modifier = Modifier.weight(1f),
-                    fontSize = 12.sp,
-                    accentColor = if (selectedTab == index) NeonRed else DimText,
-                    accentColorDark = if (selectedTab == index) NeonRedDark else DimText.copy(alpha = 0.6f),
-                )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                tabNames.forEachIndexed { index, name ->
+                    NeonButton(
+                        text = name,
+                        onClick = { selectedTab = index },
+                        modifier = Modifier.weight(1f),
+                        fontSize = 12.sp,
+                        accentColor = if (selectedTab == index) NeonRed else DimText,
+                        accentColorDark = if (selectedTab == index) NeonRedDark else DimText.copy(alpha = 0.6f),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            // Sliding indicator line
+            Box(modifier = Modifier.fillMaxWidth().height(3.dp)) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val totalSpacing = 6f * (tabCount - 1) * density
+                    val tabW = (size.width - totalSpacing) / tabCount
+                    val xOff = indicatorOffset * (tabW + 6f * density)
+                    drawRoundRect(
+                        color = NeonRed,
+                        topLeft = androidx.compose.ui.geometry.Offset(xOff, 0f),
+                        size = androidx.compose.ui.geometry.Size(tabW, size.height),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
+                    )
+                }
             }
         }
 

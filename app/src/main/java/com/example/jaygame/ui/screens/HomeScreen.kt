@@ -3,6 +3,7 @@ package com.example.jaygame.ui.screens
 import android.graphics.BitmapFactory
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,11 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -43,6 +47,36 @@ import com.example.jaygame.ui.components.StageCardPager
 import com.example.jaygame.ui.components.canClaim
 import com.example.jaygame.ui.components.claimReward
 import com.example.jaygame.ui.theme.*
+import kotlin.math.sin
+import kotlin.random.Random
+
+// ── Pre-allocated particle colors (avoid GC) ──
+private val ParticleGold1 = Color(0x33D4A847)
+private val ParticleGold2 = Color(0x26FFE0A0)
+private val ParticleWhite = Color(0x1AFFFFFF)
+private val ParticleColors = arrayOf(ParticleGold1, ParticleGold2, ParticleWhite)
+
+private class Particle {
+    var x: Float = Random.nextFloat()
+    var y: Float = Random.nextFloat()
+    var speed: Float = 0.015f + Random.nextFloat() * 0.025f
+    var amplitude: Float = 0.005f + Random.nextFloat() * 0.015f
+    var phase: Float = Random.nextFloat() * 6.2832f
+    var radius: Float = 2f + Random.nextFloat() * 4f
+    var colorIndex: Int = Random.nextInt(ParticleColors.size)
+    var alphaBase: Float = 0.1f + Random.nextFloat() * 0.2f
+
+    fun reset() {
+        x = Random.nextFloat()
+        y = 1f + Random.nextFloat() * 0.1f
+        speed = 0.015f + Random.nextFloat() * 0.025f
+        amplitude = 0.005f + Random.nextFloat() * 0.015f
+        phase = Random.nextFloat() * 6.2832f
+        radius = 2f + Random.nextFloat() * 4f
+        colorIndex = Random.nextInt(ParticleColors.size)
+        alphaBase = 0.1f + Random.nextFloat() * 0.2f
+    }
+}
 
 @Composable
 fun HomeScreen(
@@ -115,6 +149,39 @@ fun HomeScreen(
                     ),
                 ),
         )
+
+        // ── B1: Floating light particles overlay ──
+        val particles = remember { Array(20) { Particle() } }
+        var frameTime by remember { mutableLongStateOf(0L) }
+
+        LaunchedEffect(Unit) {
+            while (true) {
+                withFrameNanos { nanos ->
+                    val dt = if (frameTime == 0L) 0.016f else ((nanos - frameTime) / 1_000_000_000f).coerceAtMost(0.05f)
+                    frameTime = nanos
+                    for (p in particles) {
+                        p.y -= p.speed * dt
+                        p.phase += 2f * dt
+                        p.x += sin(p.phase) * p.amplitude * dt
+                        if (p.y < -0.05f) p.reset()
+                    }
+                }
+            }
+        }
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            for (p in particles) {
+                val alpha = p.alphaBase * (0.6f + 0.4f * sin(p.phase * 1.5f).coerceIn(0f, 1f))
+                drawCircle(
+                    color = ParticleColors[p.colorIndex].copy(alpha = alpha.coerceIn(0.05f, 0.35f)),
+                    radius = p.radius * (w / 400f),
+                    center = Offset(p.x * w, p.y * h),
+                )
+            }
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,

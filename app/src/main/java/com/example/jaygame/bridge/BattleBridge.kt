@@ -38,11 +38,23 @@ data class BattleState(
 /**
  * 배틀 결과 데이터 (C++ → Compose)
  */
+/**
+ * Buff bitmask constants for enemy visual effects.
+ * bit0=Slow, bit1=DoT, bit2=ArmorBreak, bit3=Knockback(wind hit)
+ */
+const val BUFF_BIT_SLOW       = 1 shl 0  // Frost slow
+const val BUFF_BIT_DOT        = 1 shl 1  // Fire/Poison DoT
+const val BUFF_BIT_ARMOR_BREAK = 1 shl 2 // ArmorBreak
+const val BUFF_BIT_POISON     = 1 shl 3  // Poison-family DoT (slow+dot combo)
+const val BUFF_BIT_LIGHTNING   = 1 shl 4 // Recently hit by lightning chain
+const val BUFF_BIT_WIND       = 1 shl 5  // Recently knocked back
+
 data class EnemyPositionData(
     val xs: FloatArray = FloatArray(0),
     val ys: FloatArray = FloatArray(0),
     val types: IntArray = IntArray(0),
     val hpRatios: FloatArray = FloatArray(0),
+    val buffs: IntArray = IntArray(0),
     val count: Int = 0,
     val frameId: Long = 0L,
 ) {
@@ -106,6 +118,8 @@ data class BattleResultData(
     val killCount: Int = 0,
     val mergeCount: Int = 0,
     val cardsEarned: Int = 0,
+    val noHpLost: Boolean = false,
+    val fastClear: Boolean = false,
 )
 
 /**
@@ -174,6 +188,14 @@ object BattleBridge {
     private var enemyFrameCounter = 0L
     private var projFrameCounter = 0L
     private var unitFrameCounter = 0L
+
+    /** Z16: Debug overlay toggle */
+    private val _debugMode = MutableStateFlow(false)
+    val debugMode: StateFlow<Boolean> = _debugMode.asStateFlow()
+
+    fun toggleDebugMode() {
+        _debugMode.value = !_debugMode.value
+    }
 
     private val _state = MutableStateFlow(BattleState())
     val state: StateFlow<BattleState> = _state.asStateFlow()
@@ -296,6 +318,8 @@ object BattleBridge {
         killCount: Int,
         mergeCount: Int,
         cardsEarned: Int,
+        noHpLost: Boolean = false,
+        fastClear: Boolean = false,
     ) {
         _result.value = BattleResultData(
             victory = victory,
@@ -305,12 +329,14 @@ object BattleBridge {
             killCount = killCount,
             mergeCount = mergeCount,
             cardsEarned = cardsEarned,
+            noHpLost = noHpLost,
+            fastClear = fastClear,
         )
     }
 
     @JvmStatic
-    fun updateEnemyPositions(xs: FloatArray, ys: FloatArray, types: IntArray, hpRatios: FloatArray, count: Int) {
-        _enemyPositions.value = EnemyPositionData(xs, ys, types, hpRatios, count, ++enemyFrameCounter)
+    fun updateEnemyPositions(xs: FloatArray, ys: FloatArray, types: IntArray, hpRatios: FloatArray, buffs: IntArray, count: Int) {
+        _enemyPositions.value = EnemyPositionData(xs, ys, types, hpRatios, buffs, count, ++enemyFrameCounter)
     }
 
     @JvmStatic
@@ -460,6 +486,7 @@ object BattleBridge {
         _stageId.value = 0
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _battleSpeed.value = 1f
+        _debugMode.value = false
     }
 
     // Kotlin engine reference (replaces C++ JNI)

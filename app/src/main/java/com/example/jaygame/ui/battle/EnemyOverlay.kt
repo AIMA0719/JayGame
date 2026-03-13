@@ -20,6 +20,11 @@ import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.example.jaygame.R
+import com.example.jaygame.bridge.BUFF_BIT_DOT
+import com.example.jaygame.bridge.BUFF_BIT_LIGHTNING
+import com.example.jaygame.bridge.BUFF_BIT_POISON
+import com.example.jaygame.bridge.BUFF_BIT_SLOW
+import com.example.jaygame.bridge.BUFF_BIT_WIND
 import com.example.jaygame.bridge.BattleBridge
 import kotlin.math.cos
 import kotlin.math.sin
@@ -44,14 +49,55 @@ private val FallbackColors = arrayOf(
     Color(0xFFCE93D8),
 )
 
+// ── Buff effect colors (pre-allocated to avoid GC) ──
+
+// E1: Fire — lingering flame particles
+private val FireFlameOrange = Color(0xFFFF6B00)
+private val FireFlameYellow = Color(0xFFFFAA00)
+private val FireFlameRed = Color(0xFFFF2200)
+private val FireGlow = Color(0xFFFF4400).copy(alpha = 0.15f)
+
+// E2: Frost — ice crystal particles
+private val FrostBlue = Color(0xFF88DDFF)
+private val FrostWhite = Color(0xFFCCEEFF)
+private val FrostGlow = Color(0xFF44AAFF).copy(alpha = 0.12f)
+
+// E3: Poison — green bubble particles
+private val PoisonGreen = Color(0xFF44DD44)
+private val PoisonDarkGreen = Color(0xFF228822)
+private val PoisonBubble = Color(0xFF66FF66)
+private val PoisonTint = Color(0xFF22CC22).copy(alpha = 0.18f)
+
+// E4: Lightning — spark lines
+private val LightningYellow = Color(0xFFFFEE44)
+private val LightningWhite = Color(0xFFFFFFCC)
+private val LightningGlow = Color(0xFFFFDD00).copy(alpha = 0.2f)
+
+// E5: Wind — swirl and dust
+private val WindCyan = Color(0xFF88FFDD)
+private val WindWhite = Color(0xFFCCFFEE)
+private val WindDust = Color(0xFFBBAA88)
+
+// Pre-allocated HP bar colors at 10% increments to avoid Color() in draw loop
+private val HpBarColors = Array(11) { i ->
+    val ratio = i / 10f
+    Color(red = 1f - ratio, green = ratio, blue = 0.1f, alpha = 0.9f)
+}
+
+/** Map HP ratio (0-1) to nearest pre-allocated color to avoid per-frame allocation */
+private fun hpBarColor(clampedHp: Float): Color {
+    val idx = (clampedHp * 10f).toInt().coerceIn(0, 10)
+    return HpBarColors[idx]
+}
+
 /** Death effect particle data */
-private data class DeathEffect(
+internal data class DeathEffect(
     val x: Float, val y: Float, val type: Int,
     var timer: Float = 0.5f,
     val particles: List<DeathParticle>,
 )
 
-private data class DeathParticle(
+internal data class DeathParticle(
     val vx: Float, val vy: Float,
     val size: Float,
     val colorIdx: Int,
@@ -317,14 +363,9 @@ fun EnemyOverlay() {
                 size = Size(barWidth + 2f, barHeight + 2f),
                 cornerRadius = CornerRadius(3f),
             )
-            // HP fill
+            // HP fill — uses pre-allocated color table to avoid per-frame Color() alloc
             val clampedHp = hpRatio.coerceIn(0f, 1f)
-            val hpColor = Color(
-                red = 1f - clampedHp,
-                green = clampedHp,
-                blue = 0.1f,
-                alpha = 0.9f,
-            )
+            val hpColor = hpBarColor(clampedHp)
             if (clampedHp > 0f) {
                 drawRoundRect(
                     color = hpColor,
@@ -341,6 +382,169 @@ fun EnemyOverlay() {
                 cornerRadius = CornerRadius(3f),
                 style = HpBarBorderStroke,
             )
+
+            // ── Buff Visual Effects ──
+            val buffBits = if (i < data.buffs.size) data.buffs[i] else 0
+
+            // E1: Fire — flickering flame particles below enemy
+            if (buffBits and BUFF_BIT_DOT != 0 && buffBits and BUFF_BIT_POISON == 0) {
+                // Glow under enemy
+                drawCircle(
+                    color = FireGlow,
+                    radius = spriteSize * 0.6f,
+                    center = Offset(screenX, screenY + spriteSize * 0.2f),
+                )
+                // 4 flame particles flickering
+                for (p in 0 until 4) {
+                    val px = screenX + sin(t * 6f + p * 1.6f) * spriteSize * 0.3f
+                    val py = screenY + spriteSize * 0.15f - sin(t * 8f + p * 2.1f).coerceAtLeast(0f) * spriteSize * 0.4f
+                    val flameAlpha = (0.5f + sin(t * 10f + p * 1.3f) * 0.3f).coerceIn(0.2f, 0.8f)
+                    val flameSize = 2.5f + sin(t * 7f + p * 0.9f) * 1f
+                    val flameColor = when (p % 3) {
+                        0 -> FireFlameOrange
+                        1 -> FireFlameYellow
+                        else -> FireFlameRed
+                    }
+                    drawCircle(
+                        color = flameColor.copy(alpha = flameAlpha),
+                        radius = flameSize,
+                        center = Offset(px, py),
+                    )
+                }
+            }
+
+            // E2: Frost — rotating ice crystal shapes around enemy
+            if (buffBits and BUFF_BIT_SLOW != 0 && buffBits and BUFF_BIT_POISON == 0) {
+                // Frost glow
+                drawCircle(
+                    color = FrostGlow,
+                    radius = spriteSize * 0.55f,
+                    center = Offset(screenX, screenY),
+                )
+                // 3 ice crystals orbiting
+                for (p in 0 until 3) {
+                    val angle = t * 2.5f + p * 2.094f // 120 deg apart
+                    val orbitR = spriteSize * 0.45f
+                    val cx = screenX + cos(angle) * orbitR
+                    val cy = screenY + sin(angle) * orbitR * 0.6f
+                    val crystalSize = 2.5f + sin(t * 4f + p * 1.2f) * 0.8f
+                    val crystalAlpha = 0.6f + sin(t * 3f + p * 0.7f) * 0.2f
+                    // Diamond shape approximated by small rotated rect
+                    drawCircle(
+                        color = FrostBlue.copy(alpha = crystalAlpha),
+                        radius = crystalSize,
+                        center = Offset(cx, cy),
+                    )
+                    drawCircle(
+                        color = FrostWhite.copy(alpha = crystalAlpha * 0.7f),
+                        radius = crystalSize * 0.5f,
+                        center = Offset(cx, cy),
+                    )
+                }
+            }
+
+            // E3: Poison — green bubbles floating up + green tint
+            if (buffBits and BUFF_BIT_POISON != 0) {
+                // Green tint overlay on enemy
+                drawRect(
+                    color = PoisonTint,
+                    topLeft = Offset(screenX - spriteSize / 2, screenY - spriteSize / 2),
+                    size = Size(spriteSize, spriteSize),
+                )
+                // 5 green bubbles floating upward
+                for (p in 0 until 5) {
+                    val bubblePhase = (t * 1.5f + p * 0.4f) % 1f // 0-1 cycle
+                    val bx = screenX + sin(t * 2f + p * 1.7f) * spriteSize * 0.35f
+                    val by = screenY + spriteSize * 0.2f - bubblePhase * spriteSize * 0.8f
+                    val bubbleAlpha = (1f - bubblePhase) * 0.6f
+                    val bubbleSize = 1.5f + sin(t * 3f + p * 0.5f) * 0.5f + (1f - bubblePhase) * 1.5f
+                    drawCircle(
+                        color = PoisonBubble.copy(alpha = bubbleAlpha),
+                        radius = bubbleSize,
+                        center = Offset(bx, by),
+                    )
+                    // Inner highlight
+                    drawCircle(
+                        color = PoisonGreen.copy(alpha = bubbleAlpha * 0.5f),
+                        radius = bubbleSize * 0.4f,
+                        center = Offset(bx - bubbleSize * 0.2f, by - bubbleSize * 0.2f),
+                    )
+                }
+            }
+
+            // E4: Lightning — spark lines + electric glow
+            if (buffBits and BUFF_BIT_LIGHTNING != 0) {
+                // Electric glow
+                drawCircle(
+                    color = LightningGlow,
+                    radius = spriteSize * 0.6f,
+                    center = Offset(screenX, screenY),
+                )
+                // 4 spark lines radiating outward
+                for (p in 0 until 4) {
+                    val angle = t * 12f + p * 1.571f // 90 deg apart, fast rotation
+                    val sparkLen = spriteSize * (0.3f + sin(t * 15f + p * 2f) * 0.15f)
+                    val sx = screenX + cos(angle) * spriteSize * 0.15f
+                    val sy = screenY + sin(angle) * spriteSize * 0.15f
+                    val ex = screenX + cos(angle) * sparkLen
+                    val ey = screenY + sin(angle) * sparkLen
+                    // Zigzag midpoint
+                    val mx = (sx + ex) / 2f + sin(t * 20f + p * 3f) * 4f
+                    val my = (sy + ey) / 2f + cos(t * 18f + p * 2.5f) * 4f
+                    val sparkAlpha = 0.5f + sin(t * 14f + p * 1.1f) * 0.3f
+                    drawLine(
+                        color = LightningYellow.copy(alpha = sparkAlpha),
+                        start = Offset(sx, sy),
+                        end = Offset(mx, my),
+                        strokeWidth = 1.5f,
+                    )
+                    drawLine(
+                        color = LightningWhite.copy(alpha = sparkAlpha * 0.8f),
+                        start = Offset(mx, my),
+                        end = Offset(ex, ey),
+                        strokeWidth = 1f,
+                    )
+                }
+            }
+
+            // E5: Wind — swirl lines + dust particles
+            if (buffBits and BUFF_BIT_WIND != 0) {
+                // 3 swirl arc segments
+                for (p in 0 until 3) {
+                    val swirlAngle = t * 8f + p * 2.094f
+                    val swirlR = spriteSize * (0.35f + p * 0.08f)
+                    for (seg in 0 until 4) {
+                        val a1 = swirlAngle + seg * 0.3f
+                        val a2 = swirlAngle + (seg + 1) * 0.3f
+                        val swirlAlpha = (0.4f - seg * 0.08f).coerceAtLeast(0.1f)
+                        drawLine(
+                            color = WindCyan.copy(alpha = swirlAlpha),
+                            start = Offset(
+                                screenX + cos(a1) * swirlR,
+                                screenY + sin(a1) * swirlR * 0.7f,
+                            ),
+                            end = Offset(
+                                screenX + cos(a2) * swirlR,
+                                screenY + sin(a2) * swirlR * 0.7f,
+                            ),
+                            strokeWidth = 1.5f,
+                        )
+                    }
+                }
+                // 4 dust particles
+                for (p in 0 until 4) {
+                    val dustAngle = t * 5f + p * 1.571f
+                    val dustR = spriteSize * (0.4f + sin(t * 3f + p * 0.8f) * 0.1f)
+                    val dx2 = screenX + cos(dustAngle) * dustR
+                    val dy2 = screenY + sin(dustAngle) * dustR * 0.6f
+                    val dustAlpha = 0.3f + sin(t * 4f + p * 1.5f) * 0.15f
+                    drawCircle(
+                        color = WindDust.copy(alpha = dustAlpha),
+                        radius = 1.5f + sin(t * 6f + p * 2f) * 0.5f,
+                        center = Offset(dx2, dy2),
+                    )
+                }
+            }
         }
 
         // ── Death Effects ──

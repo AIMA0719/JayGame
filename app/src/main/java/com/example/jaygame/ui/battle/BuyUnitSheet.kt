@@ -68,7 +68,14 @@ fun BuyUnitSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.6f),
+                        Color.Black.copy(alpha = 0.85f),
+                    ),
+                )
+            )
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },

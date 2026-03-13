@@ -43,13 +43,22 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.audio.SfxManager
+import com.example.jaygame.audio.SoundEvent
+import com.example.jaygame.BuildConfig
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.ui.theme.*
+import com.example.jaygame.util.HapticManager
+
+// ── Z16: Debug button colors (pre-allocated) ──
+private val DebugBtnActiveColor = Color(0xFF00FF88)
+private val DebugBtnInactiveColor = Color(0xFF888888)
 
 // ── Warm medieval theme colors ──
 private val WoodBrown = Color(0xFF5C3A1E)
@@ -224,6 +233,28 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                 )
             }
 
+            // Debug toggle button (only in debug builds)
+            if (BuildConfig.DEBUG) {
+                val isDebugOn by BattleBridge.debugMode.collectAsState()
+                val debugBorder = if (isDebugOn) DebugBtnActiveColor else DebugBtnInactiveColor
+                Box(
+                    modifier = Modifier
+                        .size(35.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .border(1.dp, debugBorder.copy(alpha = 0.6f), CircleShape)
+                        .clickable(onClick = { BattleBridge.toggleDebugMode() }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "D",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = debugBorder,
+                    )
+                }
+            }
+
             // Menu button
             Box(
                 modifier = Modifier
@@ -273,6 +304,7 @@ fun BattleBottomHud(
     val canGamble = battle.sp >= 10
     val canMerge = gridState.any { it.canMerge }
     val context = LocalContext.current
+    val view = LocalView.current
 
     val goldIcon = remember { loadAssetBitmap(context, "raw/ui/icon_gold.png") }
     val btnSummonImg = remember { loadAssetBitmap(context, "raw/ui/btn_summon.png") }
@@ -382,7 +414,11 @@ fun BattleBottomHud(
                     cost = battle.summonCost,
                     enabled = canSummon,
                     gridFull = gridFull,
-                    onClick = { BattleBridge.requestSummon() },
+                    onClick = {
+                        HapticManager.medium(view)
+                        SfxManager.play(SoundEvent.Summon)
+                        BattleBridge.requestSummon()
+                    },
                     modifier = Modifier.weight(1.6f),
                     goldIcon = goldIcon,
                 )

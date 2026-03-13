@@ -10,6 +10,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.jaygame.audio.BgmManager
+import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
         repository = GameRepository(this)
 
         BattleBridge.reset()
+        SfxManager.init(this)
 
         // Create and start Kotlin battle engine
         val stageId = BattleBridge.stageId.value

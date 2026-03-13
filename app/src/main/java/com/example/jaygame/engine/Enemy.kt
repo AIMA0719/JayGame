@@ -14,6 +14,9 @@ class Enemy {
     var type = 0
     var pathIndex = 0
     val buffs = BuffContainer()
+    /** Bitmask for recent hit effects: bit0=lightning, bit1=wind. Auto-decays. */
+    var recentHitFlags = 0
+    var recentHitTimer = 0f
 
     fun init(
         hp: Float, speed: Float, armor: Float, magicResist: Float,
@@ -30,10 +33,20 @@ class Enemy {
         this.position = startPos.copy()
         this.pathIndex = 0
         this.buffs.clear()
+        this.recentHitFlags = 0
+        this.recentHitTimer = 0f
     }
 
     fun update(dt: Float, path: List<Vec2>): Boolean {
         if (!alive) return false
+
+        // Decay recent hit flags
+        if (recentHitFlags != 0) {
+            recentHitTimer -= dt
+            if (recentHitTimer <= 0f) {
+                recentHitFlags = 0
+            }
+        }
 
         val dotDmg = buffs.update(dt)
         if (dotDmg > 0f) {
@@ -77,6 +90,8 @@ class Enemy {
     fun reset() {
         alive = false
         buffs.clear()
+        recentHitFlags = 0
+        recentHitTimer = 0f
     }
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f

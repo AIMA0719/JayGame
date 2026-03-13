@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.example.jaygame.audio.BgmManager
+import com.example.jaygame.audio.SfxManager
+import com.example.jaygame.util.HapticManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
@@ -41,6 +43,7 @@ class ComposeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         repository = GameRepository(this)
+        SfxManager.init(this)
         setContent {
             JayGameTheme {
                 var showSplash by remember { mutableStateOf(true) }
@@ -72,6 +75,13 @@ class ComposeActivity : ComponentActivity() {
                         battleTransitionActive = false
                         battleWipeProgress.snapTo(0f)
                     }
+                }
+
+                // Sync SFX / haptic enabled state with settings
+                androidx.compose.runtime.DisposableEffect(data.soundEnabled) {
+                    SfxManager.setEnabled(data.soundEnabled)
+                    HapticManager.setEnabled(data.soundEnabled)
+                    onDispose { }
                 }
 
                 // Default BGM for all non-battle screens

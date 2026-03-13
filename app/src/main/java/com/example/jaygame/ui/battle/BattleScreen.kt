@@ -31,11 +31,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import com.example.jaygame.audio.SfxManager
+import com.example.jaygame.audio.SoundEvent
+import com.example.jaygame.util.HapticManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -72,6 +77,7 @@ fun BattleScreen(
     val stageId by BattleBridge.stageId.collectAsState()
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
     val context = LocalContext.current
+    val view = LocalView.current
 
     var showQuitDialog by remember { mutableStateOf(false) }
     var showGambleDialog by remember { mutableStateOf(false) }
@@ -107,6 +113,8 @@ fun BattleScreen(
     if (currentDamageCount > prevDamageCount.value) {
         val hasCrit = damageEvents.takeLast(currentDamageCount - prevDamageCount.value).any { it.isCrit }
         if (hasCrit) {
+            HapticManager.light(view)
+            SfxManager.play(SoundEvent.CriticalHit)
             shakeScope.launch {
                 launch {
                     shakeOffsetX.animateTo(3f, animationSpec = tween(25))
@@ -205,6 +213,7 @@ fun BattleScreen(
             BattleParticleOverlay()
             SkillEffectOverlay()
             WaveAnnouncementOverlay()
+            DebugOverlay()
 
             // C6: Gold coin particle overlay
             GoldCoinOverlay()
@@ -297,7 +306,11 @@ fun BattleScreen(
                     trophyChange = data.trophyChange,
                     killCount = data.killCount,
                     mergeCount = data.mergeCount,
+                    cardsEarned = data.cardsEarned,
+                    noHpLost = data.noHpLost,
+                    fastClear = data.fastClear,
                     onGoHome = onGoHome,
+                    onRetry = onGoHome,
                 )
             }
         }
@@ -418,7 +431,14 @@ private fun QuitBattleDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.55f),
+                        Color.Black.copy(alpha = 0.8f),
+                    ),
+                )
+            )
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
@@ -575,6 +595,15 @@ private fun GoldCoinOverlay() {
 
 private val LevelUpBeamColor = Color(0xFFFFFFCC)
 private val LevelUpBeamEdge = Color(0xFFFFD700)
+// D4: Star particle colors (pre-allocated to avoid GC)
+private val StarGoldBright = Color(0xFFFFD700)
+private val StarGoldLight = Color(0xFFFFF176)
+private val StarGoldDim = Color(0xFFFFAB00)
+private val StarWhiteCore = Color(0xFFFFFFEE)
+
+// D4: Pre-computed star burst angles (12 stars)
+private val StarAngles = FloatArray(12) { i -> (i.toFloat() / 12f) * 2f * kotlin.math.PI.toFloat() }
+private val StarSpeedVariations = floatArrayOf(1.0f, 0.8f, 1.2f, 0.9f, 1.1f, 0.75f, 1.15f, 0.85f, 1.05f, 0.95f, 1.25f, 0.7f)
 
 @Composable
 private fun LevelUpOverlay() {
@@ -634,6 +663,76 @@ private fun LevelUpOverlay() {
                 center = Offset(cx, cy),
             )
 
+            // D4: Golden star particles bursting outward
+            val starProgress = ((elapsed - 0.1f) / 0.9f).coerceIn(0f, 1f)
+            if (starProgress > 0f) {
+                val starAlpha = when {
+                    starProgress < 0.2f -> starProgress / 0.2f
+                    starProgress < 0.5f -> 1f
+                    else -> (1f - starProgress) / 0.5f
+                }.coerceIn(0f, 1f)
+
+                for (i in StarAngles.indices) {
+                    val angle = StarAngles[i]
+                    val speed = StarSpeedVariations[i]
+                    val dist = starProgress * 50f * speed
+                    val starX = cx + kotlin.math.cos(angle) * dist
+                    val starY = cy + kotlin.math.sin(angle) * dist - starProgress * 15f * speed
+
+                    val size = (4f - starProgress * 2.5f).coerceAtLeast(0.5f)
+
+                    // Star core (bright)
+                    drawCircle(
+                        color = StarWhiteCore.copy(alpha = starAlpha * 0.9f),
+                        radius = size * 0.5f,
+                        center = Offset(starX, starY),
+                    )
+                    // Star glow (gold)
+                    drawCircle(
+                        color = StarGoldBright.copy(alpha = starAlpha * 0.7f),
+                        radius = size,
+                        center = Offset(starX, starY),
+                    )
+                    // Star cross lines (4-point star shape)
+                    val armLen = size * 1.5f
+                    val crossAlpha = starAlpha * 0.5f
+                    drawLine(
+                        color = StarGoldLight.copy(alpha = crossAlpha),
+                        start = Offset(starX - armLen, starY),
+                        end = Offset(starX + armLen, starY),
+                        strokeWidth = 1f,
+                    )
+                    drawLine(
+                        color = StarGoldLight.copy(alpha = crossAlpha),
+                        start = Offset(starX, starY - armLen),
+                        end = Offset(starX, starY + armLen),
+                        strokeWidth = 1f,
+                    )
+                }
+
+                // Secondary smaller sparkles (6 more, offset timing)
+                val sparkDelay = ((elapsed - 0.2f) / 0.8f).coerceIn(0f, 1f)
+                if (sparkDelay > 0f) {
+                    val sparkAlpha = when {
+                        sparkDelay < 0.3f -> sparkDelay / 0.3f
+                        else -> (1f - sparkDelay) / 0.7f
+                    }.coerceIn(0f, 1f)
+
+                    for (i in 0 until 6) {
+                        val angle = StarAngles[i * 2] + 0.26f // offset from main stars
+                        val dist = sparkDelay * 35f * StarSpeedVariations[i]
+                        val sx = cx + kotlin.math.cos(angle) * dist
+                        val sy = cy + kotlin.math.sin(angle) * dist - sparkDelay * 10f
+
+                        drawCircle(
+                            color = StarGoldDim.copy(alpha = sparkAlpha * 0.6f),
+                            radius = 1.5f,
+                            center = Offset(sx, sy),
+                        )
+                    }
+                }
+            }
+
             // "LV UP!" text using drawContext
             val textAlpha = when {
                 progress < 0.15f -> progress / 0.15f
@@ -641,8 +740,6 @@ private fun LevelUpOverlay() {
                 else -> (1f - progress) / 0.3f
             }.coerceIn(0f, 1f)
             val textY = cy - 30f - progress * 20f
-            // Draw simple "LV UP" with small circles as approximation of text
-            val textColor = GoldCoinColor.copy(alpha = textAlpha)
             // Use native text paint
             drawContext.canvas.nativeCanvas.drawText(
                 "LV UP!",

@@ -1,5 +1,7 @@
 package com.example.jaygame.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -11,11 +13,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,6 +45,14 @@ fun GameBottomNavBar(
     onTabSelected: (NavTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val tabCount = NavTab.entries.size
+    val selectedIndex = NavTab.entries.indexOf(selectedTab)
+    val indicatorOffset by animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = tween(250),
+        label = "navIndicator",
+    )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -51,6 +64,18 @@ fun GameBottomNavBar(
                     start = Offset(0f, 0f),
                     end = Offset(size.width, 0f),
                     strokeWidth = 1.dp.toPx(),
+                )
+
+                // Sliding top indicator line
+                val tabWidth = size.width / tabCount
+                val indicatorWidth = tabWidth * 0.5f
+                val indicatorX = indicatorOffset * tabWidth + (tabWidth - indicatorWidth) / 2f
+                val indicatorHeight = 3.dp.toPx()
+                drawRoundRect(
+                    color = NeonRed,
+                    topLeft = Offset(indicatorX, 0f),
+                    size = Size(indicatorWidth, indicatorHeight),
+                    cornerRadius = CornerRadius(indicatorHeight / 2),
                 )
             },
         horizontalArrangement = Arrangement.SpaceEvenly,

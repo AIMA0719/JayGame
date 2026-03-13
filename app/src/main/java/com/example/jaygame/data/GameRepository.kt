@@ -134,6 +134,9 @@ class GameRepository(context: Context) {
             }
             root.put("familyUpgrades", familyObj)
 
+            // freePull
+            root.put("lastFreePullTime", data.lastFreePullTime)
+
             root.put("saveVersion", data.saveVersion)
 
             // Compute checksum on the JSON without checksum field
@@ -266,6 +269,9 @@ class GameRepository(context: Context) {
                 }
             }
 
+            // freePull
+            val lastFreePullTime = root.optLong("lastFreePullTime", 0L)
+
             val saveVersion = root.optInt("saveVersion", 1)
 
             return GameData(
@@ -301,6 +307,7 @@ class GameRepository(context: Context) {
                 difficulty = difficulty,
                 gas = gas,
                 familyUpgrades = familyUpgrades,
+                lastFreePullTime = lastFreePullTime,
                 saveVersion = saveVersion,
             )
         }

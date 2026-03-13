@@ -1,0 +1,96 @@
+package com.example.jaygame.audio
+
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.SoundPool
+import android.util.Log
+
+/**
+ * SFX playback manager backed by [SoundPool].
+ *
+ * Call [init] once with an application/activity Context to set up the pool,
+ * then [play] with any [SoundEvent].  Until real .ogg files are placed in
+ * assets/sfx/ and registered in [assetPaths], every call is a no-op log stub.
+ */
+object SfxManager {
+
+    private const val TAG = "SfxManager"
+    private const val MAX_STREAMS = 8
+
+    private var soundPool: SoundPool? = null
+    private val loadedIds = mutableMapOf<SoundEvent, Int>()
+    private var enabled = true
+
+    /**
+     * Future mapping: SoundEvent -> asset path under assets/sfx/.
+     * Add entries here when real sound files are available.
+     */
+    private val assetPaths = mapOf<SoundEvent, String>(
+        // SoundEvent.Summon       to "sfx/summon.ogg",
+        // SoundEvent.SummonRare   to "sfx/summon_rare.ogg",
+        // SoundEvent.SummonLegend to "sfx/summon_legend.ogg",
+        // SoundEvent.Merge        to "sfx/merge.ogg",
+        // SoundEvent.MergeLucky   to "sfx/merge_lucky.ogg",
+        // SoundEvent.Attack       to "sfx/attack.ogg",
+        // SoundEvent.CriticalHit  to "sfx/critical.ogg",
+        // SoundEvent.EnemyDeath   to "sfx/enemy_death.ogg",
+        // SoundEvent.BossAppear   to "sfx/boss_appear.ogg",
+        // SoundEvent.BossDefeat   to "sfx/boss_defeat.ogg",
+        // SoundEvent.WaveStart    to "sfx/wave_start.ogg",
+        // SoundEvent.WaveClear    to "sfx/wave_clear.ogg",
+        // SoundEvent.Victory      to "sfx/victory.ogg",
+        // SoundEvent.Defeat       to "sfx/defeat.ogg",
+        // SoundEvent.ButtonClick  to "sfx/button_click.ogg",
+        // SoundEvent.GoldPickup   to "sfx/gold_pickup.ogg",
+        // SoundEvent.LevelUp      to "sfx/level_up.ogg",
+        // SoundEvent.SkillActivate to "sfx/skill_activate.ogg",
+    )
+
+    /** Initialise the SoundPool and preload all registered assets. */
+    fun init(context: Context) {
+        if (soundPool != null) return
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        soundPool = SoundPool.Builder()
+            .setMaxStreams(MAX_STREAMS)
+            .setAudioAttributes(attrs)
+            .build()
+
+        val pool = soundPool ?: return
+        for ((event, path) in assetPaths) {
+            try {
+                val afd = context.assets.openFd(path)
+                val id = pool.load(afd, 1)
+                afd.close()
+                loadedIds[event] = id
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load $path for $event: ${e.message}")
+            }
+        }
+        Log.d(TAG, "SoundPool initialised – ${loadedIds.size} sounds loaded")
+    }
+
+    /** Play a sound effect.  Silently no-ops if the asset is not yet loaded. */
+    fun play(event: SoundEvent, volume: Float = 1f) {
+        if (!enabled) return
+        val id = loadedIds[event]
+        if (id != null) {
+            soundPool?.play(id, volume, volume, 1, 0, 1f)
+        } else {
+            Log.d(TAG, "play(${event.name}) – no asset loaded (stub)")
+        }
+    }
+
+    fun setEnabled(value: Boolean) {
+        enabled = value
+    }
+
+    fun release() {
+        soundPool?.release()
+        soundPool = null
+        loadedIds.clear()
+        Log.d(TAG, "SoundPool released")
+    }
+}

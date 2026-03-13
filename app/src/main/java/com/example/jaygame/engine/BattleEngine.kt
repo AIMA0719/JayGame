@@ -1,5 +1,6 @@
 package com.example.jaygame.engine
 
+import android.util.Log
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
@@ -8,6 +9,8 @@ import com.example.jaygame.data.unitIdOf
 import com.example.jaygame.engine.math.GameRect
 import com.example.jaygame.engine.math.Vec2
 import kotlinx.coroutines.*
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class BattleEngine(
     private val stageId: Int,
@@ -51,6 +54,7 @@ class BattleEngine(
 
     private var killCount = 0
     private var mergeCount = 0
+    private var peakEnemyCount = 0
 
     private val upgradeLevels = IntArray(5)
     private var upgradeAtkMult = 1f
@@ -117,6 +121,8 @@ class BattleEngine(
 
     fun start(scope: CoroutineScope) {
         UniqueAbilitySystem.zonePool = zones
+        validateLayout()
+        validatePathSpeedUniformity()
         job = scope.launch(Dispatchers.Default) {
             var lastTime = System.nanoTime()
             var accumulator = 0f
@@ -170,6 +176,10 @@ class BattleEngine(
                     if (bossTimeRemaining <= 0f) {
                         enemies.forEach { if (it.alive) { it.alive = false } }
                     }
+                }
+
+                if (enemies.activeCount > peakEnemyCount) {
+                    peakEnemyCount = enemies.activeCount
                 }
 
                 if (enemies.activeCount >= DEFEAT_ENEMY_COUNT) {
@@ -476,12 +486,13 @@ class BattleEngine(
             enemies.activeCount, if (isBossRound) 1 else 0, bossTimeRemaining,
         )
 
-        // Enemy positions
+        // Enemy positions + buff bitmasks
         val eCount = enemies.activeCount
         val exs = FloatArray(eCount)
         val eys = FloatArray(eCount)
         val etypes = IntArray(eCount)
         val ehp = FloatArray(eCount)
+        val ebuffs = IntArray(eCount)
         var ei = 0
         enemies.forEach { e ->
             if (ei < eCount) {
@@ -489,10 +500,24 @@ class BattleEngine(
                 eys[ei] = e.position.y / H
                 etypes[ei] = e.type
                 ehp[ei] = e.hpRatio
+                // Build buff bitmask from enemy buff container
+                var bits = 0
+                val hasSlow = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.Slow)
+                val hasDot = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.DoT)
+                val hasArmorBreak = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.ArmorBreak)
+                if (hasSlow) bits = bits or com.example.jaygame.bridge.BUFF_BIT_SLOW
+                if (hasDot) bits = bits or com.example.jaygame.bridge.BUFF_BIT_DOT
+                if (hasArmorBreak) bits = bits or com.example.jaygame.bridge.BUFF_BIT_ARMOR_BREAK
+                // Poison = slow + dot combo
+                if (hasSlow && hasDot) bits = bits or com.example.jaygame.bridge.BUFF_BIT_POISON
+                // Lightning & Wind tracked via recentHitFlags
+                if (e.recentHitFlags and 1 != 0) bits = bits or com.example.jaygame.bridge.BUFF_BIT_LIGHTNING
+                if (e.recentHitFlags and 2 != 0) bits = bits or com.example.jaygame.bridge.BUFF_BIT_WIND
+                ebuffs[ei] = bits
                 ei++
             }
         }
-        BattleBridge.updateEnemyPositions(exs, eys, etypes, ehp, ei)
+        BattleBridge.updateEnemyPositions(exs, eys, etypes, ehp, ebuffs, ei)
 
         // Unit positions
         val uCount = units.activeCount
@@ -565,6 +590,111 @@ class BattleEngine(
     private fun onBattleEnd(victory: Boolean) {
         val goldEarned = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
         val trophyChange = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
-        BattleBridge.onBattleEnd(victory, waveSystem.currentWave + 1, goldEarned, trophyChange, killCount, mergeCount, 0)
+        val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%
+        val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
+        BattleBridge.onBattleEnd(
+            victory, waveSystem.currentWave + 1, goldEarned, trophyChange,
+            killCount, mergeCount, 0, noHpLost, fastClear,
+        )
+    }
+
+    // ── Z17: Unit Position vs Path Overlap Validation ──
+
+    private fun validateLayout() {
+        val tag = "BattleLayout"
+
+        // Path strip bounds: outer rect (60px outside grid) → inner rect (grid bounds)
+        // Outer: (340,60)~(940,660). Inner/grid: (400,120)~(880,600).
+        // Path strip = area between outer and inner rects.
+        val outerLeft = Grid.ORIGIN_X - 60f
+        val outerTop = Grid.ORIGIN_Y - 60f
+        val outerRight = Grid.ORIGIN_X + Grid.GRID_W + 60f
+        val outerBottom = Grid.ORIGIN_Y + Grid.GRID_H + 60f
+
+        val innerLeft = Grid.ORIGIN_X
+        val innerTop = Grid.ORIGIN_Y
+        val innerRight = Grid.ORIGIN_X + Grid.GRID_W
+        val innerBottom = Grid.ORIGIN_Y + Grid.GRID_H
+
+        var warnings = 0
+
+        for (i in 0 until Grid.TOTAL) {
+            val col = i % Grid.COLS
+            val row = i / Grid.COLS
+            val cx = Grid.ORIGIN_X + col * Grid.CELL_W + Grid.CELL_W * 0.5f
+            val cy = Grid.ORIGIN_Y + row * Grid.CELL_H + Grid.CELL_H * 0.5f
+
+            // Check if cell center is inside path strip (between outer and inner rect)
+            val inOuter = cx >= outerLeft && cx <= outerRight && cy >= outerTop && cy <= outerBottom
+            val inInner = cx > innerLeft && cx < innerRight && cy > innerTop && cy < innerBottom
+            val inPathStrip = inOuter && !inInner
+
+            if (inPathStrip) {
+                Log.w(tag, "Z17: Cell[$i] center ($cx,$cy) overlaps with path strip!")
+                warnings++
+            }
+
+            // Check wander range stays inside grid bounds (±30px + margin from GameUnit)
+            val wanderRange = 50f  // max wander = 20 + 30 = 50px
+            if (cx - wanderRange < innerLeft || cx + wanderRange > innerRight ||
+                cy - wanderRange < innerTop || cy + wanderRange > innerBottom) {
+                Log.w(tag, "Z17: Cell[$i] wander range (±50px from $cx,$cy) may exit grid bounds")
+                warnings++
+            }
+        }
+
+        if (warnings == 0) {
+            Log.i(tag, "Z17: Layout validation passed — all cell centers inside grid, wander ranges OK")
+        } else {
+            Log.w(tag, "Z17: Layout validation found $warnings warnings")
+        }
+    }
+
+    // ── Z18: Path Speed Uniformity Validation ──
+
+    private fun validatePathSpeedUniformity() {
+        val tag = "BattlePath"
+
+        if (enemyPath.size < 2) {
+            Log.w(tag, "Z18: Enemy path has fewer than 2 waypoints")
+            return
+        }
+
+        val segmentLengths = mutableListOf<Float>()
+        for (i in 0 until enemyPath.size - 1) {
+            val a = enemyPath[i]
+            val b = enemyPath[i + 1]
+            val dx = b.x - a.x
+            val dy = b.y - a.y
+            segmentLengths.add(sqrt(dx * dx + dy * dy))
+        }
+        // Closing segment (last → first)
+        val last = enemyPath.last()
+        val first = enemyPath.first()
+        val closeDx = first.x - last.x
+        val closeDy = first.y - last.y
+        segmentLengths.add(sqrt(closeDx * closeDx + closeDy * closeDy))
+
+        val totalLength = segmentLengths.sum()
+        val avgLength = totalLength / segmentLengths.size
+        val maxDeviation = segmentLengths.maxOf { abs(it - avgLength) }
+        val variancePercent = if (avgLength > 0f) (maxDeviation / avgLength) * 100f else 0f
+
+        Log.i(tag, "Z18: Path stats — ${segmentLengths.size} segments, total=${totalLength.toInt()}px, avg=${avgLength.toInt()}px")
+
+        // Log each segment length
+        for (i in segmentLengths.indices) {
+            val len = segmentLengths[i]
+            val devPct = if (avgLength > 0f) ((len - avgLength) / avgLength * 100f) else 0f
+            val label = if (i < segmentLengths.size - 1) "Seg[$i]" else "Close"
+            Log.d(tag, "Z18: $label length=${len.toInt()}px (${"%+.1f".format(devPct)}%)")
+        }
+
+        if (variancePercent < 10f) {
+            Log.i(tag, "Z18: Path uniformity OK — max deviation ${variancePercent.toInt()}% (< 10%)")
+        } else {
+            Log.w(tag, "Z18: Path NOT uniform — max deviation ${variancePercent.toInt()}% (>= 10%). " +
+                    "This is expected for paths with corner interpolation points.")
+        }
     }
 }

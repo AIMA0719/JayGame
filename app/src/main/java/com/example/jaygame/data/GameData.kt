@@ -47,6 +47,7 @@ data class GameData(
     val gas: Int = 0,
     // 패밀리 영구 업그레이드
     val familyUpgrades: Map<String, Int> = emptyMap(),
+    val lastFreePullTime: Long = 0L,
     val saveVersion: Int = 1,
 ) {
     val rank: String get() = when {

@@ -16,7 +16,9 @@ object AbilitySystem {
         enemy.takeDamage(proj.damage, proj.isMagic)
 
         when (proj.abilityType) {
-            1 -> { // Splash
+            1 -> { // Splash (Fire)
+                // Fire DoT on primary target
+                enemy.buffs.addBuff(BuffType.DoT, proj.damage * 0.1f, 2f, proj.sourceUnitId)
                 val splashRadius = proj.abilityValue.coerceAtLeast(60f)
                 val rect = GameRect(
                     enemy.position.x - splashRadius,
@@ -39,6 +41,9 @@ object AbilitySystem {
                 enemy.buffs.addBuff(BuffType.DoT, proj.abilityValue, 3f, proj.sourceUnitId)
             }
             4 -> { // Chain
+                // Mark primary target with lightning hit flag
+                enemy.recentHitFlags = enemy.recentHitFlags or 1
+                enemy.recentHitTimer = 0.5f
                 val chainCount = proj.abilityValue.toInt().coerceIn(1, 5)
                 val rect = GameRect(
                     enemy.position.x - 200f, enemy.position.y - 200f, 400f, 400f,
@@ -46,6 +51,9 @@ object AbilitySystem {
                 var chained = 0
                 spatialHash.query(rect).forEach { nearby ->
                     if (chained < chainCount && nearby !== enemy && nearby.alive) {
+                        // Mark chained targets with lightning hit flag
+                        nearby.recentHitFlags = nearby.recentHitFlags or 1
+                        nearby.recentHitTimer = 0.5f
                         spawnProjectile(enemy.position, nearby, proj.damage * 0.7f, 4)
                         chained++
                     }
@@ -60,6 +68,8 @@ object AbilitySystem {
                 }
             }
             10 -> { // Knockback (Wind)
+                enemy.recentHitFlags = enemy.recentHitFlags or 2
+                enemy.recentHitTimer = 0.6f
                 val dir = enemy.position - proj.sourcePos
                 val len = dir.length
                 if (len > 0.01f) {
