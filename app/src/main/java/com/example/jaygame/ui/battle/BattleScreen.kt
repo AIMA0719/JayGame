@@ -282,6 +282,8 @@ fun BattleScreen(
                     cardsEarned = data.cardsEarned,
                     noHpLost = data.noHpLost,
                     fastClear = data.fastClear,
+                    relicDropId = data.relicDropId,
+                    relicDropGrade = data.relicDropGrade,
                     onGoHome = onGoHome,
                     onRetry = onGoHome,
                 )

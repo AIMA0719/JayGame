@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.data.ALL_RELICS
+import com.example.jaygame.data.RelicGrade
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DeepDark
@@ -96,6 +98,8 @@ fun ResultScreen(
     noHpLost: Boolean = false,
     fastClear: Boolean = false,
     isNewRecord: Boolean = victory,
+    relicDropId: Int = -1,
+    relicDropGrade: Int = -1,
     onGoHome: () -> Unit,
     onRetry: () -> Unit = onGoHome,
 ) {
@@ -135,6 +139,7 @@ fun ResultScreen(
     var showGoldReward by remember { mutableStateOf(false) }
     var showTrophyReward by remember { mutableStateOf(false) }
     var showCardsReward by remember { mutableStateOf(false) }
+    var showRelicReward by remember { mutableStateOf(false) }
 
     // H4: New record banner visibility
     var showNewRecord by remember { mutableStateOf(false) }
@@ -168,6 +173,10 @@ fun ResultScreen(
         delay(400L)
         if (cardsEarned > 0) {
             showCardsReward = true
+            delay(400L)
+        }
+        if (relicDropId >= 0 && relicDropGrade >= 0) {
+            showRelicReward = true
             delay(400L)
         }
 
@@ -327,6 +336,29 @@ fun ResultScreen(
                                 icon = "\uD83C\uDCCF",
                                 label = "+$cardsEarned 카드",
                                 color = NeonCyan,
+                            )
+                        }
+                    }
+
+                    if (relicDropId >= 0 && relicDropGrade >= 0) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        AnimatedVisibility(
+                            visible = showRelicReward,
+                            enter = scaleIn(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMedium,
+                                ),
+                            ),
+                        ) {
+                            val relicName = ALL_RELICS.getOrNull(relicDropId)?.name ?: "유물"
+                            val grade = RelicGrade.entries.getOrNull(relicDropGrade)
+                            val gradeLabel = grade?.label ?: ""
+                            val gradeColor = grade?.let { Color(it.colorHex) } ?: NeonCyan
+                            RewardCard(
+                                icon = "\uD83D\uDC8E",
+                                label = "유물 획득! $relicName ($gradeLabel)",
+                                color = gradeColor,
                             )
                         }
                     }

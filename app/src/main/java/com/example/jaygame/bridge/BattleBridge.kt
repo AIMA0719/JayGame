@@ -120,6 +120,8 @@ data class BattleResultData(
     val cardsEarned: Int = 0,
     val noHpLost: Boolean = false,
     val fastClear: Boolean = false,
+    val relicDropId: Int = -1,      // -1 = no drop
+    val relicDropGrade: Int = -1,   // RelicGrade.ordinal, -1 = no drop
 )
 
 /**
@@ -336,6 +338,8 @@ object BattleBridge {
         cardsEarned: Int,
         noHpLost: Boolean = false,
         fastClear: Boolean = false,
+        relicDropId: Int = -1,
+        relicDropGrade: Int = -1,
     ) {
         _result.value = BattleResultData(
             victory = victory,
@@ -347,6 +351,8 @@ object BattleBridge {
             cardsEarned = cardsEarned,
             noHpLost = noHpLost,
             fastClear = fastClear,
+            relicDropId = relicDropId,
+            relicDropGrade = relicDropGrade,
         )
     }
 
@@ -602,5 +608,18 @@ object BattleBridge {
         _battleUpgradeLevels.value = levels
 
         engine?.applyBattleUpgrade(upgradeType, levels[upgradeType], cost.toFloat())
+    }
+
+    // ── Boss Modifier Notification ───────────────────────────
+
+    private val _bossModifier = MutableStateFlow<String?>(null)
+    val bossModifier: StateFlow<String?> = _bossModifier.asStateFlow()
+
+    fun notifyBossModifier(modifier: com.example.jaygame.engine.BossModifier?) {
+        _bossModifier.value = modifier?.label
+    }
+
+    fun clearBossModifier() {
+        _bossModifier.value = null
     }
 }

@@ -13,9 +13,11 @@ import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
+import com.example.jaygame.data.RelicGrade
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.engine.BattleEngine
+import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.battle.BattleScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import kotlinx.coroutines.CoroutineScope
@@ -103,17 +105,25 @@ class MainActivity : ComponentActivity() {
                             // Single-type win detection: deck has only 1 unique family
                             val singleTypeWin = battleResult.victory && current.deck.toSet().size == 1
 
-                            repository.save(current.copy(
-                                gold = current.gold + battleResult.goldEarned,
-                                trophies = (current.trophies + battleResult.trophyChange).coerceAtLeast(0),
-                                totalKills = current.totalKills + battleResult.killCount,
-                                totalMerges = current.totalMerges + battleResult.mergeCount,
-                                totalGoldEarned = current.totalGoldEarned + battleResult.goldEarned,
-                                totalWins = current.totalWins + if (battleResult.victory) 1 else 0,
-                                totalLosses = current.totalLosses + if (!battleResult.victory) 1 else 0,
-                                highestWave = maxOf(current.highestWave, battleResult.waveReached),
-                                wonWithoutDamage = current.wonWithoutDamage || battleResult.noHpLost,
-                                wonWithSingleType = current.wonWithSingleType || singleTypeWin,
+                            // Apply relic drop if present
+                            val afterRelicData = if (battleResult.relicDropId >= 0 && battleResult.relicDropGrade >= 0) {
+                                val grade = RelicGrade.entries.getOrNull(battleResult.relicDropGrade)
+                                if (grade != null) {
+                                    RelicManager(current).acquireRelic(battleResult.relicDropId, grade)
+                                } else current
+                            } else current
+
+                            repository.save(afterRelicData.copy(
+                                gold = afterRelicData.gold + battleResult.goldEarned,
+                                trophies = (afterRelicData.trophies + battleResult.trophyChange).coerceAtLeast(0),
+                                totalKills = afterRelicData.totalKills + battleResult.killCount,
+                                totalMerges = afterRelicData.totalMerges + battleResult.mergeCount,
+                                totalGoldEarned = afterRelicData.totalGoldEarned + battleResult.goldEarned,
+                                totalWins = afterRelicData.totalWins + if (battleResult.victory) 1 else 0,
+                                totalLosses = afterRelicData.totalLosses + if (!battleResult.victory) 1 else 0,
+                                highestWave = maxOf(afterRelicData.highestWave, battleResult.waveReached),
+                                wonWithoutDamage = afterRelicData.wonWithoutDamage || battleResult.noHpLost,
+                                wonWithSingleType = afterRelicData.wonWithSingleType || singleTypeWin,
                                 stageBestWaves = bestWaves,
                                 units = updatedUnits,
                                 totalXP = newTotalXP,

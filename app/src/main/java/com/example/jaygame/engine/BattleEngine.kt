@@ -369,6 +369,7 @@ class BattleEngine(
             abilityType = unit.abilityType,
             abilityValue = unit.abilityValue,
             grade = unit.grade, family = unit.family,
+            attackerRange = unit.range,
         )
     }
 
