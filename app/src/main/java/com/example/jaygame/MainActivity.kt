@@ -55,12 +55,14 @@ class MainActivity : ComponentActivity() {
             hpBarMode = data.healthBarMode,
             autoSummonOn = data.autoSummon,
         )
+        BattleBridge.updateUnitPullPity(data.unitPullPity)
         engine = BattleEngine(
             stageId = stageId,
             difficulty = difficulty,
             maxWaves = stage.maxWaves,
             deck = data.deck.toIntArray(),
             gameData = data,
+            initialPity = data.unitPullPity,
         ).also {
             BattleBridge.engine = it
             it.start(engineScope)
@@ -113,6 +115,9 @@ class MainActivity : ComponentActivity() {
                                 } else current
                             } else current
 
+                            // 천장 카운터 저장
+                            val finalPity = engine?.currentPity ?: BattleBridge.unitPullPity.value
+
                             repository.save(afterRelicData.copy(
                                 gold = afterRelicData.gold + battleResult.goldEarned,
                                 trophies = (afterRelicData.trophies + battleResult.trophyChange).coerceAtLeast(0),
@@ -129,6 +134,7 @@ class MainActivity : ComponentActivity() {
                                 totalXP = newTotalXP,
                                 playerLevel = newPlayerLevel,
                                 seasonXP = newSeasonXP,
+                                unitPullPity = finalPity,
                             ))
                         }
                         BattleBridge.clearResult()

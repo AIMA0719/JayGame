@@ -254,6 +254,7 @@ fun BattleBottomHud(
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
+    val unitPullPity by BattleBridge.unitPullPity.collectAsState()
     val gridFull = gridState.all { it.unitDefId >= 0 }
     val canSummon = battle.sp >= battle.summonCost && !gridFull
     val canGamble = battle.sp >= 10
@@ -400,6 +401,7 @@ fun BattleBottomHud(
                     cost = battle.summonCost,
                     enabled = canSummon,
                     gridFull = gridFull,
+                    pity = unitPullPity,
                     onClick = {
                         HapticManager.medium(view)
                         SfxManager.play(SoundEvent.Summon)
@@ -541,6 +543,7 @@ fun SummonButton(
     cost: Int,
     enabled: Boolean,
     gridFull: Boolean = false,
+    pity: Int = 0,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     goldIcon: androidx.compose.ui.graphics.ImageBitmap? = null,
@@ -634,6 +637,17 @@ fun SummonButton(
                     fontWeight = FontWeight.Bold,
                 )
             }
+            // 천장 카운터
+            Text(
+                text = "천장: $pity/100",
+                color = when {
+                    pity >= 80 -> NeonRed
+                    pity >= 30 -> Color(0xFFFFAA44)
+                    else -> WoodBrownDark.copy(alpha = 0.6f)
+                },
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

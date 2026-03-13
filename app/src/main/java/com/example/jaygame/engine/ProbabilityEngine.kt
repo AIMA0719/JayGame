@@ -60,4 +60,30 @@ class DefaultProbabilityEngine(
         }
         return UnitGrade.COMMON
     }
+
+    /**
+     * 천장(Pity)을 고려한 등급 롤.
+     * @param pity 현재 누적 소환 횟수
+     * @return Pair(gradeOrdinal, shouldResetPity)
+     *   - gradeOrdinal: 0=COMMON, 1=RARE, 2=HERO, 3=LEGEND
+     *   - shouldResetPity: HERO 이상이 나왔을 때 true (천장 초기화)
+     */
+    fun rollGradeWithPity(pity: Int): Pair<Int, Boolean> {
+        // 하드 천장: 100회 소환 시 무조건 LEGEND
+        if (pity >= 100) return 3 to true
+
+        // 소프트 천장: 30회 이후 HERO 확률 2배
+        val heroBoost = if (pity >= 30) 2f else 1f
+
+        val r = random.nextFloat() * 100f
+        return when {
+            r < 60f -> 0 to false                        // COMMON 60%
+            r < 85f -> 1 to false                        // RARE 25%
+            r < 85f + 12f * heroBoost -> {               // HERO (부스트 후 최대 24%)
+                val reset = pity >= 30
+                2 to reset
+            }
+            else -> 3 to true                            // LEGEND
+        }
+    }
 }

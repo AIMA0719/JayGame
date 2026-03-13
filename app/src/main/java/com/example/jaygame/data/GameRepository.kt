@@ -182,6 +182,8 @@ class GameRepository(context: Context) {
 
             root.put("petPullPity", data.petPullPity)
 
+            root.put("unitPullPity", data.unitPullPity)
+
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
             val checksum = fnv1aHash(payload)
@@ -368,6 +370,8 @@ class GameRepository(context: Context) {
 
             val petPullPity = root.optInt("petPullPity", 0)
 
+            val unitPullPity = root.optInt("unitPullPity", 0)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -413,6 +417,7 @@ class GameRepository(context: Context) {
                 pets = pets,
                 equippedPets = equippedPets,
                 petPullPity = petPullPity,
+                unitPullPity = unitPullPity,
             )
         }
     }
