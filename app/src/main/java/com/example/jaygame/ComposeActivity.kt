@@ -4,14 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -95,28 +90,14 @@ class ComposeActivity : ComponentActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // A1: Splash→Home fade+slide transition
-                    AnimatedContent(
-                        targetState = showSplash,
-                        transitionSpec = {
-                            (fadeIn(animationSpec = tween(600)) +
-                                slideInVertically(
-                                    animationSpec = tween(600),
-                                    initialOffsetY = { it / 8 },
-                                ))
-                                .togetherWith(fadeOut(animationSpec = tween(400)))
-                        },
-                        label = "splashToHome",
-                    ) { isSplash ->
-                        if (isSplash) {
-                            SplashScreen()
-                        } else {
-                            NavGraph(
-                                repository = repository,
-                                onStartBattle = { battleTransitionActive = true },
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
+                    if (showSplash) {
+                        SplashScreen()
+                    } else {
+                        NavGraph(
+                            repository = repository,
+                            onStartBattle = { battleTransitionActive = true },
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
 
                     // A2: Battle zoom-in wipe overlay
