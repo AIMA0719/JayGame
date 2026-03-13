@@ -2,6 +2,7 @@ package com.example.jaygame.engine
 
 import android.util.Log
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.data.DungeonDef
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
@@ -38,6 +39,11 @@ class BattleEngine(
     var state = State.WaveDelay; private set
 
     var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
+    val petSystem = PetBattleSystem().also { ps -> gameData?.let { ps.init(it) } }
+
+    // 던전 모드
+    var isDungeonMode: Boolean = false
+    var dungeonDef: DungeonDef? = null
 
     // 천장(Pity) 시스템
     private val probabilityEngine = DefaultProbabilityEngine()
@@ -198,6 +204,7 @@ class BattleEngine(
                 updateUnits(dt)
                 updateProjectiles(dt)
                 updateZones(dt)
+                updatePets(dt)
 
                 if (enemies.activeCount > peakEnemyCount) {
                     peakEnemyCount = enemies.activeCount
@@ -205,8 +212,18 @@ class BattleEngine(
 
                 // Defeat: 100+ alive enemies
                 if (enemies.activeCount >= DEFEAT_ENEMY_COUNT) {
-                    state = State.Defeat
-                    onBattleEnd(false)
+                    if (petSystem.canPhoenixRevive()) {
+                        // Pet ID 8 (봉황): one-time revive — clear excess enemies and continue
+                        petSystem.usePhoenixRevive()
+                        var released = 0
+                        val excessList = mutableListOf<Enemy>()
+                        enemies.forEach { if (it.alive) excessList.add(it) }
+                        excessList.forEach { enemies.release(it); released++ }
+                        BattleBridge.onPhoenixRevive()
+                    } else {
+                        state = State.Defeat
+                        onBattleEnd(false)
+                    }
                 }
 
                 // All enemies spawned & killed → immediate next wave
@@ -295,7 +312,7 @@ class BattleEngine(
             val deathY = it.position.y / H
             enemies.release(it)
             killCount++
-            val killGold = (1f * (1f + (relicManager?.totalGoldKillBonus() ?: 0f))).toInt().coerceAtLeast(1)
+            val killGold = (1f * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
             BattleBridge.onGoldPickup(deathX, deathY, killGold)
         }
     }
@@ -347,6 +364,33 @@ class BattleEngine(
             if (!stillAlive) deadZones.add(zone)
         }
         deadZones.forEach { zones.release(it) }
+    }
+
+    private fun updatePets(dt: Float) {
+        val activeEnemies = enemies.toActiveList()
+        val activeUnits = units.toActiveList()
+        petSystem.update(
+            dt = dt,
+            enemies = activeEnemies,
+            units = activeUnits,
+            onDamageEnemy = { enemy, damage ->
+                if (enemy.alive) {
+                    enemy.hp -= damage
+                    if (enemy.hp <= 0f) enemy.alive = false
+                    val nx = enemy.position.x / W
+                    val ny = enemy.position.y / H
+                    BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
+                }
+            },
+            onBuffUnit = { unit, type, value, duration ->
+                unit.buffs.addBuff(type, value, duration)
+            },
+            onDotEnemy = { enemy, dps, duration ->
+                if (enemy.alive) {
+                    enemy.buffs.addBuff(BuffType.DoT, dps, duration)
+                }
+            },
+        )
     }
 
     private fun fireProjectile(unit: GameUnit) {
@@ -402,9 +446,14 @@ class BattleEngine(
         if (sp < effectiveSummonCost || grid.isFull()) return
         sp -= effectiveSummonCost
 
-        val (grade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
+        val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
         currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
         BattleBridge.updateUnitPullPity(currentPity)
+        // Pet ID 7 (9미호): chance to bump summon grade by 1
+        val gradeUpChance = petSystem.getSummonGradeUpChance()
+        val grade = if (gradeUpChance > 0f && Math.random() < gradeUpChance) {
+            (rawGrade + 1).coerceAtMost(3)  // cap at LEGEND (3)
+        } else rawGrade
         if (deck.isEmpty()) return
         val familyIndex = deck.random()  // deck stores family ordinals directly
         val unitDefId = unitIdOf(grade, familyIndex) ?: return
@@ -682,10 +731,15 @@ class BattleEngine(
     }
 
     private fun onBattleEnd(victory: Boolean) {
-        val difficultyBonus = 1f + difficulty * 0.25f // 초보1.0, 숙련자1.25, 고인물1.5, 썩은물1.75, 챌린저2.0
+        val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
+            dungeonDef!!.difficultyMultiplier
+        } else {
+            1f + difficulty * 0.25f // 초보1.0, 숙련자1.25, 고인물1.5, 썩은물1.75, 챌린저2.0
+        }
+        val dungeonRewardMult = if (isDungeonMode) dungeonDef?.rewardMultiplier ?: 1f else 1f
         val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
         val relicWaveBonus = if (victory) (1f + (relicManager?.totalGoldWaveBonus() ?: 0f)) else 1f
-        val goldEarned = (baseGold * difficultyBonus * relicWaveBonus).toInt()
+        val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt()
         val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%

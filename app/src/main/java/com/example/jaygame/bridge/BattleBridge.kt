@@ -493,6 +493,14 @@ object BattleBridge {
         _bossModifier.value = modifier
     }
 
+    /** 봉황 펫: 1회 부활 이벤트 */
+    private val _phoenixReviveEvent = MutableStateFlow(0)
+    val phoenixReviveEvent: StateFlow<Int> = _phoenixReviveEvent.asStateFlow()
+
+    fun onPhoenixRevive() {
+        _phoenixReviveEvent.value = _phoenixReviveEvent.value + 1
+    }
+
     /** 배속 (1f, 2f, 4f, 8f) */
     private val _battleSpeed = MutableStateFlow(1f)
     val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
