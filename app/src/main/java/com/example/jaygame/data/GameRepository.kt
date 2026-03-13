@@ -148,6 +148,22 @@ class GameRepository(context: Context) {
 
             root.put("saveVersion", data.saveVersion)
 
+            // relics
+            val relicsArr = JSONArray()
+            for (r in data.relics) {
+                val rObj = JSONObject()
+                rObj.put("relicId", r.relicId)
+                rObj.put("grade", r.grade)
+                rObj.put("level", r.level)
+                rObj.put("owned", if (r.owned) 1 else 0)
+                relicsArr.put(rObj)
+            }
+            root.put("relics", relicsArr)
+
+            val eqArr = JSONArray()
+            for (id in data.equippedRelics) eqArr.put(id)
+            root.put("equippedRelics", eqArr)
+
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
             val checksum = fnv1aHash(payload)
@@ -296,6 +312,24 @@ class GameRepository(context: Context) {
 
             val saveVersion = root.optInt("saveVersion", 1)
 
+            val relics = if (root.has("relics")) {
+                val arr = root.getJSONArray("relics")
+                List(arr.length()) { i ->
+                    val obj = arr.getJSONObject(i)
+                    RelicProgress(
+                        relicId = obj.getInt("relicId"),
+                        grade = obj.getInt("grade"),
+                        level = obj.getInt("level"),
+                        owned = obj.optInt("owned", 0) == 1,
+                    )
+                }
+            } else List(12) { RelicProgress(relicId = it) }
+
+            val equippedRelics = if (root.has("equippedRelics")) {
+                val arr = root.getJSONArray("equippedRelics")
+                List(arr.length()) { arr.getInt(it) }
+            } else emptyList()
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -336,6 +370,8 @@ class GameRepository(context: Context) {
                 lastFreePullTime = lastFreePullTime,
                 claimedAchievements = claimedAchievements,
                 saveVersion = saveVersion,
+                relics = relics,
+                equippedRelics = equippedRelics,
             )
         }
     }
