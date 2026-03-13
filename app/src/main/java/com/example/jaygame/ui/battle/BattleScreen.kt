@@ -84,6 +84,7 @@ fun BattleScreen(
     var showBulkSellDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
+    var showGambleDialog by remember { mutableStateOf(false) }
 
     // Boss vignette
     val battleState by BattleBridge.state.collectAsState()
@@ -250,6 +251,7 @@ fun BattleScreen(
                 onBuyClick = { showBuySheet = true },
                 onUpgradeClick = { showUpgradeSheet = true },
                 onBulkSellClick = { showBulkSellDialog = true },
+                onGambleClick = { showGambleDialog = true },
             )
         }
 
@@ -267,6 +269,9 @@ fun BattleScreen(
         }
         if (showUpgradeSheet) {
             UpgradeSheet(onDismiss = { showUpgradeSheet = false })
+        }
+        if (showGambleDialog) {
+            GambleDialog(onDismiss = { showGambleDialog = false })
         }
 
         // Layer 4: Result screen with A3 transition

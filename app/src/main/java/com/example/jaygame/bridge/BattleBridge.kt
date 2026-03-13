@@ -477,6 +477,14 @@ object BattleBridge {
         }
     }
 
+    /** 유닛 소환 천장(Pity) 카운터 */
+    private val _unitPullPity = MutableStateFlow(0)
+    val unitPullPity: StateFlow<Int> = _unitPullPity.asStateFlow()
+
+    fun updateUnitPullPity(pity: Int) {
+        _unitPullPity.value = pity
+    }
+
     /** 보스 모디파이어 — 보스 웨이브 시작 시 설정, 3초 후 null로 자동 리셋은 UI에서 처리 */
     private val _bossModifier = MutableStateFlow<BossModifier?>(null)
     val bossModifier: StateFlow<BossModifier?> = _bossModifier.asStateFlow()
@@ -522,6 +530,7 @@ object BattleBridge {
         _goldPickupEvents.value = emptyList()
         _levelUpEvents.value = emptyList()
         _bossModifier.value = null
+        _unitPullPity.value = 0
         // Note: stageId, difficulty, battleSpeed are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _debugMode.value = false
@@ -592,6 +601,17 @@ object BattleBridge {
         engine?.applyGamble(newSp)
 
         return GambleResult(spChange, newSp, percentage)
+    }
+
+    /**
+     * New 4-tier gamble: bet betPercent of current SP on the chosen option.
+     * Returns null if SP is insufficient (bet < 10).
+     */
+    fun requestGamble(
+        betPercent: Float,
+        option: com.example.jaygame.engine.GambleSystem.GambleOption,
+    ): com.example.jaygame.engine.GambleSystem.GambleResult? {
+        return engine?.requestGamble(betPercent, option)
     }
 
     // ── Buy Unit ────────────────────────────────────────────

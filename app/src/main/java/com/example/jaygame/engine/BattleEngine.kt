@@ -19,6 +19,7 @@ class BattleEngine(
     private val maxWaves: Int,
     private val deck: IntArray,
     gameData: GameData? = null,
+    initialPity: Int = 0,
 ) {
     companion object {
         const val W = 720f
@@ -37,6 +38,10 @@ class BattleEngine(
     var state = State.WaveDelay; private set
 
     var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
+
+    // 천장(Pity) 시스템
+    private val probabilityEngine = DefaultProbabilityEngine()
+    var currentPity: Int = initialPity.coerceIn(0, 100); private set
 
     val enemies = ObjectPool(MAX_ENEMIES, { Enemy() }) { it.reset() }
     val units = ObjectPool(MAX_UNITS, { GameUnit() }) { it.reset() }
@@ -397,7 +402,9 @@ class BattleEngine(
         if (sp < effectiveSummonCost || grid.isFull()) return
         sp -= effectiveSummonCost
 
-        val grade = rollGrade()
+        val (grade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
+        currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
+        BattleBridge.updateUnitPullPity(currentPity)
         if (deck.isEmpty()) return
         val familyIndex = deck.random()  // deck stores family ordinals directly
         val unitDefId = unitIdOf(grade, familyIndex) ?: return
@@ -418,13 +425,6 @@ class BattleEngine(
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         BattleBridge.onSummonResult(unitDefId, grade)
-    }
-
-    private fun rollGrade(): Int {
-        val r = Math.random() * 100
-        return when {
-            r < 60 -> 0; r < 85 -> 1; r < 97 -> 2; else -> 3
-        }
     }
 
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
@@ -521,6 +521,15 @@ class BattleEngine(
 
     fun applyGamble(newSp: Float) {
         sp = newSp.coerceAtLeast(0f)
+    }
+
+    fun requestGamble(betPercent: Float, option: GambleSystem.GambleOption): GambleSystem.GambleResult? {
+        val bet = sp * betPercent
+        if (bet < 10f) return null
+        val luckBonus = relicManager?.totalGambleBonus() ?: 0f
+        val result = GambleSystem.gamble(bet, option, luckBonus)
+        sp = if (result.won) sp - bet + result.reward else sp - bet
+        return result
     }
 
     fun requestBuyUnit(unitDefId: Int, cost: Float) {

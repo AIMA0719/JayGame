@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -251,6 +250,7 @@ fun BattleBottomHud(
     onBuyClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {},
     onBulkSellClick: () -> Unit = {},
+    onGambleClick: () -> Unit = {},
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
@@ -263,27 +263,6 @@ fun BattleBottomHud(
     val view = LocalView.current
 
     val goldIcon = remember { loadAssetBitmap(context, "raw/ui/icon_gold.png") }
-
-    // SP gain animation
-    var spGainText by remember { mutableStateOf<String?>(null) }
-    var spGainKey by remember { mutableIntStateOf(0) }
-    val spGainAlpha = remember { Animatable(0f) }
-    val spGainOffsetY = remember { Animatable(0f) }
-
-    LaunchedEffect(spGainKey) {
-        if (spGainText != null) {
-            launch {
-                spGainAlpha.snapTo(1f)
-                spGainAlpha.animateTo(0f, tween(1200))
-            }
-            launch {
-                spGainOffsetY.snapTo(0f)
-                spGainOffsetY.animateTo(-40f, tween(1200))
-            }
-            delay(1200)
-            spGainText = null
-        }
-    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -388,21 +367,6 @@ fun BattleBottomHud(
                 Text("${battle.sp.toInt()}", color = GoldBright, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
             }
 
-            // SP gain animation text
-            if (spGainText != null) {
-                Text(
-                    text = spGainText!!,
-                    color = if (spGainText!!.startsWith("+")) NeonGreen else NeonRed,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .graphicsLayer {
-                            alpha = spGainAlpha.value
-                            translationY = spGainOffsetY.value.dp.toPx()
-                        },
-                )
-            }
         }
 
         // ── Action buttons ──
@@ -445,17 +409,10 @@ fun BattleBottomHud(
                     goldIcon = goldIcon,
                 )
 
-                // 도박 (Gamble) — like summon: coin icon + 10 cost
+                // 도박 (Gamble) — opens GambleDialog
                 GambleButton(
                     enabled = canGamble,
-                    onClick = {
-                        if (battle.sp >= 10) {
-                            val result = BattleBridge.performGamble()
-                            val change = result.spChange.toInt()
-                            spGainText = if (change >= 0) "+$change" else "$change"
-                            spGainKey++
-                        }
-                    },
+                    onClick = { onGambleClick() },
                     modifier = Modifier.weight(1f),
                     goldIcon = goldIcon,
                 )
