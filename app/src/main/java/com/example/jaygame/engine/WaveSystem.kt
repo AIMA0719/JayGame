@@ -87,5 +87,6 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
     }
 
     fun onEnemyKilled() { killedCount++ }
+    fun advanceWave() { currentWave++ }
     val isLastWave get() = currentWave >= maxWaves - 1
 }

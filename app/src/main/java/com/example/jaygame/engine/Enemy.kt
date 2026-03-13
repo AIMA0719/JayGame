@@ -65,9 +65,7 @@ class Enemy {
                 position = target.copy()
                 pathIndex++
                 if (pathIndex >= path.size) {
-                    // Enemy completed the path → escaped
-                    alive = false
-                    return false
+                    pathIndex = 0
                 }
             } else {
                 val norm = dir.normalized()

@@ -192,6 +192,7 @@ class BattleEngine(
                         state = State.Victory
                         onBattleEnd(true)
                     } else {
+                        waveSystem.advanceWave()
                         waveDelayTimer = WAVE_DELAY
                         state = State.WaveDelay
                     }
