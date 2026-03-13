@@ -63,13 +63,62 @@ fun BattleParticleOverlay() {
     val particles = remember { mutableListOf<ComposeParticle>() }
     val animTime = remember { mutableFloatStateOf(0f) }
 
-    // Watch summon/merge events to spawn particles
+    // Watch summon/merge/enemy events to spawn particles
     val summonResult by BattleBridge.summonResult.collectAsState()
     val mergeEffect by BattleBridge.mergeEffect.collectAsState()
+    val enemies by BattleBridge.enemyPositions.collectAsState()
 
     // Track previous values to detect new events
     val prevSummonResult = remember { mutableStateOf(summonResult) }
     val prevMergeEffect = remember { mutableStateOf(mergeEffect) }
+    val prevEnemyCount = remember { mutableStateOf(0) }
+    val prevEnemyXs = remember { mutableStateOf(FloatArray(0)) }
+    val prevEnemyYs = remember { mutableStateOf(FloatArray(0)) }
+
+    // Detect enemy deaths → spawn soul particles flying to SP bar (bottom center)
+    val curEnemyCount = enemies.count
+    if (curEnemyCount < prevEnemyCount.value && prevEnemyCount.value > 0) {
+        val oldXs = prevEnemyXs.value
+        val oldYs = prevEnemyYs.value
+        val oldCount = prevEnemyCount.value
+
+        for (oi in 0 until oldCount.coerceAtMost(oldXs.size)) {
+            var found = false
+            for (ni in 0 until curEnemyCount) {
+                val dx = oldXs[oi] - enemies.xs[ni]
+                val dy = oldYs[oi] - enemies.ys[ni]
+                if (dx * dx + dy * dy < 0.003f) { found = true; break }
+            }
+            if (!found && particles.size < MAX_PARTICLES - 3) {
+                // Soul particle: flies toward bottom center (SP bar at ~0.5, 0.95)
+                val spTargetX = 0.5f
+                val spTargetY = 0.95f
+                val dx = spTargetX - oldXs[oi]
+                val dy = spTargetY - oldYs[oi]
+                for (s in 0 until 3) {
+                    val speed = 300f + s * 80f
+                    val jitterX = sin(oi.toFloat() + s * 2f) * 40f
+                    val jitterY = cos(oi.toFloat() + s * 1.5f) * 20f
+                    particles.add(ComposeParticle(
+                        x = oldXs[oi], y = oldYs[oi],
+                        vx = dx * speed + jitterX,
+                        vy = dy * speed + jitterY,
+                        life = 0.5f + s * 0.1f,
+                        maxLife = 0.5f + s * 0.1f,
+                        size = 3f - s * 0.5f,
+                        sizeEnd = 1f,
+                        color = ParticleCyan.copy(alpha = 0.9f),
+                        colorEnd = ParticleWhite.copy(alpha = 0f),
+                    ))
+                }
+            }
+        }
+    }
+    if (curEnemyCount > 0) {
+        prevEnemyXs.value = enemies.xs.copyOf(curEnemyCount)
+        prevEnemyYs.value = enemies.ys.copyOf(curEnemyCount)
+    }
+    prevEnemyCount.value = curEnemyCount
 
     // Spawn summon particles
     if (summonResult != null && summonResult != prevSummonResult.value) {
