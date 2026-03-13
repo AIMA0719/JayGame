@@ -57,6 +57,9 @@ enum class AchievementCategory(val label: String) {
     COLLECTION("수집"),
     ECONOMY("경제"),
     SPECIAL("특수"),
+    RELIC("유물"),
+    PET("펫"),
+    DUNGEON("던전"),
 }
 
 data class AchievementDef(
@@ -95,6 +98,15 @@ val ACHIEVEMENTS = listOf(
     AchievementDef(17, "한길만 파기", "단일 유닛 타입 승리", AchievementCategory.SPECIAL, 1, 500, 5),
     AchievementDef(18, "실버 달성", "실버 랭크 도달", AchievementCategory.SPECIAL, 1000, 1000, 10),
     AchievementDef(19, "골드 달성", "골드 랭크 도달", AchievementCategory.SPECIAL, 2000, 2000, 20),
+    // Relic (20-21)
+    AchievementDef(20, "유물 수집가", "유물 3종 획득", AchievementCategory.RELIC, 3, 500, 50),
+    AchievementDef(21, "유물 강화 마스터", "유물 레벨 10 달성", AchievementCategory.RELIC, 10, 1000, 100),
+    // Pet (22-23)
+    AchievementDef(22, "펫 친구", "첫 펫 획득", AchievementCategory.PET, 1, 200, 20),
+    AchievementDef(23, "펫 마스터", "펫 3종 레벨 10+", AchievementCategory.PET, 3, 2000, 200),
+    // Dungeon (24-25)
+    AchievementDef(24, "던전 탐험가", "던전 첫 클리어", AchievementCategory.DUNGEON, 1, 300, 30),
+    AchievementDef(25, "던전 정복자", "모든 던전 클리어", AchievementCategory.DUNGEON, 5, 3000, 300),
 )
 
 // ── Progress calculation ──
@@ -115,6 +127,12 @@ private fun getProgress(achievement: AchievementDef, data: GameData): Int {
         16 -> if (data.wonWithoutDamage) 1 else 0
         17 -> if (data.wonWithSingleType) 1 else 0
         in 18..19 -> data.trophies
+        20 -> data.relics.count { it.owned }
+        21 -> data.relics.maxOfOrNull { it.level } ?: 0
+        22 -> if (data.pets.any { it.owned }) 1 else 0
+        23 -> data.pets.count { it.owned && it.level >= 10 }
+        24 -> if (data.dungeonClears.isNotEmpty()) 1 else 0
+        25 -> data.dungeonClears.size
         else -> 0
     }
 }
