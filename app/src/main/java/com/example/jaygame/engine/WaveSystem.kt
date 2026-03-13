@@ -9,6 +9,7 @@ data class WaveConfig(
     val isBoss: Boolean,
     val spawnInterval: Float,
     val enemyType: Int,
+    val ccResistance: Float = 0f,
 )
 
 class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
@@ -54,6 +55,13 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
         val bossMultHP = if (isBoss) 10f else if (isMiniBoss) 5f else 1f
         val bossMultArmor = if (isBoss) 2f else if (isMiniBoss) 1.5f else 1f
 
+        val baseCcResist = when {
+            isBoss -> 0.5f
+            isMiniBoss -> 0.3f
+            else -> 0f
+        }
+        val ccResistance = (baseCcResist + difficulty * 0.05f).coerceAtMost(0.9f)
+
         return WaveConfig(
             enemyCount = if (isBoss) 1 else if (isMiniBoss) 3 else count,
             hp = baseHP * difficultyMult * bossMultHP,
@@ -63,6 +71,7 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
             isBoss = isBoss || isMiniBoss,
             spawnInterval = if (isBoss) 0f else 0.5f + (1f / (1 + w * 0.1f)),
             enemyType = enemyType,
+            ccResistance = ccResistance,
         )
     }
 

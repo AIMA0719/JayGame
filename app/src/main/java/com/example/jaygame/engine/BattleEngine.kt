@@ -246,7 +246,19 @@ class BattleEngine(
                 hp = config.hp, speed = config.speed,
                 armor = config.armor, magicResist = config.magicResist,
                 type = config.enemyType, startPos = enemyPath.first().copy(),
+                ccResistance = config.ccResistance,
             )
+            // Assign boss modifier for true boss waves (every 10th wave)
+            if (config.isBoss && (waveSystem.currentWave + 1) % 10 == 0) {
+                val modifier = getBossModifier(stageId, waveSystem.currentWave)
+                enemy.bossModifier = modifier
+                if (modifier == BossModifier.SWIFT) {
+                    enemy.baseSpeed *= 2f
+                    enemy.speed = enemy.baseSpeed
+                }
+                // Notify UI of boss modifier
+                BattleBridge.notifyBossModifier(modifier)
+            }
         }
     }
 
@@ -255,6 +267,14 @@ class BattleEngine(
         enemies.forEach { enemy ->
             if (!enemy.alive) return@forEach
             enemy.update(dt, enemyPath)
+            // REGENERATION: heal 5% maxHp every 10 seconds
+            if (enemy.bossModifier == BossModifier.REGENERATION) {
+                enemy.regenTimer -= dt
+                if (enemy.regenTimer <= 0f) {
+                    enemy.hp = (enemy.hp + enemy.maxHp * 0.05f).coerceAtMost(enemy.maxHp)
+                    enemy.regenTimer = 10f
+                }
+            }
             spatialHash.insert(
                 enemy,
                 enemy.position.x - enemy.size * 0.5f,
@@ -660,9 +680,13 @@ class BattleEngine(
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%
         val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
         val cardsEarned = if (victory) 3 + stageId + difficulty else 1 // higher difficulty = more cards
+        // Roll relic drop on victory (10% chance)
+        val relicDrop = if (victory) relicManager?.rollRelicDrop() else null
         BattleBridge.onBattleEnd(
             victory, waveSystem.currentWave + 1, goldEarned, trophyChange,
             killCount, mergeCount, cardsEarned, noHpLost, fastClear,
+            relicDropId = relicDrop?.first ?: -1,
+            relicDropGrade = relicDrop?.second?.ordinal ?: -1,
         )
     }
 

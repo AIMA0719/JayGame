@@ -1,6 +1,6 @@
 package com.example.jaygame.engine
 
-enum class BuffType { Slow, DoT, ArmorBreak, AtkUp, SpdUp, Shield }
+enum class BuffType { Slow, DoT, ArmorBreak, AtkUp, SpdUp, Shield, Stun, Silence }
 
 data class BuffEntry(
     val type: BuffType,
@@ -14,14 +14,22 @@ class BuffContainer {
     val buffs = mutableListOf<BuffEntry>()
     private var shieldHP = 0f
 
+    var ccResistance: Float = 0f  // 0.0 ~ 0.9
+
     fun addBuff(type: BuffType, value: Float, duration: Float, sourceId: Int = -1) {
+        val effectiveDuration = if (type == BuffType.Slow || type == BuffType.Stun || type == BuffType.Silence) {
+            duration * (1f - ccResistance)
+        } else duration
         val existing = buffs.filter { it.type == type && it.sourceId == sourceId }
         if (existing.size >= 3) {
             existing.minByOrNull { it.remaining }?.let { buffs.remove(it) }
         }
-        buffs.add(BuffEntry(type, value, duration, sourceId))
+        buffs.add(BuffEntry(type, value, effectiveDuration, sourceId))
         if (type == BuffType.Shield) shieldHP += value
     }
+
+    fun isStunned(): Boolean = buffs.any { it.type == BuffType.Stun && it.remaining > 0f }
+    fun isSilenced(): Boolean = buffs.any { it.type == BuffType.Silence && it.remaining > 0f }
 
     fun update(dt: Float): Float {
         var dotDamage = 0f

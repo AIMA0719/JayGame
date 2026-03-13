@@ -18,9 +18,17 @@ class Enemy {
     var recentHitFlags = 0
     var recentHitTimer = 0f
 
+    /** Boss modifier — null for non-boss enemies */
+    var bossModifier: BossModifier? = null
+    /** Timer for REGENERATION modifier: heals 5% maxHp every 10 seconds */
+    var regenTimer: Float = 10f
+    /** CC resistance: 0.0 ~ 0.9 — reduces duration of Slow/Stun/Silence */
+    var ccResistance: Float = 0f
+
     fun init(
         hp: Float, speed: Float, armor: Float, magicResist: Float,
         type: Int, startPos: Vec2,
+        ccResistance: Float = 0f,
     ) {
         this.alive = true
         this.hp = hp
@@ -32,6 +40,8 @@ class Enemy {
         this.type = type
         this.position = startPos.copy()
         this.pathIndex = 0
+        this.ccResistance = ccResistance
+        this.buffs.ccResistance = ccResistance
         this.buffs.clear()
         this.recentHitFlags = 0
         this.recentHitTimer = 0f
@@ -53,6 +63,9 @@ class Enemy {
             hp -= dotDmg
             if (hp <= 0f) { alive = false; return false }
         }
+
+        // Stun: skip movement and boss abilities
+        if (buffs.isStunned()) return true
 
         val effectiveSpeed = baseSpeed * buffs.getSlowFactor()
         if (pathIndex < path.size) {
@@ -94,6 +107,9 @@ class Enemy {
         buffs.clear()
         recentHitFlags = 0
         recentHitTimer = 0f
+        bossModifier = null
+        regenTimer = 10f
+        ccResistance = 0f
     }
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f
