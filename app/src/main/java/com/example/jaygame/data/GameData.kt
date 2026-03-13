@@ -69,7 +69,7 @@ data class GameData(
     val lastFreePullTime: Long = 0L,
     // 업적 수령 기록
     val claimedAchievements: Set<Int> = emptySet(),
-    val saveVersion: Int = 1,
+    val saveVersion: Int = 2,
     // 유물
     val relics: List<RelicProgress> = List(12) { RelicProgress(relicId = it) },
     val equippedRelics: List<Int> = emptyList(),
