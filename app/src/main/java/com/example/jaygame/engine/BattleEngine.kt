@@ -153,6 +153,13 @@ class BattleEngine(
         elapsedTime += dt
         sp += (SP_REGEN_PER_SEC + upgradeSpRegen) * dt
 
+        // Auto-summon: automatically summon when SP is enough
+        if (BattleBridge.autoSummon.value && state == State.Playing) {
+            if (sp >= summonCost && !grid.isFull()) {
+                requestSummon()
+            }
+        }
+
         when (state) {
             State.WaveDelay -> {
                 waveDelayTimer -= dt

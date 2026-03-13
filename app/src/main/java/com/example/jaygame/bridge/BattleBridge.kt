@@ -197,6 +197,22 @@ object BattleBridge {
         _debugMode.value = !_debugMode.value
     }
 
+    /** Gameplay settings — set from GameData before battle starts */
+    private val _showDamageNumbers = MutableStateFlow(true)
+    val showDamageNumbers: StateFlow<Boolean> = _showDamageNumbers.asStateFlow()
+
+    private val _healthBarMode = MutableStateFlow(0) // 0=항상, 1=피격 시만, 2=숨김
+    val healthBarMode: StateFlow<Int> = _healthBarMode.asStateFlow()
+
+    private val _autoSummon = MutableStateFlow(false)
+    val autoSummon: StateFlow<Boolean> = _autoSummon.asStateFlow()
+
+    fun applyGameplaySettings(showDamage: Boolean, hpBarMode: Int, autoSummonOn: Boolean) {
+        _showDamageNumbers.value = showDamage
+        _healthBarMode.value = hpBarMode
+        _autoSummon.value = autoSummonOn
+    }
+
     private val _state = MutableStateFlow(BattleState())
     val state: StateFlow<BattleState> = _state.asStateFlow()
 

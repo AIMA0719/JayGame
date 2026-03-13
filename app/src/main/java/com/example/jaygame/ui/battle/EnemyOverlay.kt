@@ -112,6 +112,7 @@ internal data class DeathParticle(
 @Composable
 fun EnemyOverlay() {
     val enemies by BattleBridge.enemyPositions.collectAsState()
+    val hpBarMode by BattleBridge.healthBarMode.collectAsState()
     val context = LocalContext.current
 
     // Pre-load enemy bitmaps
@@ -351,37 +352,42 @@ fun EnemyOverlay() {
 
 
             // ── HP bar (improved: rounded, bordered, smooth) ──
-            val barWidth = drawSize
-            val barHeight = if (isBoss) 6f else 4f
-            val barX = screenX - barWidth / 2
-            val barY = screenY - spriteSize / 2 - 10f
-
-            // Background with rounded corners
-            drawRoundRect(
-                color = HpBarBg,
-                topLeft = Offset(barX - 1f, barY - 1f),
-                size = Size(barWidth + 2f, barHeight + 2f),
-                cornerRadius = CornerRadius(3f),
-            )
-            // HP fill — uses pre-allocated color table to avoid per-frame Color() alloc
+            // hpBarMode: 0=항상, 1=피격 시만, 2=숨김
             val clampedHp = hpRatio.coerceIn(0f, 1f)
-            val hpColor = hpBarColor(clampedHp)
-            if (clampedHp > 0f) {
+            val showHpBar = when (hpBarMode) {
+                2 -> false
+                1 -> flashTimer > 0f || clampedHp < 1f
+                else -> true
+            }
+            if (showHpBar) {
+                val barWidth = drawSize
+                val barHeight = if (isBoss) 6f else 4f
+                val barX = screenX - barWidth / 2
+                val barY = screenY - spriteSize / 2 - 10f
+
                 drawRoundRect(
-                    color = hpColor,
-                    topLeft = Offset(barX, barY),
-                    size = Size(barWidth * clampedHp, barHeight),
-                    cornerRadius = CornerRadius(2f),
+                    color = HpBarBg,
+                    topLeft = Offset(barX - 1f, barY - 1f),
+                    size = Size(barWidth + 2f, barHeight + 2f),
+                    cornerRadius = CornerRadius(3f),
+                )
+                val hpColor = hpBarColor(clampedHp)
+                if (clampedHp > 0f) {
+                    drawRoundRect(
+                        color = hpColor,
+                        topLeft = Offset(barX, barY),
+                        size = Size(barWidth * clampedHp, barHeight),
+                        cornerRadius = CornerRadius(2f),
+                    )
+                }
+                drawRoundRect(
+                    color = HpBarBorder,
+                    topLeft = Offset(barX - 1f, barY - 1f),
+                    size = Size(barWidth + 2f, barHeight + 2f),
+                    cornerRadius = CornerRadius(3f),
+                    style = HpBarBorderStroke,
                 )
             }
-            // Border
-            drawRoundRect(
-                color = HpBarBorder,
-                topLeft = Offset(barX - 1f, barY - 1f),
-                size = Size(barWidth + 2f, barHeight + 2f),
-                cornerRadius = CornerRadius(3f),
-                style = HpBarBorderStroke,
-            )
 
             // ── Buff Visual Effects ──
             val buffBits = if (i < data.buffs.size) data.buffs[i] else 0

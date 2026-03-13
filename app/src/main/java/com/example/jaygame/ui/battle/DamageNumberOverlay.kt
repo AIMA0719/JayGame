@@ -32,6 +32,9 @@ import com.example.jaygame.bridge.DamageEvent
  */
 @Composable
 fun DamageNumberOverlay() {
+    val showDamage by BattleBridge.showDamageNumbers.collectAsState()
+    if (!showDamage) return
+
     val events by BattleBridge.damageEvents.collectAsState()
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
 

@@ -46,8 +46,13 @@ class MainActivity : ComponentActivity() {
         val stage = STAGES.getOrNull(stageId) ?: STAGES[0]
         val data = repository.gameData.value
 
-        // Apply default battle speed from settings
+        // Apply gameplay settings
         BattleBridge.setBattleSpeed(data.defaultBattleSpeed)
+        BattleBridge.applyGameplaySettings(
+            showDamage = data.showDamageNumbers,
+            hpBarMode = data.healthBarMode,
+            autoSummonOn = data.autoSummon,
+        )
         engine = BattleEngine(
             stageId = stageId,
             difficulty = difficulty,
