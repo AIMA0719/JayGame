@@ -173,16 +173,59 @@ object UniqueAbilitySystem {
         val ty = targetEnemy.position.y / H
 
         when (vfx) {
-            // ── Fire actives ──
-            SkillVfxType.FIRESTORM_METEOR -> emitVfx(vfx, tx, ty, 0.12f, unit, 1.5f)
-            SkillVfxType.VOLCANIC_ERUPTION -> emitVfx(vfx, tx, ty, 0.15f, unit, 8f)
-            SkillVfxType.PHOENIX_CARPET_BOMB -> emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 6f)
-            SkillVfxType.SUPERNOVA -> emitVfx(vfx, nx, ny, 0.5f, unit, 3f)
+            // ── Fire ──
+            // N2: Inferno — Firestorm Meteor: AoE meteor strike
+            SkillVfxType.FIRESTORM_METEOR -> {
+                emitVfx(vfx, tx, ty, 0.12f, unit, 1.5f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    val dx = e.position.x - targetEnemy.position.x
+                    val dy = e.position.y - targetEnemy.position.y
+                    if (dx * dx + dy * dy <= 120f * 120f) {
+                        e.takeDamage(atk * 3f)
+                        e.buffs.addBuff(BuffType.DoT, atk * 0.2f, 4f) // burn debuff
+                    }
+                }
+            }
+            // N3: Volcano King — Volcanic Eruption: summon volcano zone
+            SkillVfxType.VOLCANIC_ERUPTION -> {
+                emitVfx(vfx, tx, ty, 0.15f, unit, 8f)
+                val zone = zonePool?.acquire()
+                if (zone != null) {
+                    zone.init(
+                        pos = targetEnemy.position.copy(),
+                        radius = 100f, duration = 8f,
+                        tickInterval = 1.5f,
+                        tickDamage = unit.effectiveATK() * 2f,
+                        family = 0, grade = unit.grade,
+                    )
+                }
+            }
+            // N4: Phoenix — Carpet Bomb
+            SkillVfxType.PHOENIX_CARPET_BOMB -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 6f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 1.5f)
+                }
+            }
+            // N5-N6: Ra — Supernova
+            SkillVfxType.SUPERNOVA -> {
+                emitVfx(vfx, nx, ny, 0.5f, unit, 3f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 10f)
+                    if (e.alive && e.hp < e.maxHp * 0.3f) e.hp = 0f // execute
+                }
+            }
 
-            // O1: Frost Hero — Frost Nova: freeze enemies in range
+            // ── Frost ──
+            // O1: Frost Nova
             SkillVfxType.FROST_NOVA -> {
                 emitVfx(vfx, nx, ny, 0.1f, unit, 1f)
-                // Apply 2-sec freeze (100% slow) to nearby enemies
                 for (e in enemies) {
                     if (!e.alive) continue
                     val dx = e.position.x - unit.position.x
@@ -192,12 +235,51 @@ object UniqueAbilitySystem {
                     }
                 }
             }
-            SkillVfxType.ABSOLUTE_ZERO -> emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 2f)
-            SkillVfxType.ICE_AGE_BLIZZARD -> emitVfx(vfx, 0.5f, 0.5f, 0.4f, unit, 8f)
-            SkillVfxType.ETERNAL_WINTER -> emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 4f)
-            SkillVfxType.TIME_STOP -> emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 5f)
+            // O2: Iceborn — Absolute Zero: global freeze + shatter
+            SkillVfxType.ABSOLUTE_ZERO -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 2f)
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.buffs.addBuff(BuffType.Slow, 0.8f, 3f) // 3s freeze
+                    e.takeDamage(e.hp * 0.15f) // 15% current HP shatter
+                }
+            }
+            // O3: Glacier Emperor — Ice Age Blizzard zone
+            SkillVfxType.ICE_AGE_BLIZZARD -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.4f, unit, 8f)
+                val zone = zonePool?.acquire()
+                if (zone != null) {
+                    zone.init(
+                        pos = com.example.jaygame.engine.math.Vec2(640f, 360f),
+                        radius = 250f, duration = 8f,
+                        tickInterval = 1f,
+                        tickDamage = unit.effectiveATK() * 0.8f,
+                        slowPercent = 0.7f,
+                        family = 1, grade = unit.grade,
+                    )
+                }
+            }
+            // O4: Yuki — Eternal Winter
+            SkillVfxType.ETERNAL_WINTER -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 4f)
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.buffs.addBuff(BuffType.Slow, 0.8f, 4f)
+                    e.takeDamage(e.maxHp * 0.2f)
+                }
+            }
+            // O5: Chronos — Time Stop
+            SkillVfxType.TIME_STOP -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 5f)
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.buffs.addBuff(BuffType.Slow, 0.8f, 5f) // near-frozen
+                    if (e.hp < e.maxHp * 0.25f) e.hp = 0f // execute
+                }
+            }
 
-            // P1: Poison Hero — Poison Cloud: create poison zone
+            // ── Poison ──
+            // P1: Plague — Poison Cloud
             SkillVfxType.POISON_CLOUD -> {
                 emitVfx(vfx, tx, ty, 0.08f, unit, 5f)
                 val zone = zonePool?.acquire()
@@ -212,35 +294,148 @@ object UniqueAbilitySystem {
                     )
                 }
             }
-            SkillVfxType.ACID_SPRAY -> emitVfx(vfx, tx, ty, 0.12f, unit, 2f)
-            SkillVfxType.TOXIC_DOMAIN -> emitVfx(vfx, tx, ty, 0.15f, unit, 10f)
-            SkillVfxType.NIDHOGG_BREATH -> emitVfx(vfx, tx, ty, 0.2f, unit, 6f)
-            SkillVfxType.UNIVERSAL_DECAY -> emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 15f)
+            // P2: Corrosive — Acid Spray: cone AoE + defense reduction
+            SkillVfxType.ACID_SPRAY -> {
+                emitVfx(vfx, tx, ty, 0.12f, unit, 2f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    val dx = e.position.x - unit.position.x
+                    val dy = e.position.y - unit.position.y
+                    if (dx * dx + dy * dy <= 180f * 180f) {
+                        e.takeDamage(atk * 2.5f)
+                        e.buffs.addBuff(BuffType.Slow, 0.4f, 6f)
+                    }
+                }
+            }
+            // P3: Hecate — Toxic Domain: poison swamp
+            SkillVfxType.TOXIC_DOMAIN -> {
+                emitVfx(vfx, tx, ty, 0.15f, unit, 10f)
+                val zone = zonePool?.acquire()
+                if (zone != null) {
+                    zone.init(
+                        pos = targetEnemy.position.copy(),
+                        radius = 120f, duration = 10f,
+                        tickInterval = 1f,
+                        tickDamage = unit.effectiveATK() * 0.6f,
+                        slowPercent = 0.5f,
+                        family = 2, grade = unit.grade,
+                    )
+                }
+            }
+            // P4: Nidhogg — Poison Breath: massive cone
+            SkillVfxType.NIDHOGG_BREATH -> {
+                emitVfx(vfx, tx, ty, 0.2f, unit, 6f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 4f)
+                    e.buffs.addBuff(BuffType.DoT, atk * 0.3f, 6f)
+                    e.buffs.addBuff(BuffType.Slow, 0.5f, 4f)
+                    if (e.hp < e.maxHp * 0.2f) e.hp = 0f
+                }
+            }
+            // P5: Apocalypse — Universal Decay
+            SkillVfxType.UNIVERSAL_DECAY -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 15f)
+                val zone = zonePool?.acquire()
+                if (zone != null) {
+                    zone.init(
+                        pos = com.example.jaygame.engine.math.Vec2(640f, 360f),
+                        radius = 400f, duration = 15f,
+                        tickInterval = 1f,
+                        tickDamage = unit.effectiveATK() * 0.5f,
+                        slowPercent = 0.3f,
+                        family = 2, grade = unit.grade,
+                    )
+                }
+            }
 
-            // Q1: Lightning Hero — Lightning Strike: single target burst
+            // ── Lightning ──
+            // Q1: Thunder — Lightning Strike
             SkillVfxType.LIGHTNING_STRIKE -> {
                 emitVfx(vfx, tx, ty, 0.08f, unit, 0.5f)
                 targetEnemy.takeDamage(unit.effectiveATK() * 2.5f)
-                targetEnemy.buffs.addBuff(BuffType.Slow, 0.5f, 1.5f) // stun-like slow
+                targetEnemy.buffs.addBuff(BuffType.Slow, 0.5f, 1.5f)
                 BattleBridge.onDamageDealt(tx, ty, (unit.effectiveATK() * 2.5f).toInt(), true)
             }
-            SkillVfxType.STATIC_FIELD -> emitVfx(vfx, nx, ny, 0.1f, unit, 4f)
-            SkillVfxType.THUNDERSTORM -> emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 8f)
-            SkillVfxType.MJOLNIR_THROW -> emitVfx(vfx, tx, ty, 0.4f, unit, 2f)
-            SkillVfxType.DIVINE_PUNISHMENT -> emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 3f)
+            // Q2: Storm — Static Field: chain lightning
+            SkillVfxType.STATIC_FIELD -> {
+                emitVfx(vfx, nx, ny, 0.1f, unit, 4f)
+                val atk = unit.effectiveATK()
+                var chainDmg = atk * 1.8f
+                val hit = mutableSetOf<Enemy>()
+                var current = targetEnemy
+                repeat(8) {
+                    if (!current.alive || current in hit) return@repeat
+                    hit.add(current)
+                    current.takeDamage(chainDmg)
+                    current.buffs.addBuff(BuffType.Slow, 0.5f, 1f)
+                    chainDmg *= 1.1f
+                    current = enemies.filter { it.alive && it !in hit }
+                        .minByOrNull { it.position.distanceSqTo(current.position) } ?: return@repeat
+                }
+            }
+            // Q3: Thunder King — Thunderstorm zone
+            SkillVfxType.THUNDERSTORM -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 8f)
+                val zone = zonePool?.acquire()
+                if (zone != null) {
+                    zone.init(
+                        pos = com.example.jaygame.engine.math.Vec2(640f, 360f),
+                        radius = 200f, duration = 8f,
+                        tickInterval = 1f,
+                        tickDamage = unit.effectiveATK() * 1.5f,
+                        family = 3, grade = unit.grade,
+                    )
+                }
+            }
+            // Q4: Thor — Mjolnir Throw: massive single + AoE
+            SkillVfxType.MJOLNIR_THROW -> {
+                emitVfx(vfx, tx, ty, 0.4f, unit, 2f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 3.5f)
+                    e.buffs.addBuff(BuffType.Slow, 0.8f, 2f)
+                }
+            }
+            // Q5: Zeus — Divine Punishment
+            SkillVfxType.DIVINE_PUNISHMENT -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 3f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 6f)
+                    e.buffs.addBuff(BuffType.Slow, 0.8f, 3f)
+                    if (e.hp < e.maxHp * 0.1f) e.hp = 0f
+                }
+            }
 
-            // R1: Support Hero — Heal Pulse: buff nearby allies
+            // ── Support ──
+            // R1: Oracle — Heal Pulse
             SkillVfxType.HEAL_PULSE -> {
                 emitVfx(vfx, nx, ny, 0.12f, unit, 1f)
-                // Note: ally buff would need allied unit buff system
-                // For now, just emit VFX
             }
-            SkillVfxType.WAR_SONG_AURA -> emitVfx(vfx, nx, ny, 0.2f, unit, 6f)
-            SkillVfxType.DIVINE_SHIELD -> emitVfx(vfx, nx, ny, 0.15f, unit, 8f)
-            SkillVfxType.HARMONY_FIELD -> emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 10f)
-            SkillVfxType.GENESIS_LIGHT -> emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 15f)
+            // R2: Valkyrie — War Song: global ATK buff (emit VFX)
+            SkillVfxType.WAR_SONG_AURA -> {
+                emitVfx(vfx, nx, ny, 0.2f, unit, 6f)
+            }
+            // R3: Seraphim — Divine Shield
+            SkillVfxType.DIVINE_SHIELD -> {
+                emitVfx(vfx, nx, ny, 0.15f, unit, 8f)
+            }
+            // R4: Arcana — Harmony Field
+            SkillVfxType.HARMONY_FIELD -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 10f)
+            }
+            // R5: Gaia — Genesis Light
+            SkillVfxType.GENESIS_LIGHT -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 15f)
+            }
 
-            // S1: Wind Hero — Cyclone Pull: pull & damage
+            // ── Wind ──
+            // S1: Cyclone — Pull & damage
             SkillVfxType.CYCLONE_PULL -> {
                 emitVfx(vfx, tx, ty, 0.08f, unit, 3f)
                 val zone = zonePool?.acquire()
@@ -255,10 +450,51 @@ object UniqueAbilitySystem {
                     )
                 }
             }
-            SkillVfxType.EYE_OF_STORM -> emitVfx(vfx, nx, ny, 0.15f, unit, 6f)
-            SkillVfxType.VACUUM_SLASH -> emitVfx(vfx, tx, ty, 0.2f, unit, 1.5f)
-            SkillVfxType.DIMENSIONAL_SLASH -> emitVfx(vfx, tx, ty, 0.3f, unit, 2f)
-            SkillVfxType.BREATH_OF_ALL -> emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 10f)
+            // S2: Typhoon — Eye of Storm zone
+            SkillVfxType.EYE_OF_STORM -> {
+                emitVfx(vfx, nx, ny, 0.15f, unit, 6f)
+                val zone = zonePool?.acquire()
+                if (zone != null) {
+                    zone.init(
+                        pos = unit.position.copy(),
+                        radius = 130f, duration = 6f,
+                        tickInterval = 0.5f,
+                        tickDamage = unit.effectiveATK() * 2f,
+                        slowPercent = 0.5f,
+                        family = 5, grade = unit.grade,
+                    )
+                }
+            }
+            // S3: Sky Lord — Vacuum Slash: line AoE
+            SkillVfxType.VACUUM_SLASH -> {
+                emitVfx(vfx, tx, ty, 0.2f, unit, 1.5f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 3f)
+                    e.buffs.addBuff(BuffType.Slow, 0.3f, 3f) // silence as slow
+                }
+            }
+            // S4: Sylph — Dimensional Slash
+            SkillVfxType.DIMENSIONAL_SLASH -> {
+                emitVfx(vfx, tx, ty, 0.3f, unit, 2f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 4f)
+                    e.buffs.addBuff(BuffType.Slow, 0.5f, 3f)
+                }
+            }
+            // S5: Vayu — Breath of All
+            SkillVfxType.BREATH_OF_ALL -> {
+                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 10f)
+                val atk = unit.effectiveATK()
+                for (e in enemies) {
+                    if (!e.alive) continue
+                    e.takeDamage(atk * 7f)
+                    e.buffs.addBuff(BuffType.Slow, 0.8f, 3f)
+                }
+            }
 
             else -> {}
         }
