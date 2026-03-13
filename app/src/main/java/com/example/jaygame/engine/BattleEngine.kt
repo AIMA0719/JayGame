@@ -606,11 +606,14 @@ class BattleEngine(
     }
 
     private fun onBattleEnd(victory: Boolean) {
-        val goldEarned = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
-        val trophyChange = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
+        val difficultyBonus = 1f + difficulty * 0.25f // 초보1.0, 숙련자1.25, 고인물1.5, 썩은물1.75, 챌린저2.0
+        val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
+        val goldEarned = (baseGold * difficultyBonus).toInt()
+        val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
+        val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%
         val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
-        val cardsEarned = if (victory) 3 + stageId else 1 // victory: 3+ cards, defeat: 1 consolation card
+        val cardsEarned = if (victory) 3 + stageId + difficulty else 1 // higher difficulty = more cards
         BattleBridge.onBattleEnd(
             victory, waveSystem.currentWave + 1, goldEarned, trophyChange,
             killCount, mergeCount, cardsEarned, noHpLost, fastClear,

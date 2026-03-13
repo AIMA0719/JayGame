@@ -20,8 +20,11 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
     private var totalThisWave = 0
 
     private val difficultyMult = when (difficulty) {
-        0 -> 0.8f
-        2 -> 1.5f
+        0 -> 1f       // 초보
+        1 -> 1.5f     // 숙련자
+        2 -> 2.2f     // 고인물
+        3 -> 3.0f     // 썩은물
+        4 -> 4.0f     // 챌린저
         else -> 1f
     }
 

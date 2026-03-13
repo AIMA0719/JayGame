@@ -125,10 +125,12 @@ private fun StageCardItem(
     gradientColors: List<Color>,
 ) {
     val difficultyText = when (difficulty) {
-        0 -> "쉬움"
-        1 -> "보통"
-        2 -> "어려움"
-        else -> "보통"
+        0 -> "초보"
+        1 -> "숙련자"
+        2 -> "고인물"
+        3 -> "썩은물"
+        4 -> "챌린저"
+        else -> "초보"
     }
 
     // ── B2: 3D tilt/parallax ──

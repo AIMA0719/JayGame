@@ -357,9 +357,11 @@ private fun SettingsGameplay(
     onSelectDifficulty: (Int) -> Unit,
 ) {
     val options = listOf(
-        Triple(0, "쉬움", "적 체력 -20%, 보상 -20%"),
-        Triple(1, "보통", "기본 난이도"),
-        Triple(2, "어려움", "적 체력 +50%, 보상 +50%"),
+        Triple(0, "초보", "기본 난이도"),
+        Triple(1, "숙련자", "적 체력 ×1.5"),
+        Triple(2, "고인물", "적 체력 ×2.2"),
+        Triple(3, "썩은물", "적 체력 ×3.0"),
+        Triple(4, "챌린저", "적 체력 ×4.0"),
     )
     Column {
         SubPageHeader(title = "게임플레이", onBack = onBack)

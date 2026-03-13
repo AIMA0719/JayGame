@@ -335,7 +335,7 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // H5: Two buttons side by side
+            // H5: Single confirm button
             AnimatedVisibility(
                 visible = showButtons,
                 enter = scaleIn(
@@ -345,33 +345,16 @@ fun ResultScreen(
                     ),
                 ),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    // Home button (neutral/gray)
-                    NeonButton(
-                        text = "홈으로",
-                        onClick = onGoHome,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        fontSize = 15.sp,
-                        accentColor = ButtonNeutralColor,
-                        accentColorDark = ButtonNeutralDark,
-                    )
-                    // Retry button (gold accent)
-                    NeonButton(
-                        text = "다시하기",
-                        onClick = onRetry,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        fontSize = 15.sp,
-                        accentColor = Gold,
-                        accentColorDark = Gold.copy(alpha = 0.5f),
-                    )
-                }
+                NeonButton(
+                    text = "확인",
+                    onClick = onGoHome,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    fontSize = 15.sp,
+                    accentColor = Gold,
+                    accentColorDark = Gold.copy(alpha = 0.5f),
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
