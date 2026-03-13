@@ -34,6 +34,7 @@ class BattleEngine(
     val enemies = ObjectPool(MAX_ENEMIES, { Enemy() }) { it.reset() }
     val units = ObjectPool(MAX_UNITS, { GameUnit() }) { it.reset() }
     val projectiles = ObjectPool(MAX_PROJECTILES, { Projectile() }) { it.reset() }
+    val zones = ObjectPool(32, { ZoneEffect() }) { it.reset() }
 
     val grid = Grid()
     val waveSystem = WaveSystem(maxWaves, difficulty)
@@ -161,6 +162,7 @@ class BattleEngine(
                 updateEnemies(dt)
                 updateUnits(dt)
                 updateProjectiles(dt)
+                updateZones(dt)
 
                 if (isBossRound) {
                     bossTimeRemaining -= dt
@@ -258,6 +260,17 @@ class BattleEngine(
             if (!proj.alive) deadProj.add(proj)
         }
         deadProj.forEach { projectiles.release(it) }
+    }
+
+    private fun updateZones(dt: Float) {
+        val activeEnemies = enemies.toActiveList()
+        val deadZones = mutableListOf<ZoneEffect>()
+        zones.forEach { zone ->
+            if (!zone.alive) { deadZones.add(zone); return@forEach }
+            val stillAlive = zone.update(dt, activeEnemies)
+            if (!stillAlive) deadZones.add(zone)
+        }
+        deadZones.forEach { zones.release(it) }
     }
 
     private fun fireProjectile(unit: GameUnit) {
