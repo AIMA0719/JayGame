@@ -152,9 +152,12 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
 
                     // Difficulty badge (settings-style)
                     val diffInfo = when (BattleBridge.difficulty.value) {
-                        0 -> "\uC26C\uC6C0" to NeonGreen
-                        2 -> "\uC5B4\uB824\uC6C0" to NeonRed
-                        else -> "\uBCF4\uD1B5" to NeonCyan
+                        0 -> "초보" to NeonGreen
+                        1 -> "숙련자" to NeonCyan
+                        2 -> "고인물" to Gold
+                        3 -> "썩은물" to NeonRed
+                        4 -> "챌린저" to Color(0xFFFF3333)
+                        else -> "초보" to NeonGreen
                     }
                     Box(
                         modifier = Modifier

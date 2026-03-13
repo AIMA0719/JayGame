@@ -34,12 +34,15 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         repository = GameRepository(this)
 
+        // Preserve stageId/difficulty/speed set by ComposeActivity, then reset battle state
+        val stageId = BattleBridge.stageId.value
+        val difficulty = BattleBridge.difficulty.value
         BattleBridge.reset()
+        BattleBridge.setStageId(stageId)
+        BattleBridge.setDifficulty(difficulty)
         SfxManager.init(this)
 
         // Create and start Kotlin battle engine
-        val stageId = BattleBridge.stageId.value
-        val difficulty = BattleBridge.difficulty.value
         val stage = STAGES.getOrNull(stageId) ?: STAGES[0]
         val data = repository.gameData.value
 

@@ -490,10 +490,8 @@ object BattleBridge {
         _skillEvents.value = emptyList()
         _goldPickupEvents.value = emptyList()
         _levelUpEvents.value = emptyList()
-        _stageId.value = 0
-        _difficulty.value = 1
+        // Note: stageId, difficulty, battleSpeed are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
-        _battleSpeed.value = 1f
         _debugMode.value = false
     }
 
