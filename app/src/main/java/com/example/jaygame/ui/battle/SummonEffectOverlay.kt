@@ -47,41 +47,70 @@ import kotlin.math.sin
 private val SummonGradeColors = GradeColorsByIndex
 private val SummonGradeNames = GradeNamesByIndex
 
+// Rainbow colors for legend+ summon burst
+private val RainbowColors = arrayOf(
+    Color(0xFFFF4444), // red
+    Color(0xFFFF8800), // orange
+    Color(0xFFFFDD00), // yellow
+    Color(0xFF44DD44), // green
+    Color(0xFF4488FF), // blue
+    Color(0xFF8844FF), // indigo
+    Color(0xFFFF44FF), // violet
+)
+
 @Composable
 fun SummonEffectOverlay() {
     val summonResult by BattleBridge.summonResult.collectAsState()
     val data = summonResult ?: return
 
     val unitDef = UNIT_DEFS_MAP[data.unitDefId]
+    val grade = data.grade
 
-    // Auto-dismiss
+    // Auto-dismiss: longer for higher grades
     LaunchedEffect(data) {
-        delay(1500)
+        val duration = when {
+            grade >= 5 -> 2500L
+            grade >= 3 -> 2000L
+            else -> 1200L
+        }
+        delay(duration)
         BattleBridge.clearSummonResult()
     }
 
-    val gradeColor = SummonGradeColors.getOrElse(data.grade) { Color.White }
-    val gradeName = SummonGradeNames.getOrElse(data.grade) { "" }
-    val isRare = data.grade >= 3
+    val gradeColor = SummonGradeColors.getOrElse(grade) { Color.White }
+    val gradeName = SummonGradeNames.getOrElse(grade) { "" }
+    val isHeroPlus = grade >= 2
+    val isLegendPlus = grade >= 3
 
-    // Card scale with spring bounce
+    // Card scale with spring bounce — bouncier for higher grades
     val scale by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = spring(dampingRatio = 0.35f, stiffness = 250f),
+        animationSpec = spring(
+            dampingRatio = if (isLegendPlus) 0.25f else 0.35f,
+            stiffness = if (isLegendPlus) 200f else 250f,
+        ),
         label = "summonScale",
     )
 
-    // Card rotation (entrance spin)
+    // Card rotation (entrance spin) — more dramatic spin for legend+
     val rotation by animateFloatAsState(
         targetValue = 0f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
+        animationSpec = spring(
+            dampingRatio = if (isLegendPlus) 0.4f else 0.5f,
+            stiffness = 200f,
+        ),
         label = "summonRotation",
     )
 
     // Burst expand animation
+    val burstDuration = when {
+        grade >= 5 -> 1200
+        grade >= 3 -> 1000
+        else -> 600
+    }
     val burstProgress by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = tween(durationMillis = 800),
+        animationSpec = tween(durationMillis = burstDuration),
         label = "burstExpand",
     )
 
@@ -107,112 +136,268 @@ fun SummonEffectOverlay() {
         label = "iconBounce",
     )
 
+    // Rainbow hue rotation for legend+
+    val rainbowShift by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "rainbowShift",
+    )
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        // Background dim for rare summons
-        if (isRare) {
+        // Background dim — intensity scales with grade
+        val dimAlpha = when {
+            grade >= 5 -> 0.6f  // mythic+: very dark
+            grade >= 3 -> 0.4f  // legend+
+            grade >= 2 -> 0.2f  // hero: slight dim
+            else -> 0f          // common/rare: no dim
+        }
+        if (dimAlpha > 0f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)),
+                    .background(Color.Black.copy(alpha = dimAlpha)),
             )
         }
 
-        // Canvas aura burst effect
-        if (data.grade >= 1) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val cx = size.width / 2f
-                val cy = size.height / 2f
-                val bp = burstProgress
-                val maxR = size.minDimension * 0.4f * bp
-                val grade = data.grade
+        // Canvas VFX — grade-differentiated
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val bp = burstProgress
+            val maxR = size.minDimension * 0.4f * bp
 
-                // Outer glow ring
-                val ringAlpha = (1f - bp).coerceIn(0f, 0.6f)
-                drawCircle(
-                    color = gradeColor.copy(alpha = ringAlpha * 0.3f),
-                    radius = maxR,
-                    center = Offset(cx, cy),
-                )
-
-                // Radial burst lines
-                val lineCount = when {
-                    grade <= 1 -> 6
-                    grade <= 3 -> 12
-                    grade <= 5 -> 18
-                    else -> 24
-                }
-                val lineLen = maxR * when {
-                    grade <= 1 -> 0.5f
-                    grade <= 3 -> 0.7f
-                    else -> 0.9f
-                }
-                val lineWidth = when {
-                    grade <= 2 -> 2f
-                    grade <= 4 -> 3f
-                    else -> 4f
-                }
-
-                for (i in 0 until lineCount) {
-                    val angle = (i.toFloat() / lineCount) * 2f * Math.PI.toFloat() + fxTime * 2f
-                    val innerR = maxR * 0.15f
-                    val outerR = innerR + lineLen * (0.5f + sin(fxTime * 6f + i) * 0.5f)
-                    val alpha2 = ringAlpha * (0.4f + sin(fxTime * 4f + i * 1.3f) * 0.3f)
-                    drawLine(
-                        color = gradeColor.copy(alpha = alpha2),
-                        start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
-                        end = Offset(cx + cos(angle) * outerR, cy + sin(angle) * outerR),
-                        strokeWidth = lineWidth,
-                        cap = StrokeCap.Round,
+            when {
+                // ── GRADE 0 (Common): minimal sparkle ──
+                grade == 0 -> {
+                    val ringAlpha = (1f - bp).coerceIn(0f, 0.4f)
+                    drawCircle(
+                        color = gradeColor.copy(alpha = ringAlpha * 0.2f),
+                        radius = maxR * 0.6f,
+                        center = Offset(cx, cy),
                     )
-                }
-
-                // Particle dots for grade 3+
-                if (grade >= 3) {
-                    val particleCount = (grade - 2) * 6
-                    for (i in 0 until particleCount) {
-                        val angle = (i.toFloat() / particleCount) * 2f * Math.PI.toFloat()
-                        val r = maxR * (0.3f + ((fxTime + i * 0.1f) % 1f) * 0.7f)
-                        val pAlpha = (1f - ((fxTime + i * 0.1f) % 1f)) * 0.6f
-                        val wobble = sin(fxTime * 8f + i * 2f) * maxR * 0.05f
-                        drawCircle(
-                            color = gradeColor.copy(alpha = pAlpha),
-                            radius = if (grade >= 5) 4f else 3f,
-                            center = Offset(cx + cos(angle) * r + wobble, cy + sin(angle) * r),
-                        )
-                    }
-                }
-
-                // Full screen radial light rays for grade 5+
-                if (grade >= 5) {
-                    val rayCount = 12
-                    for (i in 0 until rayCount) {
-                        val angle = (i.toFloat() / rayCount) * 2f * Math.PI.toFloat() + fxTime * 1.5f
-                        val rayLen = size.maxDimension * 0.6f * bp
-                        val rayAlpha = (1f - bp * 0.5f) * 0.2f
+                    // Just 4 small lines
+                    for (i in 0 until 4) {
+                        val angle = (i / 4f) * 6.283f + fxTime * 1.5f
+                        val innerR = maxR * 0.2f
+                        val outerR = innerR + maxR * 0.3f * bp
                         drawLine(
-                            color = gradeColor.copy(alpha = rayAlpha),
-                            start = Offset(cx, cy),
-                            end = Offset(cx + cos(angle) * rayLen, cy + sin(angle) * rayLen),
-                            strokeWidth = 8f + sin(fxTime * 6f + i) * 4f,
+                            color = gradeColor.copy(alpha = ringAlpha * 0.5f),
+                            start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
+                            end = Offset(cx + cos(angle) * outerR, cy + sin(angle) * outerR),
+                            strokeWidth = 1.5f,
                             cap = StrokeCap.Round,
                         )
                     }
-                    // Screen flash
-                    if (bp < 0.3f) {
-                        val flashAlpha = (0.3f - bp) / 0.3f * 0.4f
+                }
+
+                // ── GRADE 1 (Rare): basic burst ──
+                grade == 1 -> {
+                    val ringAlpha = (1f - bp).coerceIn(0f, 0.5f)
+                    drawCircle(
+                        color = gradeColor.copy(alpha = ringAlpha * 0.25f),
+                        radius = maxR,
+                        center = Offset(cx, cy),
+                    )
+                    for (i in 0 until 8) {
+                        val angle = (i / 8f) * 6.283f + fxTime * 2f
+                        val innerR = maxR * 0.15f
+                        val outerR = innerR + maxR * 0.5f * (0.5f + sin(fxTime * 6f + i) * 0.5f)
+                        drawLine(
+                            color = gradeColor.copy(alpha = ringAlpha * 0.4f),
+                            start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
+                            end = Offset(cx + cos(angle) * outerR, cy + sin(angle) * outerR),
+                            strokeWidth = 2f,
+                            cap = StrokeCap.Round,
+                        )
+                    }
+                }
+
+                // ── GRADE 2 (Hero): burst + rotating ring ──
+                grade == 2 -> {
+                    val ringAlpha = (1f - bp).coerceIn(0f, 0.6f)
+                    drawCircle(
+                        color = gradeColor.copy(alpha = ringAlpha * 0.3f),
+                        radius = maxR,
+                        center = Offset(cx, cy),
+                    )
+                    // Burst lines
+                    for (i in 0 until 12) {
+                        val angle = (i / 12f) * 6.283f + fxTime * 2f
+                        val innerR = maxR * 0.15f
+                        val outerR = innerR + maxR * 0.6f * (0.5f + sin(fxTime * 6f + i) * 0.5f)
+                        drawLine(
+                            color = gradeColor.copy(alpha = ringAlpha * 0.5f),
+                            start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
+                            end = Offset(cx + cos(angle) * outerR, cy + sin(angle) * outerR),
+                            strokeWidth = 2.5f,
+                            cap = StrokeCap.Round,
+                        )
+                    }
+                    // Rotating ring of dots
+                    for (i in 0 until 8) {
+                        val angle = (i / 8f) * 6.283f + fxTime * 4f
+                        val r = maxR * 0.7f
+                        drawCircle(
+                            color = gradeColor.copy(alpha = 0.5f * (1f - bp * 0.5f)),
+                            radius = 3f,
+                            center = Offset(cx + cos(angle) * r, cy + sin(angle) * r),
+                        )
+                    }
+                }
+
+                // ── GRADE 3+ (Legend~Immortal): rainbow burst + expanding rings ──
+                else -> {
+                    val ringAlpha = (1f - bp).coerceIn(0f, 0.7f)
+
+                    // Multiple expanding glow rings
+                    val ringCount = if (grade >= 5) 3 else 2
+                    for (r in 0 until ringCount) {
+                        val ringPhase = ((fxTime + r * 0.3f) % 1f)
+                        val ringR = maxR * (0.3f + ringPhase * 0.7f)
+                        val ringA = (1f - ringPhase) * 0.3f
+                        drawCircle(
+                            color = gradeColor.copy(alpha = ringA),
+                            radius = ringR,
+                            center = Offset(cx, cy),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = if (grade >= 5) 4f else 3f,
+                            ),
+                        )
+                    }
+
+                    // Rainbow radial burst lines
+                    val lineCount = when {
+                        grade <= 3 -> 16
+                        grade <= 5 -> 24
+                        else -> 32
+                    }
+                    val lineLen = maxR * 0.9f
+                    val lineWidth = when {
+                        grade <= 3 -> 3f
+                        grade <= 5 -> 4f
+                        else -> 5f
+                    }
+
+                    for (i in 0 until lineCount) {
+                        val angle = (i.toFloat() / lineCount) * 6.283f + fxTime * 2f
+                        val innerR = maxR * 0.1f
+                        val outerR = innerR + lineLen * (0.5f + sin(fxTime * 6f + i) * 0.5f)
+                        // Rainbow color cycling
+                        val colorIdx = ((i + rainbowShift.toInt()) % RainbowColors.size)
+                        val lineColor = if (grade >= 3) {
+                            RainbowColors[colorIdx].copy(alpha = ringAlpha * 0.6f)
+                        } else {
+                            gradeColor.copy(alpha = ringAlpha * 0.5f)
+                        }
+                        drawLine(
+                            color = lineColor,
+                            start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
+                            end = Offset(cx + cos(angle) * outerR, cy + sin(angle) * outerR),
+                            strokeWidth = lineWidth,
+                            cap = StrokeCap.Round,
+                        )
+                    }
+
+                    // Particle dots — rainbow colored, more for higher grades
+                    val particleCount = (grade - 1) * 8
+                    for (i in 0 until particleCount) {
+                        val angle = (i.toFloat() / particleCount) * 6.283f
+                        val r = maxR * (0.2f + ((fxTime + i * 0.07f) % 1f) * 0.8f)
+                        val pAlpha = (1f - ((fxTime + i * 0.07f) % 1f)) * 0.7f
+                        val wobble = sin(fxTime * 8f + i * 2f) * maxR * 0.05f
+                        val pColor = if (grade >= 3) {
+                            RainbowColors[(i + rainbowShift.toInt()) % RainbowColors.size]
+                        } else {
+                            gradeColor
+                        }
+                        drawCircle(
+                            color = pColor.copy(alpha = pAlpha),
+                            radius = if (grade >= 5) 5f else 3.5f,
+                            center = Offset(cx + cos(angle) * r + wobble, cy + sin(angle) * r),
+                        )
+                    }
+
+                    // Full screen light rays for grade 5+ (Ancient/Mythic/Immortal)
+                    if (grade >= 4) {
+                        val rayCount = if (grade >= 6) 18 else if (grade >= 5) 14 else 10
+                        for (i in 0 until rayCount) {
+                            val angle = (i.toFloat() / rayCount) * 6.283f + fxTime * 1.5f
+                            val rayLen = size.maxDimension * (if (grade >= 5) 0.8f else 0.5f) * bp
+                            val rayAlpha = (1f - bp * 0.5f) * (if (grade >= 5) 0.25f else 0.15f)
+                            val rayColor = if (grade >= 5) {
+                                RainbowColors[(i + rainbowShift.toInt()) % RainbowColors.size]
+                            } else {
+                                gradeColor
+                            }
+                            drawLine(
+                                color = rayColor.copy(alpha = rayAlpha),
+                                start = Offset(cx, cy),
+                                end = Offset(cx + cos(angle) * rayLen, cy + sin(angle) * rayLen),
+                                strokeWidth = 6f + sin(fxTime * 6f + i) * 4f,
+                                cap = StrokeCap.Round,
+                            )
+                        }
+                    }
+
+                    // Screen flash — brighter for higher grades
+                    if (bp < 0.3f && grade >= 4) {
+                        val flashIntensity = when {
+                            grade >= 6 -> 0.6f   // immortal: blinding
+                            grade >= 5 -> 0.5f   // mythic
+                            else -> 0.3f          // ancient/legend
+                        }
+                        val flashAlpha = (0.3f - bp) / 0.3f * flashIntensity
+                        val flashColor = if (grade >= 5) Color.White else gradeColor
                         drawRect(
-                            color = gradeColor.copy(alpha = flashAlpha),
+                            color = flashColor.copy(alpha = flashAlpha),
                             size = size,
                         )
+                    }
+
+                    // Outer ring explosion for grade 6 (Immortal)
+                    if (grade >= 6 && bp > 0.1f) {
+                        val explodeR = maxR * 1.5f * bp
+                        val explodeAlpha = (1f - bp) * 0.4f
+                        drawCircle(
+                            color = Color.White.copy(alpha = explodeAlpha),
+                            radius = explodeR,
+                            center = Offset(cx, cy),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f),
+                        )
+                        // Second delayed ring
+                        val bp2 = (bp - 0.15f).coerceAtLeast(0f)
+                        if (bp2 > 0f) {
+                            drawCircle(
+                                color = gradeColor.copy(alpha = (1f - bp2) * 0.3f),
+                                radius = maxR * 1.3f * bp2,
+                                center = Offset(cx, cy),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f),
+                            )
+                        }
                     }
                 }
             }
         }
 
         // Summon result card with rotation + spring
+        val cardFontSize = when {
+            grade >= 5 -> 22.sp
+            grade >= 3 -> 20.sp
+            else -> 16.sp
+        }
+        val cardIconSize = when {
+            grade >= 5 -> 80.dp
+            grade >= 3 -> 72.dp
+            else -> 56.dp
+        }
+
         Column(
             modifier = Modifier
                 .graphicsLayer {
@@ -225,35 +410,36 @@ fun SummonEffectOverlay() {
                     Brush.verticalGradient(
                         colors = listOf(
                             DarkNavy.copy(alpha = 0.95f),
-                            gradeColor.copy(alpha = 0.3f),
+                            gradeColor.copy(alpha = if (isLegendPlus) 0.5f else 0.3f),
                         )
                     )
                 )
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (isRare) {
+            if (isLegendPlus) {
                 Text(
-                    text = "Lucky",
-                    color = Gold,
-                    fontSize = 20.sp,
+                    text = if (grade >= 5) "★ LEGENDARY ★" else "Lucky",
+                    color = if (grade >= 5) Color.White else Gold,
+                    fontSize = if (grade >= 5) 22.sp else 20.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
             if (unitDef != null) {
-                // Icon with bounce effect
-                val bounceOffset = (iconBounce - 0.5f) * 6f
+                // Icon with bounce effect — bigger bounce for higher grades
+                val bounceScale = if (isLegendPlus) 0.15f else 0.1f
+                val bounceOffset = (iconBounce - 0.5f) * (if (isLegendPlus) 10f else 6f)
                 Image(
                     painter = painterResource(id = unitDef.iconRes),
                     contentDescription = unitDef.name,
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(cardIconSize)
                         .graphicsLayer {
                             translationY = bounceOffset
-                            scaleX = 1f + (iconBounce - 0.5f) * 0.1f
-                            scaleY = 1f + (iconBounce - 0.5f) * 0.1f
+                            scaleX = 1f + (iconBounce - 0.5f) * bounceScale
+                            scaleY = 1f + (iconBounce - 0.5f) * bounceScale
                         },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -262,7 +448,7 @@ fun SummonEffectOverlay() {
             Text(
                 text = "$gradeName 소환 성공!",
                 color = gradeColor,
-                fontSize = 18.sp,
+                fontSize = cardFontSize,
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
             )
@@ -272,7 +458,7 @@ fun SummonEffectOverlay() {
                 Text(
                     text = unitDef.name,
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = if (isLegendPlus) 16.sp else 14.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }
