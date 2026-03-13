@@ -27,7 +27,7 @@ class BattleEngine(
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
         const val SP_REGEN_PER_SEC = 2f
-        const val BASE_SUMMON_COST = 10
+        const val BASE_SUMMON_COST = 35
         const val WAVE_DELAY = 3f
     }
 
@@ -50,7 +50,6 @@ class BattleEngine(
 
     private var waveDelayTimer = WAVE_DELAY
     private var isBossRound = false
-    private var bossTimeRemaining = 0f
 
     private var killCount = 0
     private var mergeCount = 0
@@ -68,11 +67,12 @@ class BattleEngine(
     // Square path around grid (480x480 centered at 640,360)
     // Grid: (400,120)~(880,600). Path margin: 60px outside grid.
     // Path outer: (340,60)~(940,660) = 600x600 square
-    // Midline of path strip: 30px from grid edge
-    private val pathLeft = Grid.ORIGIN_X - 30f    // 370
-    private val pathTop = Grid.ORIGIN_Y - 30f     // 90
-    private val pathRight = Grid.ORIGIN_X + Grid.GRID_W + 30f  // 910
-    private val pathBottom = Grid.ORIGIN_Y + Grid.GRID_H + 30f // 630
+    // Midline of path strip: centered in visual path (PATH_MARGIN=80, so 40px from grid edge)
+    // Bottom compensates for cliff (25px): center of visible strip = 40 + 25 = 65px from grid
+    private val pathLeft = Grid.ORIGIN_X - 40f
+    private val pathTop = Grid.ORIGIN_Y - 40f
+    private val pathRight = Grid.ORIGIN_X + Grid.GRID_W + 40f
+    private val pathBottom = Grid.ORIGIN_Y + Grid.GRID_H + 65f // cliff 25px 보상
 
     // Corner radius for smooth turns (8 interpolation points per corner)
     private val cornerR = 30f
@@ -160,7 +160,6 @@ class BattleEngine(
                     waveSystem.startWave(waveSystem.currentWave)
                     val config = waveSystem.getWaveConfig(waveSystem.currentWave)
                     isBossRound = config.isBoss
-                    bossTimeRemaining = if (isBossRound) 60f else 0f
                     state = State.Playing
                 }
             }
@@ -171,22 +170,33 @@ class BattleEngine(
                 updateProjectiles(dt)
                 updateZones(dt)
 
-                if (isBossRound) {
-                    bossTimeRemaining -= dt
-                    if (bossTimeRemaining <= 0f) {
-                        enemies.forEach { if (it.alive) { it.alive = false } }
-                    }
-                }
-
                 if (enemies.activeCount > peakEnemyCount) {
                     peakEnemyCount = enemies.activeCount
                 }
 
+                // Defeat: 100+ alive enemies
                 if (enemies.activeCount >= DEFEAT_ENEMY_COUNT) {
                     state = State.Defeat
                     onBattleEnd(false)
                 }
 
+                // All enemies spawned & killed → immediate next wave
+                if (!waveSystem.waveComplete && waveSystem.allSpawned && enemies.activeCount == 0) {
+                    waveSystem.forceComplete()
+                }
+
+                // Boss timeout → instant defeat
+                if (isBossRound && waveSystem.waveComplete) {
+                    var bossAlive = false
+                    enemies.forEach { if (it.alive) bossAlive = true }
+                    if (bossAlive) {
+                        state = State.Defeat
+                        onBattleEnd(false)
+                        return
+                    }
+                }
+
+                // Wave time expired → next wave (previous enemies stay alive)
                 if (waveSystem.waveComplete) {
                     if (waveSystem.isLastWave) {
                         state = State.Victory
@@ -234,7 +244,6 @@ class BattleEngine(
             val deathX = it.position.x / W
             val deathY = it.position.y / H
             enemies.release(it)
-            waveSystem.onEnemyKilled()
             killCount++
             BattleBridge.onGoldPickup(deathX, deathY, 1)
         }
@@ -501,7 +510,7 @@ class BattleEngine(
             waveSystem.currentWave + 1, maxWaves,
             (DEFEAT_ENEMY_COUNT - enemies.activeCount).coerceAtLeast(0), DEFEAT_ENEMY_COUNT,
             sp, elapsedTime, state.ordinal, summonCost,
-            enemies.activeCount, if (isBossRound) 1 else 0, bossTimeRemaining,
+            enemies.activeCount, if (isBossRound) 1 else 0, waveSystem.timeRemaining,
         )
 
         // Enemy positions + buff bitmasks

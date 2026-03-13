@@ -109,15 +109,44 @@ fun DeckScreen(repository: GameRepository) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        Text(
-            text = "소환할 계열을 3개 선택하세요 (중복 가능)",
-            fontSize = 12.sp,
-            color = SubText,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // Description banner
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color(0xFF2A1A0A), Color(0xFF1A1A2A))
+                    )
+                )
+                .border(1.dp, Color.White.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .padding(12.dp),
+        ) {
+            Column {
+                Text(
+                    text = "전투에 소환할 계열 3개를 선택하세요",
+                    fontSize = 13.sp,
+                    color = Color(0xFFF0E6D3).copy(alpha = 0.9f),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "\u2694 같은 계열 중복 가능",
+                        fontSize = 11.sp,
+                        color = SubText,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "\uD83D\uDD04 슬롯 터치로 교체",
+                        fontSize = 11.sp,
+                        color = DimText,
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 

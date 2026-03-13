@@ -68,6 +68,11 @@ fun SettingsScreen(
     val data by repository.gameData.collectAsState()
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
     var showResetDialog by remember { mutableStateOf(false) }
+
+    // System back → return to settings main when on sub-page
+    androidx.activity.compose.BackHandler(enabled = currentPage != SettingsPage.MAIN) {
+        currentPage = SettingsPage.MAIN
+    }
     var showDailyLogin by remember { mutableStateOf(false) }
 
     if (showDailyLogin) {
@@ -206,14 +211,6 @@ private fun SettingsMain(
                     title = "업적",
                     iconTint = Gold,
                     onClick = { onNavigate(Routes.ACHIEVEMENTS) },
-                )
-            }
-            GameCard(modifier = Modifier.fillMaxWidth()) {
-                SettingsCategoryRow(
-                    iconRes = R.drawable.ic_nav_collection,
-                    title = "영웅 도감",
-                    iconTint = Gold,
-                    onClick = { onNavigate(Routes.UNIT_CODEX) },
                 )
             }
             GameCard(modifier = Modifier.fillMaxWidth()) {

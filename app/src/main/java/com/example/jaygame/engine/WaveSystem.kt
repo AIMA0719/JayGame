@@ -16,8 +16,12 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
     var waveComplete = false; private set
     private var spawnTimer = 0f
     private var spawnedCount = 0
-    private var killedCount = 0
-    private var totalThisWave = 0
+    private var waveTimer = 0f
+
+    companion object {
+        const val WAVE_DURATION = 180f // 3 minutes per wave
+        const val BOSS_DURATION = 300f // 5 minutes for boss waves
+    }
 
     private val difficultyMult = when (difficulty) {
         0 -> 1f       // 초보
@@ -65,20 +69,26 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
     fun startWave(wave: Int) {
         currentWave = wave
         val config = getWaveConfig(wave)
-        totalThisWave = config.enemyCount
         spawnedCount = 0
-        killedCount = 0
         spawnTimer = 0f
+        waveTimer = if (config.isBoss) BOSS_DURATION else WAVE_DURATION
         waveComplete = false
     }
 
+    /** Returns number of enemies to spawn this tick. Wave completes when timer runs out. */
     fun update(dt: Float): Int {
         if (waveComplete) return 0
-        val config = getWaveConfig(currentWave)
-        if (spawnedCount >= config.enemyCount) {
-            if (killedCount >= config.enemyCount) waveComplete = true
+
+        // Wave timer countdown
+        waveTimer -= dt
+        if (waveTimer <= 0f) {
+            waveComplete = true
             return 0
         }
+
+        // Spawn enemies until count reached
+        val config = getWaveConfig(currentWave)
+        if (spawnedCount >= config.enemyCount) return 0
 
         spawnTimer -= dt
         if (spawnTimer <= 0f) {
@@ -89,7 +99,12 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int) {
         return 0
     }
 
-    fun onEnemyKilled() { killedCount++ }
+    /** All enemies for this wave have been spawned */
+    val allSpawned get() = spawnedCount >= getWaveConfig(currentWave).enemyCount
+
+    fun forceComplete() { waveComplete = true }
+
     fun advanceWave() { currentWave++ }
     val isLastWave get() = currentWave >= maxWaves - 1
+    val timeRemaining get() = waveTimer
 }

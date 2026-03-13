@@ -33,7 +33,7 @@ import com.example.jaygame.ui.theme.SubText
 
 enum class NavTab(val label: String, val iconRes: Int) {
     DECK("덱", R.drawable.ic_nav_deck),
-    COLLECTION("컬렉션", R.drawable.ic_nav_collection),
+    COLLECTION("도감", R.drawable.ic_nav_collection),
     HOME("홈", R.drawable.ic_nav_home),
     SHOP("상점", R.drawable.ic_nav_shop),
     SETTINGS("설정", R.drawable.ic_nav_settings),

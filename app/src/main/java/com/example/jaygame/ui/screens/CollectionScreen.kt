@@ -2,6 +2,7 @@ package com.example.jaygame.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -116,25 +118,53 @@ fun CollectionScreen(repository: GameRepository) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "영웅 도감",
+                text = "도감",
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
-                color = LightText,
+                color = Gold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // Owned count
+            // Description banner
             val ownedCount = data.units.count { it.owned }
-            Text(
-                text = "보유 $ownedCount / ${UNIT_DEFS.size}",
-                fontSize = 12.sp,
-                color = SubText,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFF1A2A1A), Color(0xFF2A1A2A))
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+            ) {
+                Column {
+                    Text(
+                        text = "수집한 영웅들의 정보를 확인하세요",
+                        fontSize = 13.sp,
+                        color = LightText.copy(alpha = 0.9f),
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "\uD83D\uDCD6 보유 $ownedCount / ${UNIT_DEFS.size}",
+                            fontSize = 12.sp,
+                            color = SubText,
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "\uD83D\uDD0D 터치하여 상세 정보 확인",
+                            fontSize = 11.sp,
+                            color = DimText,
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -227,10 +257,11 @@ private fun FamilyUnitRow(
         ) {
             units.forEach { def ->
                 val progress = unitProgress.getOrNull(def.id)
+                val owned = progress?.owned == true
                 CollectionUnitCard(
                     def = def,
                     progress = progress,
-                    onClick = { onUnitClick(def) },
+                    onClick = { if (owned) onUnitClick(def) },
                 )
             }
             Spacer(modifier = Modifier.width(8.dp)) // end padding

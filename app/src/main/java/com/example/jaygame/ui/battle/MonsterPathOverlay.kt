@@ -68,11 +68,11 @@ private const val GRID_LEFT = 120f
 private const val GRID_TOP = 107.5f
 private const val GRID_RIGHT = 600f
 private const val GRID_BOTTOM = 587.5f
-private const val PATH_MARGIN = 60f
-private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 340
-private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 60
-private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN   // 940
-private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN // 660
+private const val PATH_MARGIN = 80f
+private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 40
+private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 27.5
+private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN   // 680
+private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN + 25f // 692.5 (cliff 25px 보상)
 
 // Cliff depth in pixels (720x720 space)
 private const val CLIFF_DEPTH = 25f

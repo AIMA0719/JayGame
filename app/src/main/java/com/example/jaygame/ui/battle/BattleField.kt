@@ -511,17 +511,12 @@ fun BattleField() {
                 )
             }
 
-            // Attack glow (pulsing with family color)
+            // Attack glow (pulsing with family color only, no white)
             if (isAttacking) {
                 val glowAlpha = 0.3f + sin(t * 12f) * 0.15f
                 drawCircle(
                     color = familyTint.copy(alpha = glowAlpha),
                     radius = unitSize * 0.55f,
-                    center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                )
-                drawCircle(
-                    color = AttackGlow,
-                    radius = unitSize * 0.35f,
                     center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
                 )
             }

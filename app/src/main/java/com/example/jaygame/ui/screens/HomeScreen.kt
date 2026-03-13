@@ -41,6 +41,7 @@ import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.StaminaManager
 import com.example.jaygame.ui.components.DailyLoginDialog
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.PreBattleDialog
 import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.components.ProfileBanner
 import com.example.jaygame.ui.components.StageCardPager
@@ -85,6 +86,7 @@ fun HomeScreen(
 ) {
     val data by repository.gameData.collectAsState()
     var showDailyLogin by remember { mutableStateOf(false) }
+    var showPreBattle by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(data) {
@@ -252,22 +254,14 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Big battle button
+                // Big battle button → opens pre-battle dialog
                 run {
                     val isUnlocked = data.currentStageId in data.unlockedStages
-                    val hasStamina = data.stamina >= stage.staminaCost
-                    val canStart = isUnlocked && hasStamina
 
                     NeonButton(
-                        text = "\u26A1${stage.staminaCost}  전투 시작",
-                        onClick = {
-                            val consumed = StaminaManager.consume(data, stage.staminaCost)
-                            if (consumed != null) {
-                                repository.save(consumed.copy(currentStageId = data.currentStageId))
-                                onStartBattle()
-                            }
-                        },
-                        enabled = canStart,
+                        text = "전투 준비",
+                        onClick = { showPreBattle = true },
+                        enabled = isUnlocked,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(58.dp),
@@ -280,6 +274,31 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        // Pre-battle dialog overlay (inside main Box for correct z-order)
+        if (showPreBattle) {
+            val stage2 = STAGES.getOrNull(data.currentStageId) ?: STAGES[0]
+            val bestWave = data.stageBestWaves.getOrElse(data.currentStageId) { 0 }
+            PreBattleDialog(
+                stage = stage2,
+                bestWave = bestWave,
+                selectedDifficulty = data.difficulty,
+                staminaCost = stage2.staminaCost,
+                hasStamina = data.stamina >= stage2.staminaCost,
+                onDifficultySelected = { diff ->
+                    repository.save(data.copy(difficulty = diff))
+                },
+                onStartBattle = {
+                    val consumed = StaminaManager.consume(data, stage2.staminaCost)
+                    if (consumed != null) {
+                        repository.save(consumed.copy(currentStageId = data.currentStageId))
+                        showPreBattle = false
+                        onStartBattle()
+                    }
+                },
+                onDismiss = { showPreBattle = false },
+            )
         }
     }
 }

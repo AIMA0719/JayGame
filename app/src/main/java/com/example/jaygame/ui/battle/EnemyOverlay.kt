@@ -291,7 +291,7 @@ fun EnemyOverlay() {
             val isBoss = type == 99
 
             val cellH = h / 5f
-            val spriteSize = if (isBoss) cellH * 0.85f else cellH * 0.65f
+            val spriteSize = if (isBoss) cellH * 0.6f else cellH * 0.4f
             val bitmap = if (isBoss) bossBitmap else enemyBitmaps[type % 5]
 
             // ── Walking Wobble ──
@@ -321,38 +321,37 @@ fun EnemyOverlay() {
                 )
             }
 
-            // Draw enemy sprite with wobble
+            // ── Hit reaction: shrink + red outline ──
+            val flashTimer = if (i < flashTimers.size) flashTimers[i] else 0f
+            val hitScale = if (flashTimer > 0f) {
+                val t01 = (flashTimer / 0.12f).coerceIn(0f, 1f)
+                1f - t01 * 0.15f  // shrink up to 15%
+            } else 1f
+            val drawSize = spriteSize * hitScale
+
+            // Draw enemy sprite with wobble + hit shrink
             if (bitmap != null) {
                 drawImage(
                     image = bitmap,
-                    topLeft = Offset(
-                        screenX - spriteSize / 2 + wobbleOffsetX,
-                        screenY - spriteSize / 2,
+                    dstOffset = androidx.compose.ui.unit.IntOffset(
+                        (screenX - drawSize / 2 + wobbleOffsetX).toInt(),
+                        (screenY - drawSize / 2).toInt(),
                     ),
+                    dstSize = androidx.compose.ui.unit.IntSize(drawSize.toInt(), drawSize.toInt()),
                 )
             } else {
                 // Fallback: colored circle
                 val color = FallbackColors[type % 5]
                 drawCircle(
                     color = color,
-                    radius = spriteSize / 2,
+                    radius = drawSize / 2,
                     center = Offset(screenX + wobbleOffsetX, screenY),
                 )
             }
 
-            // ── Hit Flash ──
-            val flashTimer = if (i < flashTimers.size) flashTimers[i] else 0f
-            if (flashTimer > 0f) {
-                val flashAlpha = (flashTimer / 0.12f).coerceIn(0f, 1f) * 0.6f
-                drawRect(
-                    color = HitFlashWhite.copy(alpha = flashAlpha),
-                    topLeft = Offset(screenX - spriteSize / 2, screenY - spriteSize / 2),
-                    size = Size(spriteSize, spriteSize),
-                )
-            }
 
             // ── HP bar (improved: rounded, bordered, smooth) ──
-            val barWidth = spriteSize * 1.2f
+            val barWidth = drawSize
             val barHeight = if (isBoss) 6f else 4f
             val barX = screenX - barWidth / 2
             val barY = screenY - spriteSize / 2 - 10f

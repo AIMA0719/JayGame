@@ -58,7 +58,7 @@ data class BattleState(
     val killCount: Int = 0,
     val mergeCount: Int = 0,
     val isBossRound: Boolean = false,
-    val bossTimeRemaining: Float = 0f, // 보스 라운드 제한 시간
+    val waveTimeRemaining: Float = 0f, // 웨이브 제한 시간
     val gridTiles: List<GridTileState> = List(15) { GridTileState() }, // 5x3 그리드 상태
 )
 

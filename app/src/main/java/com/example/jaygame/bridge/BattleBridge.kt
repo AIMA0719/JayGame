@@ -19,7 +19,7 @@ data class BattleState(
     val enemyCount: Int = 0,
     val maxEnemyCount: Int = 100,
     val isBossRound: Boolean = false,
-    val bossTimeRemaining: Float = 0f,
+    val waveTimeRemaining: Float = 0f,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -30,7 +30,7 @@ data class BattleState(
                 state == other.state && summonCost == other.summonCost &&
                 deckUnits.contentEquals(other.deckUnits) &&
                 enemyCount == other.enemyCount && maxEnemyCount == other.maxEnemyCount &&
-                isBossRound == other.isBossRound && bossTimeRemaining == other.bossTimeRemaining
+                isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining
     }
     override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + if (isBossRound) 1 else 0
 }
@@ -277,7 +277,7 @@ object BattleBridge {
         hp: Int, maxHp: Int,
         sp: Float, elapsed: Float,
         state: Int, summonCost: Int,
-        enemyCount: Int, isBossRound: Int, bossTimeRemaining: Float,
+        enemyCount: Int, isBossRound: Int, waveTimeRemaining: Float,
     ) {
         _state.value = BattleState(
             currentWave = wave,
@@ -291,7 +291,7 @@ object BattleBridge {
             deckUnits = _state.value.deckUnits,
             enemyCount = enemyCount,
             isBossRound = isBossRound != 0,
-            bossTimeRemaining = bossTimeRemaining,
+            waveTimeRemaining = waveTimeRemaining,
         )
 
         // Clear visual effects on wave end

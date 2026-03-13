@@ -139,10 +139,13 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    // Timer
+                    // Wave remaining time
+                    val waveMin = (battle.waveTimeRemaining / 60f).toInt()
+                    val waveSec = (battle.waveTimeRemaining % 60f).toInt()
+                    val waveTimeColor = if (battle.waveTimeRemaining < 30f) NeonRed else Color.White
                     Text(
-                        text = "%02d:%02d".format(minutes, seconds),
-                        color = Color.White,
+                        text = "%d:%02d".format(waveMin, waveSec),
+                        color = waveTimeColor,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -235,23 +238,6 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
         }
     }
 
-    // Boss timer
-    if (battle.isBossRound) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(NeonRed.copy(alpha = 0.15f))
-                .padding(vertical = 2.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "\u26A0 BOSS ${battle.bossTimeRemaining.toInt()}s",
-                color = NeonRed,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
-        }
-    }
 }
 
 // ── Bottom HUD — resource bar → [일괄판매?] [조합?] → [구매|소환|도박] → [강화] ──
