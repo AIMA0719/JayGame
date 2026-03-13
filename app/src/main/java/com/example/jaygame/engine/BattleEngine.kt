@@ -262,13 +262,14 @@ class BattleEngine(
         projectiles.forEach { proj ->
             if (!proj.alive) { deadProj.add(proj); return@forEach }
             val stillAlive = proj.update(dt)
-            if (!stillAlive && proj.target?.alive == true) {
-                AbilitySystem.onProjectileHit(proj, proj.target!!, spatialHash) { from, target, dmg, type ->
+            val target = proj.target
+            if (!stillAlive && target != null && target.alive) {
+                AbilitySystem.onProjectileHit(proj, target, spatialHash) { from, t, dmg, type ->
                     val chain = projectiles.acquire() ?: return@onProjectileHit
-                    chain.init(from, target, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
+                    chain.init(from, t, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
                 }
-                val nx = proj.target!!.position.x / W
-                val ny = proj.target!!.position.y / H
+                val nx = target.position.x / W
+                val ny = target.position.y / H
                 BattleBridge.onDamageDealt(nx, ny, proj.damage.toInt(), proj.isCrit)
             }
             if (!proj.alive) deadProj.add(proj)
@@ -329,6 +330,7 @@ class BattleEngine(
         sp -= summonCost
 
         val grade = rollGrade()
+        if (deck.isEmpty()) return
         val familyIndex = deck.random()  // deck stores family ordinals directly
         val unitDefId = unitIdOf(grade, familyIndex) ?: return
 
@@ -463,6 +465,7 @@ class BattleEngine(
 
     fun applyBattleUpgrade(type: Int, level: Int, cost: Float) {
         if (sp < cost) return
+        if (type !in upgradeLevels.indices) return
         sp -= cost
         upgradeLevels[type] = level
         when (type) {

@@ -63,10 +63,8 @@ import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.theme.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.offset
-import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlin.math.sin
 
 @Composable

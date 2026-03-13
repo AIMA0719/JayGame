@@ -123,12 +123,12 @@ data class BattleResultData(
 )
 
 /**
- * 그리드 타일 상태 (5x3 = 15타일)
+ * 그리드 타일 상태 (6x5 = 30타일)
  */
 data class GridTileState(
     val unitDefId: Int = -1,    // -1 = empty
-    val grade: Int = -1,        // 0=Low, 1=Med, 2=High, 3=Supreme, 4=Transcendent
-    val family: Int = -1,       // 0=Fire, 1=Frost, 2=Poison, 3=Lightning, 4=Support
+    val grade: Int = -1,        // 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legend, 5=Hero, 6=Immortal
+    val family: Int = -1,       // 0=Fire, 1=Frost, 2=Poison, 3=Lightning, 4=Support, 5=Wind
     val canMerge: Boolean = false,
     val level: Int = 0,
 )
@@ -415,7 +415,10 @@ object BattleBridge {
     val skillEvents: StateFlow<List<SkillEvent>> = _skillEvents.asStateFlow()
 
     fun emitSkillEvent(event: SkillEvent) {
-        val current = _skillEvents.value.toMutableList()
+        val now = System.currentTimeMillis()
+        val current = _skillEvents.value.filter {
+            (now - it.startTime) < (it.duration * 1000f).toLong()
+        }.toMutableList()
         current.add(event)
         _skillEvents.value = current
     }
@@ -484,6 +487,7 @@ object BattleBridge {
         _goldPickupEvents.value = emptyList()
         _levelUpEvents.value = emptyList()
         _stageId.value = 0
+        _difficulty.value = 1
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _battleSpeed.value = 1f
         _debugMode.value = false
