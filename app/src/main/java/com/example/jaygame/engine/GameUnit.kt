@@ -21,6 +21,12 @@ class GameUnit {
     var isAttacking = false
     val buffs = BuffContainer()
 
+    // ── Unique ability fields (M4) ──
+    var uniqueAbilityType = -1       // index into UniqueAbilitySystem types, -1 = none
+    var uniqueAbilityCooldown = 0f   // seconds until next activation
+    var uniqueAbilityMaxCd = 0f      // max cooldown for this ability
+    var passiveCounter = 0           // generic counter for passive triggers (e.g., hit count)
+
     private var wanderTarget = Vec2()
     private var wanderTimer = 0f
     private var moveSpeed = 75f
@@ -51,6 +57,8 @@ class GameUnit {
         this.isAttacking = false
         this.attackCooldown = 0f
         this.buffs.clear()
+        this.uniqueAbilityCooldown = 0f
+        this.passiveCounter = 0
         this.wanderTarget = homePos.copy()
         this.wanderTimer = 0f
         this.moveSpeed = when (family) {
@@ -142,5 +150,9 @@ class GameUnit {
         currentTarget = null
         chaseTarget = null
         buffs.clear()
+        uniqueAbilityType = -1
+        uniqueAbilityCooldown = 0f
+        uniqueAbilityMaxCd = 0f
+        passiveCounter = 0
     }
 }

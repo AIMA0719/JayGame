@@ -227,6 +227,10 @@ class BattleEngine(
         val unitList = units.toActiveList()
         AbilitySystem.applyAuraEffects(unitList, dt, auraTicks)
 
+        // Update unique abilities (hero+ grade skills)
+        val activeEnemies = enemies.toActiveList()
+        UniqueAbilitySystem.update(unitList, dt, activeEnemies)
+
         units.forEach { unit ->
             if (!unit.alive) return@forEach
             unit.update(dt) { pos, range -> findNearestEnemy(pos, range) }
@@ -314,6 +318,7 @@ class BattleEngine(
             range = def.range * upgradeRangeMult,
             abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
         )
+        UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         BattleBridge.onSummonResult(unitDefId, grade)
     }
@@ -353,6 +358,7 @@ class BattleEngine(
             range = def.range * upgradeRangeMult,
             abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
         )
+        UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         mergeCount++
         BattleBridge.onMergeComplete(tileIndex, result.isLucky, result.resultUnitDefId)
@@ -422,6 +428,7 @@ class BattleEngine(
             range = def.range * upgradeRangeMult,
             abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
         )
+        UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         BattleBridge.onSummonResult(unitDefId, grade)
     }

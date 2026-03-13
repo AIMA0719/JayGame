@@ -195,8 +195,8 @@
 
 - [x] M1. **SkillEvent 시스템** — `BattleBridge`에 `skillEvents: StateFlow<List<SkillEvent>>` 추가. SkillEvent data class: `(type: SkillVfxType, x, y, radius, grade, family, startTime, duration)`
 - [x] M2. **SkillEffectOverlay.kt** 생성 — BattleScreen 레이어에 추가, skillEvents를 구독하여 Canvas로 렌더링하는 프레임워크
-- [ ] M3. **UniqueAbilitySystem.kt** 생성 — GameUnit에 `uniqueAbilityCooldown`, `uniqueAbilityReady` 필드 추가. BattleEngine.updateUnits()에서 쿨타임 관리 + 발동 조건 체크
-- [ ] M4. **GameUnit 확장** — `uniqueAbilityType: Int`, `uniqueAbilityCooldown: Float`, `passiveCounter: Int` 필드 추가
+- [x] M3. **UniqueAbilitySystem.kt** 생성 — GameUnit에 `uniqueAbilityCooldown`, `uniqueAbilityReady` 필드 추가. BattleEngine.updateUnits()에서 쿨타임 관리 + 발동 조건 체크
+- [x] M4. **GameUnit 확장** — `uniqueAbilityType: Int`, `uniqueAbilityCooldown: Float`, `passiveCounter: Int` 필드 추가
 - [ ] M5. **지속 장판 시스템** — `ZoneEffect` data class (위치, 반경, 지속시간, 틱 피해, 디버프). BattleEngine에 `zones: ObjectPool<ZoneEffect>` 추가, 매 프레임 영역 내 적에게 효과 적용
 - [x] M6. **스킬 VFX 타입 enum** 정의:
   ```
