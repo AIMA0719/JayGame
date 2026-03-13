@@ -323,28 +323,13 @@ private fun AchievementItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Right: rewards or claim button
+            // Right: rewards + claim button
             Column(
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                if (isCompleted && !isClaimed) {
-                    // Claim button
-                    NeonButton(
-                        text = "수령",
-                        onClick = onClaim,
-                        fontSize = 12.sp,
-                        accentColor = Gold,
-                        accentColorDark = Gold.copy(alpha = 0.5f),
-                    )
-                } else if (isClaimed) {
-                    Text(
-                        text = "수령 완료",
-                        fontSize = 11.sp,
-                        color = DimText,
-                    )
-                } else {
-                    // Show reward preview
+                // Always show reward preview (unless already claimed)
+                if (!isClaimed) {
                     if (achievement.goldReward > 0) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -377,6 +362,23 @@ private fun AchievementItem(
                             )
                         }
                     }
+                }
+
+                // Claim button or status
+                if (isCompleted && !isClaimed) {
+                    NeonButton(
+                        text = "수령",
+                        onClick = onClaim,
+                        fontSize = 12.sp,
+                        accentColor = Gold,
+                        accentColorDark = Gold.copy(alpha = 0.5f),
+                    )
+                } else if (isClaimed) {
+                    Text(
+                        text = "수령 완료",
+                        fontSize = 11.sp,
+                        color = DimText,
+                    )
                 }
             }
         }
