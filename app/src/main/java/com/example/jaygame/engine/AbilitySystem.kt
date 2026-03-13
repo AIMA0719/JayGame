@@ -13,7 +13,7 @@ object AbilitySystem {
         spatialHash: SpatialHash<Enemy>,
         spawnProjectile: (from: Vec2, target: Enemy, damage: Float, type: Int) -> Unit,
     ) {
-        enemy.takeDamage(proj.damage, proj.isMagic)
+        enemy.takeDamage(proj.damage, proj.isMagic, proj.attackerRange)
 
         when (proj.abilityType) {
             1 -> { // Splash (Fire)

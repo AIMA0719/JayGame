@@ -256,6 +256,7 @@ class BattleEngine(
                     enemy.baseSpeed *= 2f
                     enemy.speed = enemy.baseSpeed
                 }
+                enemy.applyBossModifierFlags()
                 // Notify UI of boss modifier
                 BattleBridge.notifyBossModifier(modifier)
             }

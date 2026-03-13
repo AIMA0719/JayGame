@@ -89,17 +89,31 @@ class Enemy {
         return true
     }
 
-    fun takeDamage(damage: Float, isMagic: Boolean = false): Float {
+    fun takeDamage(damage: Float, isMagic: Boolean = false, attackRange: Float = 0f): Float {
+        var adjustedDamage = damage
+        // Boss modifier: reduce physical/magic/ranged damage
+        when (bossModifier) {
+            BossModifier.PHYSICAL_RESIST -> if (!isMagic) adjustedDamage *= 0.4f
+            BossModifier.MAGIC_RESIST -> if (isMagic) adjustedDamage *= 0.4f
+            BossModifier.RANGED_RESIST -> if (attackRange > 200f) adjustedDamage *= 0.5f
+            else -> {}
+        }
         val effectiveArmor = (armor - buffs.getArmorReduction()).coerceAtLeast(0f)
         val reduction = if (isMagic) {
             1f - (magicResist / (magicResist + 100f))
         } else {
             1f - (effectiveArmor / (effectiveArmor + 100f))
         }
-        val finalDmg = buffs.absorbDamage(damage * reduction)
+        val finalDmg = buffs.absorbDamage(adjustedDamage * reduction)
         hp -= finalDmg
         if (hp <= 0f) alive = false
         return finalDmg
+    }
+
+    /** Apply CC/DoT immune flags to buff container based on assigned bossModifier */
+    fun applyBossModifierFlags() {
+        buffs.ccImmune = bossModifier == BossModifier.CC_IMMUNE
+        buffs.dotImmune = bossModifier == BossModifier.DOT_IMMUNE
     }
 
     fun reset() {

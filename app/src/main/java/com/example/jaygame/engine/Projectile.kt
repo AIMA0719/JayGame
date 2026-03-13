@@ -18,12 +18,15 @@ class Projectile {
     var grade = 0
     var family = 0
     var sourcePos = Vec2()
+    /** Attacker's base range — used by RANGED_RESIST boss modifier */
+    var attackerRange = 0f
 
     fun init(
         from: Vec2, target: Enemy, damage: Float, speed: Float,
         type: Int, isMagic: Boolean, isCrit: Boolean,
         sourceUnitId: Int, abilityType: Int, abilityValue: Float,
         grade: Int, family: Int,
+        attackerRange: Float = 0f,
     ) {
         this.alive = true
         this.position = from.copy()
@@ -40,6 +43,7 @@ class Projectile {
         this.lifetime = 3f
         this.grade = grade
         this.family = family
+        this.attackerRange = attackerRange
     }
 
     fun update(dt: Float): Boolean {

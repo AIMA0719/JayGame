@@ -15,8 +15,16 @@ class BuffContainer {
     private var shieldHP = 0f
 
     var ccResistance: Float = 0f  // 0.0 ~ 0.9
+    /** CC_IMMUNE boss modifier: skips Slow and Stun buffs */
+    var ccImmune: Boolean = false
+    /** DOT_IMMUNE boss modifier: skips DoT buffs */
+    var dotImmune: Boolean = false
 
     fun addBuff(type: BuffType, value: Float, duration: Float, sourceId: Int = -1) {
+        // Boss modifier immunity checks
+        if (ccImmune && (type == BuffType.Slow || type == BuffType.Stun || type == BuffType.Silence)) return
+        if (dotImmune && type == BuffType.DoT) return
+
         val effectiveDuration = if (type == BuffType.Slow || type == BuffType.Stun || type == BuffType.Silence) {
             duration * (1f - ccResistance)
         } else duration
@@ -89,6 +97,8 @@ class BuffContainer {
     fun clear() {
         buffs.clear()
         shieldHP = 0f
+        ccImmune = false
+        dotImmune = false
     }
 
     fun hasBuff(type: BuffType) = buffs.any { it.type == type }

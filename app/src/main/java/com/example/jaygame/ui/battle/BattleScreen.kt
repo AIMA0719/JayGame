@@ -243,6 +243,8 @@ fun BattleScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BattleTopHud(onPauseClick = { showMenuDialog = true })
+            // Boss modifier alert — appears below top HUD for 3 seconds when boss spawns
+            BossModifierAlert()
             Spacer(modifier = Modifier.weight(1f))
             BattleBottomHud(
                 onBuyClick = { showBuySheet = true },

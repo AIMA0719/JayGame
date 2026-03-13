@@ -1,5 +1,6 @@
 package com.example.jaygame.bridge
 
+import com.example.jaygame.engine.BossModifier
 import com.example.jaygame.ui.battle.GambleResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -476,6 +477,14 @@ object BattleBridge {
         }
     }
 
+    /** 보스 모디파이어 — 보스 웨이브 시작 시 설정, 3초 후 null로 자동 리셋은 UI에서 처리 */
+    private val _bossModifier = MutableStateFlow<BossModifier?>(null)
+    val bossModifier: StateFlow<BossModifier?> = _bossModifier.asStateFlow()
+
+    fun notifyBossModifier(modifier: BossModifier?) {
+        _bossModifier.value = modifier
+    }
+
     /** 배속 (1f, 2f, 4f, 8f) */
     private val _battleSpeed = MutableStateFlow(1f)
     val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
@@ -512,6 +521,7 @@ object BattleBridge {
         _skillEvents.value = emptyList()
         _goldPickupEvents.value = emptyList()
         _levelUpEvents.value = emptyList()
+        _bossModifier.value = null
         // Note: stageId, difficulty, battleSpeed are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _debugMode.value = false
@@ -610,16 +620,4 @@ object BattleBridge {
         engine?.applyBattleUpgrade(upgradeType, levels[upgradeType], cost.toFloat())
     }
 
-    // ── Boss Modifier Notification ───────────────────────────
-
-    private val _bossModifier = MutableStateFlow<String?>(null)
-    val bossModifier: StateFlow<String?> = _bossModifier.asStateFlow()
-
-    fun notifyBossModifier(modifier: com.example.jaygame.engine.BossModifier?) {
-        _bossModifier.value = modifier?.label
-    }
-
-    fun clearBossModifier() {
-        _bossModifier.value = null
-    }
 }

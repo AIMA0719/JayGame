@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.audio.SoundEvent
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.engine.BossModifier
 import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -676,6 +677,59 @@ fun SummonButton(
                     fontWeight = FontWeight.Bold,
                 )
             }
+        }
+    }
+}
+
+// ── Boss Modifier Alert Banner ─────────────────────────────────
+
+/**
+ * Shows an alert banner for 3 seconds when a boss with a modifier spawns.
+ * Display: "⚠️ 보스: {label} — {description}"
+ * Red/orange text on semi-transparent dark background.
+ */
+@Composable
+fun BossModifierAlert() {
+    val bossModifierState by BattleBridge.bossModifier.collectAsState()
+    var visibleModifier by remember { mutableStateOf<BossModifier?>(null) }
+    val alpha = remember { Animatable(0f) }
+
+    LaunchedEffect(bossModifierState) {
+        if (bossModifierState != null) {
+            visibleModifier = bossModifierState
+            alpha.snapTo(1f)
+            delay(2500)
+            alpha.animateTo(0f, tween(500))
+            visibleModifier = null
+        }
+    }
+
+    val mod = visibleModifier ?: return
+
+    Box(
+        modifier = Modifier
+            .graphicsLayer { this.alpha = alpha.value }
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xCC1A0A00))
+            .border(2.dp, Color(0xFFFF4400).copy(alpha = 0.8f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "\u26A0\uFE0F 보스: ${mod.label}",
+                color = Color(0xFFFF6633),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = mod.description,
+                color = Color(0xFFFFBB88),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
