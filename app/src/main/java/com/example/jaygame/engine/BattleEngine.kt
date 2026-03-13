@@ -116,6 +116,7 @@ class BattleEngine(
     private var job: Job? = null
 
     fun start(scope: CoroutineScope) {
+        UniqueAbilitySystem.zonePool = zones
         job = scope.launch(Dispatchers.Default) {
             var lastTime = System.nanoTime()
             var accumulator = 0f
