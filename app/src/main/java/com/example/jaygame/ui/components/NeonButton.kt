@@ -1,7 +1,12 @@
 package com.example.jaygame.ui.components
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -37,6 +42,7 @@ fun NeonButton(
     fontSize: TextUnit = 16.sp,
     accentColor: Color = NeonRed,
     accentColorDark: Color = NeonRedDark,
+    glowPulse: Boolean = false,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -46,6 +52,21 @@ fun NeonButton(
         animationSpec = spring(dampingRatio = 0.6f),
         label = "btnScale",
     )
+
+    // Glow pulse animation for highlighted buttons
+    val glowAlpha = if (glowPulse && enabled) {
+        val transition = rememberInfiniteTransition(label = "glowPulse")
+        val pulse by transition.animateFloat(
+            initialValue = 0.3f,
+            targetValue = 0.8f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "glowAlpha",
+        )
+        pulse
+    } else 0f
 
     Box(
         contentAlignment = Alignment.Center,
@@ -57,6 +78,17 @@ fun NeonButton(
             .alpha(if (enabled) 1f else 0.4f)
             .drawBehind {
                 val cr = CornerRadius(12.dp.toPx())
+
+                // Outer glow layer for pulse effect
+                if (glowPulse && enabled) {
+                    val glowCr = CornerRadius(14.dp.toPx())
+                    drawRoundRect(
+                        color = accentColor.copy(alpha = glowAlpha * 0.4f),
+                        cornerRadius = glowCr,
+                        style = Stroke(width = (4f + glowAlpha * 4f).dp.toPx()),
+                    )
+                }
+
                 drawRoundRect(
                     brush = Brush.verticalGradient(
                         colors = if (isPressed) listOf(accentColorDark, accentColor.copy(alpha = 0.8f))
@@ -65,7 +97,7 @@ fun NeonButton(
                     cornerRadius = cr,
                 )
                 drawRoundRect(
-                    color = accentColor.copy(alpha = 0.5f),
+                    color = accentColor.copy(alpha = if (glowPulse) 0.5f + glowAlpha * 0.3f else 0.5f),
                     cornerRadius = cr,
                     style = Stroke(width = 1.5f.dp.toPx()),
                 )

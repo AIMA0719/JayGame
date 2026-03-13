@@ -207,6 +207,7 @@ fun HomeScreen(
                         fontSize = 19.sp,
                         accentColor = NeonRed,
                         accentColorDark = NeonRedDark,
+                        glowPulse = true,
                     )
                 }
             }
