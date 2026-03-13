@@ -51,14 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.audio.SoundEvent
-import com.example.jaygame.BuildConfig
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.ui.theme.*
 import com.example.jaygame.util.HapticManager
-
-// ── Z16: Debug button colors (pre-allocated) ──
-private val DebugBtnActiveColor = Color(0xFF00FF88)
-private val DebugBtnInactiveColor = Color(0xFF888888)
 
 // ── Warm medieval theme colors ──
 private val WoodBrown = Color(0xFF5C3A1E)
@@ -81,8 +76,6 @@ private val OrangeDark = Color(0xFFCC6600)
 @Composable
 fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
-    val gridState by BattleBridge.gridState.collectAsState()
-    val unitCount = gridState.count { it.unitDefId >= 0 }
     val battleSpeed by BattleBridge.battleSpeed.collectAsState()
 
     val totalSeconds = battle.elapsedTime.toInt()
@@ -196,77 +189,42 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             }
         }
 
-        // Top-right buttons: speed + menu
-        Row(
+        // Top-right: menu button only
+        Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(end = 8.dp)
+                .size(45.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.5f))
+                .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
+                .clickable(onClick = onPauseClick),
+            contentAlignment = Alignment.Center,
         ) {
-            // Speed button
+            // Show current speed indicator on menu button
             val speedLabel = when (battleSpeed) {
                 2f -> "x2"
                 4f -> "x4"
                 8f -> "x8"
-                else -> "x1"
+                else -> ""
             }
-            val speedColor = when (battleSpeed) {
-                2f -> GoldBright
-                4f -> Color(0xFFFF6B6B)
-                8f -> Color(0xFFFF3333)
-                else -> Color.White
-            }
-            Box(
-                modifier = Modifier
-                    .size(45.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .border(1.dp, speedColor.copy(alpha = 0.6f), CircleShape)
-                    .clickable(onClick = { BattleBridge.cycleBattleSpeed() }),
-                contentAlignment = Alignment.Center,
-            ) {
+            if (speedLabel.isNotEmpty()) {
                 Text(
                     speedLabel,
-                    fontSize = 15.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = speedColor,
+                    color = when (battleSpeed) {
+                        2f -> GoldBright
+                        4f -> Color(0xFFFF6B6B)
+                        8f -> Color(0xFFFF3333)
+                        else -> Color.White
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 2.dp, end = 4.dp),
                 )
             }
-
-            // Debug toggle button (only in debug builds)
-            if (BuildConfig.DEBUG) {
-                val isDebugOn by BattleBridge.debugMode.collectAsState()
-                val debugBorder = if (isDebugOn) DebugBtnActiveColor else DebugBtnInactiveColor
-                Box(
-                    modifier = Modifier
-                        .size(35.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .border(1.dp, debugBorder.copy(alpha = 0.6f), CircleShape)
-                        .clickable(onClick = { BattleBridge.toggleDebugMode() }),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "D",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = debugBorder,
-                    )
-                }
-            }
-
-            // Menu button
-            Box(
-                modifier = Modifier
-                    .size(45.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
-                    .clickable(onClick = onPauseClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("\u2630", fontSize = 21.sp, color = Color.White)
-            }
+            Text("\u2630", fontSize = 21.sp, color = Color.White)
         }
     }
 

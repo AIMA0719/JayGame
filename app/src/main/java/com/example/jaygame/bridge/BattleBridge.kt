@@ -467,6 +467,10 @@ object BattleBridge {
         }
     }
 
+    fun setBattleSpeed(speed: Float) {
+        _battleSpeed.value = speed.coerceIn(1f, 8f)
+    }
+
     /** 새 배틀 시작 시 상태 초기화 */
     fun reset() {
         _state.value = BattleState()

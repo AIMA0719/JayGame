@@ -55,6 +55,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
+import com.example.jaygame.BuildConfig
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.BattleResultData
 import com.example.jaygame.data.STAGES
@@ -78,6 +79,7 @@ fun BattleScreen(
     val context = LocalContext.current
     val view = LocalView.current
 
+    var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showGambleDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
@@ -174,7 +176,7 @@ fun BattleScreen(
         }
     }
 
-    BackHandler { showQuitDialog = true }
+    BackHandler { showMenuDialog = true }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 0: Full-screen background image
@@ -269,7 +271,7 @@ fun BattleScreen(
                 .windowInsetsPadding(WindowInsets.displayCutout),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            BattleTopHud(onPauseClick = { showQuitDialog = true })
+            BattleTopHud(onPauseClick = { showMenuDialog = true })
             Spacer(modifier = Modifier.weight(1f))
             BattleBottomHud(
                 onGambleClick = { showGambleDialog = true },
@@ -315,7 +317,18 @@ fun BattleScreen(
             }
         }
 
-        // Layer 5: Quit confirmation
+        // Layer 5: Menu dialog
+        if (showMenuDialog) {
+            BattleMenuDialog(
+                onDismiss = { showMenuDialog = false },
+                onQuitClick = {
+                    showMenuDialog = false
+                    showQuitDialog = true
+                },
+            )
+        }
+
+        // Layer 6: Quit confirmation
         if (showQuitDialog) {
             QuitBattleDialog(
                 onConfirm = onGoHome,
@@ -493,6 +506,125 @@ private fun QuitBattleDialog(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+    }
+}
+
+// ── Battle Menu Dialog ──────────────────────────────────────────
+
+private val MenuSpeedX1Color = Color.White
+private val MenuSpeedX2Color = Color(0xFFFFD700)
+private val MenuSpeedX4Color = Color(0xFFFF6B6B)
+private val MenuSpeedX8Color = Color(0xFFFF3333)
+
+@Composable
+private fun BattleMenuDialog(
+    onDismiss: () -> Unit,
+    onQuitClick: () -> Unit,
+) {
+    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.55f),
+                        Color.Black.copy(alpha = 0.8f),
+                    ),
+                )
+            )
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        GameCard(
+            modifier = Modifier
+                .width(280.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) {},
+            borderColor = Gold.copy(alpha = 0.5f),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp, horizontal = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "메뉴",
+                    color = Gold,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                // ── Speed control ──
+                Text(
+                    text = "배속",
+                    color = LightText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf(1f to "x1", 2f to "x2", 4f to "x4", 8f to "x8").forEach { (speed, label) ->
+                        val isSelected = battleSpeed == speed
+                        val color = when (speed) {
+                            2f -> MenuSpeedX2Color
+                            4f -> MenuSpeedX4Color
+                            8f -> MenuSpeedX8Color
+                            else -> MenuSpeedX1Color
+                        }
+                        NeonButton(
+                            text = label,
+                            onClick = { BattleBridge.setBattleSpeed(speed) },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            accentColor = if (isSelected) color else SubText,
+                            accentColorDark = if (isSelected) color.copy(alpha = 0.7f) else DimText,
+                        )
+                    }
+                }
+
+                // ── Debug toggle (debug builds only) ──
+                if (BuildConfig.DEBUG) {
+                    val isDebugOn by BattleBridge.debugMode.collectAsState()
+                    NeonButton(
+                        text = if (isDebugOn) "디버그 OFF" else "디버그 ON",
+                        onClick = { BattleBridge.toggleDebugMode() },
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                        accentColor = if (isDebugOn) NeonGreen else SubText,
+                        accentColorDark = if (isDebugOn) NeonGreen.copy(alpha = 0.7f) else DimText,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // ── Quit button ──
+                NeonButton(
+                    text = "전투 포기",
+                    onClick = onQuitClick,
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    accentColor = NeonRed,
+                    accentColorDark = NeonRedDark,
+                )
+
+                // ── Close ──
+                NeonButton(
+                    text = "닫기",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    accentColor = SubText,
+                    accentColorDark = DimText,
+                )
             }
         }
     }
