@@ -3,6 +3,7 @@ package com.example.jaygame.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,11 +41,11 @@ import com.example.jaygame.data.LEVEL_MULTIPLIER
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UPGRADE_COSTS
 import com.example.jaygame.data.UnitDef
+import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.data.UnitGrade
 import com.example.jaygame.data.UnitProgress
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
-import com.example.jaygame.ui.components.ResourceHeader
 import com.example.jaygame.ui.theme.DarkSurface
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DimText
@@ -89,10 +86,26 @@ private fun gradeGlowColor(grade: UnitGrade): Color? = when (grade) {
     UnitGrade.IMMORTAL -> GradeBorderRainbowStart
 }
 
+private val FAMILY_ICONS = mapOf(
+    UnitFamily.FIRE to "\uD83D\uDD25",
+    UnitFamily.FROST to "\u2744\uFE0F",
+    UnitFamily.POISON to "\uD83D\uDCA8",
+    UnitFamily.LIGHTNING to "\u26A1",
+    UnitFamily.SUPPORT to "\uD83D\uDE4F",
+    UnitFamily.WIND to "\uD83C\uDF00",
+)
+
 @Composable
 fun CollectionScreen(repository: GameRepository) {
     val data by repository.gameData.collectAsState()
     var selectedUnit by remember { mutableStateOf<UnitDef?>(null) }
+
+    // Group units by family
+    val unitsByFamily = remember {
+        UnitFamily.entries.map { family ->
+            family to UNIT_DEFS.filter { it.family == family }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -103,7 +116,7 @@ fun CollectionScreen(repository: GameRepository) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "컬렉션",
+                text = "영웅 도감",
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
                 color = LightText,
@@ -111,26 +124,36 @@ fun CollectionScreen(repository: GameRepository) {
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // Unit Grid — full screen, click to open detail dialog
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
+            // Owned count
+            val ownedCount = data.units.count { it.owned }
+            Text(
+                text = "보유 $ownedCount / ${UNIT_DEFS.size}",
+                fontSize = 12.sp,
+                color = SubText,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Family rows with horizontal scroll
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                items(UNIT_DEFS, key = { it.id }) { def ->
-                    val progress = data.units.getOrNull(def.id)
-                    CollectionUnitCard(
-                        def = def,
-                        progress = progress,
-                        onClick = { selectedUnit = def },
+                unitsByFamily.forEach { (family, units) ->
+                    FamilyUnitRow(
+                        family = family,
+                        units = units,
+                        unitProgress = data.units,
+                        onUnitClick = { selectedUnit = it },
                     )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
@@ -161,6 +184,61 @@ fun CollectionScreen(repository: GameRepository) {
 }
 
 @Composable
+private fun FamilyUnitRow(
+    family: UnitFamily,
+    units: List<UnitDef>,
+    unitProgress: List<UnitProgress>,
+    onUnitClick: (UnitDef) -> Unit,
+) {
+    val icon = FAMILY_ICONS[family] ?: ""
+    val ownedInFamily = units.count { def ->
+        unitProgress.getOrNull(def.id)?.owned == true
+    }
+
+    Column(modifier = Modifier.padding(start = 16.dp)) {
+        // Family header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = icon, fontSize = 18.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = family.label,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp,
+                color = family.color,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "$ownedInFamily/${units.size}",
+                fontSize = 12.sp,
+                color = SubText,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Horizontal scroll of unit cards
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            units.forEach { def ->
+                val progress = unitProgress.getOrNull(def.id)
+                CollectionUnitCard(
+                    def = def,
+                    progress = progress,
+                    onClick = { onUnitClick(def) },
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp)) // end padding
+        }
+    }
+}
+
+@Composable
 private fun CollectionUnitCard(
     def: UnitDef,
     progress: UnitProgress?,
@@ -175,7 +253,7 @@ private fun CollectionUnitCard(
         glowColor = gradeGlowColor(def.grade),
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
+            .width(80.dp)
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
         Column(
@@ -207,10 +285,18 @@ private fun CollectionUnitCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = if (owned) def.name else "미보유",
+                text = if (owned) def.name else "???",
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
                 color = if (owned) LightText else DimText,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+
+            Text(
+                text = def.grade.label,
+                fontSize = 9.sp,
+                color = def.grade.color.copy(alpha = if (owned) 1f else 0.5f),
                 textAlign = TextAlign.Center,
             )
 

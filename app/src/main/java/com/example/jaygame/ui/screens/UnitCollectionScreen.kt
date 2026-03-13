@@ -4,11 +4,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,11 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,8 +50,6 @@ import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.NeonCyan
-import com.example.jaygame.ui.theme.NeonRed
-import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
 // ── Grade-based card background colors (pre-allocated) ──
@@ -79,16 +76,25 @@ private fun codexGradeBorderColor(grade: UnitGrade): Color = when (grade) {
     else -> grade.color.copy(alpha = 0.4f)
 }
 
+private val FAMILY_ICONS = mapOf(
+    UnitFamily.FIRE to "\uD83D\uDD25",
+    UnitFamily.FROST to "\u2744\uFE0F",
+    UnitFamily.POISON to "\uD83D\uDCA8",
+    UnitFamily.LIGHTNING to "\u26A1",
+    UnitFamily.SUPPORT to "\uD83D\uDE4F",
+    UnitFamily.WIND to "\uD83C\uDF00",
+)
+
 @Composable
 fun UnitCollectionScreen(
     onBack: () -> Unit,
 ) {
-    var selectedFamily by remember { mutableStateOf<UnitFamily?>(null) }
     var selectedUnit by remember { mutableStateOf<UnitDef?>(null) }
-    val displayedUnits = if (selectedFamily != null) {
-        UNIT_DEFS.filter { it.family == selectedFamily }
-    } else {
-        UNIT_DEFS
+
+    val unitsByFamily = remember {
+        UnitFamily.entries.map { family ->
+            family to UNIT_DEFS.filter { it.family == family }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -133,47 +139,23 @@ fun UnitCollectionScreen(
                 )
             }
 
-            // Family filter tabs
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                CodexFilterChip(
-                    label = "전체",
-                    color = NeonCyan,
-                    selected = selectedFamily == null,
-                    onClick = { selectedFamily = null },
-                    modifier = Modifier.weight(1f),
-                )
-                UnitFamily.entries.forEach { family ->
-                    CodexFilterChip(
-                        label = family.label,
-                        color = family.color,
-                        selected = selectedFamily == family,
-                        onClick = { selectedFamily = family },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Unit grid — click to open detail dialog
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
+            // Family rows with horizontal scroll
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                items(displayedUnits, key = { it.id }) { unit ->
-                    CodexUnitCard(
-                        unit = unit,
-                        onClick = { selectedUnit = unit },
+                unitsByFamily.forEach { (family, units) ->
+                    FamilyUnitRow(
+                        family = family,
+                        units = units,
+                        onUnitClick = { selectedUnit = it },
                     )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
@@ -188,35 +170,51 @@ fun UnitCollectionScreen(
 }
 
 @Composable
-private fun CodexFilterChip(
-    label: String,
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun FamilyUnitRow(
+    family: UnitFamily,
+    units: List<UnitDef>,
+    onUnitClick: (UnitDef) -> Unit,
 ) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .height(32.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (selected) color.copy(alpha = 0.25f)
-                else Color(0xFF1A1A2E),
+    val icon = FAMILY_ICONS[family] ?: ""
+
+    Column(modifier = Modifier.padding(start = 16.dp)) {
+        // Family header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = icon, fontSize = 18.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = family.label,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp,
+                color = family.color,
             )
-            .border(
-                width = if (selected) 1.5.dp else 0.5.dp,
-                color = if (selected) color else Color.White.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(8.dp),
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "${units.size}종",
+                fontSize = 12.sp,
+                color = SubText,
             )
-            .clickable(onClick = onClick),
-    ) {
-        Text(
-            text = label,
-            color = if (selected) color else Color.White.copy(alpha = 0.6f),
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Horizontal scroll of unit cards
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            units.forEach { unit ->
+                CodexUnitCard(
+                    unit = unit,
+                    onClick = { onUnitClick(unit) },
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
     }
 }
 
@@ -230,6 +228,7 @@ private fun CodexUnitCard(
 
     Column(
         modifier = Modifier
+            .width(80.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(codexGradeBgColor(unit.grade))
             .border(
@@ -256,7 +255,7 @@ private fun CodexUnitCard(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(56.dp)
+                .size(48.dp)
                 .shadow(4.dp, CircleShape, ambientColor = gradeColor, spotColor = gradeColor)
                 .clip(CircleShape)
                 .background(gradeColor.copy(alpha = 0.15f))
@@ -265,7 +264,7 @@ private fun CodexUnitCard(
             Image(
                 painter = painterResource(id = unit.iconRes),
                 contentDescription = unit.name,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(34.dp),
             )
         }
 
