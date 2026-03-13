@@ -51,15 +51,15 @@ private val CellHighlightBright = Color.White.copy(alpha = 0.06f)
 private val GradeColors = GradeColorsByIndex
 private val FamilyAuraColors = FamilyColorsByIndex
 
-// C++ grid area in 1280x720 space — must match Grid.h (880x440 centered)
-private const val CPP_GRID_W = 880f
-private const val CPP_GRID_H = 440f
-private const val GRID_NORM_X = (1280f - CPP_GRID_W) / 2f / 1280f   // 0.15625
-private const val GRID_NORM_Y = (720f - CPP_GRID_H) / 2f / 720f     // 0.19444
-private const val GRID_NORM_W = CPP_GRID_W / 1280f                   // 0.6875
-private const val GRID_NORM_H = CPP_GRID_H / 720f                    // 0.61111
+// Grid area in 1280x720 space — must match Grid.kt (480x480 centered)
+private const val CPP_GRID_W = 480f
+private const val CPP_GRID_H = 480f
+private const val GRID_NORM_X = 400f / 1280f   // 0.3125  (Grid.ORIGIN_X / 1280)
+private const val GRID_NORM_Y = 120f / 720f    // 0.16667 (Grid.ORIGIN_Y / 720)
+private const val GRID_NORM_W = CPP_GRID_W / 1280f  // 0.375
+private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
 
-private const val GRID_COLS = 6
+private const val GRID_COLS = 5
 private const val GRID_ROWS = 5
 
 /**

@@ -110,6 +110,20 @@ class GameUnit {
                 position.y += norm.y * wanderSpeed * dt
             }
         }
+
+        // Clamp position within grid boundaries (prevent units from entering monster path)
+        position.x = position.x.coerceIn(GRID_MIN_X, GRID_MAX_X)
+        position.y = position.y.coerceIn(GRID_MIN_Y, GRID_MAX_Y)
+    }
+
+    companion object {
+        val LEVEL_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2.2f, 3.2f, 4.5f, 6f, 8f)
+
+        // Grid boundaries with margin for unit sprite size
+        private const val GRID_MIN_X = 400f + 10f   // Grid.ORIGIN_X + margin
+        private const val GRID_MAX_X = 880f - 10f   // Grid.ORIGIN_X + Grid.GRID_W - margin
+        private const val GRID_MIN_Y = 120f + 10f   // Grid.ORIGIN_Y + margin
+        private const val GRID_MAX_Y = 600f - 10f   // Grid.ORIGIN_Y + Grid.GRID_H - margin
     }
 
     fun canAttack(): Boolean = isAttacking && attackCooldown <= 0f && currentTarget?.alive == true
@@ -128,9 +142,5 @@ class GameUnit {
         currentTarget = null
         chaseTarget = null
         buffs.clear()
-    }
-
-    companion object {
-        val LEVEL_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2.2f, 3.2f, 4.5f, 6f, 8f)
     }
 }

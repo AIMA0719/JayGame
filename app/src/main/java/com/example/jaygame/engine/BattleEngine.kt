@@ -60,16 +60,57 @@ class BattleEngine(
 
     private var gridPushTimer = 0f
 
-    // Path midpoints between outer path edge and grid edge
-    // Grid: (200,140)~(1080,580), Path margin: 70px outside grid
-    // midX left=(130+200)/2=165, midX right=(1080+1150)/2=1115
-    // midY top=(70+140)/2=105, midY bottom=(580+650)/2=615
-    val enemyPath: List<Vec2> = listOf(
-        Vec2(165f, 105f),
-        Vec2(1115f, 105f),
-        Vec2(1115f, 615f),
-        Vec2(165f, 615f),
-    )
+    // Square path around grid (480x480 centered at 640,360)
+    // Grid: (400,120)~(880,600). Path margin: 60px outside grid.
+    // Path outer: (340,60)~(940,660) = 600x600 square
+    // Midline of path strip: 30px from grid edge
+    private val pathLeft = Grid.ORIGIN_X - 30f    // 370
+    private val pathTop = Grid.ORIGIN_Y - 30f     // 90
+    private val pathRight = Grid.ORIGIN_X + Grid.GRID_W + 30f  // 910
+    private val pathBottom = Grid.ORIGIN_Y + Grid.GRID_H + 30f // 630
+
+    // Corner radius for smooth turns (8 interpolation points per corner)
+    private val cornerR = 30f
+
+    val enemyPath: List<Vec2> = buildList {
+        val steps = 8
+        // Top edge: left→right
+        add(Vec2(pathLeft + cornerR, pathTop))
+        add(Vec2(pathRight - cornerR, pathTop))
+        // Top-right corner
+        for (i in 0..steps) {
+            val angle = (-Math.PI / 2 + (Math.PI / 2) * i / steps).toFloat()
+            add(Vec2(pathRight - cornerR + cornerR * kotlin.math.cos(angle),
+                      pathTop + cornerR + cornerR * kotlin.math.sin(angle)))
+        }
+        // Right edge: top→bottom
+        add(Vec2(pathRight, pathTop + cornerR))
+        add(Vec2(pathRight, pathBottom - cornerR))
+        // Bottom-right corner
+        for (i in 0..steps) {
+            val angle = (0.0 + (Math.PI / 2) * i / steps).toFloat()
+            add(Vec2(pathRight - cornerR + cornerR * kotlin.math.cos(angle),
+                      pathBottom - cornerR + cornerR * kotlin.math.sin(angle)))
+        }
+        // Bottom edge: right→left
+        add(Vec2(pathRight - cornerR, pathBottom))
+        add(Vec2(pathLeft + cornerR, pathBottom))
+        // Bottom-left corner
+        for (i in 0..steps) {
+            val angle = (Math.PI / 2 + (Math.PI / 2) * i / steps).toFloat()
+            add(Vec2(pathLeft + cornerR + cornerR * kotlin.math.cos(angle),
+                      pathBottom - cornerR + cornerR * kotlin.math.sin(angle)))
+        }
+        // Left edge: bottom→top
+        add(Vec2(pathLeft, pathBottom - cornerR))
+        add(Vec2(pathLeft, pathTop + cornerR))
+        // Top-left corner
+        for (i in 0..steps) {
+            val angle = (Math.PI + (Math.PI / 2) * i / steps).toFloat()
+            add(Vec2(pathLeft + cornerR + cornerR * kotlin.math.cos(angle),
+                      pathTop + cornerR + cornerR * kotlin.math.sin(angle)))
+        }
+    }
 
     private var job: Job? = null
 

@@ -33,18 +33,18 @@ private val InnerStroke = Stroke(width = 1.5f)
 // Arrow colors
 private val ArrowColor = Color.White.copy(alpha = 0.15f)
 
-// Coordinates in 1280x720 space — matching C++ Grid.h + BattleScene::setupPath()
-// Grid: (200, 140) ~ (1080, 580) = 880x440
-// Path: margin=70 outside grid → matches C++ pathWaypoints_
-private const val GRID_LEFT = 200f
-private const val GRID_TOP = 140f
-private const val GRID_RIGHT = 1080f
-private const val GRID_BOTTOM = 580f
-private const val PATH_MARGIN = 70f
-private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 130
-private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 70
-private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN   // 1150
-private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN // 650
+// Coordinates in 1280x720 space — matching Grid.kt (480x480 centered)
+// Grid: (400, 120) ~ (880, 600) = 480x480
+// Path: margin=60 outside grid → square 600x600
+private const val GRID_LEFT = 400f   // Grid.ORIGIN_X
+private const val GRID_TOP = 120f    // Grid.ORIGIN_Y
+private const val GRID_RIGHT = 880f  // ORIGIN_X + GRID_W
+private const val GRID_BOTTOM = 600f // ORIGIN_Y + GRID_H
+private const val PATH_MARGIN = 60f
+private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 340
+private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 60
+private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN   // 940
+private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN // 660
 
 /**
  * Draws the visible path where monsters walk around the rectangular field (880x440).

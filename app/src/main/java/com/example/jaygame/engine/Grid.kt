@@ -4,13 +4,15 @@ import com.example.jaygame.engine.math.Vec2
 
 class Grid {
     companion object {
-        const val COLS = 6
+        const val COLS = 5
         const val ROWS = 5
-        const val TOTAL = 30
-        const val CELL_W = 140f
-        const val CELL_H = 88f
-        const val ORIGIN_X = 200f
-        const val ORIGIN_Y = 140f
+        const val TOTAL = COLS * ROWS          // 25
+        const val CELL_W = 96f
+        const val CELL_H = 96f
+        const val GRID_W = COLS * CELL_W       // 480
+        const val GRID_H = ROWS * CELL_H       // 480
+        const val ORIGIN_X = (1280f - GRID_W) / 2f  // 400
+        const val ORIGIN_Y = (720f - GRID_H) / 2f   // 120
     }
 
     val cells = arrayOfNulls<GameUnit>(TOTAL)
