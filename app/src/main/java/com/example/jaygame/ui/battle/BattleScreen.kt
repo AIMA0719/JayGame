@@ -37,6 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.BattleResultData
 import com.example.jaygame.data.STAGES
@@ -44,6 +51,7 @@ import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.theme.*
+import kotlin.math.sin
 
 @Composable
 fun BattleScreen(
@@ -58,6 +66,25 @@ fun BattleScreen(
     var showGambleDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
+
+    // Boss vignette
+    val battleState by BattleBridge.state.collectAsState()
+    val isBoss = battleState.isBossRound
+    val bossVignetteAlpha by animateFloatAsState(
+        targetValue = if (isBoss) 1f else 0f,
+        animationSpec = tween(600),
+        label = "bossVignette",
+    )
+    val bossPulse = if (isBoss) {
+        val transition = rememberInfiniteTransition(label = "bossPulse")
+        val pulse by transition.animateFloat(
+            initialValue = 0.08f,
+            targetValue = 0.2f,
+            animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
+            label = "bossPulseAlpha",
+        )
+        pulse
+    } else 0f
 
     // Load background image from assets
     val bgAssetName = remember(stageId) {
@@ -116,6 +143,27 @@ fun BattleScreen(
             DamageNumberOverlay()
             BattleParticleOverlay()
             WaveAnnouncementOverlay()
+
+            // Boss red vignette overlay
+            if (bossVignetteAlpha > 0.01f) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val vigAlpha = bossVignetteAlpha * bossPulse
+                    // Radial vignette: transparent center → red edges
+                    drawRect(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Red.copy(alpha = vigAlpha * 0.5f),
+                                Color.Red.copy(alpha = vigAlpha),
+                            ),
+                            center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2),
+                            radius = size.width * 0.7f,
+                        ),
+                        size = size,
+                    )
+                }
+            }
         }
 
         // Layer 2: HUD overlays
