@@ -14,8 +14,8 @@
         <activity
             android:name=".ComposeActivity"
             android:exported="true"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait"
+            android:configChanges="screenSize|screenLayout|keyboardHidden"
             android:theme="@style/Theme.JayGame"
             android:launchMode="singleTop">
             <intent-filter>
@@ -28,8 +28,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="false"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:screenOrientation="portrait"
+            android:configChanges="screenSize|screenLayout|keyboardHidden"
             android:launchMode="singleTop"
             android:theme="@style/Theme.JayGame" />
 
