@@ -334,11 +334,11 @@ private fun CollectionUnitDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    StatRow("ATK", fmt.format(calculatedATK), Gold)
-                    StatRow("Speed", String.format("%.1f", def.baseSpeed), LightText)
-                    StatRow("Range", String.format("%.0f", def.range), LightText)
+                    StatRow("공격력", fmt.format(calculatedATK), Gold)
+                    StatRow("공속", String.format("%.1f", def.baseSpeed), LightText)
+                    StatRow("사거리", String.format("%.0f", def.range), LightText)
                     StatRow("계열", def.family.label, def.family.color)
-                    StatRow("Ability", def.abilityName, NeonCyan)
+                    StatRow("능력", def.abilityName, NeonCyan)
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))

@@ -102,10 +102,13 @@ fun MergeEffectOverlay() {
     val cardAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(data) {
-        // Phase 1: Ghost units fly in (D2)
+        // Reset all animatables unconditionally to avoid stale state
         flyProgress.snapTo(0f)
         burstProgress.snapTo(0f)
         cardAlpha.snapTo(0f)
+        goldenFlashAlpha.snapTo(0f)
+        luckyScale.snapTo(0f)
+        luckyAlpha.snapTo(0f)
 
         flyProgress.animateTo(
             1f,

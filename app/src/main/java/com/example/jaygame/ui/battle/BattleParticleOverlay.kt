@@ -28,6 +28,10 @@ private val ParticlePurple = Color(0xFFCE93D8)
 private val SoulParticleColor = Color(0xFF5BA4CF).copy(alpha = 0.9f)
 private val SoulParticleColorEnd = Color(0xFFF0E6D3).copy(alpha = 0f)
 
+// Pre-allocated merge particle colorEnd (avoid .copy() per spawn)
+private val MergeGoldColorEnd = Color(0xFFD4A847).copy(alpha = 0f)
+private val MergeCyanColorEnd = Color(0xFF5BA4CF).copy(alpha = 0f)
+
 // Pre-allocated ambient particle colors
 private val AmbientParticleColor = Color(0xFFF0E6D3).copy(alpha = 0.2f)
 private val AmbientParticleColorEnd = Color(0xFFF0E6D3).copy(alpha = 0f)
@@ -190,7 +194,7 @@ fun BattleParticleOverlay() {
         prevMergeEffect.value = mergeEffect
         val isLucky = mergeEffect!!.isLucky
         val color = if (isLucky) ParticleGold else ParticleCyan
-        val colorEnd = if (isLucky) ParticleGold.copy(alpha = 0f) else ParticleCyan.copy(alpha = 0f)
+        val colorEnd = if (isLucky) MergeGoldColorEnd else MergeCyanColorEnd
         val count = if (isLucky) 24 else 12
         for (i in 0 until count) {
             val p = acquireParticle() ?: break

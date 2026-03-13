@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -363,8 +362,8 @@ private fun SeasonPassContent(repository: GameRepository) {
                         Toast.makeText(
                             context,
                             "보상 수령! 골드+$goldReward" +
-                                if (diamondReward > 0) " 다이아+$diamondReward" else "" +
-                                    if (cardReward > 0) " 카드+$cardReward" else "",
+                                (if (diamondReward > 0) " 다이아+$diamondReward" else "") +
+                                (if (cardReward > 0) " 카드+$cardReward" else ""),
                             Toast.LENGTH_SHORT,
                         ).show()
                     },

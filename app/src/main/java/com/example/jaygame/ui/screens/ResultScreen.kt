@@ -58,7 +58,6 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.SubText
 import com.example.jaygame.ui.theme.TrophyAmber
 import kotlinx.coroutines.delay
-import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
