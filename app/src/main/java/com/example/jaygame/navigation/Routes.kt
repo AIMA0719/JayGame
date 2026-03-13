@@ -9,4 +9,5 @@ object Routes {
     const val ACHIEVEMENTS = "achievements"
     const val RESULT = "result"
     const val UNIT_CODEX = "unit_codex"
+    const val RELIC = "relic"
 }

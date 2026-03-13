@@ -18,9 +18,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.ui.components.GameBottomNavBar
 import com.example.jaygame.ui.components.NavTab
+import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.screens.CollectionScreen
 import com.example.jaygame.ui.screens.DeckScreen
 import com.example.jaygame.ui.screens.HomeScreen
+import com.example.jaygame.ui.screens.RelicScreen
 import com.example.jaygame.ui.screens.SettingsScreen
 import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
@@ -76,6 +78,11 @@ fun NavGraph(
                 HomeScreen(
                     repository = repository,
                     onStartBattle = onStartBattle,
+                    onNavigateToRelic = {
+                        navController.navigate(Routes.RELIC) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(Routes.DECK) {
@@ -107,6 +114,27 @@ fun NavGraph(
             }
             composable(Routes.UNIT_CODEX) {
                 UnitCollectionScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.RELIC) {
+                val data by repository.gameData.collectAsState()
+                RelicScreen(
+                    gameData = data,
+                    onUpgrade = { relicId ->
+                        val mgr = RelicManager(repository.gameData.value)
+                        val updated = mgr.upgradeRelic(relicId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onEquip = { relicId ->
+                        val mgr = RelicManager(repository.gameData.value)
+                        val updated = mgr.equipRelic(relicId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onUnequip = { relicId ->
+                        val mgr = RelicManager(repository.gameData.value)
+                        repository.save(mgr.unequipRelic(relicId))
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

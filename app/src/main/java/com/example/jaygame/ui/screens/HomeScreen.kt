@@ -83,6 +83,7 @@ private class Particle {
 fun HomeScreen(
     repository: GameRepository,
     onStartBattle: () -> Unit,
+    onNavigateToRelic: (() -> Unit)? = null,
 ) {
     val data by repository.gameData.collectAsState()
     var showDailyLogin by remember { mutableStateOf(false) }
@@ -269,6 +270,18 @@ fun HomeScreen(
                         accentColor = NeonRed,
                         accentColorDark = NeonRedDark,
                         glowPulse = true,
+                    )
+                }
+
+                if (onNavigateToRelic != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NeonButton(
+                        text = "\u2B50 유물",
+                        onClick = onNavigateToRelic,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = 15.sp,
+                        accentColor = Gold,
+                        accentColorDark = DarkGold,
                     )
                 }
             }
