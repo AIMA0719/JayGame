@@ -83,10 +83,7 @@ private class Particle {
 fun HomeScreen(
     repository: GameRepository,
     onStartBattle: () -> Unit,
-    onNavigateToRelic: (() -> Unit)? = null,
     onNavigateToDungeon: (() -> Unit)? = null,
-    onNavigateToProfile: (() -> Unit)? = null,
-    onNavigateToPet: (() -> Unit)? = null,
 ) {
     val data by repository.gameData.collectAsState()
     var showDailyLogin by remember { mutableStateOf(false) }
@@ -107,10 +104,6 @@ fun HomeScreen(
             },
             onDismiss = { showDailyLogin = false },
         )
-    }
-
-    val stage = remember(data.currentStageId) {
-        STAGES.getOrNull(data.currentStageId) ?: STAGES[0]
     }
 
     // Pre-load all stage background bitmaps
@@ -258,70 +251,38 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Big battle button → opens pre-battle dialog
+                // Battle + Dungeon side by side
                 run {
                     val isUnlocked = data.currentStageId in data.unlockedStages
 
-                    NeonButton(
-                        text = "전투 준비",
-                        onClick = { showPreBattle = true },
-                        enabled = isUnlocked,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(58.dp),
-                        fontSize = 19.sp,
-                        accentColor = NeonRed,
-                        accentColorDark = NeonRedDark,
-                        glowPulse = true,
-                    )
-                }
-
-                if (onNavigateToRelic != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NeonButton(
-                        text = "\u2B50 유물",
-                        onClick = onNavigateToRelic,
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        fontSize = 15.sp,
-                        accentColor = Gold,
-                        accentColorDark = DarkGold,
-                    )
-                }
-
-                if (onNavigateToDungeon != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NeonButton(
-                        text = "\uD83C\uDFF0 던전",
-                        onClick = onNavigateToDungeon,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 15.sp,
-                        accentColor = NeonCyan,
-                        accentColorDark = NeonCyan.copy(alpha = 0.6f),
-                    )
-                }
-
-                if (onNavigateToProfile != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NeonButton(
-                        text = "\uD83D\uDC51 프로필 칭호",
-                        onClick = onNavigateToProfile,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 15.sp,
-                        accentColor = Gold,
-                        accentColorDark = DarkGold,
-                    )
-                }
-
-                if (onNavigateToPet != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NeonButton(
-                        text = "\uD83D\uDC3E 펫",
-                        onClick = onNavigateToPet,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 15.sp,
-                        accentColor = NeonCyan,
-                        accentColorDark = NeonCyan.copy(alpha = 0.6f),
-                    )
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        NeonButton(
+                            text = "전투 준비",
+                            onClick = { showPreBattle = true },
+                            enabled = isUnlocked,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(58.dp),
+                            fontSize = 19.sp,
+                            accentColor = NeonRed,
+                            accentColorDark = NeonRedDark,
+                            glowPulse = true,
+                        )
+                        NeonButton(
+                            text = "던전",
+                            onClick = { onNavigateToDungeon?.invoke() },
+                            enabled = onNavigateToDungeon != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(58.dp),
+                            fontSize = 19.sp,
+                            accentColor = NeonCyan,
+                            accentColorDark = NeonCyan.copy(alpha = 0.6f),
+                        )
+                    }
                 }
             }
 

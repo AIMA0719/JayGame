@@ -66,6 +66,7 @@ private val LockedBorder = Color(0xFF333355)
 fun ProfileScreen(
     repository: GameRepository,
     onBack: () -> Unit,
+    showTopBar: Boolean = true,
 ) {
     val data by repository.gameData.collectAsState()
 
@@ -83,37 +84,39 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(DeepDark),
     ) {
-        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
+        if (showTopBar) {
+            ResourceHeader(gold = data.gold, diamonds = data.diamonds)
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // Title row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_arrow_back),
-                contentDescription = "뒤로",
-                tint = LightText,
+            // Title row
+            Row(
                 modifier = Modifier
-                    .size(24.dp)
-                    .clickable(onClick = onBack),
-            )
-            Text(
-                text = "프로필 칭호",
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = Gold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.width(24.dp))
-        }
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "뒤로",
+                    tint = LightText,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable(onClick = onBack),
+                )
+                Text(
+                    text = "프로필 칭호",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    color = Gold,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.width(24.dp))
+            }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         // Current profile display
         val currentProfile = ALL_PROFILES.find { it.id == data.selectedProfileId }

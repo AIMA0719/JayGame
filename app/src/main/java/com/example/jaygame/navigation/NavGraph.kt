@@ -30,7 +30,6 @@ import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.DungeonScreen
 import com.example.jaygame.ui.screens.PetScreen
-import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
 import androidx.navigation.NavType
@@ -82,23 +81,8 @@ fun NavGraph(
                 HomeScreen(
                     repository = repository,
                     onStartBattle = onStartBattle,
-                    onNavigateToRelic = {
-                        navController.navigate(Routes.RELIC) {
-                            launchSingleTop = true
-                        }
-                    },
                     onNavigateToDungeon = {
                         navController.navigate(Routes.DUNGEON) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToProfile = {
-                        navController.navigate(Routes.PROFILE) {
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToPet = {
-                        navController.navigate(Routes.PET) {
                             launchSingleTop = true
                         }
                     },
@@ -108,7 +92,49 @@ fun NavGraph(
                 DeckScreen(repository = repository)
             }
             composable(Routes.COLLECTION) {
-                CollectionScreen(repository = repository)
+                val data by repository.gameData.collectAsState()
+                val petMgr = remember { PetManager(repository.gameData.value) }
+                CollectionScreen(
+                    repository = repository,
+                    onRelicUpgrade = { relicId ->
+                        val mgr = RelicManager(repository.gameData.value)
+                        val updated = mgr.upgradeRelic(relicId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onRelicEquip = { relicId ->
+                        val mgr = RelicManager(repository.gameData.value)
+                        val updated = mgr.equipRelic(relicId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onRelicUnequip = { relicId ->
+                        val mgr = RelicManager(repository.gameData.value)
+                        repository.save(mgr.unequipRelic(relicId))
+                    },
+                    onPetPull = {
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.pullPet()
+                        if (updated != null) repository.save(updated)
+                    },
+                    onPetPull10 = {
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.pullPet10()
+                        if (updated != null) repository.save(updated)
+                    },
+                    onPetUpgrade = { petId ->
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.upgradePet(petId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onPetEquip = { petId ->
+                        petMgr.syncData(repository.gameData.value)
+                        val updated = petMgr.equipPet(petId)
+                        if (updated != null) repository.save(updated)
+                    },
+                    onPetUnequip = { petId ->
+                        petMgr.syncData(repository.gameData.value)
+                        repository.save(petMgr.unequipPet(petId))
+                    },
+                )
             }
             composable(Routes.SHOP) {
                 ShopScreen(repository = repository)
@@ -138,12 +164,6 @@ fun NavGraph(
             }
             composable(Routes.DUNGEON) {
                 DungeonScreen(
-                    repository = repository,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.PROFILE) {
-                ProfileScreen(
                     repository = repository,
                     onBack = { navController.popBackStack() },
                 )

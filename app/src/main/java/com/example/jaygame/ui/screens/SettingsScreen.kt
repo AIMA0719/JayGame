@@ -60,7 +60,7 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
-private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, DATA }
+private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, DATA, PROFILE }
 
 @Composable
 fun SettingsScreen(
@@ -158,6 +158,10 @@ fun SettingsScreen(
                     onBack = { currentPage = SettingsPage.MAIN },
                     onReset = { showResetDialog = true },
                 )
+                SettingsPage.PROFILE -> SettingsProfile(
+                    repository = repository,
+                    onBack = { currentPage = SettingsPage.MAIN },
+                )
             }
         }
     }
@@ -213,6 +217,14 @@ private fun SettingsMain(
                     title = "업적",
                     iconTint = Gold,
                     onClick = { onNavigate(Routes.ACHIEVEMENTS) },
+                )
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsCategoryRow(
+                    iconRes = R.drawable.ic_achievement,
+                    title = "프로필 칭호",
+                    iconTint = Gold,
+                    onClick = { onPageSelected(SettingsPage.PROFILE) },
                 )
             }
             GameCard(modifier = Modifier.fillMaxWidth()) {
@@ -471,6 +483,23 @@ private fun SettingsGameplay(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+// ── Profile Sub-page ──
+
+@Composable
+private fun SettingsProfile(
+    repository: com.example.jaygame.data.GameRepository,
+    onBack: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        SubPageHeader(title = "프로필 칭호", onBack = onBack)
+        ProfileScreen(
+            repository = repository,
+            onBack = onBack,
+            showTopBar = false,
+        )
     }
 }
 
