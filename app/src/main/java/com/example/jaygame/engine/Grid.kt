@@ -11,8 +11,9 @@ class Grid {
         const val CELL_H = 96f
         const val GRID_W = COLS * CELL_W       // 480
         const val GRID_H = ROWS * CELL_H       // 480
-        const val ORIGIN_X = (720f - GRID_W) / 2f   // 120
-        const val ORIGIN_Y = (720f - GRID_H) / 2f   // 120
+        const val ORIGIN_X = (720f - GRID_W) / 2f            // 120
+        private const val CLIFF_DEPTH = 25f                  // 3D cliff height below grid
+        const val ORIGIN_Y = (720f - GRID_H - CLIFF_DEPTH) / 2f  // 107.5 — centers grid+cliff visually
     }
 
     val cells = arrayOfNulls<GameUnit>(TOTAL)

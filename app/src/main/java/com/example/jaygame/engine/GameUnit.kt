@@ -128,10 +128,10 @@ class GameUnit {
         val LEVEL_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2.2f, 3.2f, 4.5f, 6f, 8f)
 
         // Grid boundaries with margin for unit sprite size
-        private const val GRID_MIN_X = 120f + 10f   // Grid.ORIGIN_X + margin
-        private const val GRID_MAX_X = 600f - 10f   // Grid.ORIGIN_X + Grid.GRID_W - margin
-        private const val GRID_MIN_Y = 120f + 10f   // Grid.ORIGIN_Y + margin
-        private const val GRID_MAX_Y = 600f - 10f   // Grid.ORIGIN_Y + Grid.GRID_H - margin
+        private const val GRID_MIN_X = 120f + 10f     // Grid.ORIGIN_X + margin
+        private const val GRID_MAX_X = 600f - 10f     // Grid.ORIGIN_X + Grid.GRID_W - margin
+        private const val GRID_MIN_Y = 107.5f + 10f   // Grid.ORIGIN_Y + margin
+        private const val GRID_MAX_Y = 587.5f - 10f   // Grid.ORIGIN_Y + Grid.GRID_H - margin
     }
 
     fun canAttack(): Boolean = isAttacking && attackCooldown <= 0f && currentTarget?.alive == true

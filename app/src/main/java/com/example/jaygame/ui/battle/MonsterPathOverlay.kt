@@ -63,11 +63,11 @@ private val GroundInnerShadow = Color.Black.copy(alpha = 0.15f)
 private val GroundEdgeLight = Color.White.copy(alpha = 0.15f)
 private val GroundEdgeDark = Color.Black.copy(alpha = 0.2f)
 
-// Coordinates in 720x720 space — matching Grid.kt (480x480 centered)
+// Coordinates in 720x720 space — matching Grid.kt (480x480, cliff-compensated)
 private const val GRID_LEFT = 120f
-private const val GRID_TOP = 120f
+private const val GRID_TOP = 107.5f
 private const val GRID_RIGHT = 600f
-private const val GRID_BOTTOM = 600f
+private const val GRID_BOTTOM = 587.5f
 private const val PATH_MARGIN = 60f
 private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 340
 private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 60

@@ -92,8 +92,8 @@ private data class UnitDissolutionEffect(
 // Grid area in 720x720 space — must match Grid.kt (480x480 centered)
 private const val CPP_GRID_W = 480f
 private const val CPP_GRID_H = 480f
-private const val GRID_NORM_X = 120f / 720f    // 0.16667 (Grid.ORIGIN_X / 720)
-private const val GRID_NORM_Y = 120f / 720f    // 0.16667 (Grid.ORIGIN_Y / 720)
+private const val GRID_NORM_X = 120f / 720f      // 0.16667 (Grid.ORIGIN_X / 720)
+private const val GRID_NORM_Y = 107.5f / 720f    // 0.14931 (Grid.ORIGIN_Y / 720)
 private const val GRID_NORM_W = CPP_GRID_W / 720f   // 0.66667
 private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
 
