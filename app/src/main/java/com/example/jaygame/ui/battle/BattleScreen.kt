@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -55,8 +56,12 @@ import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.theme.*
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 @Composable
@@ -91,6 +96,55 @@ fun BattleScreen(
         )
         pulse
     } else 0f
+
+    // C4: Critical hit screen shake
+    val shakeOffsetX = remember { Animatable(0f) }
+    val shakeOffsetY = remember { Animatable(0f) }
+    val damageEvents by BattleBridge.damageEvents.collectAsState()
+    val shakeScope = rememberCoroutineScope()
+    val prevDamageCount = remember { mutableStateOf(0) }
+    val currentDamageCount = damageEvents.size
+    if (currentDamageCount > prevDamageCount.value) {
+        val hasCrit = damageEvents.takeLast(currentDamageCount - prevDamageCount.value).any { it.isCrit }
+        if (hasCrit) {
+            shakeScope.launch {
+                launch {
+                    shakeOffsetX.animateTo(3f, animationSpec = tween(25))
+                    shakeOffsetX.animateTo(-3f, animationSpec = tween(25))
+                    shakeOffsetX.animateTo(2f, animationSpec = tween(20))
+                    shakeOffsetX.animateTo(-1f, animationSpec = tween(15))
+                    shakeOffsetX.animateTo(0f, animationSpec = tween(15))
+                }
+                launch {
+                    shakeOffsetY.animateTo(-2f, animationSpec = tween(25))
+                    shakeOffsetY.animateTo(2f, animationSpec = tween(25))
+                    shakeOffsetY.animateTo(-1f, animationSpec = tween(20))
+                    shakeOffsetY.animateTo(0f, animationSpec = tween(30))
+                }
+            }
+        }
+    }
+    prevDamageCount.value = currentDamageCount
+
+    // C3: Skill flash for high-grade skills
+    val skillEvents by BattleBridge.skillEvents.collectAsState()
+    val skillFlashAlpha = remember { Animatable(0f) }
+    val skillFlashFamily = remember { mutableStateOf(0) }
+    val prevSkillCount = remember { mutableStateOf(0) }
+    val currentSkillCount = skillEvents.size
+    if (currentSkillCount > prevSkillCount.value) {
+        val newEvents = skillEvents.takeLast(currentSkillCount - prevSkillCount.value)
+        val highGradeEvent = newEvents.firstOrNull { it.grade >= 3 }
+        if (highGradeEvent != null) {
+            skillFlashFamily.value = highGradeEvent.family
+            shakeScope.launch {
+                skillFlashAlpha.snapTo(0f)
+                skillFlashAlpha.animateTo(0.3f, animationSpec = tween(100))
+                skillFlashAlpha.animateTo(0f, animationSpec = tween(100))
+            }
+        }
+    }
+    prevSkillCount.value = currentSkillCount
 
     // Load background image from assets
     val bgAssetName = remember(stageId) {
@@ -140,7 +194,8 @@ fun BattleScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1280f / 720f)
-                .align(Alignment.Center),
+                .align(Alignment.Center)
+                .offset(x = shakeOffsetX.value.dp, y = shakeOffsetY.value.dp),
         ) {
             MonsterPathOverlay()
             EnemyOverlay()
@@ -150,6 +205,31 @@ fun BattleScreen(
             BattleParticleOverlay()
             SkillEffectOverlay()
             WaveAnnouncementOverlay()
+
+            // C6: Gold coin particle overlay
+            GoldCoinOverlay()
+            // C7: Level up effect overlay
+            LevelUpOverlay()
+
+            // C3: Skill flash overlay
+            val flashAlpha = skillFlashAlpha.value
+            if (flashAlpha > 0.01f) {
+                val flashColor = when (skillFlashFamily.value) {
+                    0 -> FlashFireColor
+                    1 -> FlashFrostColor
+                    2 -> FlashPoisonColor
+                    3 -> FlashLightningColor
+                    4 -> FlashSupportColor
+                    5 -> FlashWindColor
+                    else -> FlashDefaultColor
+                }
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawRect(
+                        color = flashColor.copy(alpha = flashAlpha),
+                        size = size,
+                    )
+                }
+            }
 
             // Boss red vignette overlay
             if (bossVignetteAlpha > 0.01f) {
@@ -231,6 +311,15 @@ fun BattleScreen(
         }
     }
 }
+
+// Pre-allocated C3 skill flash colors (avoid GC)
+private val FlashFireColor = Color(0xFFFF8C00)      // orange
+private val FlashFrostColor = Color(0xFF64B5F6)     // blue
+private val FlashPoisonColor = Color(0xFF66BB6A)    // green
+private val FlashLightningColor = Color(0xFFFFD54F) // yellow
+private val FlashSupportColor = Color(0xFFCE93D8)   // purple
+private val FlashWindColor = Color(0xFF80CBC4)       // teal
+private val FlashDefaultColor = Color.White
 
 // Pre-allocated colors for A3 transition Canvas (avoid GC)
 private val VictoryGoldBright = Color(0xFFFFD700)
@@ -385,6 +474,202 @@ private fun QuitBattleDialog(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
+        }
+    }
+}
+
+// ── C6: Gold Coin Particle Overlay ──────────────────────────────
+
+private val GoldCoinColor = Color(0xFFFFD700)
+private val GoldCoinHighlight = Color(0xFFFFF176)
+
+private class GoldCoinParticle(
+    var x: Float,
+    var y: Float,
+    var vx: Float,
+    var vy: Float,
+    var life: Float,
+    val maxLife: Float,
+)
+
+@Composable
+private fun GoldCoinOverlay() {
+    val goldEvents by BattleBridge.goldPickupEvents.collectAsState()
+    val particles = remember { mutableListOf<GoldCoinParticle>() }
+    val prevCount = remember { mutableStateOf(0) }
+
+    val currentCount = goldEvents.size
+    if (currentCount > prevCount.value) {
+        val newEvents = goldEvents.takeLast(currentCount - prevCount.value)
+        for (event in newEvents) {
+            if (particles.size >= 150) break
+            // Spawn 3-5 coin particles per gold event
+            val count = (3 + (event.amount.coerceAtMost(3)))
+            for (i in 0 until count) {
+                if (particles.size >= 150) break
+                // Target: top-right (where gold HUD is, ~0.9, 0.05)
+                val targetX = 0.9f
+                val targetY = 0.05f
+                val dx = targetX - event.x
+                val dy = targetY - event.y
+                val speed = 0.8f + i * 0.15f
+                val jitterX = sin(i.toFloat() * 2.1f) * 0.05f
+                val jitterY = kotlin.math.cos(i.toFloat() * 1.7f) * 0.03f
+                particles.add(GoldCoinParticle(
+                    x = event.x + jitterX * 0.5f,
+                    y = event.y + jitterY * 0.5f,
+                    vx = dx * speed + jitterX,
+                    vy = dy * speed + jitterY,
+                    life = 0.5f + i * 0.08f,
+                    maxLife = 0.5f + i * 0.08f,
+                ))
+            }
+        }
+    }
+    prevCount.value = currentCount
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { _ ->
+                val dt = 1f / 60f
+                val iter = particles.iterator()
+                while (iter.hasNext()) {
+                    val p = iter.next()
+                    p.life -= dt
+                    if (p.life <= 0f) { iter.remove(); continue }
+                    p.x += p.vx * dt
+                    p.y += p.vy * dt
+                }
+            }
+        }
+    }
+
+    if (particles.isEmpty()) return
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        for (p in particles) {
+            val lifeFrac = (p.life / p.maxLife).coerceIn(0f, 1f)
+            val alpha = lifeFrac.coerceIn(0f, 1f)
+            val coinSize = 3f + lifeFrac * 2f
+            val screenX = p.x * w
+            val screenY = p.y * h
+            // Gold coin body
+            drawCircle(
+                color = GoldCoinColor.copy(alpha = alpha * 0.9f),
+                radius = coinSize,
+                center = Offset(screenX, screenY),
+            )
+            // Highlight
+            drawCircle(
+                color = GoldCoinHighlight.copy(alpha = alpha * 0.5f),
+                radius = coinSize * 0.5f,
+                center = Offset(screenX - coinSize * 0.2f, screenY - coinSize * 0.2f),
+            )
+        }
+    }
+}
+
+// ── C7: Level Up Effect Overlay ─────────────────────────────────
+
+private val LevelUpBeamColor = Color(0xFFFFFFCC)
+private val LevelUpBeamEdge = Color(0xFFFFD700)
+
+@Composable
+private fun LevelUpOverlay() {
+    val levelUpEvents by BattleBridge.levelUpEvents.collectAsState()
+
+    if (levelUpEvents.isEmpty()) return
+
+    val now = System.currentTimeMillis()
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        for (event in levelUpEvents) {
+            val elapsed = (now - event.timestamp) / 1000f
+            if (elapsed > 1.2f) continue
+
+            val cx = event.x * w
+            val cy = event.y * h
+            val progress = (elapsed / 1.2f).coerceIn(0f, 1f)
+
+            // Phase 1 (0-0.3): beam expands
+            // Phase 2 (0.3-0.7): beam steady
+            // Phase 3 (0.7-1.2): beam fades out
+            val beamAlpha = when {
+                progress < 0.25f -> progress / 0.25f * 0.6f
+                progress < 0.58f -> 0.6f
+                else -> (1f - progress) / 0.42f * 0.6f
+            }
+            val beamWidth = when {
+                progress < 0.25f -> 8f + progress / 0.25f * 16f
+                else -> 24f * (1f - (progress - 0.25f) * 0.3f)
+            }
+
+            // Light beam (vertical pillar)
+            val beamTop = (cy - 120f).coerceAtLeast(0f)
+            drawRect(
+                color = LevelUpBeamColor.copy(alpha = beamAlpha * 0.4f),
+                topLeft = Offset(cx - beamWidth / 2f, beamTop),
+                size = androidx.compose.ui.geometry.Size(beamWidth, cy - beamTop),
+            )
+            // Beam edges
+            drawRect(
+                color = LevelUpBeamEdge.copy(alpha = beamAlpha * 0.6f),
+                topLeft = Offset(cx - beamWidth / 2f, beamTop),
+                size = androidx.compose.ui.geometry.Size(2f, cy - beamTop),
+            )
+            drawRect(
+                color = LevelUpBeamEdge.copy(alpha = beamAlpha * 0.6f),
+                topLeft = Offset(cx + beamWidth / 2f - 2f, beamTop),
+                size = androidx.compose.ui.geometry.Size(2f, cy - beamTop),
+            )
+
+            // Base glow
+            drawCircle(
+                color = LevelUpBeamColor.copy(alpha = beamAlpha * 0.5f),
+                radius = beamWidth * 1.2f,
+                center = Offset(cx, cy),
+            )
+
+            // "LV UP!" text using drawContext
+            val textAlpha = when {
+                progress < 0.15f -> progress / 0.15f
+                progress < 0.7f -> 1f
+                else -> (1f - progress) / 0.3f
+            }.coerceIn(0f, 1f)
+            val textY = cy - 30f - progress * 20f
+            // Draw simple "LV UP" with small circles as approximation of text
+            val textColor = GoldCoinColor.copy(alpha = textAlpha)
+            // Use native text paint
+            drawContext.canvas.nativeCanvas.drawText(
+                "LV UP!",
+                cx,
+                textY,
+                android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(
+                        (textAlpha * 255).toInt(),
+                        0xFF, 0xD7, 0x00,
+                    )
+                    textSize = 24f
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    isFakeBoldText = true
+                    setShadowLayer(4f, 0f, 0f, android.graphics.Color.BLACK)
+                },
+            )
+        }
+    }
+
+    // Force recomposition while events are active
+    LaunchedEffect(levelUpEvents) {
+        while (true) {
+            val hasActive = BattleBridge.levelUpEvents.value.any {
+                (System.currentTimeMillis() - it.timestamp) < 1200L
+            }
+            if (!hasActive) break
+            androidx.compose.runtime.withFrameNanos { }
         }
     }
 }

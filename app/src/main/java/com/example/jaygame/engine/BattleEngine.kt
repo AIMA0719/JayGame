@@ -220,9 +220,12 @@ class BattleEngine(
         val deadList = mutableListOf<Enemy>()
         enemies.forEach { if (!it.alive) deadList.add(it) }
         deadList.forEach {
+            val deathX = it.position.x / W
+            val deathY = it.position.y / H
             enemies.release(it)
             waveSystem.onEnemyKilled()
             killCount++
+            BattleBridge.onGoldPickup(deathX, deathY, 1)
         }
     }
 
@@ -419,6 +422,7 @@ class BattleEngine(
         if (sp < cost) return
         sp -= cost
         unit.level++
+        BattleBridge.onUnitLevelUp(unit.position.x / W, unit.position.y / H)
     }
 
     fun applyGamble(newSp: Float) {

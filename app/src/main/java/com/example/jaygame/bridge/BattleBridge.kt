@@ -157,6 +157,19 @@ data class SkillEvent(
     val duration: Float = 1f, // seconds
 )
 
+data class GoldPickupEvent(
+    val x: Float,       // normalized 0-1
+    val y: Float,       // normalized 0-1
+    val amount: Int,
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
+data class LevelUpEvent(
+    val x: Float,       // normalized 0-1
+    val y: Float,       // normalized 0-1
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
 object BattleBridge {
     private var enemyFrameCounter = 0L
     private var projFrameCounter = 0L
@@ -381,6 +394,30 @@ object BattleBridge {
         _skillEvents.value = current
     }
 
+    /** 골드 획득 이벤트 (C6) */
+    private val _goldPickupEvents = MutableStateFlow<List<GoldPickupEvent>>(emptyList())
+    val goldPickupEvents: StateFlow<List<GoldPickupEvent>> = _goldPickupEvents.asStateFlow()
+
+    fun onGoldPickup(x: Float, y: Float, amount: Int) {
+        val event = GoldPickupEvent(x, y, amount)
+        val current = _goldPickupEvents.value.toMutableList()
+        current.add(event)
+        val cutoff = System.currentTimeMillis() - 1500L
+        _goldPickupEvents.value = current.filter { it.timestamp > cutoff }
+    }
+
+    /** 유닛 레벨업 이벤트 (C7) */
+    private val _levelUpEvents = MutableStateFlow<List<LevelUpEvent>>(emptyList())
+    val levelUpEvents: StateFlow<List<LevelUpEvent>> = _levelUpEvents.asStateFlow()
+
+    fun onUnitLevelUp(x: Float, y: Float) {
+        val event = LevelUpEvent(x, y)
+        val current = _levelUpEvents.value.toMutableList()
+        current.add(event)
+        val cutoff = System.currentTimeMillis() - 1500L
+        _levelUpEvents.value = current.filter { it.timestamp > cutoff }
+    }
+
     fun clearExpiredSkillEvents() {
         val now = System.currentTimeMillis()
         _skillEvents.value = _skillEvents.value.filter {
@@ -418,6 +455,8 @@ object BattleBridge {
         _mergeEffect.value = null
         _summonResult.value = null
         _skillEvents.value = emptyList()
+        _goldPickupEvents.value = emptyList()
+        _levelUpEvents.value = emptyList()
         _stageId.value = 0
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _battleSpeed.value = 1f
