@@ -184,6 +184,21 @@ class GameRepository(context: Context) {
 
             root.put("unitPullPity", data.unitPullPity)
 
+            // dungeons
+            val dungeonClearsObj = JSONObject()
+            for ((dungeonId, bestWave) in data.dungeonClears) {
+                dungeonClearsObj.put(dungeonId.toString(), bestWave)
+            }
+            root.put("dungeonClears", dungeonClearsObj)
+            root.put("dungeonDailyCount", data.dungeonDailyCount)
+            root.put("lastDungeonResetDate", data.lastDungeonResetDate)
+
+            // profile
+            root.put("selectedProfileId", data.selectedProfileId)
+            val unlockedProfilesArr = JSONArray()
+            for (id in data.unlockedProfiles) unlockedProfilesArr.put(id)
+            root.put("unlockedProfiles", unlockedProfilesArr)
+
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
             val checksum = fnv1aHash(payload)
@@ -372,6 +387,28 @@ class GameRepository(context: Context) {
 
             val unitPullPity = root.optInt("unitPullPity", 0)
 
+            // dungeons
+            val dungeonClears = mutableMapOf<Int, Int>()
+            val dungeonClearsObj = root.optJSONObject("dungeonClears")
+            if (dungeonClearsObj != null) {
+                val keys = dungeonClearsObj.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    dungeonClears[key.toIntOrNull() ?: continue] = dungeonClearsObj.optInt(key, 0)
+                }
+            }
+            val dungeonDailyCount = root.optInt("dungeonDailyCount", 0)
+            val lastDungeonResetDate = root.optString("lastDungeonResetDate", "")
+
+            // profile
+            val selectedProfileId = root.optInt("selectedProfileId", 0)
+            val unlockedProfiles = mutableSetOf<Int>()
+            val unlockedProfilesArr = root.optJSONArray("unlockedProfiles")
+            if (unlockedProfilesArr != null) {
+                for (i in 0 until unlockedProfilesArr.length()) unlockedProfiles.add(unlockedProfilesArr.getInt(i))
+            }
+            if (unlockedProfiles.isEmpty()) unlockedProfiles.add(0)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -418,6 +455,11 @@ class GameRepository(context: Context) {
                 equippedPets = equippedPets,
                 petPullPity = petPullPity,
                 unitPullPity = unitPullPity,
+                dungeonClears = dungeonClears,
+                dungeonDailyCount = dungeonDailyCount,
+                lastDungeonResetDate = lastDungeonResetDate,
+                selectedProfileId = selectedProfileId,
+                unlockedProfiles = unlockedProfiles,
             )
         }
     }

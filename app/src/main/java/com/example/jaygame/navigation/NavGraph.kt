@@ -27,6 +27,8 @@ import com.example.jaygame.ui.screens.SettingsScreen
 import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.ShopScreen
+import com.example.jaygame.ui.screens.DungeonScreen
+import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
 import androidx.navigation.NavType
@@ -83,6 +85,16 @@ fun NavGraph(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToDungeon = {
+                        navController.navigate(Routes.DUNGEON) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToProfile = {
+                        navController.navigate(Routes.PROFILE) {
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(Routes.DECK) {
@@ -114,6 +126,18 @@ fun NavGraph(
             }
             composable(Routes.UNIT_CODEX) {
                 UnitCollectionScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.DUNGEON) {
+                DungeonScreen(
+                    repository = repository,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    repository = repository,
                     onBack = { navController.popBackStack() },
                 )
             }

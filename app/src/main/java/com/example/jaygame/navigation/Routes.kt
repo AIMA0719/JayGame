@@ -10,4 +10,6 @@ object Routes {
     const val RESULT = "result"
     const val UNIT_CODEX = "unit_codex"
     const val RELIC = "relic"
+    const val DUNGEON = "dungeon"
+    const val PROFILE = "profile"
 }

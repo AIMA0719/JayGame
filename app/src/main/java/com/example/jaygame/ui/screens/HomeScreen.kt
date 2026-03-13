@@ -84,6 +84,8 @@ fun HomeScreen(
     repository: GameRepository,
     onStartBattle: () -> Unit,
     onNavigateToRelic: (() -> Unit)? = null,
+    onNavigateToDungeon: (() -> Unit)? = null,
+    onNavigateToProfile: (() -> Unit)? = null,
 ) {
     val data by repository.gameData.collectAsState()
     var showDailyLogin by remember { mutableStateOf(false) }
@@ -278,6 +280,30 @@ fun HomeScreen(
                     NeonButton(
                         text = "\u2B50 유물",
                         onClick = onNavigateToRelic,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = 15.sp,
+                        accentColor = Gold,
+                        accentColorDark = DarkGold,
+                    )
+                }
+
+                if (onNavigateToDungeon != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NeonButton(
+                        text = "\uD83C\uDFF0 던전",
+                        onClick = onNavigateToDungeon,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontSize = 15.sp,
+                        accentColor = NeonCyan,
+                        accentColorDark = NeonCyan.copy(alpha = 0.6f),
+                    )
+                }
+
+                if (onNavigateToProfile != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NeonButton(
+                        text = "\uD83D\uDC51 프로필 칭호",
+                        onClick = onNavigateToProfile,
                         modifier = Modifier.fillMaxWidth(),
                         fontSize = 15.sp,
                         accentColor = Gold,

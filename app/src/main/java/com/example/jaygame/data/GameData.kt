@@ -79,6 +79,13 @@ data class GameData(
     val petPullPity: Int = 0,
     // 유닛 소환 천장
     val unitPullPity: Int = 0,
+    // 던전
+    val dungeonClears: Map<Int, Int> = emptyMap(),  // dungeonId → bestWave
+    val dungeonDailyCount: Int = 0,
+    val lastDungeonResetDate: String = "",
+    // 프로필
+    val selectedProfileId: Int = 0,
+    val unlockedProfiles: Set<Int> = setOf(0),
 ) {
     val equippedPetSlotCount: Int get() = if (trophies >= 2000) 2 else 1
     val equippedSlotCount: Int get() = when {
