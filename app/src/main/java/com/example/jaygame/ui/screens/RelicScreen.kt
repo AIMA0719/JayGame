@@ -81,7 +81,8 @@ fun RelicScreen(
     onUpgrade: (relicId: Int) -> Unit,
     onEquip: (relicId: Int) -> Unit,
     onUnequip: (relicId: Int) -> Unit,
-    onBack: () -> Unit,
+    onBack: () -> Unit = {},
+    showTopBar: Boolean = true,
 ) {
     var selectedRelicId by remember { mutableIntStateOf(-1) }
     val selectedRelic = remember(selectedRelicId) {
@@ -97,29 +98,31 @@ fun RelicScreen(
             .background(BgDark),
     ) {
         // ── Top bar ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF0D0D1F))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NeonButton(
-                text = "< 뒤로",
-                onClick = onBack,
-                fontSize = 13.sp,
-                accentColor = SubText,
-                accentColorDark = DimText,
-            )
-            Text(
-                text = "유물",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.width(72.dp))
+        if (showTopBar) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF0D0D1F))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NeonButton(
+                    text = "< 뒤로",
+                    onClick = onBack,
+                    fontSize = 13.sp,
+                    accentColor = SubText,
+                    accentColorDark = DimText,
+                )
+                Text(
+                    text = "유물",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Gold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(modifier = Modifier.width(72.dp))
+            }
         }
 
         // ── Gold resource display ──

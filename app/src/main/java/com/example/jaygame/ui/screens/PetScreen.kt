@@ -87,7 +87,8 @@ fun PetScreen(
     onUpgrade: (petId: Int) -> Unit,
     onEquip: (petId: Int) -> Unit,
     onUnequip: (petId: Int) -> Unit,
-    onBack: () -> Unit,
+    onBack: () -> Unit = {},
+    showTopBar: Boolean = true,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val pullResults = remember { mutableStateListOf<PetDef>() }
@@ -98,29 +99,31 @@ fun PetScreen(
             .background(PetBgDark),
     ) {
         // ── Top bar ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(PetBgPanel)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NeonButton(
-                text = "< 뒤로",
-                onClick = onBack,
-                fontSize = 13.sp,
-                accentColor = SubText,
-                accentColorDark = DimText,
-            )
-            Text(
-                text = "펫",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Gold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.width(72.dp))
+        if (showTopBar) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PetBgPanel)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NeonButton(
+                    text = "< 뒤로",
+                    onClick = onBack,
+                    fontSize = 13.sp,
+                    accentColor = SubText,
+                    accentColorDark = DimText,
+                )
+                Text(
+                    text = "펫",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Gold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(modifier = Modifier.width(72.dp))
+            }
         }
 
         // ── Tab row ──

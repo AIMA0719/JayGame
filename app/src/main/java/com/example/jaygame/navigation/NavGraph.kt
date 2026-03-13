@@ -23,13 +23,12 @@ import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.screens.CollectionScreen
 import com.example.jaygame.ui.screens.DeckScreen
 import com.example.jaygame.ui.screens.HomeScreen
-import com.example.jaygame.ui.screens.RelicScreen
 import com.example.jaygame.ui.screens.SettingsScreen
 import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.DungeonScreen
-import com.example.jaygame.ui.screens.PetScreen
+import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
 import androidx.navigation.NavType
@@ -92,7 +91,6 @@ fun NavGraph(
                 DeckScreen(repository = repository)
             }
             composable(Routes.COLLECTION) {
-                val data by repository.gameData.collectAsState()
                 val petMgr = remember { PetManager(repository.gameData.value) }
                 CollectionScreen(
                     repository = repository,
@@ -168,56 +166,9 @@ fun NavGraph(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Routes.RELIC) {
-                val data by repository.gameData.collectAsState()
-                RelicScreen(
-                    gameData = data,
-                    onUpgrade = { relicId ->
-                        val mgr = RelicManager(repository.gameData.value)
-                        val updated = mgr.upgradeRelic(relicId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onEquip = { relicId ->
-                        val mgr = RelicManager(repository.gameData.value)
-                        val updated = mgr.equipRelic(relicId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onUnequip = { relicId ->
-                        val mgr = RelicManager(repository.gameData.value)
-                        repository.save(mgr.unequipRelic(relicId))
-                    },
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.PET) {
-                val data by repository.gameData.collectAsState()
-                val petMgr = remember { PetManager(repository.gameData.value) }
-                PetScreen(
-                    gameData = data,
-                    onPull = {
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.pullPet()
-                        if (updated != null) repository.save(updated)
-                    },
-                    onPull10 = {
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.pullPet10()
-                        if (updated != null) repository.save(updated)
-                    },
-                    onUpgrade = { petId ->
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.upgradePet(petId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onEquip = { petId ->
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.equipPet(petId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onUnequip = { petId ->
-                        petMgr.syncData(repository.gameData.value)
-                        repository.save(petMgr.unequipPet(petId))
-                    },
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    repository = repository,
                     onBack = { navController.popBackStack() },
                 )
             }

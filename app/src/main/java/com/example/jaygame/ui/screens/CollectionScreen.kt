@@ -20,10 +20,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +63,9 @@ import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.PositiveGreen
 import com.example.jaygame.ui.theme.SubText
 import java.text.NumberFormat
+
+// ── Tab bar colors ──
+private val CollectionTabBg = Color(0xFF1A1A2E)
 
 // ── Grade-based card background colors (pre-allocated) ──
 private val GradeBgCommon = Color(0xFF424242)
@@ -98,8 +106,103 @@ private val FAMILY_ICONS = mapOf(
 )
 
 @Composable
-fun CollectionScreen(repository: GameRepository) {
+fun CollectionScreen(
+    repository: GameRepository,
+    // Relic callbacks
+    onRelicUpgrade: ((Int) -> Unit)? = null,
+    onRelicEquip: ((Int) -> Unit)? = null,
+    onRelicUnequip: ((Int) -> Unit)? = null,
+    // Pet callbacks
+    onPetPull: (() -> Unit)? = null,
+    onPetPull10: (() -> Unit)? = null,
+    onPetUpgrade: ((Int) -> Unit)? = null,
+    onPetEquip: ((Int) -> Unit)? = null,
+    onPetUnequip: ((Int) -> Unit)? = null,
+) {
     val data by repository.gameData.collectAsState()
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DeepDark),
+    ) {
+        // ── Tab row ──
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = CollectionTabBg,
+            contentColor = Gold,
+            indicator = { tabPositions ->
+                if (selectedTab < tabPositions.size) {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Gold,
+                    )
+                }
+            },
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = {
+                    Text(
+                        text = "영웅",
+                        fontSize = 14.sp,
+                        color = if (selectedTab == 0) Gold else SubText,
+                    )
+                },
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = {
+                    Text(
+                        text = "유물",
+                        fontSize = 14.sp,
+                        color = if (selectedTab == 1) Gold else SubText,
+                    )
+                },
+            )
+            Tab(
+                selected = selectedTab == 2,
+                onClick = { selectedTab = 2 },
+                text = {
+                    Text(
+                        text = "펫",
+                        fontSize = 14.sp,
+                        color = if (selectedTab == 2) Gold else SubText,
+                    )
+                },
+            )
+        }
+
+        when (selectedTab) {
+            0 -> HeroCollectionTab(repository = repository, data = data)
+            1 -> RelicScreen(
+                gameData = data,
+                onUpgrade = onRelicUpgrade ?: {},
+                onEquip = onRelicEquip ?: {},
+                onUnequip = onRelicUnequip ?: {},
+                showTopBar = false,
+            )
+            2 -> PetScreen(
+                gameData = data,
+                onPull = onPetPull ?: {},
+                onPull10 = onPetPull10 ?: {},
+                onUpgrade = onPetUpgrade ?: {},
+                onEquip = onPetEquip ?: {},
+                onUnequip = onPetUnequip ?: {},
+                showTopBar = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroCollectionTab(
+    repository: GameRepository,
+    data: com.example.jaygame.data.GameData,
+) {
     var selectedUnit by remember { mutableStateOf<UnitDef?>(null) }
 
     // Group units by family
@@ -115,18 +218,7 @@ fun CollectionScreen(repository: GameRepository) {
                 .fillMaxSize()
                 .background(DeepDark),
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "도감",
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = Gold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Description banner
             val ownedCount = data.units.count { it.owned }
