@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -150,7 +152,7 @@ fun SettingsScreen(
                 SettingsPage.GAMEPLAY -> SettingsGameplay(
                     data = data,
                     onBack = { currentPage = SettingsPage.MAIN },
-                    onSelectDifficulty = { repository.save(data.copy(difficulty = it)) },
+                    onUpdate = { repository.save(it) },
                 )
                 SettingsPage.DATA -> SettingsData(
                     onBack = { currentPage = SettingsPage.MAIN },
@@ -351,37 +353,124 @@ private fun SettingsAudio(
 private fun SettingsGameplay(
     data: com.example.jaygame.data.GameData,
     onBack: () -> Unit,
-    onSelectDifficulty: (Int) -> Unit,
+    onUpdate: (com.example.jaygame.data.GameData) -> Unit,
 ) {
-    val options = listOf(
-        Triple(0, "초보", "기본 난이도"),
-        Triple(1, "숙련자", "적 체력 ×1.5"),
-        Triple(2, "고인물", "적 체력 ×2.2"),
-        Triple(3, "썩은물", "적 체력 ×3.0"),
-        Triple(4, "챌린저", "적 체력 ×4.0"),
-    )
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         SubPageHeader(title = "게임플레이", onBack = onBack)
+
+        // ── 기본 배속 ──
         GameCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("난이도", fontSize = 14.sp, color = LightText, fontWeight = FontWeight.Bold)
+                Text("기본 배속", fontSize = 14.sp, color = LightText, fontWeight = FontWeight.Bold)
+                Text("전투 시작 시 적용되는 기본 속도", fontSize = 11.sp, color = SubText)
                 Spacer(Modifier.height(4.dp))
-                options.forEach { (id, name, desc) ->
-                    val isSelected = id == data.difficulty
-                    NeonButton(
-                        text = "$name — $desc",
-                        onClick = { onSelectDifficulty(id) },
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 13.sp,
-                        accentColor = if (isSelected) NeonCyan else SubText,
-                        accentColorDark = if (isSelected) NeonCyan.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(1f, 2f, 4f, 8f).forEach { speed ->
+                        val isSelected = data.defaultBattleSpeed == speed
+                        val label = "x${speed.toInt()}"
+                        val color = when (speed) {
+                            2f -> Gold
+                            4f -> NeonRed
+                            8f -> NeonRed
+                            else -> LightText
+                        }
+                        NeonButton(
+                            text = label,
+                            onClick = { onUpdate(data.copy(defaultBattleSpeed = speed)) },
+                            modifier = Modifier.weight(1f),
+                            fontSize = 14.sp,
+                            accentColor = if (isSelected) color else SubText,
+                            accentColorDark = if (isSelected) color.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
+                        )
+                    }
                 }
             }
         }
+
+        // ── 데미지 숫자 표시 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("데미지 숫자 표시", fontSize = 14.sp, color = LightText)
+                    Text("피해량 팝업 숫자 표시", fontSize = 11.sp, color = SubText)
+                }
+                NeonButton(
+                    text = if (data.showDamageNumbers) "ON" else "OFF",
+                    onClick = { onUpdate(data.copy(showDamageNumbers = !data.showDamageNumbers)) },
+                    accentColor = if (data.showDamageNumbers) NeonGreen else NeonRed,
+                    accentColorDark = if (data.showDamageNumbers) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                    modifier = Modifier
+                        .width(72.dp)
+                        .height(34.dp),
+                    fontSize = 13.sp,
+                )
+            }
+        }
+
+        // ── 체력바 표시 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("체력바 표시", fontSize = 14.sp, color = LightText, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(0 to "항상", 1 to "피격 시", 2 to "숨김").forEach { (mode, label) ->
+                        val isSelected = data.healthBarMode == mode
+                        NeonButton(
+                            text = label,
+                            onClick = { onUpdate(data.copy(healthBarMode = mode)) },
+                            modifier = Modifier.weight(1f),
+                            fontSize = 13.sp,
+                            accentColor = if (isSelected) NeonCyan else SubText,
+                            accentColorDark = if (isSelected) NeonCyan.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── 자동 소환 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("자동 소환", fontSize = 14.sp, color = LightText)
+                    Text("SP가 충분하면 자동으로 유닛 소환", fontSize = 11.sp, color = SubText)
+                }
+                NeonButton(
+                    text = if (data.autoSummon) "ON" else "OFF",
+                    onClick = { onUpdate(data.copy(autoSummon = !data.autoSummon)) },
+                    accentColor = if (data.autoSummon) NeonGreen else NeonRed,
+                    accentColorDark = if (data.autoSummon) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                    modifier = Modifier
+                        .width(72.dp)
+                        .height(34.dp),
+                    fontSize = 13.sp,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

@@ -43,6 +43,11 @@ data class GameData(
     val stageBestWaves: List<Int> = List(6) { 0 },
     // 난이도
     val difficulty: Int = 0,
+    // 게임플레이 설정
+    val defaultBattleSpeed: Float = 1f,   // 1, 2, 4, 8
+    val showDamageNumbers: Boolean = true,
+    val healthBarMode: Int = 0,           // 0=항상, 1=피격 시만, 2=숨김
+    val autoSummon: Boolean = false,
     // 가스
     val gas: Int = 0,
     // 패밀리 영구 업그레이드
