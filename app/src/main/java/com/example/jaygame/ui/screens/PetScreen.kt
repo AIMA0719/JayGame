@@ -572,7 +572,7 @@ private fun PetDetailPanel(
 @Composable
 private fun PetPullTab(
     gameData: GameData,
-    pullResults: androidx.compose.runtime.MutableList<PetDef>,
+    pullResults: List<PetDef>,
     onPull: () -> Unit,
     onPull10: () -> Unit,
 ) {
