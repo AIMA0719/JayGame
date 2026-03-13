@@ -115,6 +115,7 @@ fun BattleScreen(
             ProjectileOverlay()
             DamageNumberOverlay()
             BattleParticleOverlay()
+            WaveAnnouncementOverlay()
         }
 
         // Layer 2: HUD overlays
