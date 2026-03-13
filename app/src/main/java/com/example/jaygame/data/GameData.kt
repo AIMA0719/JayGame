@@ -48,6 +48,8 @@ data class GameData(
     // 패밀리 영구 업그레이드
     val familyUpgrades: Map<String, Int> = emptyMap(),
     val lastFreePullTime: Long = 0L,
+    // 업적 수령 기록
+    val claimedAchievements: Set<Int> = emptySet(),
     val saveVersion: Int = 1,
 ) {
     val rank: String get() = when {

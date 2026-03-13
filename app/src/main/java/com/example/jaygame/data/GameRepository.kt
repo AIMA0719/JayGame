@@ -137,6 +137,11 @@ class GameRepository(context: Context) {
             // freePull
             root.put("lastFreePullTime", data.lastFreePullTime)
 
+            // claimedAchievements
+            val claimedArr = JSONArray()
+            for (id in data.claimedAchievements) claimedArr.put(id)
+            root.put("claimedAchievements", claimedArr)
+
             root.put("saveVersion", data.saveVersion)
 
             // Compute checksum on the JSON without checksum field
@@ -274,6 +279,13 @@ class GameRepository(context: Context) {
             // freePull
             val lastFreePullTime = root.optLong("lastFreePullTime", 0L)
 
+            // claimedAchievements
+            val claimedAchievements = mutableSetOf<Int>()
+            val claimedArr = root.optJSONArray("claimedAchievements")
+            if (claimedArr != null) {
+                for (i in 0 until claimedArr.length()) claimedAchievements.add(claimedArr.getInt(i))
+            }
+
             val saveVersion = root.optInt("saveVersion", 1)
 
             return GameData(
@@ -310,6 +322,7 @@ class GameRepository(context: Context) {
                 gas = gas,
                 familyUpgrades = familyUpgrades,
                 lastFreePullTime = lastFreePullTime,
+                claimedAchievements = claimedAchievements,
                 saveVersion = saveVersion,
             )
         }

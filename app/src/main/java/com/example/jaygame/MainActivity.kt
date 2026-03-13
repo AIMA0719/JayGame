@@ -14,6 +14,7 @@ import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
+import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.engine.BattleEngine
 import com.example.jaygame.ui.battle.BattleScreen
 import com.example.jaygame.ui.theme.JayGameTheme
@@ -66,12 +67,30 @@ class MainActivity : ComponentActivity() {
                         val battleResult = BattleBridge.result.value
                         if (battleResult != null) {
                             val current = repository.gameData.value
+
+                            // Stage best waves
                             val stageIdx = BattleBridge.stageId.value
                             val bestWaves = current.stageBestWaves.toMutableList()
                             while (bestWaves.size <= stageIdx) bestWaves.add(0)
                             if (battleResult.waveReached > bestWaves[stageIdx]) {
                                 bestWaves[stageIdx] = battleResult.waveReached
                             }
+
+                            // Cards earned → distribute to random units
+                            val updatedUnits = addRandomCardsToUnits(current.units, battleResult.cardsEarned)
+
+                            // XP from battle (wave reached * 10, bonus for victory)
+                            val xpGained = battleResult.waveReached * 10 + if (battleResult.victory) 50 else 0
+                            val newTotalXP = current.totalXP + xpGained
+                            val newPlayerLevel = (newTotalXP / 100) + 1 // level up every 100 XP
+
+                            // Season XP
+                            val seasonXpGained = battleResult.waveReached * 5 + if (battleResult.victory) 30 else 0
+                            val newSeasonXP = current.seasonXP + seasonXpGained
+
+                            // Single-type win detection: deck has only 1 unique family
+                            val singleTypeWin = battleResult.victory && current.deck.toSet().size == 1
+
                             repository.save(current.copy(
                                 gold = current.gold + battleResult.goldEarned,
                                 trophies = (current.trophies + battleResult.trophyChange).coerceAtLeast(0),
@@ -82,7 +101,12 @@ class MainActivity : ComponentActivity() {
                                 totalLosses = current.totalLosses + if (!battleResult.victory) 1 else 0,
                                 highestWave = maxOf(current.highestWave, battleResult.waveReached),
                                 wonWithoutDamage = current.wonWithoutDamage || battleResult.noHpLost,
+                                wonWithSingleType = current.wonWithSingleType || singleTypeWin,
                                 stageBestWaves = bestWaves,
+                                units = updatedUnits,
+                                totalXP = newTotalXP,
+                                playerLevel = newPlayerLevel,
+                                seasonXP = newSeasonXP,
                             ))
                         }
                         BattleBridge.clearResult()

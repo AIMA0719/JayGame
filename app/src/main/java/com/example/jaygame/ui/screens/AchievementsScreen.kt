@@ -203,10 +203,21 @@ fun AchievementsScreen(
             items(filteredAchievements, key = { it.id }) { achievement ->
                 val progress = getProgress(achievement, data)
                 val isCompleted = progress >= achievement.threshold
+                val isClaimed = achievement.id in data.claimedAchievements
                 AchievementItem(
                     achievement = achievement,
                     progress = progress,
                     isCompleted = isCompleted,
+                    isClaimed = isClaimed,
+                    onClaim = {
+                        if (isCompleted && !isClaimed) {
+                            repository.save(data.copy(
+                                gold = data.gold + achievement.goldReward,
+                                diamonds = data.diamonds + achievement.diamondReward,
+                                claimedAchievements = data.claimedAchievements + achievement.id,
+                            ))
+                        }
+                    },
                 )
             }
 
@@ -223,8 +234,14 @@ private fun AchievementItem(
     achievement: AchievementDef,
     progress: Int,
     isCompleted: Boolean,
+    isClaimed: Boolean,
+    onClaim: () -> Unit,
 ) {
-    val borderColor = if (isCompleted) NeonGreen.copy(alpha = 0.7f) else BorderGlow
+    val borderColor = when {
+        isClaimed -> DimText.copy(alpha = 0.5f)
+        isCompleted -> NeonGreen.copy(alpha = 0.7f)
+        else -> BorderGlow
+    }
 
     GameCard(
         modifier = Modifier.fillMaxWidth(),
@@ -236,9 +253,17 @@ private fun AchievementItem(
         ) {
             // Status indicator
             Text(
-                text = if (isCompleted) "\u2713" else "\u25CB",
-                fontSize = if (isCompleted) 18.sp else 14.sp,
-                color = if (isCompleted) NeonGreen else SubText,
+                text = when {
+                    isClaimed -> "\u2714"
+                    isCompleted -> "\u2713"
+                    else -> "\u25CB"
+                },
+                fontSize = if (isCompleted || isClaimed) 18.sp else 14.sp,
+                color = when {
+                    isClaimed -> DimText
+                    isCompleted -> NeonGreen
+                    else -> SubText
+                },
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .padding(end = 10.dp)
@@ -253,7 +278,11 @@ private fun AchievementItem(
                     text = achievement.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = if (isCompleted) NeonGreen else LightText,
+                    color = when {
+                        isClaimed -> DimText
+                        isCompleted -> NeonGreen
+                        else -> LightText
+                    },
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -276,7 +305,11 @@ private fun AchievementItem(
                 NeonProgressBar(
                     progress = fraction,
                     height = 8.dp,
-                    barColor = if (isCompleted) NeonGreen else NeonCyan,
+                    barColor = when {
+                        isClaimed -> DimText
+                        isCompleted -> NeonGreen
+                        else -> NeonCyan
+                    },
                 )
 
                 Spacer(modifier = Modifier.height(3.dp))
@@ -290,41 +323,59 @@ private fun AchievementItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Right: rewards
+            // Right: rewards or claim button
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                if (achievement.goldReward > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_gold),
-                            contentDescription = null,
-                            tint = GoldCoin,
-                            modifier = Modifier.size(13.dp),
-                        )
-                        Spacer(Modifier.width(2.dp))
-                        Text(
-                            text = "${achievement.goldReward}",
-                            fontSize = 11.sp,
-                            color = LightText,
-                        )
+                if (isCompleted && !isClaimed) {
+                    // Claim button
+                    NeonButton(
+                        text = "수령",
+                        onClick = onClaim,
+                        fontSize = 12.sp,
+                        accentColor = Gold,
+                        accentColorDark = Gold.copy(alpha = 0.5f),
+                    )
+                } else if (isClaimed) {
+                    Text(
+                        text = "수령 완료",
+                        fontSize = 11.sp,
+                        color = DimText,
+                    )
+                } else {
+                    // Show reward preview
+                    if (achievement.goldReward > 0) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_gold),
+                                contentDescription = null,
+                                tint = GoldCoin,
+                                modifier = Modifier.size(13.dp),
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text = "${achievement.goldReward}",
+                                fontSize = 11.sp,
+                                color = LightText,
+                            )
+                        }
                     }
-                }
-                if (achievement.diamondReward > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_diamond),
-                            contentDescription = null,
-                            tint = DiamondBlue,
-                            modifier = Modifier.size(13.dp),
-                        )
-                        Spacer(Modifier.width(2.dp))
-                        Text(
-                            text = "${achievement.diamondReward}",
-                            fontSize = 11.sp,
-                            color = LightText,
-                        )
+                    if (achievement.diamondReward > 0) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_diamond),
+                                contentDescription = null,
+                                tint = DiamondBlue,
+                                modifier = Modifier.size(13.dp),
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Text(
+                                text = "${achievement.diamondReward}",
+                                fontSize = 11.sp,
+                                color = LightText,
+                            )
+                        }
                     }
                 }
             }

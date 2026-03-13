@@ -610,9 +610,10 @@ class BattleEngine(
         val trophyChange = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%
         val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
+        val cardsEarned = if (victory) 3 + stageId else 1 // victory: 3+ cards, defeat: 1 consolation card
         BattleBridge.onBattleEnd(
             victory, waveSystem.currentWave + 1, goldEarned, trophyChange,
-            killCount, mergeCount, 0, noHpLost, fastClear,
+            killCount, mergeCount, cardsEarned, noHpLost, fastClear,
         )
     }
 

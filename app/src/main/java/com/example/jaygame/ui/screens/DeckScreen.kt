@@ -98,9 +98,7 @@ fun DeckScreen(repository: GameRepository) {
             .fillMaxSize()
             .background(DeepDark),
     ) {
-        ResourceHeader(gold = data.gold, diamonds = data.diamonds)
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "덱 편집",

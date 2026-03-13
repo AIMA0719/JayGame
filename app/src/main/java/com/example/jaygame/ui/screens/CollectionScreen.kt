@@ -100,9 +100,7 @@ fun CollectionScreen(repository: GameRepository) {
                 .fillMaxSize()
                 .background(DeepDark),
         ) {
-            ResourceHeader(gold = data.gold, diamonds = data.diamonds)
-
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "컬렉션",
@@ -152,7 +150,8 @@ fun CollectionScreen(repository: GameRepository) {
                             cards = newUnits[def.id].cards - cost.first,
                         )
                         val newGold = data.gold - cost.second
-                        repository.save(data.copy(units = newUnits, gold = newGold))
+                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[def.id].level)
+                        repository.save(data.copy(units = newUnits, gold = newGold, maxUnitLevel = newMaxLevel))
                     }
                 },
                 onDismiss = { selectedUnit = null },

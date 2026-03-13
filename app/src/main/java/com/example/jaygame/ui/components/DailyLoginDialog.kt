@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -117,14 +118,28 @@ fun DailyLoginDialog(
                         .padding(horizontal = 12.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    // Title
-                    Text(
-                        text = "일일 출석 보상",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Gold,
-                        textAlign = TextAlign.Center,
-                    )
+                    // Title + Close button
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "일일 출석 보상",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = Gold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                        Text(
+                            text = "\u2715",
+                            fontSize = 18.sp,
+                            color = SubText,
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .clickable(onClick = onDismiss)
+                                .padding(4.dp),
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "연속 출석 ${data.loginStreak}일",
