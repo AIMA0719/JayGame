@@ -33,6 +33,9 @@ object UniqueAbilitySystem {
     // Reference to engine zone pool — set by BattleEngine
     var zonePool: ObjectPool<ZoneEffect>? = null
 
+    /** 유물 쿨다운 감소 (0.0~1.0) */
+    var cooldownReduction: Float = 0f
+
     /**
      * Update unique abilities for all active units.
      * Called once per frame from BattleEngine.updateUnits().
@@ -56,7 +59,7 @@ object UniqueAbilitySystem {
             if (unit.uniqueAbilityMaxCd > 0f && unit.uniqueAbilityCooldown <= 0f) {
                 if (enemies.any { it.alive }) {
                     activateAbility(unit, enemies)
-                    unit.uniqueAbilityCooldown = unit.uniqueAbilityMaxCd
+                    unit.uniqueAbilityCooldown = unit.uniqueAbilityMaxCd * (1f - cooldownReduction.coerceIn(0f, 0.8f))
                 }
             }
         }

@@ -37,6 +37,12 @@ class DefaultEconomyManager : EconomyManager {
     override var gold: Int = 0
     override var gas: Int = 0
 
+    /** 유물 웨이브 클리어 골드 보너스 (0.0~1.0) */
+    var relicGoldWaveBonus: Float = 0f
+
+    /** 유물 적 처치 골드 보너스 (0.0~1.0) */
+    var relicGoldKillBonus: Float = 0f
+
     // 계열별 영구 공격력 보너스 (퍼센트)
     private val familyAtkBonus = mutableMapOf<String, Float>()
 
@@ -49,13 +55,14 @@ class DefaultEconomyManager : EconomyManager {
     }
 
     override fun onEnemyKilled(reward: Int) {
-        gold += reward
+        gold += (reward * (1f + relicGoldKillBonus)).toInt().coerceAtLeast(reward)
         minerals += 1 // 몬스터 처치 시 미네랄 소량 획득
     }
 
     override fun onWaveCleared(waveNumber: Int) {
         // 라운드 클리어 보너스: 기본 50 + 웨이브 * 10
-        val bonus = 50 + waveNumber * 10
+        val baseBonus = 50 + waveNumber * 10
+        val bonus = (baseBonus * (1f + relicGoldWaveBonus)).toInt()
         gold += bonus
         minerals += 20 // 라운드마다 미네랄 추가 지급
         gas += 5       // 라운드마다 가스 소량 지급

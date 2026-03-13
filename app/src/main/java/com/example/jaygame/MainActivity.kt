@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
             difficulty = difficulty,
             maxWaves = stage.maxWaves,
             deck = data.deck.toIntArray(),
+            gameData = data,
         ).also {
             BattleBridge.engine = it
             it.start(engineScope)

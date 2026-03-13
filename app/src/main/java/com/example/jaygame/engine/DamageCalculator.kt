@@ -13,9 +13,11 @@ object DamageCalculator {
         baseDamage: Float,
         defense: Float,
         armorBreakReduction: Float = 0f, // 방어력 감소 디버프
+        relicArmorPenPercent: Float = 0f, // 유물 방어력 관통 (0.0~1.0)
     ): Float {
         val effectiveDefense = (defense - armorBreakReduction).coerceAtLeast(0f)
-        val finalDamage = baseDamage * (100f / (100f + effectiveDefense))
+        val penArmor = effectiveDefense * (1f - relicArmorPenPercent.coerceIn(0f, 1f))
+        val finalDamage = baseDamage * (100f / (100f + penArmor))
         return finalDamage.coerceAtLeast(1f)
     }
 
@@ -23,8 +25,9 @@ object DamageCalculator {
     fun calculateMagicDamage(
         baseDamage: Float,
         magicResist: Float, // 0.0 ~ 1.0
+        relicMagicDmgPercent: Float = 0f, // 유물 마법 데미지 보너스 (0.0~1.0)
     ): Float {
-        val finalDamage = baseDamage * (1f - magicResist.coerceIn(0f, 0.9f))
+        val finalDamage = baseDamage * (1f - magicResist.coerceIn(0f, 0.9f)) * (1f + relicMagicDmgPercent)
         return finalDamage.coerceAtLeast(1f)
     }
 
@@ -34,10 +37,16 @@ object DamageCalculator {
         level: Int,
         buffMultiplier: Float = 1f,
         familyUpgradeLevel: Int = 0,
+        relicAtkBonus: Float = 0f, // 유물 공격력 보너스 (0.0~1.0)
+        relicCritChanceBonus: Float = 0f, // 유물 크리티컬 확률 보너스
+        relicCritDamageBonus: Float = 0f, // 유물 크리티컬 데미지 보너스
     ): Float {
         val levelMultiplier = LEVEL_MULTIPLIERS.getOrElse(level - 1) { 1f }
         val familyBonus = 1f + familyUpgradeLevel * 0.05f // 계열 영구 강화: 레벨당 +5%
-        return baseATK * levelMultiplier * buffMultiplier * familyBonus
+        val effectiveATK = baseATK * levelMultiplier * buffMultiplier * familyBonus * (1f + relicAtkBonus)
+        val baseCritChance = 0.05f + relicCritChanceBonus
+        val critMultiplier = if (Math.random() < baseCritChance) 2f + relicCritDamageBonus else 1f
+        return effectiveATK * critMultiplier
     }
 
     /** 공격 속도 쿨다운 계산 (프레임 단위) */

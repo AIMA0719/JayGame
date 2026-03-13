@@ -6,6 +6,9 @@ object MergeSystem {
     private const val MERGE_COUNT = 3
     private const val LUCKY_CHANCE = 0.05f
 
+    /** 유물 행운 합성 보너스 (0.0~1.0 추가 확률) */
+    var luckyMergeBonus: Float = 0f
+
     data class MergeResult(
         val resultUnitDefId: Int,
         val consumedTiles: List<Int>,
@@ -23,7 +26,7 @@ object MergeSystem {
         var resultId = unitDef.mergeResultId
         if (resultId < 0) return null
 
-        val isLucky = Math.random() < LUCKY_CHANCE
+        val isLucky = Math.random() < (LUCKY_CHANCE + luckyMergeBonus)
         if (isLucky) {
             val nextDef = UNIT_DEFS.find { it.id == resultId }
             if (nextDef != null && nextDef.mergeResultId >= 0) {

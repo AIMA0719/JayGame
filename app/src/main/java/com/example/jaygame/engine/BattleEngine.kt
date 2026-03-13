@@ -2,6 +2,7 @@ package com.example.jaygame.engine
 
 import android.util.Log
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.data.GameData
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
 import com.example.jaygame.data.unitGradeOf
@@ -17,6 +18,7 @@ class BattleEngine(
     private val difficulty: Int,
     private val maxWaves: Int,
     private val deck: IntArray,
+    gameData: GameData? = null,
 ) {
     companion object {
         const val W = 720f
@@ -33,6 +35,8 @@ class BattleEngine(
 
     enum class State { WaveDelay, Playing, Victory, Defeat }
     var state = State.WaveDelay; private set
+
+    var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
 
     val enemies = ObjectPool(MAX_ENEMIES, { Enemy() }) { it.reset() }
     val units = ObjectPool(MAX_UNITS, { GameUnit() }) { it.reset() }
@@ -121,6 +125,11 @@ class BattleEngine(
 
     fun start(scope: CoroutineScope) {
         UniqueAbilitySystem.zonePool = zones
+        // Wire relic bonuses into subsystems
+        relicManager?.let { rm ->
+            MergeSystem.luckyMergeBonus = rm.totalLuckyMergeBonus()
+            UniqueAbilitySystem.cooldownReduction = rm.totalCooldownReduction()
+        }
         validateLayout()
         validatePathSpeedUniformity()
         job = scope.launch(Dispatchers.Default) {
@@ -161,7 +170,8 @@ class BattleEngine(
                 requestMerge(mergeable.first())
             }
             // Auto-summon: summon when SP is enough
-            if (sp >= summonCost && !grid.isFull()) {
+            val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
+            if (sp >= effectiveCost && !grid.isFull()) {
                 requestSummon()
             }
         }
@@ -173,6 +183,7 @@ class BattleEngine(
                     waveSystem.startWave(waveSystem.currentWave)
                     val config = waveSystem.getWaveConfig(waveSystem.currentWave)
                     isBossRound = config.isBoss
+                    sp += relicManager?.totalWaveStartSp() ?: 0f
                     state = State.Playing
                 }
             }
@@ -258,7 +269,8 @@ class BattleEngine(
             val deathY = it.position.y / H
             enemies.release(it)
             killCount++
-            BattleBridge.onGoldPickup(deathX, deathY, 1)
+            val killGold = (1f * (1f + (relicManager?.totalGoldKillBonus() ?: 0f))).toInt().coerceAtLeast(1)
+            BattleBridge.onGoldPickup(deathX, deathY, killGold)
         }
     }
 
@@ -314,9 +326,19 @@ class BattleEngine(
     private fun fireProjectile(unit: GameUnit) {
         val target = unit.currentTarget ?: return
         val proj = projectiles.acquire() ?: return
-        val isCrit = Math.random() < (0.05 + upgradeCritRate)
-        val dmg = unit.effectiveATK() * upgradeAtkMult * (if (isCrit) 2f else 1f)
+        val rm = relicManager
+        val relicAtkBonus = rm?.totalAtkPercent() ?: 0f
+        val relicCritChance = rm?.totalCritChanceBonus() ?: 0f
+        val relicCritDmg = rm?.totalCritDamageBonus() ?: 0f
+        val relicArmorPen = rm?.totalArmorPenPercent() ?: 0f
+        val relicMagicDmg = rm?.totalMagicDmgPercent() ?: 0f
+        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance)
+        val critMultiplier = 2f + relicCritDmg
         val isMagic = unit.family == 1 || unit.family == 4
+        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus)
+        val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
+            (if (isMagic) (1f + relicMagicDmg) else 1f) *
+            (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
 
         proj.init(
             from = unit.position.copy(), target = target,
@@ -349,8 +371,9 @@ class BattleEngine(
     // ── Player Actions ──
 
     fun requestSummon() {
-        if (sp < summonCost || grid.isFull()) return
-        sp -= summonCost
+        val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
+        if (sp < effectiveSummonCost || grid.isFull()) return
+        sp -= effectiveSummonCost
 
         val grade = rollGrade()
         if (deck.isEmpty()) return
@@ -630,7 +653,8 @@ class BattleEngine(
     private fun onBattleEnd(victory: Boolean) {
         val difficultyBonus = 1f + difficulty * 0.25f // 초보1.0, 숙련자1.25, 고인물1.5, 썩은물1.75, 챌린저2.0
         val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
-        val goldEarned = (baseGold * difficultyBonus).toInt()
+        val relicWaveBonus = if (victory) (1f + (relicManager?.totalGoldWaveBonus() ?: 0f)) else 1f
+        val goldEarned = (baseGold * difficultyBonus * relicWaveBonus).toInt()
         val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%
