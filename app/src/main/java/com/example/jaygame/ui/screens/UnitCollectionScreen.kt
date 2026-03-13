@@ -1,7 +1,5 @@
 package com.example.jaygame.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -232,21 +228,8 @@ private fun CodexUnitCard(
     val gradeColor = unit.grade.color
     val borderColor = codexGradeBorderColor(unit.grade)
 
-    // Card flip animation: starts at 180 and animates to 0
-    var flipTriggered by remember { mutableStateOf(false) }
-    val rotationY by animateFloatAsState(
-        targetValue = if (flipTriggered) 0f else 180f,
-        animationSpec = tween(durationMillis = 400),
-        label = "codexCardFlip",
-    )
-    LaunchedEffect(Unit) { flipTriggered = true }
-
     Column(
         modifier = Modifier
-            .graphicsLayer {
-                this.rotationY = rotationY
-                cameraDistance = 12f * density
-            }
             .clip(RoundedCornerShape(12.dp))
             .background(codexGradeBgColor(unit.grade))
             .border(
@@ -258,58 +241,55 @@ private fun CodexUnitCard(
             .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Only show content when card is facing front
-        if (rotationY <= 90f) {
-            // Grade indicator bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(gradeColor),
-            )
+        // Grade indicator bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(gradeColor),
+        )
 
-            Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-            // Unit icon
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(56.dp)
-                    .shadow(4.dp, CircleShape, ambientColor = gradeColor, spotColor = gradeColor)
-                    .clip(CircleShape)
-                    .background(gradeColor.copy(alpha = 0.15f))
-                    .border(1.5.dp, gradeColor.copy(alpha = 0.5f), CircleShape),
-            ) {
-                Image(
-                    painter = painterResource(id = unit.iconRes),
-                    contentDescription = unit.name,
-                    modifier = Modifier.size(40.dp),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Unit name
-            Text(
-                text = unit.name,
-                color = LightText,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            // Grade label
-            Text(
-                text = unit.grade.label,
-                color = gradeColor,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Medium,
+        // Unit icon
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(56.dp)
+                .shadow(4.dp, CircleShape, ambientColor = gradeColor, spotColor = gradeColor)
+                .clip(CircleShape)
+                .background(gradeColor.copy(alpha = 0.15f))
+                .border(1.5.dp, gradeColor.copy(alpha = 0.5f), CircleShape),
+        ) {
+            Image(
+                painter = painterResource(id = unit.iconRes),
+                contentDescription = unit.name,
+                modifier = Modifier.size(40.dp),
             )
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Unit name
+        Text(
+            text = unit.name,
+            color = LightText,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // Grade label
+        Text(
+            text = unit.grade.label,
+            color = gradeColor,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 

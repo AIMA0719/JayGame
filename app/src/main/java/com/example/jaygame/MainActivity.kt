@@ -62,6 +62,29 @@ class MainActivity : ComponentActivity() {
                 BattleScreen(
                     result = result,
                     onGoHome = {
+                        // Apply battle rewards to persistent data
+                        val battleResult = BattleBridge.result.value
+                        if (battleResult != null) {
+                            val current = repository.gameData.value
+                            val stageIdx = BattleBridge.stageId.value
+                            val bestWaves = current.stageBestWaves.toMutableList()
+                            while (bestWaves.size <= stageIdx) bestWaves.add(0)
+                            if (battleResult.waveReached > bestWaves[stageIdx]) {
+                                bestWaves[stageIdx] = battleResult.waveReached
+                            }
+                            repository.save(current.copy(
+                                gold = current.gold + battleResult.goldEarned,
+                                trophies = (current.trophies + battleResult.trophyChange).coerceAtLeast(0),
+                                totalKills = current.totalKills + battleResult.killCount,
+                                totalMerges = current.totalMerges + battleResult.mergeCount,
+                                totalGoldEarned = current.totalGoldEarned + battleResult.goldEarned,
+                                totalWins = current.totalWins + if (battleResult.victory) 1 else 0,
+                                totalLosses = current.totalLosses + if (!battleResult.victory) 1 else 0,
+                                highestWave = maxOf(current.highestWave, battleResult.waveReached),
+                                wonWithoutDamage = current.wonWithoutDamage || battleResult.noHpLost,
+                                stageBestWaves = bestWaves,
+                            ))
+                        }
                         BattleBridge.clearResult()
                         finish()
                     },

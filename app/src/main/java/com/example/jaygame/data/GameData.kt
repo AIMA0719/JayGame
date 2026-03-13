@@ -16,7 +16,7 @@ data class GameData(
         // COMMON grade of each family owned by default (IDs 0-4 + 35)
         UnitProgress(owned = i in 0..4 || i == 35, cards = 0, level = 1)
     },
-    val deck: List<Int> = listOf(0, 1, 2, 3, 4),  // family ordinals (0=화염,1=냉기,2=독,3=번개,4=보조,5=바람)
+    val deck: List<Int> = listOf(0, 1, 2),  // family ordinals (0=화염,1=냉기,2=독,3=번개,4=보조,5=바람)
     val totalWins: Int = 0,
     val totalLosses: Int = 0,
     val totalKills: Int = 0,

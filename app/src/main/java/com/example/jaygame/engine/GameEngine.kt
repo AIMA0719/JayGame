@@ -31,7 +31,7 @@ data class BattleConfig(
     val stageId: Int = 0,
     val maxWaves: Int = 40,
     val difficulty: Int = 0,   // 0=Easy, 1=Normal, 2=Hard
-    val deck: List<Int> = listOf(0, 1, 2, 3, 4),
+    val deck: List<Int> = listOf(0, 1, 2),
 )
 
 /**

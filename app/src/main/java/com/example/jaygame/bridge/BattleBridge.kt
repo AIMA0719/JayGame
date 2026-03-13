@@ -15,7 +15,7 @@ data class BattleState(
     val elapsedTime: Float = 0f,
     val state: Int = 0, // 0=WaveDelay, 1=Playing, 2=Victory, 3=Defeat
     val summonCost: Int = 50,
-    val deckUnits: IntArray = intArrayOf(0, 1, 2, 3, 4),
+    val deckUnits: IntArray = intArrayOf(0, 1, 2),
     val enemyCount: Int = 0,
     val maxEnemyCount: Int = 100,
     val isBossRound: Boolean = false,
@@ -516,6 +516,10 @@ object BattleBridge {
     fun requestSell(tileIndex: Int) {
         dismissPopup()
         engine?.requestSell(tileIndex)
+    }
+
+    fun requestBulkSell(grade: Int): Int {
+        return engine?.requestBulkSell(grade) ?: 0
     }
 
     fun requestUpgrade(tileIndex: Int) {

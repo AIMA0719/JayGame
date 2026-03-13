@@ -1,7 +1,5 @@
 package com.example.jaygame.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -174,15 +170,6 @@ private fun CollectionUnitCard(
     val owned = progress?.owned == true
     val level = progress?.level ?: 1
 
-    // Card flip animation: starts at 180 and animates to 0
-    var flipTriggered by remember { mutableStateOf(false) }
-    val rotationY by animateFloatAsState(
-        targetValue = if (flipTriggered) 0f else 180f,
-        animationSpec = tween(durationMillis = 400),
-        label = "cardFlip",
-    )
-    LaunchedEffect(Unit) { flipTriggered = true }
-
     GameCard(
         borderColor = def.grade.color,
         backgroundColor = gradeBackgroundColor(def.grade),
@@ -190,58 +177,51 @@ private fun CollectionUnitCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                this.rotationY = rotationY
-                cameraDistance = 12f * density
-            }
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
-        // Only show content when the card is past 90 degrees (facing front)
-        if (rotationY <= 90f) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth(),
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(DarkSurface),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = def.iconRes),
+                    contentDescription = def.name,
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(DarkSurface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(id = def.iconRes),
-                        contentDescription = def.name,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .then(if (!owned) Modifier.alpha(0.3f) else Modifier),
+                        .size(36.dp)
+                        .then(if (!owned) Modifier.alpha(0.3f) else Modifier),
+                )
+                if (!owned) {
+                    Text(
+                        text = "\uD83D\uDD12",
+                        fontSize = 18.sp,
                     )
-                    if (!owned) {
-                        Text(
-                            text = "\uD83D\uDD12",
-                            fontSize = 18.sp,
-                        )
-                    }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
+            Text(
+                text = if (owned) def.name else "미보유",
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = if (owned) LightText else DimText,
+                textAlign = TextAlign.Center,
+            )
+
+            if (owned) {
                 Text(
-                    text = if (owned) def.name else "미보유",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = if (owned) LightText else DimText,
+                    text = buildStarString(level),
+                    fontSize = 10.sp,
+                    color = Gold,
                     textAlign = TextAlign.Center,
                 )
-
-                if (owned) {
-                    Text(
-                        text = buildStarString(level),
-                        fontSize = 10.sp,
-                        color = Gold,
-                        textAlign = TextAlign.Center,
-                    )
-                }
             }
         }
     }

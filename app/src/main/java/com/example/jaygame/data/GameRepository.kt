@@ -199,7 +199,9 @@ class GameRepository(context: Context) {
                     deck.add(familyOrdinal)
                 }
             }
-            if (deck.isEmpty()) deck.addAll(listOf(0, 1, 2, 3, 4))
+            if (deck.isEmpty()) deck.addAll(listOf(0, 1, 2))
+            // Migration: trim old 5-slot decks to 3
+            while (deck.size > 3) deck.removeAt(deck.lastIndex)
 
             // stats
             val stats = root.optJSONObject("stats")

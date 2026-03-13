@@ -80,7 +80,7 @@ fun DeckScreen(repository: GameRepository) {
     val deck = remember(data) {
         mutableStateListOf<Int>().apply {
             val source = data.deck
-            for (i in 0 until 5) {
+            for (i in 0 until 3) {
                 add(source.getOrElse(i) { -1 })
             }
         }
@@ -114,7 +114,7 @@ fun DeckScreen(repository: GameRepository) {
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "소환할 계열을 5개 선택하세요 (중복 가능)",
+            text = "소환할 계열을 3개 선택하세요 (중복 가능)",
             fontSize = 12.sp,
             color = SubText,
             textAlign = TextAlign.Center,
@@ -146,7 +146,7 @@ fun DeckScreen(repository: GameRepository) {
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    for (slotIndex in 0 until 5) {
+                    for (slotIndex in 0 until 3) {
                         val familyOrdinal = deck[slotIndex]
                         val info = FAMILY_INFOS.getOrNull(familyOrdinal)
 
@@ -416,15 +416,15 @@ private fun SynergyPreview(deck: List<Int>) {
 
 private fun buildSaveDeck(deck: List<Int>): List<Int> {
     val valid = deck.filter { it >= 0 }
-    if (valid.isEmpty()) return listOf(0, 1, 2, 3, 4)
-    if (valid.size >= 5) return valid.take(5)
+    if (valid.isEmpty()) return listOf(0, 1, 2)
+    if (valid.size >= 3) return valid.take(3)
     val result = valid.toMutableList()
     // Fill remaining slots with existing families
     val families = UnitFamily.entries.map { it.ordinal }
     for (f in families) {
-        if (result.size >= 5) break
+        if (result.size >= 3) break
         result.add(f)
     }
-    while (result.size < 5) result.add(result.first())
+    while (result.size < 3) result.add(result.first())
     return result
 }

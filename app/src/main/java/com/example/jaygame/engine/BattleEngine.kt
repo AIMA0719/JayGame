@@ -400,6 +400,20 @@ class BattleEngine(
         units.release(unit)
     }
 
+    fun requestBulkSell(grade: Int): Int {
+        var count = 0
+        for (i in 0 until Grid.TOTAL) {
+            val unit = grid.getUnit(i) ?: continue
+            if (unit.grade == grade) {
+                grid.removeUnit(i)
+                sp += 30f + unit.grade * 20f
+                units.release(unit)
+                count++
+            }
+        }
+        return count
+    }
+
     fun requestClickTile(tileIndex: Int) {
         val unit = grid.getUnit(tileIndex) ?: return
         val mergeable = MergeSystem.findMergeableTiles(grid)

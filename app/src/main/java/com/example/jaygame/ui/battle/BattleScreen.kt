@@ -81,7 +81,7 @@ fun BattleScreen(
 
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
-    var showGambleDialog by remember { mutableStateOf(false) }
+    var showBulkSellDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
 
@@ -104,36 +104,8 @@ fun BattleScreen(
         pulse
     } else 0f
 
-    // C4: Critical hit screen shake
-    val shakeOffsetX = remember { Animatable(0f) }
-    val shakeOffsetY = remember { Animatable(0f) }
     val damageEvents by BattleBridge.damageEvents.collectAsState()
     val shakeScope = rememberCoroutineScope()
-    val prevDamageCount = remember { mutableStateOf(0) }
-    val currentDamageCount = damageEvents.size
-    if (currentDamageCount > prevDamageCount.value) {
-        val hasCrit = damageEvents.takeLast(currentDamageCount - prevDamageCount.value).any { it.isCrit }
-        if (hasCrit) {
-            HapticManager.light(view)
-            SfxManager.play(SoundEvent.CriticalHit)
-            shakeScope.launch {
-                launch {
-                    shakeOffsetX.animateTo(3f, animationSpec = tween(25))
-                    shakeOffsetX.animateTo(-3f, animationSpec = tween(25))
-                    shakeOffsetX.animateTo(2f, animationSpec = tween(20))
-                    shakeOffsetX.animateTo(-1f, animationSpec = tween(15))
-                    shakeOffsetX.animateTo(0f, animationSpec = tween(15))
-                }
-                launch {
-                    shakeOffsetY.animateTo(-2f, animationSpec = tween(25))
-                    shakeOffsetY.animateTo(2f, animationSpec = tween(25))
-                    shakeOffsetY.animateTo(-1f, animationSpec = tween(20))
-                    shakeOffsetY.animateTo(0f, animationSpec = tween(30))
-                }
-            }
-        }
-    }
-    prevDamageCount.value = currentDamageCount
 
     // C3: Skill flash for high-grade skills
     val skillEvents by BattleBridge.skillEvents.collectAsState()
@@ -204,8 +176,7 @@ fun BattleScreen(
                 .padding(horizontal = 25.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .align(Alignment.Center)
-                .offset(x = shakeOffsetX.value.dp, y = shakeOffsetY.value.dp),
+                .align(Alignment.Center),
         ) {
             MonsterPathOverlay()
             EnemyOverlay()
@@ -274,9 +245,9 @@ fun BattleScreen(
             BattleTopHud(onPauseClick = { showMenuDialog = true })
             Spacer(modifier = Modifier.weight(1f))
             BattleBottomHud(
-                onGambleClick = { showGambleDialog = true },
                 onBuyClick = { showBuySheet = true },
                 onUpgradeClick = { showUpgradeSheet = true },
+                onBulkSellClick = { showBulkSellDialog = true },
             )
         }
 
@@ -286,8 +257,8 @@ fun BattleScreen(
         SummonEffectOverlay()
 
         // Layer 3.5: Feature sheets
-        if (showGambleDialog) {
-            GambleDialog(onDismiss = { showGambleDialog = false })
+        if (showBulkSellDialog) {
+            BulkSellDialog(onDismiss = { showBulkSellDialog = false })
         }
         if (showBuySheet) {
             BuyUnitSheet(onDismiss = { showBuySheet = false })

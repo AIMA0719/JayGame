@@ -29,6 +29,7 @@ import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import android.widget.Toast
 
 @Composable
 fun NavGraph(
@@ -39,6 +40,11 @@ fun NavGraph(
     val navController = rememberNavController()
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route
+
+    // ── Hidden cheat: tap shop tab 10 times within 10 seconds ──
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val shopTapTimes = remember { mutableListOf<Long>() }
+    var cheatActivated by remember { mutableStateOf(false) }
 
     val selectedTab = when (currentRoute) {
         Routes.HOME -> NavTab.HOME
@@ -141,6 +147,26 @@ fun NavGraph(
             GameBottomNavBar(
                 selectedTab = selectedTab,
                 onTabSelected = { tab ->
+                    // ── Hidden cheat detection ──
+                    if (tab == NavTab.SHOP && !cheatActivated) {
+                        val now = System.currentTimeMillis()
+                        shopTapTimes.add(now)
+                        // Keep only taps within the last 10 seconds
+                        shopTapTimes.removeAll { now - it > 10_000L }
+                        if (shopTapTimes.size >= 10) {
+                            cheatActivated = true
+                            shopTapTimes.clear()
+                            val current = repository.gameData.value
+                            repository.save(
+                                current.copy(
+                                    diamonds = 9_999_999,
+                                    gold = 9_999_999,
+                                ),
+                            )
+                            Toast.makeText(context, "★ DEV MODE ★", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
                     val route = when (tab) {
                         NavTab.DECK -> Routes.DECK
                         NavTab.HOME -> Routes.HOME
