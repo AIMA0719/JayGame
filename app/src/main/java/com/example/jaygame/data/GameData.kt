@@ -13,6 +13,13 @@ data class RelicProgress(
     val owned: Boolean = false,
 )
 
+data class PetProgress(
+    val petId: Int = 0,
+    val owned: Boolean = false,
+    val cards: Int = 0,
+    val level: Int = 1,
+)
+
 data class GameData(
     val gold: Int = 10000,
     val diamonds: Int = 0,
@@ -66,7 +73,14 @@ data class GameData(
     // 유물
     val relics: List<RelicProgress> = List(12) { RelicProgress(relicId = it) },
     val equippedRelics: List<Int> = emptyList(),
+    // 펫
+    val pets: List<PetProgress> = List(9) { PetProgress(petId = it) },
+    val equippedPets: List<Int> = emptyList(),
+    val petPullPity: Int = 0,
+    // 유닛 소환 천장
+    val unitPullPity: Int = 0,
 ) {
+    val equippedPetSlotCount: Int get() = if (trophies >= 2000) 2 else 1
     val equippedSlotCount: Int get() = when {
         trophies >= 3000 -> 4
         trophies >= 1500 -> 3

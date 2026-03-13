@@ -164,6 +164,24 @@ class GameRepository(context: Context) {
             for (id in data.equippedRelics) eqArr.put(id)
             root.put("equippedRelics", eqArr)
 
+            // pets
+            val petsArr = JSONArray()
+            for (p in data.pets) {
+                val pObj = JSONObject()
+                pObj.put("petId", p.petId)
+                pObj.put("owned", if (p.owned) 1 else 0)
+                pObj.put("cards", p.cards)
+                pObj.put("level", p.level)
+                petsArr.put(pObj)
+            }
+            root.put("pets", petsArr)
+
+            val eqPetsArr = JSONArray()
+            for (id in data.equippedPets) eqPetsArr.put(id)
+            root.put("equippedPets", eqPetsArr)
+
+            root.put("petPullPity", data.petPullPity)
+
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
             val checksum = fnv1aHash(payload)
@@ -330,6 +348,26 @@ class GameRepository(context: Context) {
                 List(arr.length()) { arr.getInt(it) }
             } else emptyList()
 
+            val pets = if (root.has("pets")) {
+                val arr = root.getJSONArray("pets")
+                List(arr.length()) { i ->
+                    val obj = arr.getJSONObject(i)
+                    PetProgress(
+                        petId = obj.getInt("petId"),
+                        owned = obj.optInt("owned", 0) == 1,
+                        cards = obj.optInt("cards", 0),
+                        level = obj.optInt("level", 1),
+                    )
+                }
+            } else List(9) { PetProgress(petId = it) }
+
+            val equippedPets = if (root.has("equippedPets")) {
+                val arr = root.getJSONArray("equippedPets")
+                List(arr.length()) { arr.getInt(it) }
+            } else emptyList()
+
+            val petPullPity = root.optInt("petPullPity", 0)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -372,6 +410,9 @@ class GameRepository(context: Context) {
                 saveVersion = saveVersion,
                 relics = relics,
                 equippedRelics = equippedRelics,
+                pets = pets,
+                equippedPets = equippedPets,
+                petPullPity = petPullPity,
             )
         }
     }
