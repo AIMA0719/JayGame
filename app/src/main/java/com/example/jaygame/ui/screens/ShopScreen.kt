@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
+import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.ui.components.GachaProbabilityDialog
 import com.example.jaygame.ui.components.GameCard
@@ -136,6 +137,19 @@ fun ShopScreen(repository: GameRepository) {
                     if (d.diamonds >= 50) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 20), diamonds = d.diamonds - 50)); true } else false
                 }),
             ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", "준비 중", onPurchase = null),
+            ShopItem("\uD83D\uDD27 개발자 모드", "재화 MAX + 스태미나 무한 + 도감 올 해금", "FREE",
+                onPurchase = { d, repo ->
+                    val allUnlocked = d.units.map { it.copy(owned = true, cards = 999) }
+                    repo.save(d.copy(
+                        gold = 9_999_999,
+                        diamonds = 9_999_999,
+                        stamina = 9_999,
+                        maxStamina = 9_999,
+                        units = allUnlocked,
+                        unlockedStages = (0 until STAGES.size).toList(),
+                    ))
+                    true
+                }),
         )
     }
 
