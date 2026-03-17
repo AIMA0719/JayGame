@@ -191,6 +191,7 @@ fun BattleScreen(
                 .clipToBounds(),
         ) {
             MonsterPathOverlay()
+            ZoneGroundOverlay()
             EnemyOverlay()
             BattleField()
             ProjectileOverlay()
@@ -246,9 +247,6 @@ fun BattleScreen(
                 }
             }
         }
-
-        // Layer 1.5: Zone effect ground overlay
-        ZoneGroundOverlay()
 
         // Layer 2: HUD overlays
         Column(
