@@ -412,7 +412,10 @@ private fun SynergyPreview(deck: List<Int>) {
                     val familyColor = info.family.color
                     val isHighlighted = count >= 2
 
-                    Box(
+                    val isFull = count >= 3
+                    val synergyDesc = synergyDescription(ordinal, isFull)
+
+                    Column(
                         modifier = Modifier
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                             .clip(RoundedCornerShape(6.dp))
@@ -427,6 +430,7 @@ private fun SynergyPreview(deck: List<Int>) {
                                 shape = RoundedCornerShape(6.dp),
                             )
                             .padding(horizontal = 8.dp, vertical = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
                             text = "${info.icon} ${info.family.label} x$count",
@@ -434,11 +438,28 @@ private fun SynergyPreview(deck: List<Int>) {
                             fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
                             color = if (isHighlighted) familyColor else SubText,
                         )
+                        if (synergyDesc.isNotEmpty()) {
+                            Text(
+                                text = synergyDesc,
+                                fontSize = 9.sp,
+                                color = familyColor.copy(alpha = 0.8f),
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+private fun synergyDescription(family: Int, isFull: Boolean): String = when (family) {
+    0 -> if (isFull) "공격력 +8%, DoT 연장" else "공격력 +4%"
+    1 -> if (isFull) "공속 +6%, 둔화 강화" else "공속 +3%"
+    2 -> if (isFull) "공격력 +7%, 독 전파" else "공격력 +4%"
+    3 -> if (isFull) "공속 +8%, 체인 +1" else "공속 +4%"
+    4 -> if (isFull) "사거리 +6%, 힐 강화" else "사거리 +3%"
+    5 -> if (isFull) "공격력 +5%, 넉백 강화" else "공격력 +3%"
+    else -> ""
 }
 
 private fun buildSaveDeck(deck: List<Int>): List<Int> {

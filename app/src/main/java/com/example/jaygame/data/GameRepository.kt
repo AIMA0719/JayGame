@@ -105,6 +105,7 @@ class GameRepository(context: Context) {
             val seasonPass = JSONObject()
             seasonPass.put("seasonXP", data.seasonXP)
             seasonPass.put("seasonClaimedTier", data.seasonClaimedTier)
+            seasonPass.put("seasonMonth", data.seasonMonth)
             root.put("seasonPass", seasonPass)
 
             // stamina
@@ -198,6 +199,12 @@ class GameRepository(context: Context) {
             val unlockedProfilesArr = JSONArray()
             for (id in data.unlockedProfiles) unlockedProfilesArr.put(id)
             root.put("unlockedProfiles", unlockedProfilesArr)
+
+            // offline reward
+            root.put("lastOnlineTime", data.lastOnlineTime)
+
+            // tutorial
+            root.put("tutorialCompleted", data.tutorialCompleted)
 
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
@@ -294,6 +301,7 @@ class GameRepository(context: Context) {
             val seasonPass = root.optJSONObject("seasonPass")
             val seasonXP = seasonPass?.optInt("seasonXP", 0) ?: 0
             val seasonClaimedTier = seasonPass?.optInt("seasonClaimedTier", 0) ?: 0
+            val seasonMonth = seasonPass?.optString("seasonMonth", "") ?: ""
 
             // stamina
             val staminaData = root.optJSONObject("staminaData")
@@ -409,6 +417,12 @@ class GameRepository(context: Context) {
             }
             if (unlockedProfiles.isEmpty()) unlockedProfiles.add(0)
 
+            // offline reward
+            val lastOnlineTime = root.optLong("lastOnlineTime", System.currentTimeMillis())
+
+            // tutorial
+            val tutorialCompleted = root.optBoolean("tutorialCompleted", false)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -437,6 +451,7 @@ class GameRepository(context: Context) {
                 lastClaimedDay = lastClaimedDay,
                 seasonXP = seasonXP,
                 seasonClaimedTier = seasonClaimedTier,
+                seasonMonth = seasonMonth,
                 stamina = stamina,
                 maxStamina = maxStamina,
                 lastStaminaRegenTime = lastStaminaRegenTime,
@@ -460,6 +475,8 @@ class GameRepository(context: Context) {
                 lastDungeonResetDate = lastDungeonResetDate,
                 selectedProfileId = selectedProfileId,
                 unlockedProfiles = unlockedProfiles,
+                lastOnlineTime = lastOnlineTime,
+                tutorialCompleted = tutorialCompleted,
             )
         }
     }

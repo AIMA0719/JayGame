@@ -145,8 +145,9 @@ fun CollectionScreen(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
                 text = {
+                    val unitCount = data.units.count { it.owned }
                     Text(
-                        text = "영웅",
+                        text = "영웅 ($unitCount)",
                         fontSize = 14.sp,
                         color = if (selectedTab == 0) Gold else SubText,
                     )
@@ -156,8 +157,9 @@ fun CollectionScreen(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
                 text = {
+                    val relicCount = data.relics.count { it.owned }
                     Text(
-                        text = "유물",
+                        text = "유물 ($relicCount)",
                         fontSize = 14.sp,
                         color = if (selectedTab == 1) Gold else SubText,
                     )
@@ -167,8 +169,9 @@ fun CollectionScreen(
                 selected = selectedTab == 2,
                 onClick = { selectedTab = 2 },
                 text = {
+                    val petCount = data.pets.count { it.owned }
                     Text(
-                        text = "펫",
+                        text = "펫 ($petCount)",
                         fontSize = 14.sp,
                         color = if (selectedTab == 2) Gold else SubText,
                     )

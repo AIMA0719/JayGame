@@ -45,6 +45,18 @@ class BattleEngine(
     var isDungeonMode: Boolean = false
     var dungeonDef: DungeonDef? = null
 
+    // 가족 영구 강화 레벨
+    private val familyUpgradeLevels: Map<Int, Int> = gameData?.let { data ->
+        com.example.jaygame.data.UnitFamily.entries.associate { family ->
+            family.ordinal to (data.familyUpgrades[family.name] ?: 0)
+        }
+    } ?: emptyMap()
+
+    // 유닛별 영구 레벨 (카드 레벨업)
+    private val permanentUnitLevels: Map<Int, Int> = gameData?.let { data ->
+        data.units.mapIndexed { idx, progress -> idx to progress.level }.toMap()
+    } ?: emptyMap()
+
     // 천장(Pity) 시스템
     private val probabilityEngine = DefaultProbabilityEngine()
     var currentPity: Int = initialPity.coerceIn(0, 100); private set
@@ -55,7 +67,7 @@ class BattleEngine(
     val zones = ObjectPool(32, { ZoneEffect() }) { it.reset() }
 
     val grid = Grid()
-    val waveSystem = WaveSystem(maxWaves, difficulty)
+    var waveSystem = WaveSystem(maxWaves, difficulty); private set
     val spatialHash = SpatialHash<Enemy>(64f)
     private val auraTicks = FloatArray(MAX_UNITS)
 
@@ -69,6 +81,7 @@ class BattleEngine(
     private var killCount = 0
     private var mergeCount = 0
     private var peakEnemyCount = 0
+    private var hpEverLost = false // Track if player ever took HP damage
 
     private val upgradeLevels = IntArray(5)
     private var upgradeAtkMult = 1f
@@ -135,6 +148,17 @@ class BattleEngine(
     private var job: Job? = null
 
     fun start(scope: CoroutineScope) {
+        // Reinitialize wave system for dungeon mode
+        if (isDungeonMode && dungeonDef != null) {
+            val forceBoss = dungeonDef!!.type == com.example.jaygame.data.DungeonType.BOSS_RUSH
+            waveSystem = WaveSystem(maxWaves, difficulty, forceBoss = forceBoss)
+        }
+        // Set active synergy for AbilitySystem
+        // Use the most common family in deck for synergy calculation
+        if (deck.isNotEmpty()) {
+            val mainFamily = deck.groupBy { it }.maxByOrNull { it.value.size }?.key ?: 0
+            AbilitySystem.activeSynergy = SynergySystem.getSynergyBonus(deck, mainFamily)
+        }
         UniqueAbilitySystem.zonePool = zones
         // Wire relic bonuses into subsystems
         relicManager?.let { rm ->
@@ -171,14 +195,20 @@ class BattleEngine(
 
     private fun update(dt: Float) {
         elapsedTime += dt
-        sp += (SP_REGEN_PER_SEC + upgradeSpRegen) * dt
+        // SP regen scales slightly with wave progression (+10% per 10 waves)
+        val waveSpBonus = 1f + waveSystem.currentWave * 0.01f
+        sp += (SP_REGEN_PER_SEC + upgradeSpRegen) * waveSpBonus * dt
 
         // Auto-summon & auto-merge
         if (BattleBridge.autoSummon.value && state == State.Playing) {
             // Auto-merge first: merge any available units
             val mergeable = MergeSystem.findMergeableTiles(grid)
             if (mergeable.isNotEmpty()) {
-                requestMerge(mergeable.first())
+                // Auto-merge: prioritize lowest grade first (clear space for better units)
+                val bestMerge = mergeable.minByOrNull { tileIdx ->
+                    grid.getUnit(tileIdx)?.grade ?: Int.MAX_VALUE
+                } ?: mergeable.first()
+                requestMerge(bestMerge)
             }
             // Auto-summon: summon when SP is enough
             val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
@@ -244,6 +274,12 @@ class BattleEngine(
 
                 // Wave time expired → next wave (previous enemies stay alive)
                 if (waveSystem.waveComplete) {
+                    // Wave clear bonus: SP + gold
+                    val waveClearSP = 10f + waveSystem.currentWave * 0.5f
+                    sp += waveClearSP
+                    val waveClearGold = 5 + waveSystem.currentWave
+                    BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
+
                     if (waveSystem.isLastWave) {
                         state = State.Victory
                         onBattleEnd(true)
@@ -264,19 +300,37 @@ class BattleEngine(
         val config = waveSystem.getWaveConfig(waveSystem.currentWave)
         repeat(toSpawn) {
             val enemy = enemies.acquire() ?: return
+            val isElite = config.eliteChance > 0f && Math.random() < config.eliteChance
             enemy.init(
-                hp = config.hp, speed = config.speed,
-                armor = config.armor, magicResist = config.magicResist,
+                hp = config.hp * (if (isElite) 2f else 1f),
+                speed = config.speed * (if (isElite) 1.1f else 1f),
+                armor = config.armor * (if (isElite) 1.5f else 1f),
+                magicResist = config.magicResist * (if (isElite) 1.3f else 1f),
                 type = config.enemyType, startPos = enemyPath.first().copy(),
-                ccResistance = config.ccResistance,
+                ccResistance = config.ccResistance + if (isElite) 0.1f else 0f,
             )
-            // Assign boss modifier for true boss waves (every 10th wave)
-            if (config.isBoss && (waveSystem.currentWave + 1) % 10 == 0) {
-                val modifier = getBossModifier(stageId, waveSystem.currentWave)
+            // High difficulty: elite enemies get regeneration
+            if (isElite && difficulty >= 3) {
+                enemy.bossModifier = BossModifier.REGENERATION
+                enemy.regenTimer = 8f
+            }
+            // Assign boss modifier
+            val isTrueBoss = (waveSystem.currentWave + 1) % 10 == 0
+            val isDungeonBoss = isDungeonMode && dungeonDef?.type == com.example.jaygame.data.DungeonType.BOSS_RUSH
+            if (config.isBoss && (isTrueBoss || isDungeonBoss)) {
+                val modifier = if (isDungeonBoss) {
+                    BossModifier.entries.random() // Random modifier each boss rush wave
+                } else {
+                    getBossModifier(stageId, waveSystem.currentWave)
+                }
                 enemy.bossModifier = modifier
                 if (modifier == BossModifier.SWIFT) {
                     enemy.baseSpeed *= 2f
                     enemy.speed = enemy.baseSpeed
+                }
+                if (modifier == BossModifier.SHIELDED) {
+                    enemy.shieldTimer = 5f // Start with shield down
+                    enemy.shieldActive = false
                 }
                 enemy.applyBossModifierFlags()
                 // Notify UI of boss modifier
@@ -287,17 +341,59 @@ class BattleEngine(
 
     private fun updateEnemies(dt: Float) {
         spatialHash.clear()
+        val splitQueue = mutableListOf<Enemy>() // Deferred SPLITTER spawns
         enemies.forEach { enemy ->
             if (!enemy.alive) return@forEach
             enemy.update(dt, enemyPath)
-            // REGENERATION: heal 5% maxHp every 10 seconds
-            if (enemy.bossModifier == BossModifier.REGENERATION) {
-                enemy.regenTimer -= dt
-                if (enemy.regenTimer <= 0f) {
-                    enemy.hp = (enemy.hp + enemy.maxHp * 0.05f).coerceAtMost(enemy.maxHp)
-                    enemy.regenTimer = 10f
+
+            when (enemy.bossModifier) {
+                // COMMANDER: buff nearby enemy armor (temporarily set higher)
+                BossModifier.COMMANDER -> {
+                    // No runtime buff needed — COMMANDER effect is applied
+                    // during enemy spawn by increasing base armor of nearby enemies
+                    // Simple implementation: reduce damage taken by nearby enemies via shield buff
+                    val cmdRect = com.example.jaygame.engine.math.GameRect(
+                        enemy.position.x - 200f, enemy.position.y - 200f, 400f, 400f,
+                    )
+                    spatialHash.query(cmdRect).forEach { nearby ->
+                        if (nearby !== enemy && nearby.alive && !nearby.buffs.hasBuff(BuffType.Shield)) {
+                            nearby.buffs.addBuff(BuffType.Shield, nearby.maxHp * 0.02f, 2f)
+                        }
+                    }
                 }
+                // REGENERATION: heal 5% maxHp every 10 seconds
+                BossModifier.REGENERATION -> {
+                    enemy.regenTimer -= dt
+                    if (enemy.regenTimer <= 0f) {
+                        enemy.hp = (enemy.hp + enemy.maxHp * 0.05f).coerceAtMost(enemy.maxHp)
+                        enemy.regenTimer = 10f
+                    }
+                }
+                // BERSERKER: triple attack speed (move speed) below 50% HP
+                BossModifier.BERSERKER -> {
+                    if (!enemy.berserkerActivated && enemy.hpRatio < 0.5f) {
+                        enemy.berserkerActivated = true
+                        enemy.speed = enemy.baseSpeed * 1.5f // Faster movement in berserk
+                    }
+                }
+                // SPLITTER: spawn 2 mini-bosses at 50% HP
+                BossModifier.SPLITTER -> {
+                    if (!enemy.splitterTriggered && enemy.hpRatio < 0.5f) {
+                        enemy.splitterTriggered = true
+                        splitQueue.add(enemy)
+                    }
+                }
+                // SHIELDED: cycle shield on/off (3s active, 5s cooldown)
+                BossModifier.SHIELDED -> {
+                    enemy.shieldTimer -= dt
+                    if (enemy.shieldTimer <= 0f) {
+                        enemy.shieldActive = !enemy.shieldActive
+                        enemy.shieldTimer = if (enemy.shieldActive) 3f else 5f
+                    }
+                }
+                else -> {}
             }
+
             spatialHash.insert(
                 enemy,
                 enemy.position.x - enemy.size * 0.5f,
@@ -305,14 +401,61 @@ class BattleEngine(
                 enemy.size, enemy.size,
             )
         }
+        // Spawn split mini-bosses
+        for (parent in splitQueue) {
+            repeat(2) {
+                val mini = enemies.acquire() ?: return@repeat
+                mini.init(
+                    hp = parent.maxHp * 0.3f,
+                    speed = parent.baseSpeed * 1.3f,
+                    armor = parent.armor * 0.7f,
+                    magicResist = parent.magicResist * 0.7f,
+                    type = 5, // mini-boss type
+                    startPos = parent.position.copy(),
+                    ccResistance = parent.ccResistance * 0.5f,
+                )
+                mini.pathIndex = parent.pathIndex
+            }
+        }
         val deadList = mutableListOf<Enemy>()
         enemies.forEach { if (!it.alive) deadList.add(it) }
-        deadList.forEach {
-            val deathX = it.position.x / W
-            val deathY = it.position.y / H
-            enemies.release(it)
+        val poisonSpread = AbilitySystem.activeSynergy.specialEffect == SynergySystem.SpecialEffect.POISON_SPREAD
+        deadList.forEach { dead ->
+            val deathX = dead.position.x / W
+            val deathY = dead.position.y / H
+
+            // POISON_SPREAD synergy: on death, spread poison to nearby enemies
+            if (poisonSpread && dead.buffs.hasBuff(BuffType.DoT)) {
+                val spreadRect = com.example.jaygame.engine.math.GameRect(
+                    dead.position.x - 100f, dead.position.y - 100f, 200f, 200f,
+                )
+                spatialHash.query(spreadRect).forEach { nearby ->
+                    if (nearby.alive && nearby !== dead) {
+                        nearby.buffs.addBuff(BuffType.DoT, 8f, 3f)
+                    }
+                }
+            }
+
+            val wasElite = dead.maxHp > waveSystem.getWaveConfig(waveSystem.currentWave).hp * 1.5f
+
+            // Challenger difficulty: enemy death enrages nearby enemies (+15% speed permanently)
+            if (difficulty >= 4) {
+                val enrageRect = com.example.jaygame.engine.math.GameRect(
+                    dead.position.x - 80f, dead.position.y - 80f, 160f, 160f,
+                )
+                spatialHash.query(enrageRect).forEach { nearby ->
+                    if (nearby.alive && nearby !== dead) {
+                        nearby.speed = (nearby.speed * 1.15f).coerceAtMost(nearby.baseSpeed * 2f)
+                    }
+                }
+            }
+
+            enemies.release(dead)
             killCount++
-            val killGold = (1f * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
+            // SP recovery on kill (0.5 base, 1.5 for elite)
+            sp += if (wasElite) 1.5f else 0.5f
+            val eliteGoldMult = if (wasElite) 3f else 1f
+            val killGold = (eliteGoldMult * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
             BattleBridge.onGoldPickup(deathX, deathY, killGold)
         }
     }
@@ -364,6 +507,28 @@ class BattleEngine(
             if (!stillAlive) deadZones.add(zone)
         }
         deadZones.forEach { zones.release(it) }
+
+        // Push zone data to UI
+        val zCount = zones.activeCount
+        if (zCount > 0) {
+            val zxs = FloatArray(zCount)
+            val zys = FloatArray(zCount)
+            val zradii = FloatArray(zCount)
+            val zfamilies = IntArray(zCount)
+            var zi = 0
+            zones.forEach { zone ->
+                if (zone.alive && zi < zCount) {
+                    zxs[zi] = zone.position.x / W
+                    zys[zi] = zone.position.y / H
+                    zradii[zi] = zone.radius / W
+                    zfamilies[zi] = zone.family
+                    zi++
+                }
+            }
+            BattleBridge.updateZoneData(zxs, zys, zradii, zfamilies, zi)
+        } else {
+            BattleBridge.updateZoneData(FloatArray(0), FloatArray(0), FloatArray(0), IntArray(0), 0)
+        }
     }
 
     private fun updatePets(dt: Float) {
@@ -402,10 +567,17 @@ class BattleEngine(
         val relicCritDmg = rm?.totalCritDamageBonus() ?: 0f
         val relicArmorPen = rm?.totalArmorPenPercent() ?: 0f
         val relicMagicDmg = rm?.totalMagicDmgPercent() ?: 0f
+
+        // Synergy bonus
+        val synergy = SynergySystem.getSynergyBonus(deck, unit.family)
+
         val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance)
         val critMultiplier = 2f + relicCritDmg
         val isMagic = unit.family == 1 || unit.family == 4
-        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus)
+        val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.001f // +0.1% per level
+        val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
+        val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
+        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus) * synergy.atkMultiplier * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
             (if (isMagic) (1f + relicMagicDmg) else 1f) *
             (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
@@ -464,11 +636,15 @@ class BattleEngine(
         val def = UNIT_DEFS.find { it.id == unitDefId } ?: return
         val unit = units.acquire() ?: return
         val abilityInfo = abilityForFamily(familyIndex)
+        val synergy = SynergySystem.getSynergyBonus(deck, familyIndex)
+        // Apply permanent unit level bonus from card upgrades
+        val permLevel = permanentUnitLevels.getOrElse(unitDefId) { 1 }
+        val permLevelBonus = 1f + (permLevel - 1) * 0.02f // +2% ATK per permanent level
         unit.init(
             unitDefId = unitDefId, grade = grade, family = familyIndex, level = 1,
             tileIndex = tileIndex, homePos = grid.cellCenter(tileIndex),
-            baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
-            range = def.range * upgradeRangeMult,
+            baseATK = def.baseATK.toFloat() * permLevelBonus, atkSpeed = def.baseSpeed * synergy.spdMultiplier,
+            range = def.range * upgradeRangeMult * synergy.rangeMultiplier,
             abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
         )
         UniqueAbilitySystem.initUnit(unit)
@@ -742,11 +918,16 @@ class BattleEngine(
         val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt()
         val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
-        val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 10 // HP never dropped below 90%
+        val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 5 // HP never dropped below 80%
         val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
-        val cardsEarned = if (victory) 3 + stageId + difficulty else 1 // higher difficulty = more cards
-        // Roll relic drop on victory (10% chance)
-        val relicDrop = if (victory) relicManager?.rollRelicDrop() else null
+        val baseCards = if (victory) 3 + stageId + difficulty else 1
+        val dungeonCardBonus = if (isDungeonMode && victory) waveSystem.currentWave / 5 else 0
+        val cardsEarned = baseCards + dungeonCardBonus
+        // Roll relic drop on victory (10% chance, 50% in RELIC_HUNT dungeon)
+        val relicDrop = if (victory) {
+            val isRelicHunt = isDungeonMode && dungeonDef?.type == com.example.jaygame.data.DungeonType.RELIC_HUNT
+            if (isRelicHunt) relicManager?.rollRelicDropBoosted(0.50) else relicManager?.rollRelicDrop()
+        } else null
         BattleBridge.onBattleEnd(
             victory, waveSystem.currentWave + 1, goldEarned, trophyChange,
             killCount, mergeCount, cardsEarned, noHpLost, fastClear,

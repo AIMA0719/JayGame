@@ -74,6 +74,9 @@ fun claimReward(data: GameData): GameData {
 
     val updatedUnits = addRandomCardsToUnits(data.units, reward.cards)
 
+    // Daily login also gives season XP (5 base + 5 per streak day)
+    val seasonXpBonus = 5 + dayIndex * 5
+
     return data.copy(
         gold = data.gold + reward.gold,
         diamonds = data.diamonds + reward.diamonds,
@@ -81,6 +84,7 @@ fun claimReward(data: GameData): GameData {
         loginStreak = newStreak,
         lastClaimedDay = newStreak,
         units = updatedUnits,
+        seasonXP = data.seasonXP + seasonXpBonus,
     )
 }
 

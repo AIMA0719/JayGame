@@ -47,6 +47,7 @@ data class GameData(
     val lastClaimedDay: Int = 0,
     val seasonXP: Int = 0,
     val seasonClaimedTier: Int = 0,
+    val seasonMonth: String = "", // "2026-03" format — resets when month changes
     // 스태미나
     val stamina: Int = 100,
     val maxStamina: Int = 100,
@@ -86,6 +87,10 @@ data class GameData(
     // 프로필
     val selectedProfileId: Int = 0,
     val unlockedProfiles: Set<Int> = setOf(0),
+    // 오프라인 보상
+    val lastOnlineTime: Long = System.currentTimeMillis(),
+    // 튜토리얼
+    val tutorialCompleted: Boolean = false,
 ) {
     val equippedPetSlotCount: Int get() = if (trophies >= 2000) 2 else 1
     val equippedSlotCount: Int get() = when {

@@ -5,6 +5,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -81,6 +86,7 @@ fun BattleScreen(
 
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var savedSpeed by remember { mutableFloatStateOf(1f) }
     var showBulkSellDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
@@ -149,7 +155,11 @@ fun BattleScreen(
         }
     }
 
-    BackHandler { showMenuDialog = true }
+    BackHandler {
+        savedSpeed = BattleBridge.battleSpeed.value
+        BattleBridge.setBattleSpeed(0f)
+        showMenuDialog = true
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 0: Full-screen background image
@@ -177,7 +187,8 @@ fun BattleScreen(
                 .padding(horizontal = 25.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .align(Alignment.Center),
+                .align(Alignment.Center)
+                .clipToBounds(),
         ) {
             MonsterPathOverlay()
             EnemyOverlay()
@@ -236,6 +247,9 @@ fun BattleScreen(
             }
         }
 
+        // Layer 1.5: Zone effect ground overlay
+        ZoneGroundOverlay()
+
         // Layer 2: HUD overlays
         Column(
             modifier = Modifier
@@ -243,7 +257,11 @@ fun BattleScreen(
                 .windowInsetsPadding(WindowInsets.displayCutout),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            BattleTopHud(onPauseClick = { showMenuDialog = true })
+            BattleTopHud(onPauseClick = {
+                savedSpeed = BattleBridge.battleSpeed.value
+                BattleBridge.setBattleSpeed(0f)
+                showMenuDialog = true
+            })
             // Boss modifier alert — appears below top HUD for 3 seconds when boss spawns
             BossModifierAlert()
             Spacer(modifier = Modifier.weight(1f))
@@ -279,11 +297,16 @@ fun BattleScreen(
             BattleResultTransition(
                 victory = data.victory,
             ) {
+                val dungeonId = BattleBridge.dungeonId.value
+                val dDef = if (dungeonId >= 0) com.example.jaygame.data.ALL_DUNGEONS.getOrNull(dungeonId) else null
+                val displayGold = if (dDef != null) (data.goldEarned * dDef.rewardMultiplier).toInt() else data.goldEarned
+                val displayTrophy = if (dDef != null) 0 else data.trophyChange
+
                 ResultScreen(
                     victory = data.victory,
                     waveReached = data.waveReached,
-                    goldEarned = data.goldEarned,
-                    trophyChange = data.trophyChange,
+                    goldEarned = displayGold,
+                    trophyChange = displayTrophy,
                     killCount = data.killCount,
                     mergeCount = data.mergeCount,
                     cardsEarned = data.cardsEarned,
@@ -297,10 +320,18 @@ fun BattleScreen(
             }
         }
 
-        // Layer 5: Menu dialog
+        // Layer 5: Menu dialog (pauses game)
         if (showMenuDialog) {
             BattleMenuDialog(
-                onDismiss = { showMenuDialog = false },
+                onDismiss = {
+                    showMenuDialog = false
+                    // Resume: if user changed speed in menu, use that; otherwise restore saved
+                    val menuSpeed = BattleBridge.battleSpeed.value
+                    if (menuSpeed == 0f) {
+                        BattleBridge.setBattleSpeed(savedSpeed)
+                    }
+                    // else user already set a new speed via menu controls
+                },
                 onQuitClick = {
                     showMenuDialog = false
                     showQuitDialog = true
@@ -313,6 +344,100 @@ fun BattleScreen(
             QuitBattleDialog(
                 onConfirm = onGoHome,
                 onDismiss = { showQuitDialog = false },
+            )
+        }
+
+        // Layer 7: Tutorial hints (first battle only)
+        val isTutorial by BattleBridge.tutorialMode.collectAsState()
+        if (isTutorial && result == null) {
+            TutorialHintOverlay()
+        }
+    }
+}
+
+// ─── Zone Ground Overlay ─────────────────────────────────────
+
+private val ZoneFireColor = Color(0xFFFF6B35)
+private val ZoneFrostColor = Color(0xFF64B5F6)
+private val ZonePoisonColor = Color(0xFF81C784)
+private val ZoneLightningColor = Color(0xFFFFD54F)
+private val ZoneSupportColor = Color(0xFFCE93D8)
+private val ZoneWindColor = Color(0xFF80CBC4)
+
+private fun zoneColor(family: Int): Color = when (family) {
+    0 -> ZoneFireColor
+    1 -> ZoneFrostColor
+    2 -> ZonePoisonColor
+    3 -> ZoneLightningColor
+    4 -> ZoneSupportColor
+    5 -> ZoneWindColor
+    else -> Color.White
+}
+
+@Composable
+private fun ZoneGroundOverlay() {
+    val zones by BattleBridge.zoneData.collectAsState()
+    if (zones.count == 0) return
+
+    Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
+        val w = size.width
+        val h = size.height
+        for (i in 0 until zones.count) {
+            val cx = zones.xs[i] * w
+            val cy = zones.ys[i] * h
+            val radius = zones.radii[i] * w
+            val color = zoneColor(zones.families[i])
+
+            // Ground glow
+            drawCircle(
+                color = color.copy(alpha = 0.15f),
+                radius = radius,
+                center = Offset(cx, cy),
+            )
+            // Border ring
+            drawCircle(
+                color = color.copy(alpha = 0.3f),
+                radius = radius,
+                center = Offset(cx, cy),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f),
+            )
+        }
+    }
+}
+
+/** Tutorial hint overlay — shows step-by-step tips on first battle */
+@Composable
+private fun TutorialHintOverlay() {
+    val battle by BattleBridge.state.collectAsState()
+    val unitCount by remember { derivedStateOf { BattleBridge.unitPositions.value.count } }
+
+    // Determine which hint to show based on game state
+    val hintText = when {
+        battle.currentWave == 0 && unitCount == 0 -> "하단의 소환 버튼을 탭하여 유닛을 배치하세요!"
+        unitCount in 1..2 -> "유닛을 더 소환하세요. 같은 유닛 3개를 합성할 수 있습니다!"
+        battle.currentWave == 0 && unitCount >= 3 -> "적이 곧 나타납니다. 유닛이 자동으로 공격합니다."
+        battle.currentWave in 1..2 && battle.sp > 80 -> "SP가 충분합니다! 유닛을 더 소환하세요."
+        battle.isBossRound -> "보스 웨이브! 제한 시간 내에 처치하세요!"
+        else -> null
+    }
+
+    if (hintText != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp, vertical = 120.dp),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Text(
+                text = hintText,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
     }
@@ -571,6 +696,29 @@ private fun BattleMenuDialog(
                             accentColor = if (isSelected) color else SubText,
                             accentColorDark = if (isSelected) color.copy(alpha = 0.7f) else DimText,
                         )
+                    }
+                }
+
+                // ── Active synergies ──
+                val battleState by BattleBridge.state.collectAsState()
+                val deckFamilies = battleState.deckUnits
+                val synergyCounts = remember(deckFamilies.toList()) {
+                    val counts = IntArray(6)
+                    deckFamilies.forEach { if (it in 0..5) counts[it]++ }
+                    counts.mapIndexed { idx, count -> idx to count }.filter { it.second >= 2 }
+                }
+                if (synergyCounts.isNotEmpty()) {
+                    Text(text = "활성 시너지", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    synergyCounts.forEach { (familyOrd, count) ->
+                        val family = com.example.jaygame.data.UnitFamily.entries.getOrNull(familyOrd)
+                        if (family != null) {
+                            val isFull = count >= 3
+                            Text(
+                                text = "${family.label} x$count" + if (isFull) " (풀)" else "",
+                                color = family.color,
+                                fontSize = 11.sp,
+                            )
+                        }
                     }
                 }
 

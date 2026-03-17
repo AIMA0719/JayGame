@@ -89,13 +89,22 @@ class Enemy {
         return true
     }
 
+    /** SHIELDED boss: shield blocks all damage, cycles 5s on / 3s off */
+    var shieldTimer = 0f
+    var shieldActive = false
+
     fun takeDamage(damage: Float, isMagic: Boolean = false, attackRange: Float = 0f): Float {
+        // SHIELDED: completely block damage during shield phase
+        if (bossModifier == BossModifier.SHIELDED && shieldActive) return 0f
+
         var adjustedDamage = damage
         // Boss modifier: reduce physical/magic/ranged damage
         when (bossModifier) {
             BossModifier.PHYSICAL_RESIST -> if (!isMagic) adjustedDamage *= 0.4f
             BossModifier.MAGIC_RESIST -> if (isMagic) adjustedDamage *= 0.4f
             BossModifier.RANGED_RESIST -> if (attackRange > 200f) adjustedDamage *= 0.5f
+            // BERSERKER: takes 15% more damage as trade-off
+            BossModifier.BERSERKER -> if (hpRatio < 0.5f) adjustedDamage *= 1.15f
             else -> {}
         }
         val effectiveArmor = (armor - buffs.getArmorReduction()).coerceAtLeast(0f)
@@ -106,6 +115,12 @@ class Enemy {
         }
         val finalDmg = buffs.absorbDamage(adjustedDamage * reduction)
         hp -= finalDmg
+
+        // VAMPIRIC: heal 20% of damage dealt to player
+        if (bossModifier == BossModifier.VAMPIRIC) {
+            hp = (hp + finalDmg * 0.2f).coerceAtMost(maxHp)
+        }
+
         if (hp <= 0f) alive = false
         return finalDmg
     }
@@ -124,7 +139,17 @@ class Enemy {
         bossModifier = null
         regenTimer = 10f
         ccResistance = 0f
+        shieldTimer = 0f
+        shieldActive = false
+        berserkerActivated = false
+        splitterTriggered = false
     }
+
+    /** BERSERKER: track if speed boost was applied */
+    var berserkerActivated = false
+
+    /** SPLITTER: track if split already happened */
+    var splitterTriggered = false
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f
     val size: Float get() = if (type == 4 || type == 5) 96f else 48f

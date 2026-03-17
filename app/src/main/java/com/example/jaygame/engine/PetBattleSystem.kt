@@ -64,7 +64,9 @@ class PetBattleSystem {
             // Trigger skill
             val triggered = triggerSkill(pet, enemies, units, onDamageEnemy, onBuffUnit, onDotEnemy)
             if (triggered) {
-                pet.cooldownRemaining = pet.def.cooldown
+                // Higher pet level reduces cooldown (up to -30% at level 10)
+                val levelCdReduction = 1f - (pet.level * 0.03f).coerceAtMost(0.3f)
+                pet.cooldownRemaining = pet.def.cooldown * levelCdReduction
             }
         }
     }

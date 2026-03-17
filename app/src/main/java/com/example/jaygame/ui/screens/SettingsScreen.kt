@@ -46,6 +46,7 @@ import com.example.jaygame.navigation.Routes
 import com.example.jaygame.ui.components.DailyLoginDialog
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.components.canClaim
 import com.example.jaygame.ui.components.claimReward
 import com.example.jaygame.ui.theme.DarkNavy
@@ -60,7 +61,7 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
-private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, DATA, PROFILE }
+private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, UPGRADE, DATA, PROFILE }
 
 @Composable
 fun SettingsScreen(
@@ -154,6 +155,11 @@ fun SettingsScreen(
                     onBack = { currentPage = SettingsPage.MAIN },
                     onUpdate = { repository.save(it) },
                 )
+                SettingsPage.UPGRADE -> SettingsUpgrade(
+                    data = data,
+                    onBack = { currentPage = SettingsPage.MAIN },
+                    onUpdate = { repository.save(it) },
+                )
                 SettingsPage.DATA -> SettingsData(
                     onBack = { currentPage = SettingsPage.MAIN },
                     onReset = { showResetDialog = true },
@@ -201,6 +207,14 @@ private fun SettingsMain(
                     title = "게임플레이",
                     iconTint = NeonCyan,
                     onClick = { onPageSelected(SettingsPage.GAMEPLAY) },
+                )
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsCategoryRow(
+                    iconRes = R.drawable.ic_settings_gameplay,
+                    title = "강화",
+                    iconTint = NeonGreen,
+                    onClick = { onPageSelected(SettingsPage.UPGRADE) },
                 )
             }
             GameCard(modifier = Modifier.fillMaxWidth()) {
@@ -479,6 +493,119 @@ private fun SettingsGameplay(
                         .height(34.dp),
                     fontSize = 13.sp,
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+// ── Upgrade Sub-page ──
+
+private const val FAMILY_UPGRADE_MAX_LEVEL = 10
+private const val FAMILY_UPGRADE_PERCENT_PER_LEVEL = 0.1f // +0.1% per level
+
+@Composable
+private fun SettingsUpgrade(
+    data: com.example.jaygame.data.GameData,
+    onBack: () -> Unit,
+    onUpdate: (com.example.jaygame.data.GameData) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SubPageHeader(title = "강화", onBack = onBack)
+
+        // ── 설명 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text("가족 강화", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "골드를 소비하여 각 가족 유닛의 공격력을 영구적으로 강화합니다.\n레벨당 +0.1%, 최대 Lv.10 (+1.0%)",
+                    fontSize = 11.sp,
+                    color = SubText,
+                    lineHeight = 16.sp,
+                )
+            }
+        }
+
+        // ── 가족별 강화 카드 ──
+        val families = com.example.jaygame.data.UnitFamily.entries
+        families.forEach { family ->
+            val key = family.name
+            val level = data.familyUpgrades[key] ?: 0
+            val isMaxLevel = level >= FAMILY_UPGRADE_MAX_LEVEL
+            val cost = 500 + level * 500 // 500, 1000, 1500, ... 5500
+            val bonusPercent = "%.1f".format(level * FAMILY_UPGRADE_PERCENT_PER_LEVEL)
+            val canAfford = data.gold >= cost && !isMaxLevel
+
+            GameCard(
+                modifier = Modifier.fillMaxWidth(),
+                borderColor = if (isMaxLevel) Gold.copy(alpha = 0.5f) else family.color.copy(alpha = 0.3f),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Family name + color indicator
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = family.label,
+                            color = family.color,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = if (isMaxLevel) "MAX (+${bonusPercent}%)" else "Lv.$level (+${bonusPercent}%)",
+                            color = if (isMaxLevel) Gold else SubText,
+                            fontSize = 12.sp,
+                        )
+                        // Progress bar
+                        Spacer(Modifier.height(4.dp))
+                        NeonProgressBar(
+                            progress = level.toFloat() / FAMILY_UPGRADE_MAX_LEVEL,
+                            barColor = family.color,
+                            height = 6.dp,
+                        )
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    // Upgrade button
+                    if (isMaxLevel) {
+                        Text(
+                            text = "완료",
+                            color = Gold,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    } else {
+                        NeonButton(
+                            text = "${cost}G",
+                            onClick = {
+                                if (canAfford) {
+                                    val newUpgrades = data.familyUpgrades.toMutableMap()
+                                    newUpgrades[key] = level + 1
+                                    onUpdate(data.copy(
+                                        gold = data.gold - cost,
+                                        familyUpgrades = newUpgrades,
+                                    ))
+                                }
+                            },
+                            enabled = canAfford,
+                            modifier = Modifier
+                                .width(80.dp)
+                                .height(34.dp),
+                            fontSize = 12.sp,
+                            accentColor = if (canAfford) NeonGreen else DimText,
+                            accentColorDark = if (canAfford) NeonGreen.copy(alpha = 0.5f) else DimText.copy(alpha = 0.5f),
+                        )
+                    }
+                }
             }
         }
 

@@ -42,7 +42,7 @@ object DamageCalculator {
         relicCritDamageBonus: Float = 0f, // 유물 크리티컬 데미지 보너스
     ): Float {
         val levelMultiplier = LEVEL_MULTIPLIERS.getOrElse(level - 1) { 1f }
-        val familyBonus = 1f + familyUpgradeLevel * 0.05f // 계열 영구 강화: 레벨당 +5%
+        val familyBonus = 1f + familyUpgradeLevel * 0.001f // +0.1% per level // 계열 영구 강화: 레벨당 +5%
         val effectiveATK = baseATK * levelMultiplier * buffMultiplier * familyBonus * (1f + relicAtkBonus)
         val baseCritChance = 0.05f + relicCritChanceBonus
         val critMultiplier = if (Math.random() < baseCritChance) 2f + relicCritDamageBonus else 1f
@@ -92,4 +92,97 @@ object DamageCalculator {
     }
 
     private val LEVEL_MULTIPLIERS = floatArrayOf(1.0f, 1.5f, 2.2f, 3.2f, 4.5f, 6.0f, 8.0f)
+
+    /** 등급(Grade) 기반 데미지 보정 — 레퍼런스: 랜덤디펜스 계열 (최고 등급 ~1.5x) */
+    private val GRADE_MULTIPLIERS = floatArrayOf(
+        1.0f,   // Common
+        1.05f,  // Rare       (+5%)
+        1.10f,  // Hero       (+10%)
+        1.18f,  // Legend     (+18%)
+        1.28f,  // Ancient    (+28%)
+        1.38f,  // Mythic     (+38%)
+        1.50f,  // Immortal   (+50%)
+    )
+
+    fun gradeMultiplier(grade: Int): Float =
+        GRADE_MULTIPLIERS.getOrElse(grade) { 1f }
+
+    /**
+     * 속성 상성 — 화염→냉기→바람→번개→독→화염 (1.2x),
+     * 보조는 상성 없음 (1.0x)
+     * @param attackerFamily 공격하는 유닛의 가족 (0-5)
+     * @param defenderType 적 타입 (0-5, 연관)
+     */
+    fun familyAdvantageMultiplier(attackerFamily: Int, defenderType: Int): Float {
+        // 보조(4)는 상성 없음
+        if (attackerFamily == 4 || defenderType >= 5) return 1f
+        // 상성 루프: 0(화염)→1(냉기)→5(바람)→3(번개)→2(독)→0(화염)
+        val advantageMap = intArrayOf(1, 5, 0, 2, -1, 3) // family → 유리한 대상
+        val disadvantageMap = intArrayOf(2, 0, 3, 5, -1, 1) // family → 불리한 대상
+        val mapped = defenderType % 6
+        return when (mapped) {
+            advantageMap.getOrElse(attackerFamily) { -1 } -> 1.2f  // 유리
+            disadvantageMap.getOrElse(attackerFamily) { -1 } -> 0.85f // 불리
+            else -> 1f
+        }
+    }
+
+    /**
+     * 크리티컬 판정 분리 — isCrit 여부와 배율을 함께 반환
+     */
+    data class CritResult(val isCrit: Boolean, val multiplier: Float)
+
+    fun rollCrit(
+        baseCritChance: Float = 0.05f,
+        relicCritChanceBonus: Float = 0f,
+        relicCritDamageBonus: Float = 0f,
+        upgradeCritRate: Float = 0f,
+    ): CritResult {
+        val totalChance = (baseCritChance + relicCritChanceBonus + upgradeCritRate).coerceAtMost(0.8f)
+        val isCrit = Math.random() < totalChance
+        val multiplier = if (isCrit) 2f + relicCritDamageBonus else 1f
+        return CritResult(isCrit, multiplier)
+    }
+
+    /**
+     * 통합 데미지 계산 — 등급, 상성, 크리티컬 모두 반영
+     */
+    data class DamageResult(val damage: Float, val isCrit: Boolean)
+
+    fun calculateFullDamage(
+        baseATK: Float,
+        level: Int,
+        grade: Int,
+        attackerFamily: Int,
+        defenderType: Int,
+        defense: Float,
+        magicResist: Float,
+        isPhysical: Boolean = true,
+        buffMultiplier: Float = 1f,
+        familyUpgradeLevel: Int = 0,
+        relicAtkBonus: Float = 0f,
+        relicArmorPenPercent: Float = 0f,
+        relicCritChanceBonus: Float = 0f,
+        relicCritDamageBonus: Float = 0f,
+        upgradeCritRate: Float = 0f,
+        armorBreakReduction: Float = 0f,
+    ): DamageResult {
+        val levelMult = LEVEL_MULTIPLIERS.getOrElse(level - 1) { 1f }
+        val gradeMult = gradeMultiplier(grade)
+        val familyBonus = 1f + familyUpgradeLevel * 0.001f // +0.1% per level
+        val advantageMult = familyAdvantageMultiplier(attackerFamily, defenderType)
+
+        val effectiveATK = baseATK * levelMult * gradeMult * buffMultiplier * familyBonus * (1f + relicAtkBonus) * advantageMult
+
+        val crit = rollCrit(0.05f, relicCritChanceBonus, relicCritDamageBonus, upgradeCritRate)
+        val dmgAfterCrit = effectiveATK * crit.multiplier
+
+        val finalDmg = if (isPhysical) {
+            calculatePhysicalDamage(dmgAfterCrit, defense, armorBreakReduction, relicArmorPenPercent)
+        } else {
+            calculateMagicDamage(dmgAfterCrit, magicResist)
+        }
+
+        return DamageResult(finalDmg, crit.isCrit)
+    }
 }

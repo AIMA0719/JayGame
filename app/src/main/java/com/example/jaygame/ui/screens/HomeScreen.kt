@@ -249,7 +249,32 @@ fun HomeScreen(
                     height = 10.dp,
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Season tier mini indicator
+                if (data.seasonTier > 0 || data.seasonXP > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "시즌 Tier ${data.seasonTier}",
+                            fontSize = 10.sp,
+                            color = Gold.copy(alpha = 0.7f),
+                        )
+                        Text(
+                            text = "${data.seasonXP % 100}/100 XP",
+                            fontSize = 10.sp,
+                            color = SubText,
+                        )
+                    }
+                    NeonProgressBar(
+                        progress = data.seasonTierProgress,
+                        barColor = Gold,
+                        height = 5.dp,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Battle + Dungeon side by side
                 run {
@@ -271,8 +296,10 @@ fun HomeScreen(
                             accentColorDark = NeonRedDark,
                             glowPulse = true,
                         )
+                        val dungeonMgr = com.example.jaygame.engine.DungeonManager(data)
+                        val dungeonRemaining = dungeonMgr.remainingAttempts()
                         NeonButton(
-                            text = "던전",
+                            text = "던전 ($dungeonRemaining)",
                             onClick = { onNavigateToDungeon?.invoke() },
                             enabled = onNavigateToDungeon != null,
                             modifier = Modifier

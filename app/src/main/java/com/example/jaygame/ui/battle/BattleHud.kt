@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 import com.example.jaygame.util.HapticManager
 
 // ── Warm medieval theme colors ──
+private val DungeonPurple = Color(0xFFAB47BC)
 private val WoodBrown = Color(0xFF5C3A1E)
 private val WoodBrownLight = Color(0xFF7B5230)
 private val WoodBrownDark = Color(0xFF3E2510)
@@ -139,14 +140,21 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    // Wave remaining time
+                    // Wave remaining time — boss waves get bigger, more urgent display
                     val waveMin = (battle.waveTimeRemaining / 60f).toInt()
                     val waveSec = (battle.waveTimeRemaining % 60f).toInt()
-                    val waveTimeColor = if (battle.waveTimeRemaining < 30f) NeonRed else Color.White
+                    val isBossWave = battle.isBossRound
+                    val waveTimeColor = when {
+                        battle.waveTimeRemaining < 15f && isBossWave -> Color(0xFFFF0000) // critical
+                        battle.waveTimeRemaining < 30f -> NeonRed
+                        isBossWave -> Color(0xFFFF8844)
+                        else -> Color.White
+                    }
+                    val timerSize = if (isBossWave && battle.waveTimeRemaining < 30f) 26.sp else 22.sp
                     Text(
                         text = "%d:%02d".format(waveMin, waveSec),
                         color = waveTimeColor,
-                        fontSize = 22.sp,
+                        fontSize = timerSize,
                         fontWeight = FontWeight.ExtraBold,
                     )
 
@@ -173,6 +181,29 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                         )
+                    }
+
+                    // Dungeon mode indicator
+                    val dungeonId by BattleBridge.dungeonId.collectAsState()
+                    if (dungeonId >= 0) {
+                        val dDef = com.example.jaygame.data.ALL_DUNGEONS.getOrNull(dungeonId)
+                        if (dDef != null) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(1.dp, DungeonPurple.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                    .background(DungeonPurple.copy(alpha = 0.2f))
+                                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = dDef.name,
+                                    color = DungeonPurple,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                )
+                            }
+                        }
                     }
                 }
             }

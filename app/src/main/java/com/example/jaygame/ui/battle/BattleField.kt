@@ -452,6 +452,19 @@ fun BattleField() {
                 )
             }
 
+            // ── Selected unit: range circle ──
+            if (isSelected) {
+                // Approximate range from UnitDefs (default ~200 world units in 720 world)
+                val rangeScreen = (200f / 720f) * w // fallback range
+                val rangePulse = 0.15f + sin(t * 3f) * 0.05f
+                drawCircle(
+                    color = gradeColor.copy(alpha = rangePulse),
+                    radius = rangeScreen,
+                    center = Offset(screenX, screenY),
+                    style = Stroke(width = 1.5f),
+                )
+            }
+
             // ── Idle Bounce ──
             val bounceOffset = sin(t * 2.5f + unitDefId * 0.7f) * 3f
 

@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -48,6 +50,7 @@ import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
+import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.SubText
@@ -88,8 +91,10 @@ private val FAMILY_ICONS = mapOf(
 @Composable
 fun UnitCollectionScreen(
     onBack: () -> Unit,
+    repository: com.example.jaygame.data.GameRepository? = null,
 ) {
     var selectedUnit by remember { mutableStateOf<UnitDef?>(null) }
+    val gameData = repository?.gameData?.collectAsState()?.value
 
     val unitsByFamily = remember {
         UnitFamily.entries.map { family ->
@@ -153,6 +158,7 @@ fun UnitCollectionScreen(
                         family = family,
                         units = units,
                         onUnitClick = { selectedUnit = it },
+                        ownedUnitIds = gameData?.units?.mapIndexedNotNull { idx, p -> if (p.owned) idx else null }?.toSet(),
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -164,6 +170,7 @@ fun UnitCollectionScreen(
             UnitDetailDialog(
                 unit = unit,
                 onDismiss = { selectedUnit = null },
+                repository = repository,
             )
         }
     }
@@ -174,6 +181,7 @@ private fun FamilyUnitRow(
     family: UnitFamily,
     units: List<UnitDef>,
     onUnitClick: (UnitDef) -> Unit,
+    ownedUnitIds: Set<Int>? = null,
 ) {
     val icon = FAMILY_ICONS[family] ?: ""
 
@@ -191,8 +199,9 @@ private fun FamilyUnitRow(
                 color = family.color,
             )
             Spacer(modifier = Modifier.width(8.dp))
+            val ownedCount = if (ownedUnitIds != null) units.count { it.id in ownedUnitIds } else units.size
             Text(
-                text = "${units.size}종",
+                text = "$ownedCount/${units.size}",
                 fontSize = 12.sp,
                 color = SubText,
             )
@@ -211,6 +220,7 @@ private fun FamilyUnitRow(
                 CodexUnitCard(
                     unit = unit,
                     onClick = { onUnitClick(unit) },
+                    isOwned = ownedUnitIds?.contains(unit.id) ?: true,
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -222,6 +232,7 @@ private fun FamilyUnitRow(
 private fun CodexUnitCard(
     unit: UnitDef,
     onClick: () -> Unit,
+    isOwned: Boolean = true,
 ) {
     val gradeColor = unit.grade.color
     val borderColor = codexGradeBorderColor(unit.grade)
@@ -233,10 +244,11 @@ private fun CodexUnitCard(
             .background(codexGradeBgColor(unit.grade))
             .border(
                 width = if (unit.grade.ordinal >= UnitGrade.LEGEND.ordinal) 2.dp else 1.dp,
-                color = borderColor,
+                color = if (isOwned) borderColor else borderColor.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onClick)
+            .then(if (!isOwned) Modifier.graphicsLayer { alpha = 0.4f } else Modifier)
             .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -296,6 +308,7 @@ private fun CodexUnitCard(
 private fun UnitDetailDialog(
     unit: UnitDef,
     onDismiss: () -> Unit,
+    repository: com.example.jaygame.data.GameRepository? = null,
 ) {
     val gradeColor = unit.grade.color
 
@@ -496,6 +509,71 @@ private fun UnitDetailDialog(
                                 color = LightText,
                                 fontSize = 12.sp,
                             )
+                        }
+                    }
+                }
+
+                // Card-based permanent level up
+                if (repository != null) {
+                    val data = repository.gameData.collectAsState().value
+                    val unitIdx = unit.id
+                    if (unitIdx in data.units.indices) {
+                        val progress = data.units[unitIdx]
+                        if (progress.owned) {
+                            val cardsNeeded = progress.level * 3 // 레벨당 3장씩 더 필요
+                            val canLevelUp = progress.cards >= cardsNeeded && progress.level < 10
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.White.copy(alpha = 0.05f))
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Lv.${progress.level}" + if (progress.level >= 10) " (MAX)" else "",
+                                        color = if (progress.level >= 10) Gold else LightText,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    if (progress.level < 10) {
+                                        Text(
+                                            text = "카드: ${progress.cards} / $cardsNeeded",
+                                            color = if (canLevelUp) NeonGreen else SubText,
+                                            fontSize = 11.sp,
+                                        )
+                                    }
+                                }
+                                if (progress.level < 10) {
+                                    NeonButton(
+                                        text = "레벨업",
+                                        onClick = {
+                                            if (canLevelUp) {
+                                                val updatedUnits = data.units.toMutableList()
+                                                updatedUnits[unitIdx] = progress.copy(
+                                                    level = progress.level + 1,
+                                                    cards = progress.cards - cardsNeeded,
+                                                )
+                                                val newMaxLevel = updatedUnits.maxOf { it.level }
+                                                repository.save(data.copy(
+                                                    units = updatedUnits,
+                                                    maxUnitLevel = newMaxLevel,
+                                                ))
+                                            }
+                                        },
+                                        enabled = canLevelUp,
+                                        modifier = Modifier
+                                            .width(72.dp)
+                                            .height(32.dp),
+                                        fontSize = 12.sp,
+                                        accentColor = if (canLevelUp) NeonGreen else DimText,
+                                        accentColorDark = if (canLevelUp) NeonGreen.copy(alpha = 0.5f) else DimText.copy(alpha = 0.5f),
+                                    )
+                                }
+                            }
                         }
                     }
                 }

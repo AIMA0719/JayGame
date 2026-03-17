@@ -90,6 +90,15 @@ class RelicManager(private var gameData: GameData) {
         return relicId to grade
     }
 
+    /** Boosted relic drop for dungeon RELIC_HUNT mode */
+    fun rollRelicDropBoosted(chance: Double): Pair<Int, RelicGrade>? {
+        if (Math.random() > chance) return null
+        val relicId = (ALL_RELICS.indices).random()
+        val def = ALL_RELICS[relicId]
+        val grade = rollGrade(def.minGrade)
+        return relicId to grade
+    }
+
     private fun rollGrade(minGrade: RelicGrade): RelicGrade {
         val eligible = RelicGrade.entries.filter { it.ordinal >= minGrade.ordinal }
         val totalWeight = eligible.sumOf { it.dropWeight }

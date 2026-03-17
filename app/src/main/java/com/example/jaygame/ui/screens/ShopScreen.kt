@@ -120,9 +120,18 @@ fun ShopScreen(repository: GameRepository) {
 
     val diamondPackItems = remember {
         listOf(
-            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", "준비 중", onPurchase = null),
-            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", "준비 중", onPurchase = null),
-            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", "준비 중", onPurchase = null),
+            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", "골드 5,000",
+                onPurchase = { d, repo ->
+                    if (d.gold >= 5000) { repo.save(d.copy(gold = d.gold - 5000, diamonds = d.diamonds + 50)); true } else false
+                }),
+            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", "골드 18,000",
+                onPurchase = { d, repo ->
+                    if (d.gold >= 18000) { repo.save(d.copy(gold = d.gold - 18000, diamonds = d.diamonds + 200)); true } else false
+                }),
+            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", "골드 40,000",
+                onPurchase = { d, repo ->
+                    if (d.gold >= 40000) { repo.save(d.copy(gold = d.gold - 40000, diamonds = d.diamonds + 500)); true } else false
+                }),
         )
     }
 
@@ -136,7 +145,21 @@ fun ShopScreen(repository: GameRepository) {
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 50) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 20), diamonds = d.diamonds - 50)); true } else false
                 }),
-            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", "준비 중", onPurchase = null),
+            ShopItem("스태미나 충전", "스태미나를 50 회복합니다.", "다이아 30",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 30) { repo.save(d.copy(diamonds = d.diamonds - 30, stamina = (d.stamina + 50).coerceAtMost(d.maxStamina))); true } else false
+                }),
+            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", "다이아 100",
+                onPurchase = { d, repo ->
+                    if (d.diamonds >= 100) {
+                        repo.save(d.copy(
+                            diamonds = d.diamonds - 100,
+                            gold = d.gold + 5000,
+                            units = addRandomCardsToUnits(d.units, 10),
+                        ))
+                        true
+                    } else false
+                }),
             ShopItem("\uD83D\uDD27 개발자 모드", "재화 MAX + 스태미나 무한 + 도감 올 해금", "FREE",
                 onPurchase = { d, repo ->
                     val allUnlocked = d.units.map { it.copy(owned = true, cards = 999) }

@@ -7,6 +7,9 @@ object AbilitySystem {
     private const val AURA_RADIUS = 150f
     private const val AURA_TICK = 0.5f
 
+    /** Current deck synergy — set by BattleEngine at start */
+    var activeSynergy: SynergySystem.SynergyBonus = SynergySystem.SynergyBonus()
+
     fun onProjectileHit(
         proj: Projectile,
         enemy: Enemy,
@@ -15,10 +18,14 @@ object AbilitySystem {
     ) {
         enemy.takeDamage(proj.damage, proj.isMagic, proj.attackerRange)
 
+        // Get synergy for this projectile's family
+        val synergy = activeSynergy
+
         when (proj.abilityType) {
             1 -> { // Splash (Fire)
-                // Fire DoT on primary target
-                enemy.buffs.addBuff(BuffType.DoT, proj.damage * 0.1f, 2f, proj.sourceUnitId)
+                // Fire DoT — duration boosted by FIRE_BURN_EXTEND synergy
+                val dotDuration = if (synergy.specialEffect == SynergySystem.SpecialEffect.FIRE_BURN_EXTEND) 3f else 2f
+                enemy.buffs.addBuff(BuffType.DoT, proj.damage * 0.1f, dotDuration, proj.sourceUnitId)
                 val splashRadius = proj.abilityValue.coerceAtLeast(60f)
                 val rect = GameRect(
                     enemy.position.x - splashRadius,
@@ -35,23 +42,29 @@ object AbilitySystem {
                 }
             }
             2 -> { // Slow
-                enemy.buffs.addBuff(BuffType.Slow, proj.abilityValue, 2f, proj.sourceUnitId)
+                // FROST_SLOW_BOOST: +30% slow strength
+                val slowValue = if (synergy.specialEffect == SynergySystem.SpecialEffect.FROST_SLOW_BOOST) {
+                    proj.abilityValue * 1.3f
+                } else proj.abilityValue
+                enemy.buffs.addBuff(BuffType.Slow, slowValue, 2f, proj.sourceUnitId)
             }
-            3 -> { // DoT
+            3 -> { // DoT (Poison)
                 enemy.buffs.addBuff(BuffType.DoT, proj.abilityValue, 3f, proj.sourceUnitId)
+                // POISON_SPREAD: on kill, spread poison to nearby enemies
+                // (handled in BattleEngine's enemy death loop)
             }
-            4 -> { // Chain
-                // Mark primary target with lightning hit flag
+            4 -> { // Chain (Lightning)
                 enemy.recentHitFlags = enemy.recentHitFlags or 1
                 enemy.recentHitTimer = 0.5f
-                val chainCount = proj.abilityValue.toInt().coerceIn(1, 5)
+                // LIGHTNING_CHAIN_EXTRA: +1 chain target
+                val extraChain = if (synergy.specialEffect == SynergySystem.SpecialEffect.LIGHTNING_CHAIN_EXTRA) 1 else 0
+                val chainCount = (proj.abilityValue.toInt() + extraChain).coerceIn(1, 6)
                 val rect = GameRect(
                     enemy.position.x - 200f, enemy.position.y - 200f, 400f, 400f,
                 )
                 var chained = 0
                 spatialHash.query(rect).forEach { nearby ->
                     if (chained < chainCount && nearby !== enemy && nearby.alive) {
-                        // Mark chained targets with lightning hit flag
                         nearby.recentHitFlags = nearby.recentHitFlags or 1
                         nearby.recentHitTimer = 0.5f
                         spawnProjectile(enemy.position, nearby, proj.damage * 0.7f, 4)
@@ -75,8 +88,10 @@ object AbilitySystem {
                 if (len > 0.01f) {
                     val nx = dir.x / len
                     val ny = dir.y / len
-                    enemy.position.x += nx * proj.abilityValue
-                    enemy.position.y += ny * proj.abilityValue
+                    // WIND_KNOCKBACK_EXTRA: +40% knockback distance
+                    val knockbackMult = if (synergy.specialEffect == SynergySystem.SpecialEffect.WIND_KNOCKBACK_EXTRA) 1.4f else 1f
+                    enemy.position.x += nx * proj.abilityValue * knockbackMult
+                    enemy.position.y += ny * proj.abilityValue * knockbackMult
                 }
             }
         }
@@ -100,11 +115,13 @@ object AbilitySystem {
                 if (other === unit || !other.alive) continue
                 val dist = unit.position.distanceTo(other.position)
                 if (dist <= AURA_RADIUS) {
+                    // SUPPORT_HEAL_BOOST: +25% aura/buff effectiveness
+                    val supportBoost = if (activeSynergy.specialEffect == SynergySystem.SpecialEffect.SUPPORT_HEAL_BOOST) 1.25f else 1f
                     when (unit.abilityType) {
-                        5 -> other.buffs.addBuff(BuffType.AtkUp, unit.abilityValue, 1f, i)
+                        5 -> other.buffs.addBuff(BuffType.AtkUp, unit.abilityValue * supportBoost, 1f, i)
                         8 -> {
                             if (!other.buffs.hasBuff(BuffType.Shield)) {
-                                other.buffs.addBuff(BuffType.Shield, unit.effectiveATK() * 0.5f, 5f, i)
+                                other.buffs.addBuff(BuffType.Shield, unit.effectiveATK() * 0.5f * supportBoost, 5f, i)
                             }
                         }
                     }

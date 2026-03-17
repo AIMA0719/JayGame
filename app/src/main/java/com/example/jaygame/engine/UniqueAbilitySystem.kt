@@ -169,6 +169,8 @@ object UniqueAbilitySystem {
         val vfx = resolveVfxTypeEnum(unit.family, unit.grade) ?: return
         val nx = unit.position.x / W
         val ny = unit.position.y / H
+        // Grade-based scaling: Hero=1.0, Legend=1.3, Ancient=1.7, Mythic=2.2, Immortal=3.0
+        val gradeScale = DamageCalculator.gradeMultiplier(unit.grade)
 
         // Find best target position (densest enemies or strongest)
         val targetEnemy = enemies.filter { it.alive }.maxByOrNull { it.maxHp } ?: return
@@ -180,7 +182,7 @@ object UniqueAbilitySystem {
             // N2: Inferno — Firestorm Meteor: AoE meteor strike
             SkillVfxType.FIRESTORM_METEOR -> {
                 emitVfx(vfx, tx, ty, 0.12f, unit, 1.5f)
-                val atk = unit.effectiveATK()
+                val atk = unit.effectiveATK() * gradeScale
                 for (e in enemies) {
                     if (!e.alive) continue
                     val dx = e.position.x - targetEnemy.position.x
@@ -200,7 +202,7 @@ object UniqueAbilitySystem {
                         pos = targetEnemy.position.copy(),
                         radius = 100f, duration = 8f,
                         tickInterval = 1.5f,
-                        tickDamage = unit.effectiveATK() * 2f,
+                        tickDamage = unit.effectiveATK() * 2f * gradeScale,
                         family = 0, grade = unit.grade,
                     )
                 }

@@ -263,6 +263,14 @@ object BattleBridge {
 
     fun setDifficulty(diff: Int) { _difficulty.value = diff }
 
+    /** 던전 모드 */
+    private val _dungeonId = MutableStateFlow(-1) // -1 = normal battle
+    val dungeonId: StateFlow<Int> = _dungeonId.asStateFlow()
+
+    fun setDungeonMode(dungeonId: Int) { _dungeonId.value = dungeonId }
+    fun clearDungeonMode() { _dungeonId.value = -1 }
+    val isDungeonMode: Boolean get() = _dungeonId.value >= 0
+
     /** 선택된 타일 인덱스 (-1 = 없음) */
     private val _selectedTile = MutableStateFlow(-1)
     val selectedTile: StateFlow<Int> = _selectedTile.asStateFlow()
@@ -501,6 +509,37 @@ object BattleBridge {
         _phoenixReviveEvent.value = _phoenixReviveEvent.value + 1
     }
 
+    /** Zone effects (persistent ground AoE areas) */
+    data class ZoneData(
+        val xs: FloatArray = FloatArray(0),  // normalized 0-1
+        val ys: FloatArray = FloatArray(0),
+        val radii: FloatArray = FloatArray(0), // normalized
+        val families: IntArray = IntArray(0),
+        val count: Int = 0,
+        val frameId: Long = 0L,
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ZoneData) return false
+            return frameId == other.frameId
+        }
+        override fun hashCode(): Int = frameId.hashCode()
+    }
+
+    private var zoneFrameCounter = 0L
+    private val _zoneData = MutableStateFlow(ZoneData())
+    val zoneData: StateFlow<ZoneData> = _zoneData.asStateFlow()
+
+    fun updateZoneData(xs: FloatArray, ys: FloatArray, radii: FloatArray, families: IntArray, count: Int) {
+        _zoneData.value = ZoneData(xs, ys, radii, families, count, ++zoneFrameCounter)
+    }
+
+    /** 튜토리얼 모드 (첫 전투) */
+    private val _tutorialMode = MutableStateFlow(false)
+    val tutorialMode: StateFlow<Boolean> = _tutorialMode.asStateFlow()
+
+    fun setTutorialMode(enabled: Boolean) { _tutorialMode.value = enabled }
+
     /** 배속 (1f, 2f, 4f, 8f) */
     private val _battleSpeed = MutableStateFlow(1f)
     val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
@@ -515,7 +554,7 @@ object BattleBridge {
     }
 
     fun setBattleSpeed(speed: Float) {
-        _battleSpeed.value = speed.coerceIn(1f, 8f)
+        _battleSpeed.value = speed.coerceIn(0f, 8f) // 0 = paused
     }
 
     /** 새 배틀 시작 시 상태 초기화 */
@@ -539,7 +578,9 @@ object BattleBridge {
         _levelUpEvents.value = emptyList()
         _bossModifier.value = null
         _unitPullPity.value = 0
-        // Note: stageId, difficulty, battleSpeed are preserved — set by ComposeActivity before launch
+        zoneFrameCounter = 0L
+        _zoneData.value = ZoneData()
+        // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _debugMode.value = false
     }

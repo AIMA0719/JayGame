@@ -68,11 +68,14 @@ private fun gradeColor(gradeOrdinal: Int): Color {
 }
 
 private fun resolveDescription(template: String, level: Int, effectPerLevel: Float): String {
-    val value = (level * effectPerLevel).toInt()
+    val value = level * effectPerLevel
+    val valueStr = if (value == value.toInt().toFloat()) "${value.toInt()}" else "%.1f".format(value)
+    val eplInt = effectPerLevel.toInt()
+    val eplStr = if (effectPerLevel == eplInt.toFloat()) "$eplInt" else "%.1f".format(effectPerLevel)
     return template
         .replace("{lv}", level.toString())
-        .replace("{lv}×${effectPerLevel.toInt()}%", "$value%")
-        .replace("{lv}×${effectPerLevel.toInt()}", "$value")
+        .replace("{lv}\u00D7${eplStr}%", "$valueStr%")
+        .replace("{lv}\u00D7${eplStr}", valueStr)
 }
 
 @Composable

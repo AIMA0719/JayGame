@@ -39,6 +39,7 @@ import android.widget.Toast
 fun NavGraph(
     repository: GameRepository,
     onStartBattle: () -> Unit,
+    onStartDungeonBattle: (dungeonId: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
@@ -158,12 +159,14 @@ fun NavGraph(
             composable(Routes.UNIT_CODEX) {
                 UnitCollectionScreen(
                     onBack = { navController.popBackStack() },
+                    repository = repository,
                 )
             }
             composable(Routes.DUNGEON) {
                 DungeonScreen(
                     repository = repository,
                     onBack = { navController.popBackStack() },
+                    onStartDungeonBattle = onStartDungeonBattle,
                 )
             }
             composable(Routes.PROFILE) {

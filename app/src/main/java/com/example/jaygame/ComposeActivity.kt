@@ -25,7 +25,9 @@ import com.example.jaygame.util.HapticManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
+import com.example.jaygame.engine.OfflineRewardManager
 import com.example.jaygame.navigation.NavGraph
+import com.example.jaygame.ui.components.OfflineRewardDialog
 import com.example.jaygame.ui.screens.SplashScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import kotlinx.coroutines.delay
@@ -43,6 +45,12 @@ class ComposeActivity : ComponentActivity() {
             JayGameTheme {
                 var showSplash by remember { mutableStateOf(true) }
                 val data by repository.gameData.collectAsState()
+
+                // Offline reward dialog
+                val offlineReward = remember {
+                    OfflineRewardManager.calculateReward(repository.gameData.value)
+                }
+                var showOfflineReward by remember { mutableStateOf(offlineReward != null) }
 
                 // A2: Battle launch zoom-in wipe state
                 var battleTransitionActive by remember { mutableStateOf(false) }
@@ -96,7 +104,19 @@ class ComposeActivity : ComponentActivity() {
                         NavGraph(
                             repository = repository,
                             onStartBattle = { battleTransitionActive = true },
+                            onStartDungeonBattle = { dungeonId ->
+                                BattleBridge.setDungeonMode(dungeonId)
+                                battleTransitionActive = true
+                            },
                             modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+
+                    // Offline reward dialog
+                    if (showOfflineReward && offlineReward != null && !showSplash) {
+                        OfflineRewardDialog(
+                            reward = offlineReward,
+                            onDismiss = { showOfflineReward = false },
                         )
                     }
 
@@ -123,6 +143,9 @@ class ComposeActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         BgmManager.pause()
+        // Save last online time for offline reward calculation
+        val data = repository.gameData.value
+        repository.save(data.copy(lastOnlineTime = System.currentTimeMillis()))
     }
 
     override fun onDestroy() {
@@ -143,6 +166,24 @@ class ComposeActivity : ComponentActivity() {
         val newUnlocked = STAGES.filter { it.unlockTrophies <= data.trophies }.map { it.id }
         if (newUnlocked.toSet() != data.unlockedStages.toSet()) {
             repository.save(data.copy(unlockedStages = newUnlocked))
+        }
+        // Apply offline rewards and update last online time
+        val afterOffline = OfflineRewardManager.claimReward(repository.gameData.value)
+        repository.save(afterOffline)
+
+        // Season reset check (monthly)
+        val currentMonth = java.time.YearMonth.now().toString() // "2026-03"
+        val latestData = repository.gameData.value
+        if (latestData.seasonMonth != currentMonth && latestData.seasonMonth.isNotEmpty()) {
+            // New month → reset season XP and claimed tier
+            repository.save(latestData.copy(
+                seasonXP = 0,
+                seasonClaimedTier = 0,
+                seasonMonth = currentMonth,
+            ))
+        } else if (latestData.seasonMonth.isEmpty()) {
+            // First time — set current month
+            repository.save(latestData.copy(seasonMonth = currentMonth))
         }
     }
 

@@ -64,6 +64,7 @@ private fun dungeonTypeIcon(type: DungeonType): String = when (type) {
 fun DungeonScreen(
     repository: GameRepository,
     onBack: () -> Unit,
+    onStartDungeonBattle: (dungeonId: Int) -> Unit = {},
 ) {
     val data by repository.gameData.collectAsState()
 
@@ -141,7 +142,7 @@ fun DungeonScreen(
                         val updated = mgr.enterDungeon(def.id)
                         if (updated != null) {
                             repository.save(updated)
-                            // TODO: navigate to battle with dungeon mode
+                            onStartDungeonBattle(def.id)
                         }
                     },
                 )
