@@ -33,7 +33,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -209,8 +212,8 @@ fun UnitCollectionScreen(
                             color = SubText,
                             fontSize = 13.sp,
                         )
-                        // Placeholder cards for hidden units
-                        repeat(6) { index ->
+                        // TODO: Wire to BlueprintRegistry.findByCategory(UnitCategory.HIDDEN)
+                        repeat(18) { index ->
                             HiddenUnitCard(
                                 blueprintId = "hidden_$index",
                                 discovered = false,
@@ -393,6 +396,7 @@ private fun UnitDetailDialog(
     repository: com.example.jaygame.data.GameRepository? = null,
 ) {
     val gradeColor = unit.grade.color
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -640,10 +644,12 @@ private fun UnitDetailDialog(
                                                     cards = progress.cards - cardsNeeded,
                                                 )
                                                 val newMaxLevel = updatedUnits.maxOf { it.level }
-                                                repository.save(data.copy(
-                                                    units = updatedUnits,
-                                                    maxUnitLevel = newMaxLevel,
-                                                ))
+                                                scope.launch(Dispatchers.IO) {
+                                                    repository.save(data.copy(
+                                                        units = updatedUnits,
+                                                        maxUnitLevel = newMaxLevel,
+                                                    ))
+                                                }
                                             }
                                         },
                                         enabled = canLevelUp,

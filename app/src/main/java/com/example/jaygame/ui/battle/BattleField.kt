@@ -97,8 +97,7 @@ private const val GRID_NORM_Y = 107.5f / 720f    // 0.14931 (Grid.ORIGIN_Y / 720
 private const val GRID_NORM_W = CPP_GRID_W / 720f   // 0.66667
 private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
 
-private const val GRID_COLS = 5
-private const val GRID_ROWS = 5
+// Use BattleBridge.GRID_COLS and BattleBridge.GRID_ROWS instead of local copies
 
 /**
  * Battlefield overlay — unit sprites rendered in Compose (proper drawable icons),
@@ -137,9 +136,12 @@ fun BattleField() {
     val prevFamilyMap = remember { mutableStateOf(mapOf<Int, Int>()) }
 
     LaunchedEffect(Unit) {
+        var lastFrameNanos = 0L
         while (true) {
             withFrameNanos { frameTimeNanos ->
-                val dt = 1f / 60f // approximate
+                val dt = if (lastFrameNanos == 0L) 1f / 60f
+                         else ((frameTimeNanos - lastFrameNanos) / 1_000_000_000f).coerceIn(0.001f, 0.05f)
+                lastFrameNanos = frameTimeNanos
                 animTime.floatValue += dt
 
                 val data = BattleBridge.unitPositions.value
@@ -314,13 +316,15 @@ fun BattleField() {
         val useMicro = moArr.size == data.count * 2
 
         // Size based on cell height (grid is 880x440, 6cols x 5rows -> cells are 146x88)
-        val cellH = gridH / GRID_ROWS.toFloat()
+        val cellH = gridH / BattleBridge.GRID_ROWS.toFloat()
         val unitSize = cellH * 0.65f
         val pedestalRx = unitSize * 0.45f
         val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
 
         for (i in 0 until data.count) {
+            if (i >= data.xs.size || i >= data.ys.size || i >= data.grades.size ||
+                i >= data.tileIndices.size || i >= data.unitDefIds.size || i >= data.levels.size) continue
             val baseScreenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
             val baseScreenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
             // G3: micro-movement offset
@@ -334,7 +338,11 @@ fun BattleField() {
             val tileIdx = data.tileIndices[i]
             val isSelected = selectedTile == tileIdx
             val isAttacking = data.isAttacking.getOrElse(i) { false }
-            val family = com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+            val family = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
+                data.familiesList[i].first().ordinal
+            } else {
+                com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+            }
             val unitDefId = data.unitDefIds[i]
             val level = data.levels[i]
 

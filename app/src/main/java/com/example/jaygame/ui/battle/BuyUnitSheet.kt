@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,9 +75,10 @@ fun BuyUnitSheet(
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
-    val gridFull = gridState.all { it.unitDefId >= 0 }
+    val gridFull = gridState.all { it.unitDefId >= 0 || it.blueprintId.isNotEmpty() }
 
     var confirmUnit by remember { mutableStateOf<UnitDef?>(null) }
+    var selectedRole by remember { mutableStateOf<UnitRole?>(null) }
 
     Box(
         modifier = Modifier
@@ -228,8 +230,6 @@ fun BuyUnitSheet(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Role filter tabs (Task 18: activated with family-based role inference)
-                    var selectedRole by remember { mutableStateOf<UnitRole?>(null) }
-
                     ScrollableTabRow(
                         selectedTabIndex = if (selectedRole == null) 0 else UnitRole.entries.indexOf(selectedRole) + 1,
                         modifier = Modifier.fillMaxWidth(),
@@ -268,6 +268,16 @@ fun BuyUnitSheet(
                                 canAfford = battle.sp >= (BUY_PRICES[unit.grade] ?: 300),
                                 onClick = { confirmUnit = unit },
                             )
+                        }
+                        if (filteredUnits.isEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    "해당 역할의 유닛이 없습니다.",
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
                     }
 
