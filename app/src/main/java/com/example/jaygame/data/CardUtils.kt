@@ -1,5 +1,7 @@
 package com.example.jaygame.data
 
+import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.engine.UnitGrade
 import kotlin.random.Random
 
 /**
@@ -27,20 +29,18 @@ private fun rollCardGrade(): UnitGrade {
     return UnitGrade.COMMON
 }
 
-@Suppress("DEPRECATION")
 fun addRandomCardsToUnits(units: Map<String, UnitProgress>, count: Int): Map<String, UnitProgress> {
     if (count <= 0) return units
     val updatedUnits = units.toMutableMap()
 
     repeat(count) {
         val grade = rollCardGrade()
-        val candidates = UNIT_DEFS.filter { it.grade == grade }
+        val candidates = BlueprintRegistry.instance.findByGradeAndSummonable(grade)
         if (candidates.isEmpty()) return@repeat
         val picked = candidates.random()
-        val blueprintId = LegacyMigration.blueprintIdForLegacyIndex(picked.id) ?: return@repeat
 
-        val current = updatedUnits[blueprintId] ?: UnitProgress()
-        updatedUnits[blueprintId] = if (current.owned) {
+        val current = updatedUnits[picked.id] ?: UnitProgress()
+        updatedUnits[picked.id] = if (current.owned) {
             current.copy(cards = current.cards + 1)
         } else {
             current.copy(owned = true, cards = current.cards + 1)
