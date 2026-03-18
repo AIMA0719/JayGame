@@ -18,6 +18,7 @@ import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.ALL_DUNGEONS
 import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.engine.RecipeSystem
 import com.example.jaygame.engine.BattleEngine
 import com.example.jaygame.engine.DungeonManager
 import com.example.jaygame.engine.RelicManager
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         BlueprintRegistry.initialize(applicationContext)
+        RecipeSystem.initialize(applicationContext)
         repository = GameRepository(this)
 
         // Preserve stageId/difficulty/speed set by ComposeActivity, then reset battle state

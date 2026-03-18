@@ -26,6 +26,7 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.engine.RecipeSystem
 import com.example.jaygame.engine.OfflineRewardManager
 import com.example.jaygame.navigation.NavGraph
 import com.example.jaygame.ui.components.OfflineRewardDialog
@@ -41,6 +42,7 @@ class ComposeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         BlueprintRegistry.initialize(applicationContext)
+        RecipeSystem.initialize(applicationContext)
         repository = GameRepository(this)
         SfxManager.init(this)
         setContent {

@@ -19,6 +19,22 @@ data class RecipeSlot(
 )
 
 class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
+
+    companion object {
+        lateinit var instance: RecipeSystem
+            private set
+
+        /** Must be called AFTER BlueprintRegistry.initialize() */
+        fun initialize(context: android.content.Context) {
+            if (::instance.isInitialized) return
+            val recipesJson = context.assets.open("units/hidden_recipes.json")
+                .bufferedReader().use { it.readText() }
+            val system = RecipeSystem(BlueprintRegistry.instance)
+            system.loadRecipes(recipesJson)
+            instance = system
+        }
+    }
+
     private val recipes = mutableListOf<HiddenRecipe>()
     private val discoveredIds = mutableSetOf<String>()
 
