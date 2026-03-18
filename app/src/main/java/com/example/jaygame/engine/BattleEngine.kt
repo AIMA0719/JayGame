@@ -223,10 +223,14 @@ class BattleEngine(
                 } ?: mergeable.first()
                 requestMerge(bestMerge)
             }
-            // Auto-summon: summon when SP is enough
+            // Auto-summon: summon when SP is enough (prefer blueprint path)
             val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
             if (sp >= effectiveCost && !grid.isFull()) {
-                requestSummon()
+                if (blueprintRegistry.count() > 0) {
+                    requestSummonBlueprint()
+                } else {
+                    requestSummon()
+                }
             }
         }
 
@@ -747,6 +751,11 @@ class BattleEngine(
         unit.homePosition = grid.cellCenter(tileIndex)
         unit.behavior = BehaviorFactory.create(selected.behaviorId)
         grid.placeUnit(tileIndex, unit)
+        BattleBridge.onSummonResult(
+            unitDefId = -1,
+            grade = selected.grade.ordinal,
+            blueprintId = selected.id,
+        )
     }
 
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
@@ -809,6 +818,13 @@ class BattleEngine(
         BattleBridge.onUnitClicked(
             tileIndex, unit.unitDefId, unit.grade, unit.family,
             tileIndex in mergeable, unit.level,
+            blueprintId = unit.blueprintId,
+            families = unit.families,
+            role = unit.role,
+            attackRange = unit.attackRange,
+            damageType = unit.damageType,
+            hp = unit.hp,
+            maxHp = unit.maxHp,
         )
     }
 
@@ -944,6 +960,17 @@ class BattleEngine(
         val uLevels = IntArray(uCount)
         val uAttacking = BooleanArray(uCount)
         val uTiles = IntArray(uCount)
+        val uBlueprintIds = Array(uCount) { "" }
+        val uFamiliesList = Array<List<com.example.jaygame.data.UnitFamily>>(uCount) { emptyList() }
+        val uRoles = Array(uCount) { UnitRole.RANGED_DPS }
+        val uAttackRanges = Array(uCount) { AttackRange.RANGED }
+        val uDamageTypes = Array(uCount) { DamageType.PHYSICAL }
+        val uUnitCategories = Array(uCount) { UnitCategory.NORMAL }
+        val uHps = FloatArray(uCount)
+        val uMaxHps = FloatArray(uCount)
+        val uStates = Array(uCount) { UnitState.IDLE }
+        val uHomeXs = FloatArray(uCount)
+        val uHomeYs = FloatArray(uCount)
         var ui = 0
         units.forEach { u ->
             if (ui < uCount) {
@@ -954,10 +981,25 @@ class BattleEngine(
                 uLevels[ui] = u.level
                 uAttacking[ui] = u.isAttacking
                 uTiles[ui] = u.tileIndex
+                uBlueprintIds[ui] = u.blueprintId
+                uFamiliesList[ui] = u.families
+                uRoles[ui] = u.role
+                uAttackRanges[ui] = u.attackRange
+                uDamageTypes[ui] = u.damageType
+                uUnitCategories[ui] = u.unitCategory
+                uHps[ui] = u.hp
+                uMaxHps[ui] = u.maxHp
+                uStates[ui] = u.state
+                uHomeXs[ui] = u.homePosition.x / W
+                uHomeYs[ui] = u.homePosition.y / H
                 ui++
             }
         }
-        BattleBridge.updateUnitPositions(uxs, uys, uDefIds, uGrades, uLevels, uAttacking, uTiles, ui)
+        BattleBridge.updateUnitPositions(
+            uxs, uys, uDefIds, uGrades, uLevels, uAttacking, uTiles, ui,
+            uBlueprintIds, uFamiliesList, uRoles, uAttackRanges, uDamageTypes, uUnitCategories,
+            uHps, uMaxHps, uStates, uHomeXs, uHomeYs,
+        )
 
         // Projectiles
         val pCount = projectiles.activeCount
@@ -987,6 +1029,9 @@ class BattleEngine(
             val families = IntArray(Grid.TOTAL)
             val canMerge = BooleanArray(Grid.TOTAL)
             val levels = IntArray(Grid.TOTAL)
+            val gridBlueprintIds = Array(Grid.TOTAL) { "" }
+            val gridFamiliesList = Array<List<com.example.jaygame.data.UnitFamily>>(Grid.TOTAL) { emptyList() }
+            val gridRoles = Array(Grid.TOTAL) { UnitRole.RANGED_DPS }
             for (i in 0 until Grid.TOTAL) {
                 val u = grid.getUnit(i)
                 if (u != null) {
@@ -995,11 +1040,14 @@ class BattleEngine(
                     families[i] = u.family
                     canMerge[i] = i in mergeable
                     levels[i] = u.level
+                    gridBlueprintIds[i] = u.blueprintId
+                    gridFamiliesList[i] = u.families
+                    gridRoles[i] = u.role
                 } else {
                     ids[i] = -1
                 }
             }
-            BattleBridge.updateGridState(ids, grades, families, canMerge, levels)
+            BattleBridge.updateGridState(ids, grades, families, canMerge, levels, gridBlueprintIds, gridFamiliesList, gridRoles)
         }
     }
 

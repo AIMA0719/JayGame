@@ -152,35 +152,71 @@ fun UnitDetailPopup() {
                 }
             }
 
-            // TODO(Task18): Role/AttackRange/DamageType badges — currently UnitPopupData
-            //  does not include these fields. Once BattleBridge.onUnitClicked passes
-            //  role, attackRange, damageType, hp, and maxHp, replace the placeholder
-            //  UnitDef-based lookup below with real bridge data.
-            // Role / AttackRange / DamageType badges
-            Row(
-                modifier = Modifier.padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Role badge (placeholder — UnitDef has no role field yet)
-                // TODO(Task18): Replace with actual role from bridge data
-                // Surface(
-                //     shape = RoundedCornerShape(4.dp),
-                //     color = getRoleColor(unit.role)
-                // ) { ... }
+            // Role / AttackRange / DamageType badges (Task 18: activated)
+            if (data.blueprintId.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Role badge
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = getRoleColor(data.role)
+                    ) {
+                        Text(
+                            text = data.role.label,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
 
-                // Attack Range badge (placeholder)
-                // TODO(Task18): Replace with actual attackRange from bridge data
+                    // Attack Range badge
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = DarkNavy,
+                    ) {
+                        Text(
+                            text = data.attackRange.label,
+                            color = NeonCyan,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
 
-                // Damage Type badge (placeholder)
-                // TODO(Task18): Replace with actual damageType from bridge data
+                    // Damage Type badge
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = DarkNavy,
+                    ) {
+                        Text(
+                            text = if (data.damageType == DamageType.PHYSICAL) "물리" else "마법",
+                            color = if (data.damageType == DamageType.PHYSICAL) NeonRed else Color(0xFF7E57C2),
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
             }
 
-            // TODO(Task18): HP bar for melee/tank units — bridge must expose hp/maxHp
-            // if (unit.attackRange == AttackRange.MELEE && unit.maxHp > 0f) {
-            //     Spacer(modifier = Modifier.height(4.dp))
-            //     LinearProgressIndicator(...)
-            //     Text("HP: ${unit.hp.toInt()} / ${unit.maxHp.toInt()}", ...)
-            // }
+            // HP bar for melee/tank units (Task 18: activated)
+            if (data.attackRange == AttackRange.MELEE && data.maxHp > 0f) {
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { (data.hp / data.maxHp).coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = Color(0xFF4CAF50),
+                    trackColor = Color(0xFF333333),
+                )
+                Text(
+                    text = "HP: ${data.hp.toInt()} / ${data.maxHp.toInt()}",
+                    color = SubText,
+                    fontSize = 10.sp,
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 

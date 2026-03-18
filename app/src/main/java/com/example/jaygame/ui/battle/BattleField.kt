@@ -606,46 +606,51 @@ fun BattleField() {
                 }
             }
 
-            // ── Task 17: Tank HP bar ──
-            // TODO(Task18): UnitPositionData does not yet include role, state, hp, maxHp,
-            //  or homePosition. Once BattleBridge.updateUnitPositions exposes these fields,
-            //  uncomment the rendering code below.
-            //
-            // if (unit.role == UnitRole.TANK && unit.state == UnitState.BLOCKING && unit.maxHp > 0f) {
-            //     val hpPercent = (unit.hp / unit.maxHp).coerceIn(0f, 1f)
-            //     val barWidth = 40f
-            //     val barHeight = 4f
-            //     val barX = screenX - barWidth / 2
-            //     val barY = screenY - unitSize * 0.9f
-            //     drawRect(Color(0xFF333333), Offset(barX, barY), Size(barWidth, barHeight))
-            //     drawRect(Color(0xFF4CAF50), Offset(barX, barY), Size(barWidth * hpPercent, barHeight))
-            // }
-            //
-            // ── Task 17: Dash trail ──
-            // if (unit.state == UnitState.DASHING) {
-            //     drawLine(
-            //         color = Color.White.copy(alpha = 0.3f),
-            //         start = Offset(homeScreenX, homeScreenY),
-            //         end = Offset(screenX, screenY),
-            //         strokeWidth = 2f
-            //     )
-            // }
-            //
-            // ── Task 17: Field effect range circles (SPECIAL units) ──
-            // if (unit.unitCategory == UnitCategory.SPECIAL && unit.fieldController != null) {
-            //     val effectRadius = (unit.fieldController.range / 720f) * w
-            //     drawCircle(
-            //         color = Color(0xFF9C27B0).copy(alpha = 0.12f),
-            //         radius = effectRadius,
-            //         center = Offset(screenX, screenY),
-            //     )
-            //     drawCircle(
-            //         color = Color(0xFF9C27B0).copy(alpha = 0.25f),
-            //         radius = effectRadius,
-            //         center = Offset(screenX, screenY),
-            //         style = Stroke(width = 1.5f),
-            //     )
-            // }
+            // ── Task 18: Tank HP bar (activated) ──
+            val unitRole = data.roles.getOrElse(i) { com.example.jaygame.engine.UnitRole.RANGED_DPS }
+            val unitState = data.states.getOrElse(i) { com.example.jaygame.engine.UnitState.IDLE }
+            val unitHp = data.hps.getOrElse(i) { 0f }
+            val unitMaxHp = data.maxHps.getOrElse(i) { 0f }
+            val unitCategory = data.unitCategories.getOrElse(i) { com.example.jaygame.engine.UnitCategory.NORMAL }
+
+            if (unitRole == com.example.jaygame.engine.UnitRole.TANK && unitState == com.example.jaygame.engine.UnitState.BLOCKING && unitMaxHp > 0f) {
+                val hpPercent = (unitHp / unitMaxHp).coerceIn(0f, 1f)
+                val barWidth = 40f
+                val barHeight = 4f
+                val barX = screenX - barWidth / 2
+                val barY = screenY - unitSize * 0.9f
+                drawRect(Color(0xFF333333), Offset(barX, barY), Size(barWidth, barHeight))
+                drawRect(Color(0xFF4CAF50), Offset(barX, barY), Size(barWidth * hpPercent, barHeight))
+            }
+
+            // ── Task 18: Dash trail (activated) ──
+            if (unitState == com.example.jaygame.engine.UnitState.DASHING) {
+                val homeScreenX = data.homeXs.getOrElse(i) { data.xs[i] } * w
+                val homeScreenY = data.homeYs.getOrElse(i) { data.ys[i] } * h
+                drawLine(
+                    color = Color.White.copy(alpha = 0.3f),
+                    start = Offset(homeScreenX, homeScreenY),
+                    end = Offset(screenX, screenY),
+                    strokeWidth = 2f,
+                )
+            }
+
+            // ── Task 18: Field effect range circles for SPECIAL units (activated) ──
+            if (unitCategory == com.example.jaygame.engine.UnitCategory.SPECIAL) {
+                // Use unit range as field effect radius (approximation)
+                val effectRadius = (200f / 720f) * w // default field effect radius
+                drawCircle(
+                    color = Color(0xFF9C27B0).copy(alpha = 0.12f),
+                    radius = effectRadius,
+                    center = Offset(screenX, screenY),
+                )
+                drawCircle(
+                    color = Color(0xFF9C27B0).copy(alpha = 0.25f),
+                    radius = effectRadius,
+                    center = Offset(screenX, screenY),
+                    style = Stroke(width = 1.5f),
+                )
+            }
 
             // Merge indicator (pulsing)
             val tile = gridState.getOrNull(tileIdx)

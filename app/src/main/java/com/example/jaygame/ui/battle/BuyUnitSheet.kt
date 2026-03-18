@@ -58,6 +58,16 @@ private val BUYABLE_UNITS: List<UnitDef> = UNIT_DEFS.filter {
     it.grade == UnitGrade.MYTHIC || it.grade == UnitGrade.IMMORTAL
 }
 
+/** Derive role from family for legacy UnitDef (until fully migrated to BlueprintRegistry) */
+private fun inferRoleFromFamily(def: UnitDef): UnitRole = when (def.family) {
+    com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
+    com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
+    com.example.jaygame.data.UnitFamily.FIRE -> UnitRole.RANGED_DPS
+    com.example.jaygame.data.UnitFamily.FROST -> UnitRole.RANGED_DPS
+    com.example.jaygame.data.UnitFamily.POISON -> UnitRole.RANGED_DPS
+    com.example.jaygame.data.UnitFamily.LIGHTNING -> UnitRole.RANGED_DPS
+}
+
 @Composable
 fun BuyUnitSheet(
     onDismiss: () -> Unit,
@@ -217,10 +227,7 @@ fun BuyUnitSheet(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Role filter tabs
-                    // TODO(Task18): Once UnitDef includes role field, filter BUYABLE_UNITS
-                    //  by selectedRole. Currently the tabs are shown but filtering is a no-op
-                    //  because UnitDef does not have a role property yet.
+                    // Role filter tabs (Task 18: activated with family-based role inference)
                     var selectedRole by remember { mutableStateOf<UnitRole?>(null) }
 
                     ScrollableTabRow(
@@ -241,8 +248,11 @@ fun BuyUnitSheet(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // TODO(Task18): Replace BUYABLE_UNITS with filtered list once UnitDef has role
-                    val filteredUnits = BUYABLE_UNITS // selectedRole filtering pending UnitDef.role
+                    val filteredUnits = if (selectedRole == null) {
+                        BUYABLE_UNITS
+                    } else {
+                        BUYABLE_UNITS.filter { inferRoleFromFamily(it) == selectedRole }
+                    }
 
                     // Unit grid
                     LazyVerticalGrid(
