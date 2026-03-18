@@ -17,7 +17,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Tab
@@ -41,17 +45,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.LEVEL_MULTIPLIER
-import com.example.jaygame.data.LegacyMigration
-import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UPGRADE_COSTS
-import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitFamily
-import com.example.jaygame.data.UnitGrade
 import com.example.jaygame.data.UnitProgress
+import com.example.jaygame.engine.AttackRange
+import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.engine.DamageType
+import com.example.jaygame.engine.UnitBlueprint
+import com.example.jaygame.engine.UnitCategory
+import com.example.jaygame.engine.UnitGrade
+import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkSurface
@@ -77,14 +85,48 @@ private val GradeBorderRed = Color(0xFFEF4444)
 private val GradeBorderRainbowStart = Color(0xFFFF6B35)
 private val GradeBorderRainbowEnd = Color(0xFFFBBF24)
 
+// ── Filter chip colors (pre-allocated) ──
+private val CollChipSelectedBg = Color(0xFF2A2A4E)
+private val CollChipUnselectedBg = Color(0xFF1A1A2E)
+private val CollChipSelectedBorder = Color(0xFFFFD700)
+private val CollChipUnselectedBorder = Color(0xFF333355)
+
+// ── Damage type indicator colors (pre-allocated) ──
+private val CollPhysicalColor = Color(0xFFFF8A65)
+private val CollMagicColor = Color(0xFFCE93D8)
+
+// ── Role icon labels (reuse from UnitCollectionScreen concept) ──
+private val COLL_ROLE_LABELS = mapOf(
+    UnitRole.TANK to "🛡탱커",
+    UnitRole.MELEE_DPS to "⚔근딜",
+    UnitRole.RANGED_DPS to "🏹원딜",
+    UnitRole.SUPPORT to "✚서포터",
+    UnitRole.CONTROLLER to "⛓컨트롤러",
+)
+
+// ── Behavior pattern labels ──
+private val COLL_BEHAVIOR_LABELS = mapOf(
+    "tank_blocker" to "전방 저지형",
+    "assassin_dash" to "돌진 암살형",
+    "ranged_mage" to "원거리 마법형",
+    "support_aura" to "오라 지원형",
+    "controller_cc_ranged" to "원거리 제어형",
+)
+
+private val COLL_FAMILY_ICONS = mapOf(
+    UnitFamily.FIRE to "\uD83D\uDD25",
+    UnitFamily.FROST to "\u2744\uFE0F",
+    UnitFamily.POISON to "\uD83D\uDCA8",
+    UnitFamily.LIGHTNING to "\u26A1",
+    UnitFamily.SUPPORT to "\uD83D\uDE4F",
+    UnitFamily.WIND to "\uD83C\uDF00",
+)
+
 private fun gradeBackgroundColor(grade: UnitGrade): Color = when (grade) {
     UnitGrade.COMMON -> GradeBgCommon
     UnitGrade.RARE -> GradeBgRare
     UnitGrade.HERO -> GradeBgHero
-    UnitGrade.LEGEND -> GradeBgCommon
-    UnitGrade.ANCIENT -> GradeBgCommon
-    UnitGrade.MYTHIC -> GradeBgCommon
-    UnitGrade.IMMORTAL -> GradeBgCommon
+    else -> GradeBgCommon
 }
 
 private fun gradeGlowColor(grade: UnitGrade): Color? = when (grade) {
@@ -96,15 +138,6 @@ private fun gradeGlowColor(grade: UnitGrade): Color? = when (grade) {
     UnitGrade.MYTHIC -> GradeBorderRainbowEnd
     UnitGrade.IMMORTAL -> GradeBorderRainbowStart
 }
-
-private val FAMILY_ICONS = mapOf(
-    UnitFamily.FIRE to "\uD83D\uDD25",
-    UnitFamily.FROST to "\u2744\uFE0F",
-    UnitFamily.POISON to "\uD83D\uDCA8",
-    UnitFamily.LIGHTNING to "\u26A1",
-    UnitFamily.SUPPORT to "\uD83D\uDE4F",
-    UnitFamily.WIND to "\uD83C\uDF00",
-)
 
 @Composable
 fun CollectionScreen(
@@ -207,13 +240,30 @@ private fun HeroCollectionTab(
     repository: GameRepository,
     data: com.example.jaygame.data.GameData,
 ) {
-    var selectedUnit by remember { mutableStateOf<UnitDef?>(null) }
+    var selectedBlueprint by remember { mutableStateOf<UnitBlueprint?>(null) }
 
-    // Group units by family
-    val unitsByFamily = remember {
-        UnitFamily.entries.map { family ->
-            family to UNIT_DEFS.filter { it.family == family }
-        }
+    // ── Data source: BlueprintRegistry ──
+    val allBlueprints = remember {
+        BlueprintRegistry.instance.findByCategory(UnitCategory.NORMAL)
+    }
+
+    // ── Filter state ──
+    var selectedRoles by remember { mutableStateOf(emptySet<UnitRole>()) }
+    var selectedFamilies by remember { mutableStateOf(emptySet<UnitFamily>()) }
+    var sortMode by remember { mutableStateOf(SortMode.GRADE) }
+
+    // ── Filtered + sorted list ──
+    val filteredBlueprints = remember(allBlueprints, selectedRoles, selectedFamilies, sortMode) {
+        allBlueprints
+            .filter { bp ->
+                (selectedRoles.isEmpty() || bp.role in selectedRoles) &&
+                (selectedFamilies.isEmpty() || bp.families.any { it in selectedFamilies })
+            }
+            .sortedWith(when (sortMode) {
+                SortMode.GRADE -> compareByDescending { it.grade.ordinal }
+                SortMode.ATK -> compareByDescending { it.stats.baseATK }
+                SortMode.NAME -> compareBy { it.name }
+            })
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -248,13 +298,13 @@ private fun HeroCollectionTab(
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "\uD83D\uDCD6 보유 $ownedCount / ${UNIT_DEFS.size}",
+                            text = "\uD83D\uDCD6 보유 $ownedCount / ${allBlueprints.size}",
                             fontSize = 12.sp,
                             color = SubText,
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "\uD83D\uDD0D 터치하여 상세 정보 확인",
+                            text = "${filteredBlueprints.size}종 표시중",
                             fontSize = 11.sp,
                             color = DimText,
                         )
@@ -262,131 +312,188 @@ private fun HeroCollectionTab(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Family rows with horizontal scroll
+            // ── Filter bar ──
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                unitsByFamily.forEach { (family, units) ->
-                    FamilyUnitRow(
-                        family = family,
-                        units = units,
-                        unitProgress = data.units,  // Map<String, UnitProgress>
-                        onUnitClick = { selectedUnit = it },
+                // Row 1: Role chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "역할",
+                        color = SubText,
+                        fontSize = 10.sp,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    UnitRole.entries.forEach { role ->
+                        val selected = role in selectedRoles
+                        CollFilterChip(
+                            label = COLL_ROLE_LABELS[role] ?: role.label,
+                            selected = selected,
+                            onClick = {
+                                selectedRoles = if (selected) selectedRoles - role
+                                else selectedRoles + role
+                            },
+                        )
+                    }
+                }
+
+                // Row 2: Family chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "계열",
+                        color = SubText,
+                        fontSize = 10.sp,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    UnitFamily.entries.forEach { family ->
+                        val icon = COLL_FAMILY_ICONS[family] ?: ""
+                        val selected = family in selectedFamilies
+                        CollFilterChip(
+                            label = "$icon${family.label}",
+                            selected = selected,
+                            onClick = {
+                                selectedFamilies = if (selected) selectedFamilies - family
+                                else selectedFamilies + family
+                            },
+                        )
+                    }
+                }
+
+                // Row 3: Sort chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "정렬",
+                        color = SubText,
+                        fontSize = 10.sp,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    SortMode.entries.forEach { mode ->
+                        CollFilterChip(
+                            label = mode.label,
+                            selected = sortMode == mode,
+                            onClick = { sortMode = mode },
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Grid display ──
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(filteredBlueprints, key = { it.id }) { bp ->
+                    val progress = data.units[bp.id]
+                    val owned = progress?.owned == true
+                    CollectionBlueprintCard(
+                        blueprint = bp,
+                        progress = progress,
+                        onClick = { if (owned) selectedBlueprint = bp },
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
         // Detail dialog overlay
-        selectedUnit?.let { def ->
-            @Suppress("DEPRECATION")
-            val blueprintId = LegacyMigration.blueprintIdForLegacyIndex(def.id)
-            val progress = blueprintId?.let { data.units[it] }
-            CollectionUnitDetailDialog(
-                def = def,
+        selectedBlueprint?.let { bp ->
+            val progress = data.units[bp.id]
+            CollectionBlueprintDetailDialog(
+                blueprint = bp,
                 progress = progress,
                 gold = data.gold,
                 onUpgrade = {
-                    if (blueprintId != null && progress != null && progress.level < 7) {
+                    if (progress != null && progress.level < 7) {
                         val cost = UPGRADE_COSTS[progress.level - 1]
                         val newUnits = data.units.toMutableMap()
-                        val cur = newUnits[blueprintId] ?: return@CollectionUnitDetailDialog
-                        newUnits[blueprintId] = cur.copy(
+                        val cur = newUnits[bp.id] ?: return@CollectionBlueprintDetailDialog
+                        newUnits[bp.id] = cur.copy(
                             level = cur.level + 1,
                             cards = cur.cards - cost.first,
                         )
                         val newGold = data.gold - cost.second
-                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[blueprintId]!!.level)
+                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[bp.id]!!.level)
                         repository.save(data.copy(units = newUnits, gold = newGold, maxUnitLevel = newMaxLevel))
                     }
                 },
-                onDismiss = { selectedUnit = null },
+                onDismiss = { selectedBlueprint = null },
             )
         }
     }
 }
 
 @Composable
-@Suppress("DEPRECATION")
-private fun FamilyUnitRow(
-    family: UnitFamily,
-    units: List<UnitDef>,
-    unitProgress: Map<String, UnitProgress>,
-    onUnitClick: (UnitDef) -> Unit,
+private fun CollFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
 ) {
-    val icon = FAMILY_ICONS[family] ?: ""
-    val ownedInFamily = units.count { def ->
-        val bpId = LegacyMigration.blueprintIdForLegacyIndex(def.id)
-        bpId != null && unitProgress[bpId]?.owned == true
-    }
-
-    Column(modifier = Modifier.padding(start = 16.dp)) {
-        // Family header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = icon, fontSize = 18.sp)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = family.label,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 16.sp,
-                color = family.color,
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) CollChipSelectedBg else CollChipUnselectedBg)
+            .border(
+                width = 1.dp,
+                color = if (selected) CollChipSelectedBorder else CollChipUnselectedBorder,
+                shape = RoundedCornerShape(16.dp),
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "$ownedInFamily/${units.size}",
-                fontSize = 12.sp,
-                color = SubText,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Horizontal scroll of unit cards
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            units.forEach { def ->
-                val bpId = LegacyMigration.blueprintIdForLegacyIndex(def.id)
-                val progress = bpId?.let { unitProgress[it] }
-                val owned = progress?.owned == true
-                CollectionUnitCard(
-                    def = def,
-                    progress = progress,
-                    onClick = { if (owned) onUnitClick(def) },
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp)) // end padding
-        }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        Text(
+            text = label,
+            color = if (selected) Gold else SubText,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1,
+        )
     }
 }
 
 @Composable
-private fun CollectionUnitCard(
-    def: UnitDef,
+private fun CollectionBlueprintCard(
+    blueprint: UnitBlueprint,
     progress: UnitProgress?,
     onClick: () -> Unit,
 ) {
     val owned = progress?.owned == true
     val level = progress?.level ?: 1
+    val iconRes = blueprintIconRes(blueprint)
 
     GameCard(
-        borderColor = def.grade.color,
-        backgroundColor = gradeBackgroundColor(def.grade),
-        glowColor = gradeGlowColor(def.grade),
+        borderColor = blueprint.grade.color,
+        backgroundColor = gradeBackgroundColor(blueprint.grade),
+        glowColor = gradeGlowColor(blueprint.grade),
         onClick = onClick,
         modifier = Modifier
-            .width(80.dp)
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
         Column(
@@ -401,8 +508,8 @@ private fun CollectionUnitCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(id = def.iconRes),
-                    contentDescription = def.name,
+                    painter = painterResource(id = iconRes),
+                    contentDescription = blueprint.name,
                     modifier = Modifier
                         .size(36.dp)
                         .then(if (!owned) Modifier.alpha(0.3f) else Modifier),
@@ -418,18 +525,44 @@ private fun CollectionUnitCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = if (owned) def.name else "???",
+                text = if (owned) blueprint.name else "???",
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
                 color = if (owned) LightText else DimText,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
+            // Role + damage type indicators
+            if (owned) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (blueprint.damageType == DamageType.PHYSICAL) CollPhysicalColor
+                                else CollMagicColor
+                            ),
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = if (blueprint.attackRange == AttackRange.MELEE) "근" else "원",
+                        fontSize = 8.sp,
+                        color = SubText,
+                    )
+                }
+            }
+
             Text(
-                text = def.grade.label,
+                text = blueprint.grade.label,
                 fontSize = 9.sp,
-                color = def.grade.color.copy(alpha = if (owned) 1f else 0.5f),
+                color = blueprint.grade.color.copy(alpha = if (owned) 1f else 0.5f),
                 textAlign = TextAlign.Center,
             )
 
@@ -446,8 +579,8 @@ private fun CollectionUnitCard(
 }
 
 @Composable
-private fun CollectionUnitDetailDialog(
-    def: UnitDef,
+private fun CollectionBlueprintDetailDialog(
+    blueprint: UnitBlueprint,
     progress: UnitProgress?,
     gold: Int,
     onUpgrade: () -> Unit,
@@ -455,13 +588,16 @@ private fun CollectionUnitDetailDialog(
 ) {
     val owned = progress?.owned == true
     val level = progress?.level ?: 1
-    val calculatedATK = (def.baseATK * LEVEL_MULTIPLIER[level - 1]).toInt()
+    val calculatedATK = (blueprint.stats.baseATK * LEVEL_MULTIPLIER[level - 1]).toInt()
     val upgradeCost = if (level < 7) UPGRADE_COSTS[level - 1] else null
     val canUpgrade = owned && level < 7
             && upgradeCost != null
             && (progress?.cards ?: 0) >= upgradeCost.first
             && gold >= upgradeCost.second
     val fmt = NumberFormat.getNumberInstance()
+    val iconRes = blueprintIconRes(blueprint)
+    val behaviorLabel = COLL_BEHAVIOR_LABELS[blueprint.behaviorId] ?: blueprint.behaviorId
+    val roleLabel = COLL_ROLE_LABELS[blueprint.role] ?: blueprint.role.label
 
     Box(
         modifier = Modifier
@@ -480,7 +616,7 @@ private fun CollectionUnitDetailDialog(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                 ) {},
-            borderColor = def.grade.color,
+            borderColor = blueprint.grade.color,
         ) {
             Column(
                 modifier = Modifier
@@ -501,8 +637,8 @@ private fun CollectionUnitDetailDialog(
                         contentAlignment = Alignment.Center,
                     ) {
                         Image(
-                            painter = painterResource(id = def.iconRes),
-                            contentDescription = def.name,
+                            painter = painterResource(id = iconRes),
+                            contentDescription = blueprint.name,
                             modifier = Modifier.size(42.dp),
                         )
                     }
@@ -511,88 +647,204 @@ private fun CollectionUnitDetailDialog(
 
                     Column {
                         Text(
-                            text = def.name,
+                            text = blueprint.name,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = LightText,
                         )
                         Text(
-                            text = def.grade.label,
+                            text = blueprint.grade.label,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = def.grade.color,
+                            color = blueprint.grade.color,
                         )
+                        Text(
+                            text = roleLabel,
+                            fontSize = 11.sp,
+                            color = blueprint.grade.color.copy(alpha = 0.8f),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Damage type + Attack range + Behavior
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (blueprint.damageType == DamageType.PHYSICAL) CollPhysicalColor
+                                    else CollMagicColor
+                                ),
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = if (blueprint.damageType == DamageType.PHYSICAL) "물리" else "마법",
+                            color = if (blueprint.damageType == DamageType.PHYSICAL) CollPhysicalColor else CollMagicColor,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Text(text = "|", color = SubText, fontSize = 10.sp)
+                    Text(
+                        text = if (blueprint.attackRange == AttackRange.MELEE) "근접" else "원거리",
+                        color = SubText,
+                        fontSize = 10.sp,
+                    )
+                    Text(text = "|", color = SubText, fontSize = 10.sp)
+                    Text(
+                        text = behaviorLabel,
+                        color = SubText,
+                        fontSize = 10.sp,
+                    )
+                }
+
+                // Family badges
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    blueprint.families.forEach { family ->
+                        val icon = COLL_FAMILY_ICONS[family] ?: ""
+                        Box(
+                            modifier = Modifier
+                                .background(family.color.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                text = "$icon ${family.label}",
+                                color = family.color,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Stats
+                // Full stats
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
+                    StatRow("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF81C784))
                     StatRow("공격력", fmt.format(calculatedATK), Gold)
-                    StatRow("공속", String.format("%.1f", def.baseSpeed), LightText)
-                    StatRow("사거리", String.format("%.0f", def.range), LightText)
-                    StatRow("계열", def.family.label, def.family.color)
-                    StatRow("능력", def.abilityName, NeonCyan)
+                    StatRow("공속", String.format("%.2f", blueprint.stats.baseSpeed), LightText)
+                    StatRow("사거리", String.format("%.0f", blueprint.stats.range), LightText)
+                    StatRow("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFFFFCC80))
+                    StatRow("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFFB39DDB))
+                    StatRow("이동속도", "${blueprint.stats.moveSpeed.toInt()}", Color(0xFF80CBC4))
+                    StatRow("블록 수", "${blueprint.stats.blockCount}", Gold)
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Description
                 Text(
-                    text = def.description,
+                    text = blueprint.description,
                     fontSize = 12.sp,
                     color = SubText,
                     lineHeight = 18.sp,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                // Unique Ability section (Hero grade and above)
-                if (def.uniqueAbility != null) {
+                // Ability section
+                if (blueprint.ability != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    StatRow("능력", blueprint.ability.name, NeonCyan)
+                    Text(
+                        text = blueprint.ability.description,
+                        fontSize = 11.sp,
+                        color = SubText,
+                        lineHeight = 16.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                    )
+                }
+
+                // Unique Ability section
+                if (blueprint.uniqueAbility != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                def.grade.color.copy(alpha = 0.08f),
+                                blueprint.grade.color.copy(alpha = 0.08f),
                                 RoundedCornerShape(8.dp),
                             )
                             .padding(10.dp),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "\u2726 ",
                                 fontSize = 13.sp,
-                                color = def.grade.color,
+                                color = blueprint.grade.color,
                             )
                             Text(
-                                text = def.uniqueAbility.name,
+                                text = blueprint.uniqueAbility.name,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = def.grade.color,
+                                color = blueprint.grade.color,
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (def.uniqueAbility.cooldown > 0)
-                                "[${def.uniqueAbility.type}] 쿨타임: ${def.uniqueAbility.cooldown}초"
-                            else
-                                "[${def.uniqueAbility.type}]",
-                            fontSize = 10.sp,
-                            color = SubText,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = def.uniqueAbility.description,
-                            fontSize = 11.sp,
-                            color = LightText.copy(alpha = 0.9f),
-                            lineHeight = 16.sp,
-                        )
+                        blueprint.uniqueAbility.passive?.let { passive ->
+                            Text(
+                                text = "[패시브] ${passive.description}",
+                                fontSize = 11.sp,
+                                color = LightText.copy(alpha = 0.9f),
+                                lineHeight = 16.sp,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                        blueprint.uniqueAbility.active?.let { active ->
+                            Text(
+                                text = "[액티브] ${active.description}" +
+                                    if (active.cooldown > 0) " (쿨타임 ${active.cooldown.toInt()}초)" else "",
+                                fontSize = 11.sp,
+                                color = NeonCyan,
+                                lineHeight = 16.sp,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                    }
+                }
+
+                // Merge info
+                if (blueprint.mergeResultId != null) {
+                    val nextBp = remember(blueprint.mergeResultId) {
+                        BlueprintRegistry.instance.findById(blueprint.mergeResultId)
+                    }
+                    if (nextBp != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Gold.copy(alpha = 0.08f))
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "\u2728 조합",
+                                color = Gold,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "x3 \u2192 ${nextBp.grade.label} ${nextBp.name}",
+                                color = LightText,
+                                fontSize = 12.sp,
+                            )
+                        }
                     }
                 }
 
