@@ -24,6 +24,17 @@ class GameRepository(context: Context) {
         _gameData.value = data
     }
 
+    fun saveDiscoveredRecipes(ids: Set<String>) {
+        val json = JSONArray(ids.toList()).toString()
+        prefs.edit().putString("discovered_recipes", json).apply()
+    }
+
+    fun loadDiscoveredRecipes(): Set<String> {
+        val json = prefs.getString("discovered_recipes", "[]") ?: "[]"
+        val arr = JSONArray(json)
+        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+    }
+
     private fun load(): GameData {
         val jsonStr = prefs.getString("save_data", null) ?: return GameData()
         return try {
