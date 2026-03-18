@@ -21,10 +21,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -146,22 +152,98 @@ fun UnitCollectionScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Family rows with horizontal scroll
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+            // Category tabs: 일반 | 히든 | 특수
+            var selectedTab by remember { mutableIntStateOf(0) }
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = DeepDark.copy(alpha = 0.9f),
+                contentColor = Gold,
             ) {
-                unitsByFamily.forEach { (family, units) ->
-                    FamilyUnitRow(
-                        family = family,
-                        units = units,
-                        onUnitClick = { selectedUnit = it },
-                        ownedUnitIds = gameData?.units?.mapIndexedNotNull { idx, p -> if (p.owned) idx else null }?.toSet(),
-                    )
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                    Text("일반", modifier = Modifier.padding(8.dp), color = if (selectedTab == 0) Gold else SubText)
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                    Text("히든", modifier = Modifier.padding(8.dp), color = if (selectedTab == 1) Gold else SubText)
+                }
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                    Text("특수", modifier = Modifier.padding(8.dp), color = if (selectedTab == 2) Gold else SubText)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            when (selectedTab) {
+                0 -> {
+                    // Normal units — existing family rows
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        unitsByFamily.forEach { (family, units) ->
+                            FamilyUnitRow(
+                                family = family,
+                                units = units,
+                                onUnitClick = { selectedUnit = it },
+                                ownedUnitIds = gameData?.units?.mapIndexedNotNull { idx, p -> if (p.owned) idx else null }?.toSet(),
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+                1 -> {
+                    // Hidden units tab
+                    // TODO(Task18): Once BlueprintRegistry is accessible from UI,
+                    //  filter blueprints by UnitCategory.HIDDEN and use RecipeSystem.isDiscovered()
+                    //  to show discovered vs silhouette cards.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "히든 유닛은 특수 조합으로 발견할 수 있습니다.",
+                            color = SubText,
+                            fontSize = 13.sp,
+                        )
+                        // Placeholder cards for hidden units
+                        repeat(6) { index ->
+                            HiddenUnitCard(
+                                blueprintId = "hidden_$index",
+                                discovered = false,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+                2 -> {
+                    // Special units tab
+                    // TODO(Task18): Once BlueprintRegistry is accessible from UI,
+                    //  filter blueprints by UnitCategory.SPECIAL and display them.
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "특수 유닛은 필드 효과를 가진 유닛입니다.",
+                            color = SubText,
+                            fontSize = 13.sp,
+                        )
+                        Text(
+                            text = "최대 2기까지 배치 가능합니다.",
+                            color = SubText.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                        )
+                        // TODO(Task18): Populate with actual special unit blueprints
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
             }
         }
 
@@ -611,5 +693,45 @@ private fun StatItem(
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
         )
+    }
+}
+
+/**
+ * Hidden unit card — shows full info if discovered, silhouette if not.
+ * TODO(Task18): Accept UnitBlueprint instead of blueprintId once BlueprintRegistry
+ *  is accessible from UI layer.
+ */
+@Composable
+private fun HiddenUnitCard(blueprintId: String, discovered: Boolean) {
+    Card(
+        modifier = Modifier
+            .padding(4.dp)
+            .fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (discovered) Color(0xFF1A1A2E) else Color(0xFF0D0D0D)
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            if (discovered) {
+                // TODO(Task18): Show actual unit name/icon from blueprint
+                Text(
+                    text = blueprintId,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
+                )
+            } else {
+                // Silhouette / undiscovered
+                Text(
+                    text = "???",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF333333),
+                )
+                Text(
+                    text = "미발견",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF555555),
+                )
+            }
+        }
     }
 }

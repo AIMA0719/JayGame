@@ -34,8 +34,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.engine.AttackRange
+import com.example.jaygame.engine.DamageType
+import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkGold
@@ -144,6 +151,36 @@ fun UnitDetailPopup() {
                     }
                 }
             }
+
+            // TODO(Task18): Role/AttackRange/DamageType badges — currently UnitPopupData
+            //  does not include these fields. Once BattleBridge.onUnitClicked passes
+            //  role, attackRange, damageType, hp, and maxHp, replace the placeholder
+            //  UnitDef-based lookup below with real bridge data.
+            // Role / AttackRange / DamageType badges
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Role badge (placeholder — UnitDef has no role field yet)
+                // TODO(Task18): Replace with actual role from bridge data
+                // Surface(
+                //     shape = RoundedCornerShape(4.dp),
+                //     color = getRoleColor(unit.role)
+                // ) { ... }
+
+                // Attack Range badge (placeholder)
+                // TODO(Task18): Replace with actual attackRange from bridge data
+
+                // Damage Type badge (placeholder)
+                // TODO(Task18): Replace with actual damageType from bridge data
+            }
+
+            // TODO(Task18): HP bar for melee/tank units — bridge must expose hp/maxHp
+            // if (unit.attackRange == AttackRange.MELEE && unit.maxHp > 0f) {
+            //     Spacer(modifier = Modifier.height(4.dp))
+            //     LinearProgressIndicator(...)
+            //     Text("HP: ${unit.hp.toInt()} / ${unit.maxHp.toInt()}", ...)
+            // }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -257,4 +294,13 @@ private fun StatItem(label: String, value: String, color: Color) {
         Text(label, color = SubText, fontSize = 10.sp)
         Text(value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
+}
+
+/** Role-specific badge color. Used once bridge exposes role data (Task 18). */
+private fun getRoleColor(role: UnitRole): Color = when (role) {
+    UnitRole.TANK -> Color(0xFF607D8B)       // Blue Grey
+    UnitRole.MELEE_DPS -> Color(0xFFE53935)  // Red
+    UnitRole.RANGED_DPS -> Color(0xFF43A047) // Green
+    UnitRole.SUPPORT -> Color(0xFFFFB300)    // Amber
+    UnitRole.CONTROLLER -> Color(0xFF7E57C2) // Purple
 }

@@ -36,10 +36,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitGrade
+import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.*
@@ -214,6 +217,33 @@ fun BuyUnitSheet(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Role filter tabs
+                    // TODO(Task18): Once UnitDef includes role field, filter BUYABLE_UNITS
+                    //  by selectedRole. Currently the tabs are shown but filtering is a no-op
+                    //  because UnitDef does not have a role property yet.
+                    var selectedRole by remember { mutableStateOf<UnitRole?>(null) }
+
+                    ScrollableTabRow(
+                        selectedTabIndex = if (selectedRole == null) 0 else UnitRole.entries.indexOf(selectedRole) + 1,
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = Color.Transparent,
+                        contentColor = Gold,
+                    ) {
+                        Tab(selected = selectedRole == null, onClick = { selectedRole = null }) {
+                            Text("전체", modifier = Modifier.padding(8.dp), color = if (selectedRole == null) Gold else SubText)
+                        }
+                        UnitRole.entries.forEach { role ->
+                            Tab(selected = selectedRole == role, onClick = { selectedRole = role }) {
+                                Text(role.label, modifier = Modifier.padding(8.dp), color = if (selectedRole == role) Gold else SubText)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // TODO(Task18): Replace BUYABLE_UNITS with filtered list once UnitDef has role
+                    val filteredUnits = BUYABLE_UNITS // selectedRole filtering pending UnitDef.role
+
                     // Unit grid
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
@@ -221,7 +251,7 @@ fun BuyUnitSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(BUYABLE_UNITS) { unit ->
+                        items(filteredUnits) { unit ->
                             BuyUnitCard(
                                 unit = unit,
                                 price = BUY_PRICES[unit.grade] ?: 300,

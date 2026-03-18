@@ -606,6 +606,47 @@ fun BattleField() {
                 }
             }
 
+            // ── Task 17: Tank HP bar ──
+            // TODO(Task18): UnitPositionData does not yet include role, state, hp, maxHp,
+            //  or homePosition. Once BattleBridge.updateUnitPositions exposes these fields,
+            //  uncomment the rendering code below.
+            //
+            // if (unit.role == UnitRole.TANK && unit.state == UnitState.BLOCKING && unit.maxHp > 0f) {
+            //     val hpPercent = (unit.hp / unit.maxHp).coerceIn(0f, 1f)
+            //     val barWidth = 40f
+            //     val barHeight = 4f
+            //     val barX = screenX - barWidth / 2
+            //     val barY = screenY - unitSize * 0.9f
+            //     drawRect(Color(0xFF333333), Offset(barX, barY), Size(barWidth, barHeight))
+            //     drawRect(Color(0xFF4CAF50), Offset(barX, barY), Size(barWidth * hpPercent, barHeight))
+            // }
+            //
+            // ── Task 17: Dash trail ──
+            // if (unit.state == UnitState.DASHING) {
+            //     drawLine(
+            //         color = Color.White.copy(alpha = 0.3f),
+            //         start = Offset(homeScreenX, homeScreenY),
+            //         end = Offset(screenX, screenY),
+            //         strokeWidth = 2f
+            //     )
+            // }
+            //
+            // ── Task 17: Field effect range circles (SPECIAL units) ──
+            // if (unit.unitCategory == UnitCategory.SPECIAL && unit.fieldController != null) {
+            //     val effectRadius = (unit.fieldController.range / 720f) * w
+            //     drawCircle(
+            //         color = Color(0xFF9C27B0).copy(alpha = 0.12f),
+            //         radius = effectRadius,
+            //         center = Offset(screenX, screenY),
+            //     )
+            //     drawCircle(
+            //         color = Color(0xFF9C27B0).copy(alpha = 0.25f),
+            //         radius = effectRadius,
+            //         center = Offset(screenX, screenY),
+            //         style = Stroke(width = 1.5f),
+            //     )
+            // }
+
             // Merge indicator (pulsing)
             val tile = gridState.getOrNull(tileIdx)
             if (tile != null && tile.canMerge) {
