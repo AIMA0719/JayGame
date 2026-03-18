@@ -2,7 +2,7 @@ package com.example.jaygame.navigation
 
 object Routes {
     const val HOME = "home"
-    const val DECK = "deck"
+
     const val COLLECTION = "collection"
     const val SHOP = "shop"
     const val SETTINGS = "settings"

@@ -21,7 +21,7 @@ import com.example.jaygame.ui.components.NavTab
 import com.example.jaygame.engine.PetManager
 import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.screens.CollectionScreen
-import com.example.jaygame.ui.screens.DeckScreen
+
 import com.example.jaygame.ui.screens.HomeScreen
 import com.example.jaygame.ui.screens.SettingsScreen
 import com.example.jaygame.ui.screens.AchievementsScreen
@@ -53,7 +53,6 @@ fun NavGraph(
 
     val selectedTab = when (currentRoute) {
         Routes.HOME -> NavTab.HOME
-        Routes.DECK -> NavTab.DECK
         Routes.COLLECTION -> NavTab.COLLECTION
         Routes.SHOP -> NavTab.SHOP
         Routes.SETTINGS -> NavTab.SETTINGS
@@ -61,7 +60,7 @@ fun NavGraph(
     }
 
     val showBottomBar = currentRoute in listOf(
-        Routes.HOME, Routes.DECK, Routes.COLLECTION, Routes.SHOP, Routes.SETTINGS,
+        Routes.HOME, Routes.COLLECTION, Routes.SHOP, Routes.SETTINGS,
     )
 
     Column(modifier = modifier
@@ -87,9 +86,6 @@ fun NavGraph(
                         }
                     },
                 )
-            }
-            composable(Routes.DECK) {
-                DeckScreen(repository = repository)
             }
             composable(Routes.COLLECTION) {
                 val petMgr = remember { PetManager(repository.gameData.value) }
@@ -233,7 +229,6 @@ fun NavGraph(
                     }
 
                     val route = when (tab) {
-                        NavTab.DECK -> Routes.DECK
                         NavTab.HOME -> Routes.HOME
                         NavTab.COLLECTION -> Routes.COLLECTION
                         NavTab.SHOP -> Routes.SHOP
