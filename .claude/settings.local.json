@@ -16,7 +16,10 @@
       "Bash(cd C:/Users/Infocar/AndroidStudioProjects/JayGame && ./gradlew assembleDebug 2>&1 | tail -5)",
       "WebFetch(domain:namu.wiki)",
       "Bash(./gradlew assembleDebug 2>&1 | tail -50)",
-      "Bash(./gradlew assembleDebug 2>&1 | tail -5)"
+      "Bash(./gradlew assembleDebug 2>&1 | tail -5)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "Bash(./gradlew assembleDebug)",
+      "Skill(ralph-loop:cancel-ralph)"
     ]
   }
 }

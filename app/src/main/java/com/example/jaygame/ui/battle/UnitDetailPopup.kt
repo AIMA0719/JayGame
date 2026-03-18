@@ -41,6 +41,7 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.data.UnitGrade
 import com.example.jaygame.engine.AttackRange
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
@@ -155,10 +156,13 @@ fun UnitDetailPopup() {
                     }
                 }
             } else {
-                // Blueprint unit without legacy UnitDef — show basic info from bridge data
+                // Blueprint unit — look up name from BlueprintRegistry
+                val blueprint = remember(data.blueprintId) {
+                    BlueprintRegistry.instance.findById(data.blueprintId)
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = data.blueprintId,
+                        text = blueprint?.name ?: data.blueprintId,
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
@@ -250,20 +254,20 @@ fun UnitDetailPopup() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Stats grid: ATK, SPD, Range (only for legacy UnitDef units)
+            // Stats grid
             if (unitDef != null) {
+                // Legacy unit stats
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    StatItem("ATK", "${unitDef.baseATK}", NeonRed)
-                    StatItem("SPD", "%.1f".format(unitDef.baseSpeed), NeonCyan)
-                    StatItem("Range", "${unitDef.range.toInt()}", Gold)
+                    StatItem("공격력", "${unitDef.baseATK}", NeonRed)
+                    StatItem("공속", "%.1f".format(unitDef.baseSpeed), NeonCyan)
+                    StatItem("사거리", "${unitDef.range.toInt()}", Gold)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Ability description
                 Text(
                     text = "${unitDef.abilityName}: ${unitDef.description}",
                     color = SubText,
@@ -271,7 +275,6 @@ fun UnitDetailPopup() {
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                // Unique Ability (Hero grade and above)
                 if (unitDef.uniqueAbility != null) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Column(
@@ -304,6 +307,39 @@ fun UnitDetailPopup() {
                             modifier = Modifier.padding(top = 2.dp),
                         )
                     }
+                }
+            } else if (data.blueprintId.isNotEmpty()) {
+                // Blueprint unit stats
+                val bp = remember(data.blueprintId) {
+                    BlueprintRegistry.instance.findById(data.blueprintId)
+                }
+                if (bp != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        StatItem("공격력", "${bp.stats.baseATK.toInt()}", NeonRed)
+                        StatItem("공속", "%.1f".format(bp.stats.baseSpeed), NeonCyan)
+                        StatItem("사거리", "${bp.stats.range.toInt()}", Gold)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        StatItem("체력", "${bp.stats.hp.toInt()}", Color(0xFF4CAF50))
+                        StatItem("방어력", "${bp.stats.defense.toInt()}", Color(0xFF90A4AE))
+                        StatItem("마법저항", "${bp.stats.magicResist.toInt()}", Color(0xFF7E57C2))
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = bp.description,
+                        color = SubText,
+                        fontSize = 11.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
