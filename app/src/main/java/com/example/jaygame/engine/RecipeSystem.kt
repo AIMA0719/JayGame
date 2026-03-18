@@ -21,10 +21,12 @@ data class RecipeSlot(
 class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
 
     companion object {
+        @Volatile
         lateinit var instance: RecipeSystem
             private set
 
         /** Must be called AFTER BlueprintRegistry.initialize() */
+        @Synchronized
         fun initialize(context: android.content.Context) {
             if (::instance.isInitialized) return
             val recipesJson = context.assets.open("units/hidden_recipes.json")

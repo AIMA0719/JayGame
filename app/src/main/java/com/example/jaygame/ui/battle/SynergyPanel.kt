@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,8 +41,8 @@ fun SynergyPanel(
     roleSynergies: Map<UnitRole, Int>,
     modifier: Modifier = Modifier,
 ) {
-    val activeRoles = roleSynergies.filter { it.value >= 2 }
-    val activeFamilies = familySynergies.filter { it.value >= 2 }
+    val activeRoles: Map<UnitRole, Int> = remember(roleSynergies) { roleSynergies.filter { it.value >= 2 } }
+    val activeFamilies: Map<UnitFamily, Int> = remember(familySynergies) { familySynergies.filter { it.value >= 2 } }
 
     if (activeRoles.isEmpty() && activeFamilies.isEmpty()) return
 

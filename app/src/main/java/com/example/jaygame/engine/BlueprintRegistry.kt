@@ -6,9 +6,11 @@ import org.json.JSONObject
 
 class BlueprintRegistry {
     companion object {
+        @Volatile
         lateinit var instance: BlueprintRegistry
             private set
 
+        @Synchronized
         fun initialize(context: android.content.Context) {
             if (::instance.isInitialized) return
             val registry = BlueprintRegistry()

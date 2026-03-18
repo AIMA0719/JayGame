@@ -782,42 +782,48 @@ class BattleEngine(
         )
     }
 
+    // Pre-allocated containers for refreshSynergies() — avoid per-call allocation
+    private val roleSynergyCacheMut = HashMap<UnitRole, RoleSynergySystem.RoleSynergyBonus>(5)
+    private val roleCountsScratch = HashMap<UnitRole, Int>(5)
+
     /** Recalculate field-based synergies from currently alive units.
      *  Picks the dominant family (highest count >= 2) for the global synergy bonus. */
     private fun refreshSynergies() {
         activeUnitsScratch.clear()
         units.forEach { if (it.alive) activeUnitsScratch.add(it) }
+
+        // Family synergy — countFamilies is called once internally
         val familyCounts = SynergySystem.getActiveSynergies(activeUnitsScratch)
         if (familyCounts.isEmpty()) {
             AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
         } else {
-            // Use the family with the highest count as the dominant synergy
             val dominantFamily = familyCounts.maxByOrNull { it.value }!!.key
-            AbilitySystem.activeSynergy = SynergySystem.getSynergyBonus(activeUnitsScratch, dominantFamily)
+            // Reuse cached counts from getActiveSynergies — avoid second countFamilies call
+            AbilitySystem.activeSynergy = SynergySystem.getSynergyBonusFromCached(dominantFamily)
         }
-
-        // Push family synergy counts to Compose
         BattleBridge.updateFamilySynergies(familyCounts)
 
-        // Role synergy
-        roleSynergyCache = UnitRole.entries.associateWith { role ->
-            RoleSynergySystem.getBonus(activeUnitsScratch, role)
-        }
-
-        // Push role counts to Compose (count alive non-SPECIAL units per role)
-        val roleCounts = mutableMapOf<UnitRole, Int>()
+        // Role synergy — single pass: count roles + compute bonuses
+        roleCountsScratch.clear()
         for (unit in activeUnitsScratch) {
-            if (unit.alive && unit.unitCategory != UnitCategory.SPECIAL) {
-                roleCounts[unit.role] = (roleCounts[unit.role] ?: 0) + 1
+            if (unit.unitCategory != UnitCategory.SPECIAL) {
+                roleCountsScratch[unit.role] = (roleCountsScratch[unit.role] ?: 0) + 1
             }
         }
-        BattleBridge.updateRoleSynergies(roleCounts)
+        roleSynergyCacheMut.clear()
+        for (role in UnitRole.entries) {
+            val count = roleCountsScratch[role] ?: 0
+            roleSynergyCacheMut[role] = RoleSynergySystem.getBonusByCount(role, count)
+        }
+        roleSynergyCache = roleSynergyCacheMut
+
+        BattleBridge.updateRoleSynergies(roleCountsScratch)
     }
 
     /** Get role synergy bonus for a unit. SPECIAL category units get no bonus. */
     private fun getRoleBonus(unit: GameUnit): RoleSynergySystem.RoleSynergyBonus {
-        if (unit.unitCategory == UnitCategory.SPECIAL) return RoleSynergySystem.RoleSynergyBonus()
-        return roleSynergyCache[unit.role] ?: RoleSynergySystem.RoleSynergyBonus()
+        if (unit.unitCategory == UnitCategory.SPECIAL) return RoleSynergySystem.NO_BONUS
+        return roleSynergyCache[unit.role] ?: RoleSynergySystem.NO_BONUS
     }
 
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {

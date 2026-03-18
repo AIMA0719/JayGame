@@ -65,6 +65,15 @@ object SynergySystem {
     }
 
     /**
+     * cachedCounts가 이미 채워진 상태에서 호출 — countFamilies() 재호출 없이 보너스 조회.
+     * refreshSynergies()에서 getActiveSynergies() 이후 사용.
+     */
+    fun getSynergyBonusFromCached(family: UnitFamily): SynergyBonus {
+        val familyCount = cachedCounts[family] ?: 0
+        return getSynergyBonusByCount(family.ordinal, familyCount)
+    }
+
+    /**
      * GameUnit 리스트 기반 활성 시너지 요약 (UI 표시용)
      */
     fun getActiveSynergies(units: List<GameUnit>): Map<UnitFamily, Int> {

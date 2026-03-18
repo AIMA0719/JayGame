@@ -33,7 +33,7 @@ object RoleSynergySystem {
     }
 
     // Pre-allocated tier constants to avoid per-call data class allocation
-    private val NO_BONUS = RoleSynergyBonus()
+    val NO_BONUS = RoleSynergyBonus()
     private val TANK_2 = RoleSynergyBonus(blockTimeBonus = 0.2f)
     private val TANK_3 = RoleSynergyBonus(blockTimeBonus = 0.2f, blockCountBonus = 1)
     private val TANK_4 = RoleSynergyBonus(blockTimeBonus = 0.2f, blockCountBonus = 1, specialEffect = RoleSpecialEffect.TAUNT_ON_HIT)
@@ -49,6 +49,15 @@ object RoleSynergySystem {
     private val CONTROLLER_2 = RoleSynergyBonus(ccChanceBonus = 0.1f)
     private val CONTROLLER_3 = RoleSynergyBonus(ccChanceBonus = 0.1f, ccDurationBonus = 0.25f)
     private val CONTROLLER_4 = RoleSynergyBonus(ccChanceBonus = 0.1f, ccDurationBonus = 0.25f, specialEffect = RoleSpecialEffect.CC_HALF_ON_IMMUNE)
+
+    /** Pre-counted version — avoids re-scanning the unit list per role. */
+    fun getBonusByCount(role: UnitRole, count: Int): RoleSynergyBonus = when (role) {
+        UnitRole.TANK -> when { count >= 4 -> TANK_4; count >= 3 -> TANK_3; count >= 2 -> TANK_2; else -> NO_BONUS }
+        UnitRole.MELEE_DPS -> when { count >= 4 -> MELEE_4; count >= 3 -> MELEE_3; count >= 2 -> MELEE_2; else -> NO_BONUS }
+        UnitRole.RANGED_DPS -> when { count >= 4 -> RANGED_4; count >= 3 -> RANGED_3; count >= 2 -> RANGED_2; else -> NO_BONUS }
+        UnitRole.SUPPORT -> when { count >= 4 -> SUPPORT_4; count >= 3 -> SUPPORT_3; count >= 2 -> SUPPORT_2; else -> NO_BONUS }
+        UnitRole.CONTROLLER -> when { count >= 4 -> CONTROLLER_4; count >= 3 -> CONTROLLER_3; count >= 2 -> CONTROLLER_2; else -> NO_BONUS }
+    }
 
     fun getBonus(activeUnits: List<GameUnit>, role: UnitRole): RoleSynergyBonus {
         val count = activeUnits.count {
