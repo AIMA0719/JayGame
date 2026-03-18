@@ -6,7 +6,8 @@ class FieldEffectManager {
 
     fun canPlace(unit: GameUnit): Boolean {
         if (unit.unitCategory != UnitCategory.SPECIAL) return true
-        if (activeEffects.size >= MAX_SPECIAL_UNITS) return false
+        val specialCount = activeEffects.count { it.first.unitCategory == UnitCategory.SPECIAL }
+        if (specialCount >= MAX_SPECIAL_UNITS) return false
         if (activeEffects.any { it.first.blueprintId == unit.blueprintId }) return false
         return true
     }

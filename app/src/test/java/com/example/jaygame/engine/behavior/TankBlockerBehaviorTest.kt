@@ -195,7 +195,7 @@ class TankBlockerBehaviorTest {
     }
 
     @Test
-    fun `onTakeDamage kills unit at zero hp`() {
+    fun `onTakeDamage transitions to RESPAWNING at zero hp`() {
         unit.hp = 10f
         unit.maxHp = 100f
         unit.defense = 0f
@@ -203,8 +203,9 @@ class TankBlockerBehaviorTest {
         behavior.onTakeDamage(unit, 100f, isMagic = false)
 
         assertEquals(0f, unit.hp, 0.01f)
-        assertFalse(unit.alive)
-        assertEquals(UnitState.DEAD, unit.state)
+        // Tank stays alive=true so RESPAWNING state can run in update()
+        assertTrue(unit.alive)
+        assertEquals(UnitState.RESPAWNING, unit.state)
     }
 
     // --- Helpers ---

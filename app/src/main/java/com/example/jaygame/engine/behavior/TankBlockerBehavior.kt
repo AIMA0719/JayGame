@@ -50,8 +50,9 @@ class TankBlockerBehavior : UnitBehavior {
                     }
                 }
 
-                // Remove dead enemies from block list
-                blockedEnemies.removeAll { !it.alive }
+                // Remove dead enemies from block list (properly releasing each)
+                val deadBlocked = blockedEnemies.filter { !it.alive }
+                deadBlocked.forEach { releaseEnemy(it) }
 
                 // Try to block more if under blockCount
                 if (blockedEnemies.size < unit.blockCount) {
@@ -97,13 +98,18 @@ class TankBlockerBehavior : UnitBehavior {
     }
 
     override fun onTakeDamage(unit: GameUnit, damage: Float, isMagic: Boolean) {
+        if (unit.state == UnitState.RESPAWNING) return // don't take damage while respawning
         val resist = if (isMagic) unit.magicResist else unit.defense
         val reduction = resist / (resist + 100f)
         unit.hp -= damage * (1f - reduction)
         if (unit.hp <= 0f) {
             unit.hp = 0f
-            unit.alive = false
-            unit.state = UnitState.DEAD
+            // Release all blocked enemies IMMEDIATELY
+            releaseAllEnemies()
+            unit.state = UnitState.RESPAWNING
+            respawnTimer = RESPAWN_COOLDOWN
+            // Keep alive=true so update() can run the RESPAWNING state
+            // unit.alive stays true — tank is respawning, not permanently dead
         }
     }
 

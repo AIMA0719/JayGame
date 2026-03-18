@@ -113,7 +113,7 @@ object DamageCalculator {
      * Formula: rawDamage * (100 / (100 + resist))
      */
     fun calculateDamageToUnit(rawDamage: Float, isMagic: Boolean, targetUnit: GameUnit): Float {
-        val resist = if (isMagic) targetUnit.magicResist else targetUnit.defense
+        val resist = (if (isMagic) targetUnit.magicResist else targetUnit.defense).coerceAtLeast(0f)
         return rawDamage * (100f / (100f + resist))
     }
 

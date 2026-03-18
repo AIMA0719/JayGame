@@ -486,43 +486,42 @@ class BattleEngine(
         UniqueAbilitySystem.update(unitList, dt, activeEnemies)
 
         units.forEach { unit ->
-            if (!unit.alive) return@forEach
+            if (!unit.alive && unit.state != UnitState.RESPAWNING) return@forEach
 
             // NEW: Behavior-based update path — units with a behavior delegate to it
             if (unit.behavior != null) {
                 unit.behavior!!.update(unit, dt) { pos, range -> findNearestEnemy(pos, range) }
                 // For behavior-based units, check if behavior produced an attack
-                if (unit.canAttack()) {
-                    val target = unit.currentTarget
-                    if (target != null && target.alive) {
-                        val result = unit.behavior!!.onAttack(unit, target)
-                        if (result.isInstant) {
-                            // Melee instant damage — apply directly
-                            val finalDmg = DamageCalculator.calculatePhysicalDamage(
-                                result.damage,
-                                if (result.isMagic) 0f else target.armor,
+                // Use behavior's canAttack() for ranged units instead of legacy unit.canAttack()
+                val canFire = when (val b = unit.behavior) {
+                    is com.example.jaygame.engine.behavior.RangedShooterBehavior -> b.canAttack()
+                    is com.example.jaygame.engine.behavior.ControllerCCBehavior -> b.canAttack()
+                    else -> unit.canAttack()
+                }
+                if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
+                    val target = unit.currentTarget!!
+                    val result = unit.behavior!!.onAttack(unit, target)
+                    if (result.isInstant) {
+                        // Melee instant damage — use Enemy.takeDamage() for proper boss/buff handling
+                        val finalDmg = target.takeDamage(result.damage, result.isMagic, unit.range)
+                        val nx = target.position.x / W
+                        val ny = target.position.y / H
+                        BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), result.isCrit)
+                    } else {
+                        // Ranged — spawn projectile with behavior-computed damage
+                        val proj = projectiles.acquire()
+                        if (proj != null) {
+                            proj.init(
+                                from = unit.position.copy(), target = target,
+                                damage = result.damage, speed = 400f,
+                                type = unit.family.coerceIn(0, 5),
+                                isMagic = result.isMagic, isCrit = result.isCrit,
+                                sourceUnitId = unit.tileIndex,
+                                abilityType = unit.abilityType,
+                                abilityValue = unit.abilityValue,
+                                grade = unit.grade, family = unit.family,
+                                attackerRange = unit.range,
                             )
-                            target.hp -= finalDmg
-                            if (target.hp <= 0f) target.alive = false
-                            val nx = target.position.x / W
-                            val ny = target.position.y / H
-                            BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), result.isCrit)
-                        } else {
-                            // Ranged — spawn projectile with behavior-computed damage
-                            val proj = projectiles.acquire()
-                            if (proj != null) {
-                                proj.init(
-                                    from = unit.position.copy(), target = target,
-                                    damage = result.damage, speed = 400f,
-                                    type = unit.family.coerceIn(0, 5),
-                                    isMagic = result.isMagic, isCrit = result.isCrit,
-                                    sourceUnitId = unit.tileIndex,
-                                    abilityType = unit.abilityType,
-                                    abilityValue = unit.abilityValue,
-                                    grade = unit.grade, family = unit.family,
-                                    attackerRange = unit.range,
-                                )
-                            }
                         }
                     }
                     unit.onAttack()
@@ -769,6 +768,8 @@ class BattleEngine(
     }
 
     fun requestMerge(tileIndex: Int) {
+        val existingUnit = grid.getUnit(tileIndex) ?: return
+        if (existingUnit.unitCategory == UnitCategory.HIDDEN || existingUnit.unitCategory == UnitCategory.SPECIAL) return
         val result = MergeSystem.tryMerge(grid, tileIndex) ?: return
         result.consumedTiles.forEach { i ->
             val u = grid.removeUnit(i)

@@ -35,8 +35,12 @@ class AssassinDashBehavior : UnitBehavior {
                 unit.position = unit.position.plus(dir.times(unit.moveSpeed * 2f * dt))
                 if (unit.position.distanceTo(target.position) < 20f) {
                     // Hit! Deal damage
+                    val attackResult = onAttack(unit, target)
+                    target.takeDamage(attackResult.damage, attackResult.isMagic)
                     unit.state = UnitState.RETURNING
                     dashCooldown = BASE_COOLDOWN
+                    dashTarget = null
+                    unit.currentTarget = null
                 }
             }
             UnitState.RETURNING -> {

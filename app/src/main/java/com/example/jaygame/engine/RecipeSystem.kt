@@ -25,17 +25,22 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
     fun loadRecipes(jsonString: String) {
         val arr = JSONArray(jsonString)
         for (i in 0 until arr.length()) {
-            recipes.add(parseRecipe(arr.getJSONObject(i)))
+            val recipe = parseRecipe(arr.getJSONObject(i))
+            if (recipe.ingredients.isNotEmpty()) {
+                recipes.add(recipe)
+            }
         }
     }
 
     fun matchRecipe(unitA: GameUnit, unitB: GameUnit): HiddenRecipe? {
+        if (unitA === unitB) return null
         return recipes.firstOrNull { recipe ->
             recipe.ingredients.size == 2 && matchesIngredients(recipe, listOf(unitA, unitB))
         }
     }
 
     fun matchPartial(unitA: GameUnit, unitB: GameUnit): HiddenRecipe? {
+        if (unitA === unitB) return null
         return recipes.firstOrNull { recipe ->
             recipe.ingredients.size == 3 && matchesPartialIngredients(recipe, listOf(unitA, unitB))
         }
@@ -57,6 +62,7 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
     fun getDiscoveredIds(): Set<String> = discoveredIds.toSet()
 
     private fun matchesIngredients(recipe: HiddenRecipe, units: List<GameUnit>): Boolean {
+        if (recipe.ingredients.isEmpty()) return false
         if (units.size != recipe.ingredients.size) return false
         // Try all permutations of units against slots
         val slots = recipe.ingredients.toMutableList()
