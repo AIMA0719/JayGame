@@ -57,9 +57,9 @@ class BattleEngine(
         }
     } ?: emptyMap()
 
-    // 유닛별 영구 레벨 (카드 레벨업)
-    private val permanentUnitLevels: Map<Int, Int> = gameData?.let { data ->
-        data.units.mapIndexed { idx, progress -> idx to progress.level }.toMap()
+    // 유닛별 영구 레벨 (카드 레벨업) — keyed by blueprintId
+    private val permanentUnitLevels: Map<String, Int> = gameData?.let { data ->
+        data.units.mapValues { (_, progress) -> progress.level }
     } ?: emptyMap()
 
     // 천장(Pity) 시스템
@@ -753,7 +753,8 @@ class BattleEngine(
         val abilityInfo = abilityForFamily(familyIndex)
         val synergy = SynergySystem.getSynergyBonus(deck, familyIndex)
         // Apply permanent unit level bonus from card upgrades
-        val permLevel = permanentUnitLevels.getOrElse(unitDefId) { 1 }
+        val blueprintId = com.example.jaygame.data.LegacyMigration.blueprintIdForLegacyIndex(unitDefId)
+        val permLevel = if (blueprintId != null) permanentUnitLevels.getOrElse(blueprintId) { 1 } else 1
         val permLevelBonus = 1f + (permLevel - 1) * 0.02f // +2% ATK per permanent level
         unit.init(
             unitDefId = unitDefId, grade = grade, family = familyIndex, level = 1,

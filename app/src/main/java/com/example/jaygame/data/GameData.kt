@@ -26,11 +26,7 @@ data class GameData(
     val trophies: Int = 0,
     val playerLevel: Int = 1,
     val totalXP: Int = 0,
-    val units: List<UnitProgress> = List(42) { i ->
-        // COMMON grade of each family owned by default (IDs 0-4 + 35)
-        UnitProgress(owned = i in 0..4 || i == 35, cards = 0, level = 1)
-    },
-    val deck: List<Int> = listOf(0, 1, 2),  // family ordinals (0=화염,1=냉기,2=독,3=번개,4=보조,5=바람)
+    val units: Map<String, UnitProgress> = emptyMap(),
     val totalWins: Int = 0,
     val totalLosses: Int = 0,
     val totalKills: Int = 0,
@@ -70,7 +66,7 @@ data class GameData(
     val lastFreePullTime: Long = 0L,
     // 업적 수령 기록
     val claimedAchievements: Set<Int> = emptySet(),
-    val saveVersion: Int = 2,
+    val saveVersion: Int = 3,
     // 유물
     val relics: List<RelicProgress> = List(12) { RelicProgress(relicId = it) },
     val equippedRelics: List<Int> = emptyList(),

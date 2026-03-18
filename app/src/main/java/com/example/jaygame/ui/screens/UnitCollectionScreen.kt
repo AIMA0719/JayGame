@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.data.LegacyMigration
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitFamily
@@ -189,7 +190,7 @@ fun UnitCollectionScreen(
                                 family = family,
                                 units = units,
                                 onUnitClick = { selectedUnit = it },
-                                ownedUnitIds = gameData?.units?.mapIndexedNotNull { idx, p -> if (p.owned) idx else null }?.toSet(),
+                                ownedBlueprintIds = gameData?.units?.filterValues { it.owned }?.keys,
                             )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -262,11 +263,12 @@ fun UnitCollectionScreen(
 }
 
 @Composable
+@Suppress("DEPRECATION")
 private fun FamilyUnitRow(
     family: UnitFamily,
     units: List<UnitDef>,
     onUnitClick: (UnitDef) -> Unit,
-    ownedUnitIds: Set<Int>? = null,
+    ownedBlueprintIds: Set<String>? = null,
 ) {
     val icon = FAMILY_ICONS[family] ?: ""
 
@@ -284,7 +286,10 @@ private fun FamilyUnitRow(
                 color = family.color,
             )
             Spacer(modifier = Modifier.width(8.dp))
-            val ownedCount = if (ownedUnitIds != null) units.count { it.id in ownedUnitIds } else units.size
+            val ownedCount = if (ownedBlueprintIds != null) units.count {
+                val bpId = LegacyMigration.blueprintIdForLegacyIndex(it.id)
+                bpId != null && bpId in ownedBlueprintIds
+            } else units.size
             Text(
                 text = "$ownedCount/${units.size}",
                 fontSize = 12.sp,
@@ -305,7 +310,10 @@ private fun FamilyUnitRow(
                 CodexUnitCard(
                     unit = unit,
                     onClick = { onUnitClick(unit) },
-                    isOwned = ownedUnitIds?.contains(unit.id) ?: true,
+                    isOwned = run {
+                        val bpId = LegacyMigration.blueprintIdForLegacyIndex(unit.id)
+                        if (ownedBlueprintIds != null && bpId != null) bpId in ownedBlueprintIds else true
+                    },
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -602,9 +610,9 @@ private fun UnitDetailDialog(
                 // Card-based permanent level up
                 if (repository != null) {
                     val data = repository.gameData.collectAsState().value
-                    val unitIdx = unit.id
-                    if (unitIdx in data.units.indices) {
-                        val progress = data.units[unitIdx]
+                    val blueprintId = LegacyMigration.blueprintIdForLegacyIndex(unit.id)
+                    val progress = blueprintId?.let { data.units[it] }
+                    if (blueprintId != null && progress != null) {
                         if (progress.owned) {
                             val cardsNeeded = progress.level * 3 // 레벨당 3장씩 더 필요
                             val canLevelUp = progress.cards >= cardsNeeded && progress.level < 10
@@ -638,12 +646,12 @@ private fun UnitDetailDialog(
                                         text = "레벨업",
                                         onClick = {
                                             if (canLevelUp) {
-                                                val updatedUnits = data.units.toMutableList()
-                                                updatedUnits[unitIdx] = progress.copy(
+                                                val updatedUnits = data.units.toMutableMap()
+                                                updatedUnits[blueprintId] = progress.copy(
                                                     level = progress.level + 1,
                                                     cards = progress.cards - cardsNeeded,
                                                 )
-                                                val newMaxLevel = updatedUnits.maxOf { it.level }
+                                                val newMaxLevel = updatedUnits.values.maxOf { it.level }
                                                 scope.launch(Dispatchers.IO) {
                                                     repository.save(data.copy(
                                                         units = updatedUnits,

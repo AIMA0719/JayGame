@@ -118,10 +118,10 @@ private fun getProgress(achievement: AchievementDef, data: GameData): Int {
         4 -> data.totalKills
         in 5..7 -> data.totalMerges
         8 -> data.maxUnitLevel
-        in 9..11 -> data.units.count { it.owned }
+        in 9..11 -> data.units.count { (_, u) -> u.owned }
         in 12..14 -> data.totalGoldEarned
         15 -> {
-            val totalLevels = data.units.sumOf { it.level }
+            val totalLevels = data.units.values.sumOf { it.level }
             (totalLevels - data.units.size).coerceAtLeast(0)
         }
         16 -> if (data.wonWithoutDamage) 1 else 0

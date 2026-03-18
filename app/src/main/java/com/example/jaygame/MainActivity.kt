@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
             stageId = stageId,
             difficulty = effectiveDifficulty,
             maxWaves = maxWaves,
-            deck = data.deck.toIntArray(),
+            deck = intArrayOf(0, 1, 2),  // TODO(Task5): remove deck param from BattleEngine
             gameData = data,
             initialPity = data.unitPullPity,
         ).also {
@@ -170,7 +170,7 @@ class MainActivity : ComponentActivity() {
                             val newSeasonXP = current.seasonXP + seasonXpGained
 
                             // Single-type win detection: deck has only 1 unique family
-                            val singleTypeWin = battleResult.victory && current.deck.toSet().size == 1
+                            val singleTypeWin = false  // TODO(Task5): detect single-type from BattleEngine
 
                             // Apply relic drop if present (boosted chance in RELIC_HUNT dungeon handled by engine)
                             val afterRelicData = if (battleResult.relicDropId >= 0 && battleResult.relicDropGrade >= 0) {

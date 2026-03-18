@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.LEVEL_MULTIPLIER
+import com.example.jaygame.data.LegacyMigration
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UPGRADE_COSTS
 import com.example.jaygame.data.UnitDef
@@ -145,7 +146,7 @@ fun CollectionScreen(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
                 text = {
-                    val unitCount = data.units.count { it.owned }
+                    val unitCount = data.units.count { (_, u) -> u.owned }
                     Text(
                         text = "영웅 ($unitCount)",
                         fontSize = 14.sp,
@@ -224,7 +225,7 @@ private fun HeroCollectionTab(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Description banner
-            val ownedCount = data.units.count { it.owned }
+            val ownedCount = data.units.count { (_, u) -> u.owned }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -274,7 +275,7 @@ private fun HeroCollectionTab(
                     FamilyUnitRow(
                         family = family,
                         units = units,
-                        unitProgress = data.units,
+                        unitProgress = data.units,  // Map<String, UnitProgress>
                         onUnitClick = { selectedUnit = it },
                     )
                 }
@@ -284,21 +285,24 @@ private fun HeroCollectionTab(
 
         // Detail dialog overlay
         selectedUnit?.let { def ->
-            val progress = data.units.getOrNull(def.id)
+            @Suppress("DEPRECATION")
+            val blueprintId = LegacyMigration.blueprintIdForLegacyIndex(def.id)
+            val progress = blueprintId?.let { data.units[it] }
             CollectionUnitDetailDialog(
                 def = def,
                 progress = progress,
                 gold = data.gold,
                 onUpgrade = {
-                    if (progress != null && progress.level < 7) {
+                    if (blueprintId != null && progress != null && progress.level < 7) {
                         val cost = UPGRADE_COSTS[progress.level - 1]
-                        val newUnits = data.units.toMutableList()
-                        newUnits[def.id] = newUnits[def.id].copy(
-                            level = newUnits[def.id].level + 1,
-                            cards = newUnits[def.id].cards - cost.first,
+                        val newUnits = data.units.toMutableMap()
+                        val cur = newUnits[blueprintId] ?: return@CollectionUnitDetailDialog
+                        newUnits[blueprintId] = cur.copy(
+                            level = cur.level + 1,
+                            cards = cur.cards - cost.first,
                         )
                         val newGold = data.gold - cost.second
-                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[def.id].level)
+                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[blueprintId]!!.level)
                         repository.save(data.copy(units = newUnits, gold = newGold, maxUnitLevel = newMaxLevel))
                     }
                 },
@@ -309,15 +313,17 @@ private fun HeroCollectionTab(
 }
 
 @Composable
+@Suppress("DEPRECATION")
 private fun FamilyUnitRow(
     family: UnitFamily,
     units: List<UnitDef>,
-    unitProgress: List<UnitProgress>,
+    unitProgress: Map<String, UnitProgress>,
     onUnitClick: (UnitDef) -> Unit,
 ) {
     val icon = FAMILY_ICONS[family] ?: ""
     val ownedInFamily = units.count { def ->
-        unitProgress.getOrNull(def.id)?.owned == true
+        val bpId = LegacyMigration.blueprintIdForLegacyIndex(def.id)
+        bpId != null && unitProgress[bpId]?.owned == true
     }
 
     Column(modifier = Modifier.padding(start = 16.dp)) {
@@ -351,7 +357,8 @@ private fun FamilyUnitRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             units.forEach { def ->
-                val progress = unitProgress.getOrNull(def.id)
+                val bpId = LegacyMigration.blueprintIdForLegacyIndex(def.id)
+                val progress = bpId?.let { unitProgress[it] }
                 val owned = progress?.owned == true
                 CollectionUnitCard(
                     def = def,

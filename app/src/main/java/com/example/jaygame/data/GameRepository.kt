@@ -66,21 +66,16 @@ class GameRepository(context: Context) {
             root.put("playerLevel", data.playerLevel)
             root.put("totalXP", data.totalXP)
 
-            // units array — matches C++ format: [{owned:0/1, cards:N, level:N}, ...]
-            val unitsArr = JSONArray()
-            for (u in data.units) {
+            // units map — key=blueprintId, value={owned, cards, level}
+            val unitsObj = JSONObject()
+            for ((blueprintId, u) in data.units) {
                 val obj = JSONObject()
                 obj.put("owned", if (u.owned) 1 else 0)
                 obj.put("cards", u.cards)
                 obj.put("level", u.level)
-                unitsArr.put(obj)
+                unitsObj.put(blueprintId, obj)
             }
-            root.put("units", unitsArr)
-
-            // deck array
-            val deckArr = JSONArray()
-            for (d in data.deck) deckArr.put(d)
-            root.put("deck", deckArr)
+            root.put("units", unitsObj)
 
             // stats object
             val stats = JSONObject()
@@ -158,7 +153,7 @@ class GameRepository(context: Context) {
             for (id in data.claimedAchievements) claimedArr.put(id)
             root.put("claimedAchievements", claimedArr)
 
-            root.put("saveVersion", data.saveVersion)
+            root.put("saveVersion", 3)
 
             // relics
             val relicsArr = JSONArray()
@@ -246,40 +241,47 @@ class GameRepository(context: Context) {
             val playerLevel = root.optInt("playerLevel", 1)
             val totalXP = root.optInt("totalXP", 0)
 
-            // units
-            val units = mutableListOf<UnitProgress>()
-            val unitsArr = root.optJSONArray("units")
-            if (unitsArr != null) {
-                for (i in 0 until unitsArr.length()) {
-                    val obj = unitsArr.getJSONObject(i)
-                    units.add(
-                        UnitProgress(
+            // units — v3+ stores as JSON object keyed by blueprintId; v1/v2 stores as JSON array
+            val saveVersion = root.optInt("saveVersion", 1)
+            val units: Map<String, UnitProgress> = if (saveVersion >= 3) {
+                // New format: {"blueprintId": {owned, cards, level}, ...}
+                val unitsObj = root.optJSONObject("units")
+                if (unitsObj != null) {
+                    val map = mutableMapOf<String, UnitProgress>()
+                    val keys = unitsObj.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val obj = unitsObj.getJSONObject(key)
+                        map[key] = UnitProgress(
                             owned = obj.optInt("owned", 0) != 0,
                             cards = obj.optInt("cards", 0),
                             level = obj.optInt("level", 1),
                         )
-                    )
+                    }
+                    map
+                } else emptyMap()
+            } else {
+                // Legacy format: [{owned, cards, level}, ...] indexed by Int
+                val legacyUnits = mutableListOf<UnitProgress>()
+                val unitsArr = root.optJSONArray("units")
+                if (unitsArr != null) {
+                    for (i in 0 until unitsArr.length()) {
+                        val obj = unitsArr.getJSONObject(i)
+                        legacyUnits.add(
+                            UnitProgress(
+                                owned = obj.optInt("owned", 0) != 0,
+                                cards = obj.optInt("cards", 0),
+                                level = obj.optInt("level", 1),
+                            )
+                        )
+                    }
                 }
-            }
-            // Pad to 42 if fewer entries (COMMON grade units 0-4 + 35 owned by default)
-            while (units.size < 42) {
-                units.add(UnitProgress(owned = units.size == 35, cards = 0, level = 1))
-            }
-
-            // deck (stores family ordinals 0-5)
-            val deck = mutableListOf<Int>()
-            val deckArr = root.optJSONArray("deck")
-            if (deckArr != null) {
-                for (i in 0 until deckArr.length()) {
-                    val v = deckArr.getInt(i)
-                    // Migration: old saves stored unit IDs, convert to family ordinal
-                    val familyOrdinal = if (v in 0 until NUM_FAMILIES) v else unitFamilyOf(v)
-                    deck.add(familyOrdinal)
+                while (legacyUnits.size < 42) {
+                    legacyUnits.add(UnitProgress(owned = legacyUnits.size == 35, cards = 0, level = 1))
                 }
+                LegacyMigration.migrateUnits(legacyUnits)
             }
-            if (deck.isEmpty()) deck.addAll(listOf(0, 1, 2))
-            // Migration: trim old 5-slot decks to 3
-            while (deck.size > 3) deck.removeAt(deck.lastIndex)
+            // deck removed in v3 — skip parsing
 
             // stats
             val stats = root.optJSONObject("stats")
@@ -364,8 +366,6 @@ class GameRepository(context: Context) {
                 for (i in 0 until claimedArr.length()) claimedAchievements.add(claimedArr.getInt(i))
             }
 
-            val saveVersion = root.optInt("saveVersion", 1)
-
             val relics = if (root.has("relics")) {
                 val arr = root.getJSONArray("relics")
                 List(arr.length()) { i ->
@@ -441,7 +441,6 @@ class GameRepository(context: Context) {
                 playerLevel = playerLevel,
                 totalXP = totalXP,
                 units = units,
-                deck = deck,
                 totalWins = totalWins,
                 totalLosses = totalLosses,
                 totalKills = totalKills,

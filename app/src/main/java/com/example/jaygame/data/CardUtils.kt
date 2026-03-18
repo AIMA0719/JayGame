@@ -27,20 +27,20 @@ private fun rollCardGrade(): UnitGrade {
     return UnitGrade.COMMON
 }
 
-fun addRandomCardsToUnits(units: List<UnitProgress>, count: Int): List<UnitProgress> {
+@Suppress("DEPRECATION")
+fun addRandomCardsToUnits(units: Map<String, UnitProgress>, count: Int): Map<String, UnitProgress> {
     if (count <= 0) return units
-    val updatedUnits = units.toMutableList()
+    val updatedUnits = units.toMutableMap()
 
     repeat(count) {
         val grade = rollCardGrade()
         val candidates = UNIT_DEFS.filter { it.grade == grade }
         if (candidates.isEmpty()) return@repeat
         val picked = candidates.random()
-        val idx = picked.id
-        if (idx !in updatedUnits.indices) return@repeat
+        val blueprintId = LegacyMigration.blueprintIdForLegacyIndex(picked.id) ?: return@repeat
 
-        val current = updatedUnits[idx]
-        updatedUnits[idx] = if (current.owned) {
+        val current = updatedUnits[blueprintId] ?: UnitProgress()
+        updatedUnits[blueprintId] = if (current.owned) {
             current.copy(cards = current.cards + 1)
         } else {
             current.copy(owned = true, cards = current.cards + 1)

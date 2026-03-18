@@ -162,7 +162,7 @@ fun ShopScreen(repository: GameRepository) {
                 }),
             ShopItem("\uD83D\uDD27 개발자 모드", "재화 MAX + 스태미나 무한 + 도감 올 해금", "FREE",
                 onPurchase = { d, repo ->
-                    val allUnlocked = d.units.map { it.copy(owned = true, cards = 999) }
+                    val allUnlocked = d.units.mapValues { (_, u) -> u.copy(owned = true, cards = 999) }
                     repo.save(d.copy(
                         gold = 9_999_999,
                         diamonds = 9_999_999,
