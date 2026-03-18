@@ -282,10 +282,8 @@ object BattleBridge {
     private val _damageEvents = MutableStateFlow<List<DamageEvent>>(emptyList())
     val damageEvents: StateFlow<List<DamageEvent>> = _damageEvents.asStateFlow()
 
-    /** 25타일 그리드 상태 (5x5) */
-    const val GRID_COLS = 5
-    const val GRID_ROWS = 5
-    const val GRID_TOTAL = GRID_COLS * GRID_ROWS
+    /** 유닛 슬롯 상태 (최대 100) */
+    const val GRID_TOTAL = 100
 
     private val _gridState = MutableStateFlow(List(GRID_TOTAL) { GridTileState() })
     val gridState: StateFlow<List<GridTileState>> = _gridState.asStateFlow()

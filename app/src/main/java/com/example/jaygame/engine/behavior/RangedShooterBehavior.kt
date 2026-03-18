@@ -17,8 +17,8 @@ class RangedShooterBehavior(
 
         when (unit.state) {
             UnitState.IDLE -> {
-                // Find enemy in detection range (range * 1.5)
-                val enemy = findEnemy(unit.position, unit.range * 1.5f)
+                // Detect enemies across entire map, chase into attack range
+                val enemy = findEnemy(unit.position, 720f)
                 if (enemy != null) {
                     unit.currentTarget = enemy
                     unit.state = UnitState.ATTACKING
@@ -47,23 +47,25 @@ class RangedShooterBehavior(
                 val target = unit.currentTarget
                 if (target == null || !target.alive) {
                     unit.currentTarget = null
+                    unit.isAttacking = false
                     unit.state = UnitState.IDLE
                     return
                 }
-                // Check if still in detection range
+                // Chase toward target if out of attack range
                 val distSq = unit.position.distanceSqTo(target.position)
-                if (distSq > (unit.range * 1.5f) * (unit.range * 1.5f)) {
-                    unit.currentTarget = null
-                    unit.state = UnitState.IDLE
-                    return
+                if (distSq > unit.range * unit.range) {
+                    unit.isAttacking = false
+                    val dir = target.position.minus(unit.position).normalized()
+                    unit.position = unit.position.plus(dir.times(unit.moveSpeed * dt))
+                } else {
+                    unit.isAttacking = true
                 }
-                // Attack is handled by BattleEngine checking canAttack()
             }
             else -> { /* Other states not used by ranged */ }
         }
     }
 
-    fun canAttack(): Boolean = attackCooldown <= 0f
+    override fun canAttack(): Boolean = attackCooldown <= 0f
 
     override fun onAttack(unit: GameUnit, target: Enemy): AttackResult {
         attackCooldown = 1f / unit.atkSpeed

@@ -9,12 +9,15 @@ class TankBlockerBehavior : UnitBehavior {
     private val RESPAWN_COOLDOWN = 3f
     private val BOSS_BLOCK_DURATION = 5f
     private val bossBlockTimers = mutableMapOf<Enemy, Float>()
+    private var attackCooldown = 0f
 
     override fun update(unit: GameUnit, dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
+        attackCooldown -= dt
+
         when (unit.state) {
             UnitState.IDLE -> {
-                // Find nearest enemy to block
-                val enemy = findEnemy(unit.position, unit.range * 2f)
+                // Detect enemies across entire map
+                val enemy = findEnemy(unit.position, 720f)
                 if (enemy != null && blockedEnemies.size < unit.blockCount) {
                     unit.state = UnitState.MOVING
                     unit.currentTarget = enemy
@@ -51,8 +54,24 @@ class TankBlockerBehavior : UnitBehavior {
                 }
 
                 // Remove dead enemies from block list (properly releasing each)
-                val deadBlocked = blockedEnemies.filter { !it.alive }
-                deadBlocked.forEach { releaseEnemy(it) }
+                val iter = blockedEnemies.iterator()
+                while (iter.hasNext()) {
+                    val enemy = iter.next()
+                    if (!enemy.alive) {
+                        enemy.releaseBlock()
+                        bossBlockTimers.remove(enemy)
+                        iter.remove()
+                    }
+                }
+
+                // Attack blocked enemies periodically
+                if (attackCooldown <= 0f && blockedEnemies.isNotEmpty()) {
+                    unit.isAttacking = true
+                    unit.currentTarget = blockedEnemies.first()
+                    unit.state = UnitState.ATTACKING
+                } else {
+                    unit.isAttacking = blockedEnemies.isNotEmpty()
+                }
 
                 // Try to block more if under blockCount
                 if (blockedEnemies.size < unit.blockCount) {
@@ -64,8 +83,14 @@ class TankBlockerBehavior : UnitBehavior {
 
                 // If no enemies left to block, return to idle
                 if (blockedEnemies.isEmpty()) {
+                    unit.isAttacking = false
                     unit.state = UnitState.IDLE
                 }
+            }
+            UnitState.ATTACKING -> {
+                // Fire attack at blocked enemy, then return to blocking
+                unit.state = UnitState.BLOCKING
+                attackCooldown = 1f / unit.atkSpeed.coerceAtLeast(0.1f)
             }
             UnitState.DEAD -> {
                 // Release ALL blocked enemies immediately (same frame)
@@ -137,5 +162,6 @@ class TankBlockerBehavior : UnitBehavior {
     override fun reset() {
         releaseAllEnemies()
         respawnTimer = 0f
+        attackCooldown = 0f
     }
 }

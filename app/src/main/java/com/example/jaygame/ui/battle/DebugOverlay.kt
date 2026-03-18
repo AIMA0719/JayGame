@@ -14,7 +14,6 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.engine.Grid
 
 // Pre-allocated Color constants (avoid GC during Canvas draw)
-private val DebugGridLineColor = Color.White.copy(alpha = 0.3f)
 private val DebugWaypointColor = Color.Cyan
 private val DebugHomeMarkerColor = Color.Green
 private val DebugPathLineColor = Color.Yellow.copy(alpha = 0.7f)
@@ -41,40 +40,14 @@ fun DebugOverlay() {
         fun wx(worldX: Float) = worldX / WORLD_W * w
         fun wy(worldY: Float) = worldY / WORLD_H * h
 
-        // ── a. Grid cell boundaries as thin white lines ──
+        // ── a. Field area bounds (dashed) ──
         val originX = Grid.ORIGIN_X
         val originY = Grid.ORIGIN_Y
-        val cellW = Grid.CELL_W
-        val cellH = Grid.CELL_H
-        val cols = Grid.COLS
-        val rows = Grid.ROWS
 
-        // Vertical lines
-        for (col in 0..cols) {
-            val x = wx(originX + col * cellW)
-            drawLine(
-                color = DebugGridLineColor,
-                start = Offset(x, wy(originY)),
-                end = Offset(x, wy(originY + rows * cellH)),
-                strokeWidth = 1f,
-            )
-        }
-        // Horizontal lines
-        for (row in 0..rows) {
-            val y = wy(originY + row * cellH)
-            drawLine(
-                color = DebugGridLineColor,
-                start = Offset(wx(originX), y),
-                end = Offset(wx(originX + cols * cellW), y),
-                strokeWidth = 1f,
-            )
-        }
-
-        // Grid outer bounds (dashed)
         val gridLeft = wx(originX)
         val gridTop = wy(originY)
-        val gridRight = wx(originX + cols * cellW)
-        val gridBottom = wy(originY + rows * cellH)
+        val gridRight = wx(originX + Grid.GRID_W)
+        val gridBottom = wy(originY + Grid.GRID_H)
         drawRect(
             color = DebugGridBoundsColor,
             topLeft = Offset(gridLeft, gridTop),
@@ -85,17 +58,12 @@ fun DebugOverlay() {
             ),
         )
 
-        // ── c. Unit home positions as green markers ──
-        for (i in 0 until Grid.TOTAL) {
-            val col = i % cols
-            val row = i / cols
-            val cx = wx(originX + col * cellW + cellW * 0.5f)
-            val cy = wy(originY + row * cellH + cellH * 0.5f)
-            // Small green cross
-            val armLen = 4f
-            drawLine(DebugHomeMarkerColor, Offset(cx - armLen, cy), Offset(cx + armLen, cy), strokeWidth = 2f)
-            drawLine(DebugHomeMarkerColor, Offset(cx, cy - armLen), Offset(cx, cy + armLen), strokeWidth = 2f)
-        }
+        // ── c. Field center marker ──
+        val cx = wx(Grid.CENTER_X)
+        val cy = wy(Grid.CENTER_Y)
+        val armLen = 6f
+        drawLine(DebugHomeMarkerColor, Offset(cx - armLen, cy), Offset(cx + armLen, cy), strokeWidth = 2f)
+        drawLine(DebugHomeMarkerColor, Offset(cx, cy - armLen), Offset(cx, cy + armLen), strokeWidth = 2f)
 
         // ── b & d. Enemy path waypoints and connecting line ──
         if (waypoints.isNotEmpty()) {

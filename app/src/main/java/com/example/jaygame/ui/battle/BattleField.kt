@@ -1,8 +1,7 @@
 package com.example.jaygame.ui.battle
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableIntStateOf
@@ -98,7 +97,6 @@ private const val GRID_NORM_Y = 107.5f / 720f    // 0.14931 (Grid.ORIGIN_Y / 720
 private const val GRID_NORM_W = CPP_GRID_W / 720f   // 0.66667
 private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
 
-// Use BattleBridge.GRID_COLS and BattleBridge.GRID_ROWS instead of local copies
 
 /**
  * Battlefield overlay — unit sprites rendered in Compose (proper drawable icons),
@@ -245,16 +243,17 @@ fun BattleField() {
         }
     }
 
-    // Drag state for unit relocation
+    // Drag state for unit relocation (immediate drag, no long-press)
     var dragFromTile by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var isDragging by remember { mutableStateOf(false) }
+    var dragTotalDistance by remember { mutableFloatStateOf(0f) }
 
     Canvas(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
+                detectDragGestures(
                     onDragStart = { startOffset ->
                         val w = size.width.toFloat()
                         val h = size.height.toFloat()
@@ -280,57 +279,40 @@ fun BattleField() {
                             dragFromTile = data.tileIndices[closestIdx]
                             isDragging = true
                             dragOffset = startOffset
+                            dragTotalDistance = 0f
                         }
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         dragOffset += dragAmount
+                        dragTotalDistance += dragAmount.getDistance()
                     },
                     onDragEnd = {
                         if (isDragging && dragFromTile >= 0) {
                             val w = size.width.toFloat()
                             val h = size.height.toFloat()
-                            val normX = dragOffset.x / w
-                            val normY = dragOffset.y / h
-                            BattleBridge.requestRelocate(dragFromTile, normX, normY)
+                            if (dragTotalDistance < 15f) {
+                                // Short drag = tap → show unit popup
+                                BattleBridge.requestClickTile(dragFromTile)
+                            } else {
+                                // Real drag → relocate unit
+                                val normX = dragOffset.x / w
+                                val normY = dragOffset.y / h
+                                BattleBridge.requestRelocate(dragFromTile, normX, normY)
+                            }
                         }
                         isDragging = false
                         dragFromTile = -1
                         dragOffset = Offset.Zero
+                        dragTotalDistance = 0f
                     },
                     onDragCancel = {
                         isDragging = false
                         dragFromTile = -1
                         dragOffset = Offset.Zero
+                        dragTotalDistance = 0f
                     },
                 )
-            }
-            .pointerInput(Unit) {
-                detectTapGestures { tapOffset ->
-                    val w = size.width.toFloat()
-                    val h = size.height.toFloat()
-                    val tapNormX = tapOffset.x / w
-                    val tapNormY = tapOffset.y / h
-
-                    val data = BattleBridge.unitPositions.value
-                    var closestIdx = -1
-                    var closestDistSq = Float.MAX_VALUE
-                    val threshold = 0.04f
-
-                    for (i in 0 until data.count) {
-                        val dx = tapNormX - data.xs[i]
-                        val dy = tapNormY - data.ys[i]
-                        val distSq = dx * dx + dy * dy
-                        if (distSq < threshold * threshold && distSq < closestDistSq) {
-                            closestDistSq = distSq
-                            closestIdx = i
-                        }
-                    }
-
-                    if (closestIdx >= 0) {
-                        BattleBridge.requestClickTile(data.tileIndices[closestIdx])
-                    }
-                }
             }
     ) {
         val w = size.width
@@ -350,9 +332,8 @@ fun BattleField() {
         val moArr = microOffsets.value
         val useMicro = moArr.size == data.count * 2
 
-        // Size based on cell height (grid is 880x440, 6cols x 5rows -> cells are 146x88)
-        val cellH = gridH / BattleBridge.GRID_ROWS.toFloat()
-        val unitSize = cellH * 0.65f
+        // Unit size based on field height (no grid cells)
+        val unitSize = gridH * 0.12f
         val pedestalRx = unitSize * 0.45f
         val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
@@ -775,25 +756,40 @@ fun BattleField() {
             }
         }
 
-        // Draw drag ghost at finger position
+        // Draw drag ghost at finger position — lifted Z-axis effect
         if (isDragging && dragFromTile >= 0) {
             val data2 = BattleBridge.unitPositions.value
             val dragUnitIdx = (0 until data2.count).firstOrNull {
                 data2.tileIndices[it] == dragFromTile
             }
             if (dragUnitIdx != null) {
+                val liftOffset = 12f  // Z-axis lift: unit drawn higher
+                val liftScale = 1.25f // Scaled up when lifted
+                val liftedSize = unitSize * liftScale
+                val liftedX = dragOffset.x
+                val liftedY = dragOffset.y - liftOffset
+
+                // Drop shadow (on ground)
+                drawOval(
+                    color = Color.Black.copy(alpha = 0.3f),
+                    topLeft = Offset(dragOffset.x - liftedSize * 0.4f, dragOffset.y + liftedSize * 0.1f),
+                    size = Size(liftedSize * 0.8f, liftedSize * 0.3f),
+                )
+
+                // Lifted unit
                 val bitmap = unitBitmaps[data2.unitDefIds[dragUnitIdx]]
+                    ?: blueprintBitmapCache[data2.blueprintIds.getOrElse(dragUnitIdx) { "" }]
                 if (bitmap != null) {
                     drawImage(
                         image = bitmap,
-                        topLeft = Offset(dragOffset.x - unitSize / 2, dragOffset.y - unitSize / 2),
-                        alpha = 0.7f,
+                        topLeft = Offset(liftedX - liftedSize / 2, liftedY - liftedSize / 2),
+                        alpha = 0.85f,
                     )
                 }
                 drawCircle(
                     color = DragGhost,
-                    radius = unitSize * 0.6f,
-                    center = Offset(dragOffset.x, dragOffset.y),
+                    radius = liftedSize * 0.55f,
+                    center = Offset(liftedX, liftedY),
                 )
             }
         }

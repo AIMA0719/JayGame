@@ -14,7 +14,7 @@ class ControllerCCBehavior(
         attackCooldown -= dt
         when (unit.state) {
             UnitState.IDLE -> {
-                val enemy = findEnemy(unit.position, unit.range * (if (isRanged) 1.5f else 1f))
+                val enemy = findEnemy(unit.position, 720f)
                 if (enemy != null) {
                     unit.currentTarget = enemy
                     unit.state = UnitState.ATTACKING
@@ -24,14 +24,25 @@ class ControllerCCBehavior(
                 val target = unit.currentTarget
                 if (target == null || !target.alive) {
                     unit.currentTarget = null
+                    unit.isAttacking = false
                     unit.state = UnitState.IDLE
+                    return
+                }
+                // Chase toward target if out of attack range
+                val distSq = unit.position.distanceSqTo(target.position)
+                if (distSq > unit.range * unit.range) {
+                    unit.isAttacking = false
+                    val dir = target.position.minus(unit.position).normalized()
+                    unit.position = unit.position.plus(dir.times(unit.moveSpeed * dt))
+                } else {
+                    unit.isAttacking = true
                 }
             }
             else -> {}
         }
     }
 
-    fun canAttack(): Boolean = attackCooldown <= 0f
+    override fun canAttack(): Boolean = attackCooldown <= 0f
     fun getCCDuration(): Float = CC_DURATION
 
     override fun onAttack(unit: GameUnit, target: Enemy): AttackResult {

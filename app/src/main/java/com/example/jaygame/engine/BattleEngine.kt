@@ -30,7 +30,7 @@ class BattleEngine(
         const val H = 720f
         const val FIXED_DT = 1f / 60f
         const val MAX_ENEMIES = 256
-        const val MAX_UNITS = 64
+        const val MAX_UNITS = 128
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
         const val SP_REGEN_PER_SEC = 2f
@@ -273,7 +273,7 @@ class BattleEngine(
             }
             // Auto-summon: summon when SP is enough
             val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
-            if (sp >= effectiveCost && !grid.isFull()) {
+            if (sp >= effectiveCost && units.activeCount < Grid.TOTAL) {
                 requestSummonBlueprint()
             }
         }
@@ -541,13 +541,11 @@ class BattleEngine(
                 unit.behavior!!.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
                 }
-                // For behavior-based units, check if behavior produced an attack
-                // Use behavior's canAttack() for ranged units instead of legacy unit.canAttack()
-                val canFire = when (val b = unit.behavior) {
-                    is com.example.jaygame.engine.behavior.RangedShooterBehavior -> b.canAttack()
-                    is com.example.jaygame.engine.behavior.ControllerCCBehavior -> b.canAttack()
-                    else -> unit.canAttack()
-                }
+                // Clamp position within field bounds (behaviors move units directly)
+                unit.position.x = unit.position.x.coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
+                unit.position.y = unit.position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
+                // For behavior-based units, use behavior's canAttack() (interface default = true)
+                val canFire = unit.behavior!!.canAttack()
                 if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
                     val target = unit.currentTarget!!
                     val result = unit.behavior!!.onAttack(unit, target)
@@ -565,12 +563,14 @@ class BattleEngine(
                         val ny = target.position.y / H
                         BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
                     } else {
-                        // Ranged — spawn projectile with behavior-computed damage
+                        // Projectile — melee slash uses fast projectile, ranged uses normal
+                        val isSlash = unit.attackRange == AttackRange.MELEE
+                        val projSpeed = if (isSlash) 900f else 400f
                         val proj = projectiles.acquire()
                         if (proj != null) {
                             proj.init(
                                 from = unit.position.copy(), target = target,
-                                damage = finalBoostedDamage, speed = 400f,
+                                damage = finalBoostedDamage, speed = projSpeed,
                                 type = unit.family.coerceIn(0, 5),
                                 isMagic = result.isMagic, isCrit = boostedCrit,
                                 sourceUnitId = unit.tileIndex,
@@ -738,7 +738,7 @@ class BattleEngine(
 
     fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
         val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
-        if (sp < effectiveSummonCost || grid.isFull()) return
+        if (sp < effectiveSummonCost || units.activeCount >= Grid.TOTAL) return
         sp -= effectiveSummonCost
 
         val grade = if (gradeOverride != null) {
@@ -770,8 +770,8 @@ class BattleEngine(
         val unit = units.acquire() ?: return
         unit.initFromBlueprint(selected)
         unit.tileIndex = tileIndex
-        unit.position = grid.cellCenter(tileIndex)
-        unit.homePosition = grid.cellCenter(tileIndex)
+        unit.position = Grid.FIELD_CENTER.copy()
+        unit.homePosition = Grid.FIELD_CENTER.copy()
         unit.behavior = BehaviorFactory.create(selected.behaviorId)
         grid.placeUnit(tileIndex, unit)
         refreshSynergies()
@@ -786,14 +786,19 @@ class BattleEngine(
     private val roleSynergyCacheMut = HashMap<UnitRole, RoleSynergySystem.RoleSynergyBonus>(5)
     private val roleCountsScratch = HashMap<UnitRole, Int>(5)
 
+    // Dedicated scratch list for refreshSynergies — separate from activeUnitsScratch
+    // to avoid ConcurrentModificationException when UI thread triggers refreshSynergies
+    // while game loop is using activeUnitsScratch.
+    private val synergyScratch = ArrayList<GameUnit>(MAX_UNITS)
+
     /** Recalculate field-based synergies from currently alive units.
      *  Picks the dominant family (highest count >= 2) for the global synergy bonus. */
     private fun refreshSynergies() {
-        activeUnitsScratch.clear()
-        units.forEach { if (it.alive) activeUnitsScratch.add(it) }
+        synergyScratch.clear()
+        units.forEach { if (it.alive) synergyScratch.add(it) }
 
         // Family synergy — countFamilies is called once internally
-        val familyCounts = SynergySystem.getActiveSynergies(activeUnitsScratch)
+        val familyCounts = SynergySystem.getActiveSynergies(synergyScratch)
         if (familyCounts.isEmpty()) {
             AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
         } else {
@@ -805,7 +810,7 @@ class BattleEngine(
 
         // Role synergy — single pass: count roles + compute bonuses
         roleCountsScratch.clear()
-        for (unit in activeUnitsScratch) {
+        for (unit in synergyScratch) {
             if (unit.unitCategory != UnitCategory.SPECIAL) {
                 roleCountsScratch[unit.role] = (roleCountsScratch[unit.role] ?: 0) + 1
             }
@@ -839,6 +844,9 @@ class BattleEngine(
     fun requestMerge(tileIndex: Int) {
         val existingUnit = grid.getUnit(tileIndex) ?: return
         if (existingUnit.unitCategory == UnitCategory.HIDDEN || existingUnit.unitCategory == UnitCategory.SPECIAL) return
+        // Remember position of the merge anchor before consuming
+        val mergePos = existingUnit.position.copy()
+        val mergeHomePos = existingUnit.homePosition.copy()
         val result = MergeSystem.tryMerge(grid, tileIndex) ?: return
         result.consumedTiles.forEach { i ->
             val u = grid.removeUnit(i)
@@ -851,11 +859,12 @@ class BattleEngine(
         val abilityInfo = abilityForFamily(newFamily)
         unit.init(
             unitDefId = result.resultUnitDefId, grade = newGrade, family = newFamily, level = 1,
-            tileIndex = tileIndex, homePos = grid.cellCenter(tileIndex),
+            tileIndex = tileIndex, homePos = mergeHomePos,
             baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
             range = def.range * upgradeRangeMult,
             abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
         )
+        unit.position = mergePos
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         refreshSynergies()
@@ -902,15 +911,11 @@ class BattleEngine(
     }
 
     fun requestRelocate(tileIndex: Int, normX: Float, normY: Float) {
-        val unit = grid.removeUnit(tileIndex) ?: return
-        val worldX = normX * W
-        val worldY = normY * H
-        val newTile = grid.getCellAt(worldX, worldY)
-        if (newTile >= 0 && grid.getUnit(newTile) == null) {
-            grid.placeUnit(newTile, unit)
-        } else {
-            grid.placeUnit(tileIndex, unit)
-        }
+        val unit = grid.getUnit(tileIndex) ?: return
+        val worldX = (normX * W).coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
+        val worldY = (normY * H).coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
+        unit.homePosition = Vec2(worldX, worldY)
+        unit.position = Vec2(worldX, worldY)
     }
 
     fun requestSwap(from: Int, to: Int) {
@@ -944,7 +949,7 @@ class BattleEngine(
     }
 
     fun requestBuyUnit(unitDefId: Int, cost: Float) {
-        if (sp < cost || grid.isFull()) return
+        if (sp < cost || units.activeCount >= Grid.TOTAL) return
         sp -= cost
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
@@ -955,11 +960,12 @@ class BattleEngine(
         val abilityInfo = abilityForFamily(family)
         unit.init(
             unitDefId = unitDefId, grade = grade, family = family, level = 1,
-            tileIndex = tileIndex, homePos = grid.cellCenter(tileIndex),
+            tileIndex = tileIndex, homePos = Grid.FIELD_CENTER.copy(),
             baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
             range = def.range * upgradeRangeMult,
             abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
         )
+        unit.position = Grid.FIELD_CENTER.copy()
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         refreshSynergies()
@@ -1130,52 +1136,8 @@ class BattleEngine(
 
     private fun validateLayout() {
         val tag = "BattleLayout"
-
-        // Path strip bounds: outer rect (60px outside grid) → inner rect (grid bounds)
-        // Outer: (340,60)~(940,660). Inner/grid: (400,120)~(880,600).
-        // Path strip = area between outer and inner rects.
-        val outerLeft = Grid.ORIGIN_X - 60f
-        val outerTop = Grid.ORIGIN_Y - 60f
-        val outerRight = Grid.ORIGIN_X + Grid.GRID_W + 60f
-        val outerBottom = Grid.ORIGIN_Y + Grid.GRID_H + 60f
-
-        val innerLeft = Grid.ORIGIN_X
-        val innerTop = Grid.ORIGIN_Y
-        val innerRight = Grid.ORIGIN_X + Grid.GRID_W
-        val innerBottom = Grid.ORIGIN_Y + Grid.GRID_H
-
-        var warnings = 0
-
-        for (i in 0 until Grid.TOTAL) {
-            val col = i % Grid.COLS
-            val row = i / Grid.COLS
-            val cx = Grid.ORIGIN_X + col * Grid.CELL_W + Grid.CELL_W * 0.5f
-            val cy = Grid.ORIGIN_Y + row * Grid.CELL_H + Grid.CELL_H * 0.5f
-
-            // Check if cell center is inside path strip (between outer and inner rect)
-            val inOuter = cx >= outerLeft && cx <= outerRight && cy >= outerTop && cy <= outerBottom
-            val inInner = cx > innerLeft && cx < innerRight && cy > innerTop && cy < innerBottom
-            val inPathStrip = inOuter && !inInner
-
-            if (inPathStrip) {
-                Log.w(tag, "Z17: Cell[$i] center ($cx,$cy) overlaps with path strip!")
-                warnings++
-            }
-
-            // Check wander range stays inside grid bounds (±30px + margin from GameUnit)
-            val wanderRange = 50f  // max wander = 20 + 30 = 50px
-            if (cx - wanderRange < innerLeft || cx + wanderRange > innerRight ||
-                cy - wanderRange < innerTop || cy + wanderRange > innerBottom) {
-                Log.w(tag, "Z17: Cell[$i] wander range (±50px from $cx,$cy) may exit grid bounds")
-                warnings++
-            }
-        }
-
-        if (warnings == 0) {
-            Log.i(tag, "Z17: Layout validation passed — all cell centers inside grid, wander ranges OK")
-        } else {
-            Log.w(tag, "Z17: Layout validation found $warnings warnings")
-        }
+        // Free-form placement — units are clamped to field bounds by GameUnit.update()
+        Log.i(tag, "Z17: Free-form layout — unit positions clamped by field bounds")
     }
 
     // ── Z18: Path Speed Uniformity Validation ──

@@ -61,6 +61,9 @@ import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.example.jaygame.util.HapticManager
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.window.Dialog
 
 // ── Warm medieval theme colors ──
 private val DungeonPurple = Color(0xFFAB47BC)
@@ -274,6 +277,225 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
 
 }
 
+// ── Unit Card Strip — compact summary of all summoned units at top-left ──
+
+@Composable
+fun UnitCardStrip(modifier: Modifier = Modifier) {
+    val gridState by BattleBridge.gridState.collectAsState()
+    val activeUnits = remember(gridState) {
+        gridState.filter { it.unitDefId >= 0 || it.blueprintId.isNotEmpty() }
+    }
+    if (activeUnits.isEmpty()) return
+
+    // Group by grade for compact display
+    val gradeGroups = remember(activeUnits) {
+        activeUnits.groupBy { it.grade }
+            .entries
+            .sortedByDescending { it.key }
+    }
+
+    var showUnitListDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.Black.copy(alpha = 0.65f))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+            .clickable { showUnitListDialog = true }
+            .padding(6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        // Header: total count
+        Text(
+            text = "\uC720\uB2DB ${activeUnits.size}",  // 유닛
+            color = Color.White.copy(alpha = 0.8f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+        )
+
+        // Grade rows: colored dot + count
+        for ((grade, units) in gradeGroups) {
+            val gradeColor = GradeColorsByIndex.getOrElse(grade) { Color.Gray }
+            val gradeName = GradeNamesByIndex.getOrElse(grade) { "?" }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(gradeColor),
+                )
+                Text(
+                    text = "$gradeName ${units.size}",
+                    color = gradeColor,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+
+    if (showUnitListDialog) {
+        UnitListDialog(
+            activeUnits = activeUnits,
+            onDismiss = { showUnitListDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun UnitListDialog(
+    activeUnits: List<com.example.jaygame.bridge.GridTileState>,
+    onDismiss: () -> Unit,
+) {
+    val registry = remember { com.example.jaygame.engine.BlueprintRegistry.instance }
+
+    // Group by blueprintId, count duplicates
+    val unitGroups = remember(activeUnits) {
+        activeUnits
+            .filter { it.blueprintId.isNotEmpty() }
+            .groupBy { it.blueprintId }
+            .entries
+            .sortedWith(compareByDescending<Map.Entry<String, List<com.example.jaygame.bridge.GridTileState>>> {
+                it.value.first().grade
+            }.thenBy { it.key })
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1A1008))
+                .border(2.dp, Color(0xFF8B6040), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+        ) {
+            // Title
+            Text(
+                text = "\uC18C\uD658\uB41C \uC720\uB2DB (${activeUnits.size})",  // 소환된 유닛
+                color = GoldBright,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Scrollable unit list
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                for ((bpId, tiles) in unitGroups) {
+                    val bp = registry.findById(bpId)
+                    val tile = tiles.first()
+                    val gradeColor = GradeColorsByIndex.getOrElse(tile.grade) { Color.Gray }
+                    val gradeName = GradeNamesByIndex.getOrElse(tile.grade) { "?" }
+                    val count = tiles.size
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(gradeColor.copy(alpha = 0.1f))
+                            .border(1.dp, gradeColor.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Grade dot
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(gradeColor),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Unit info
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = bp?.name ?: bpId,
+                                    color = gradeColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                if (count > 1) {
+                                    Text(
+                                        text = " x$count",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontSize = 11.sp,
+                                    )
+                                }
+                            }
+                            // Role + Grade
+                            Text(
+                                text = "$gradeName | ${tile.role.label}",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 10.sp,
+                            )
+                            // Stats from blueprint
+                            if (bp != null) {
+                                val families = bp.families.joinToString("/") { it.label }
+                                Text(
+                                    text = "$families | ATK ${bp.stats.baseATK.toInt()} | SPD ${String.format(java.util.Locale.US, "%.1f", bp.stats.baseSpeed)} | RNG ${bp.stats.range.toInt()}",
+                                    color = Color.White.copy(alpha = 0.4f),
+                                    fontSize = 9.sp,
+                                )
+                                if (bp.stats.hp > 0f) {
+                                    Text(
+                                        text = "HP ${bp.stats.hp.toInt()} | DEF ${bp.stats.defense.toInt()} | MRES ${bp.stats.magicResist.toInt()}",
+                                        color = Color.White.copy(alpha = 0.4f),
+                                        fontSize = 9.sp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (unitGroups.isEmpty()) {
+                    // Legacy units without blueprintId
+                    Text(
+                        text = "\uBE14\uB8E8\uD504\uB9B0\uD2B8 \uC815\uBCF4 \uC5C6\uC74C",  // 블루프린트 정보 없음
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Close button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF3E2510))
+                    .border(1.dp, Color(0xFF8B6040), RoundedCornerShape(10.dp))
+                    .clickable(onClick = onDismiss)
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "\uB2EB\uAE30",  // 닫기
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
 // ── Bottom HUD — resource bar → [일괄판매?] [조합?] → [구매|소환|도박] → [강화] ──
 
 @Composable
@@ -286,11 +508,17 @@ fun BattleBottomHud(
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
     val unitPullPity by BattleBridge.unitPullPity.collectAsState()
-    val gridFull = gridState.all { it.unitDefId >= 0 }
-    val canSummon = battle.sp >= battle.summonCost && !gridFull
+    // Single pass over gridState for unit count, merge, and has-units flags
+    var unitCount = 0
+    var canMerge = false
+    for (tile in gridState) {
+        val occupied = tile.unitDefId >= 0 || tile.blueprintId.isNotEmpty()
+        if (occupied) unitCount++
+        if (tile.canMerge) canMerge = true
+    }
+    val canSummon = battle.sp >= battle.summonCost && unitCount < BattleBridge.GRID_TOTAL
     val canGamble = battle.sp >= 10
-    val canMerge = gridState.any { it.canMerge }
-    val hasUnits = gridState.any { it.unitDefId >= 0 }
+    val hasUnits = unitCount > 0
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -431,7 +659,7 @@ fun BattleBottomHud(
                 SummonButton(
                     cost = battle.summonCost,
                     enabled = canSummon,
-                    gridFull = gridFull,
+                    gridFull = unitCount >= BattleBridge.GRID_TOTAL,
                     pity = unitPullPity,
                     onClick = {
                         HapticManager.medium(view)

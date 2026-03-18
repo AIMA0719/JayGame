@@ -274,24 +274,7 @@ fun MonsterPathOverlay() {
             style = InnerStroke,
         )
 
-        // Ground subtle texture (grid-like subtle lines)
-        val cellSize = gW / 5f
-        for (i in 1 until 5) {
-            val lx = gL + cellSize * i
-            drawLine(
-                color = Color.White.copy(alpha = 0.03f),
-                start = Offset(lx, gT + 8f),
-                end = Offset(lx, gB - 8f),
-                strokeWidth = 0.5f,
-            )
-            val ly = gT + cellSize * i
-            drawLine(
-                color = Color.White.copy(alpha = 0.03f),
-                start = Offset(gL + 8f, ly),
-                end = Offset(gR - 8f, ly),
-                strokeWidth = 0.5f,
-            )
-        }
+        // Ground subtle texture (no grid lines — free-form placement)
 
         // ═══════════════════════════════════════════
         // 3. CORNER VISUAL TREATMENT (Z8)

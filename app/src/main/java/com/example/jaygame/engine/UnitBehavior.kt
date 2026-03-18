@@ -6,6 +6,7 @@ interface UnitBehavior {
     fun update(unit: GameUnit, dt: Float, findEnemy: (position: Vec2, range: Float) -> Enemy?)
     fun onAttack(unit: GameUnit, target: Enemy): AttackResult
     fun onTakeDamage(unit: GameUnit, damage: Float, isMagic: Boolean)
+    fun canAttack(): Boolean = true
     fun reset()
 }
 

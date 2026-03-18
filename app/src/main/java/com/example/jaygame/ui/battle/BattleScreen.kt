@@ -283,6 +283,14 @@ fun BattleScreen(
                 .padding(top = 48.dp, start = 4.dp),
         )
 
+        // Unit card strip — shows summoned unit summary below synergy panel
+        UnitCardStrip(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .windowInsetsPadding(WindowInsets.displayCutout)
+                .padding(top = 160.dp, start = 4.dp),
+        )
+
         // Layer 3: Popups
         UnitDetailPopup()
         MergeEffectOverlay()

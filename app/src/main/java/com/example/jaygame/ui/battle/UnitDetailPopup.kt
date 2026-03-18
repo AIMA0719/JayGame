@@ -346,10 +346,8 @@ fun UnitDetailPopup() {
             }
 
             // Slot info
-            val slotRow = data.tileIndex / BattleBridge.GRID_COLS + 1
-            val slotCol = data.tileIndex % BattleBridge.GRID_COLS + 1
             Text(
-                text = "\uC2AC\uB86F: ${slotRow}-${slotCol}",  // 슬롯:
+                text = "\uC2AC\uB86F: #${data.tileIndex + 1}",  // 슬롯:
                 color = SubText.copy(alpha = 0.7f),
                 fontSize = 10.sp,
                 modifier = Modifier.fillMaxWidth(),

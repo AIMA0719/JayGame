@@ -121,8 +121,9 @@ class GameUnit {
         val spdMult = buffs.getSpdMultiplier()
         attackCooldown -= dt * spdMult
 
-        val chaseRange = range * 1.5f
-        val enemy = findEnemy(position, chaseRange)
+        // Detect enemies across entire map, then chase into attack range
+        val detectRange = BattleEngine.W
+        val enemy = findEnemy(position, detectRange)
 
         if (enemy != null) {
             chaseTarget = enemy
@@ -161,19 +162,13 @@ class GameUnit {
             }
         }
 
-        // Clamp position within grid boundaries (prevent units from entering monster path)
-        position.x = position.x.coerceIn(GRID_MIN_X, GRID_MAX_X)
-        position.y = position.y.coerceIn(GRID_MIN_Y, GRID_MAX_Y)
+        // Clamp position within field boundaries (prevent units from entering monster path)
+        position.x = position.x.coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
+        position.y = position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
     }
 
     companion object {
         val LEVEL_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2.2f, 3.2f, 4.5f, 6f, 8f)
-
-        // Grid boundaries with margin for unit sprite size
-        private const val GRID_MIN_X = 120f + 10f     // Grid.ORIGIN_X + margin
-        private const val GRID_MAX_X = 600f - 10f     // Grid.ORIGIN_X + Grid.GRID_W - margin
-        private const val GRID_MIN_Y = 107.5f + 10f   // Grid.ORIGIN_Y + margin
-        private const val GRID_MAX_Y = 587.5f - 10f   // Grid.ORIGIN_Y + Grid.GRID_H - margin
     }
 
     fun canAttack(): Boolean = isAttacking && attackCooldown <= 0f && currentTarget?.alive == true

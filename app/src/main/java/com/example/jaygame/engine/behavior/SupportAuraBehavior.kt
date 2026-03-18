@@ -15,13 +15,29 @@ class SupportAuraBehavior : UnitBehavior {
             buffTickTimer = BUFF_INTERVAL
             pendingBuff = true
         }
-        // Stay near home position — guard against overwriting DEAD/RESPAWNING
-        if (unit.state != UnitState.DEAD && unit.state != UnitState.RESPAWNING) {
-            unit.state = UnitState.IDLE
+        // Guard against overwriting DEAD/RESPAWNING
+        if (unit.state == UnitState.DEAD || unit.state == UnitState.RESPAWNING) return
+        unit.state = UnitState.IDLE
+
+        // Find nearest enemy across entire map
+        val enemy = findEnemy(unit.position, 720f)
+        if (enemy != null) {
+            // Move toward enemy but stay at buff range distance (don't go melee)
+            val dir = enemy.position.minus(unit.position)
+            val dist = dir.length
+            val desiredDist = getBuffRange() * 0.8f  // stay within buff range
+            if (dist > desiredDist) {
+                val norm = dir.normalized()
+                unit.position = unit.position.plus(norm.times(unit.moveSpeed * dt))
+            }
+        } else {
+            // No enemies — drift toward home position
+            val dir = unit.homePosition.minus(unit.position)
+            if (dir.lengthSq > 16f) {
+                val norm = dir.normalized()
+                unit.position = unit.position.plus(norm.times(20f * dt))
+            }
         }
-        // Slow drift toward home position
-        val dir = unit.homePosition.minus(unit.position).normalized()
-        unit.position = unit.position.plus(dir.times(20f * dt))
     }
 
     fun consumeBuff(): Boolean {
