@@ -220,6 +220,21 @@ object BattleBridge {
     private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
     private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
 
+    /** 활성 시너지 데이터 (BattleEngine → Compose) */
+    private val _activeFamilySynergies = MutableStateFlow<Map<UnitFamily, Int>>(emptyMap())
+    val activeFamilySynergies: StateFlow<Map<UnitFamily, Int>> = _activeFamilySynergies.asStateFlow()
+
+    private val _activeRoleSynergies = MutableStateFlow<Map<UnitRole, Int>>(emptyMap())
+    val activeRoleSynergies: StateFlow<Map<UnitRole, Int>> = _activeRoleSynergies.asStateFlow()
+
+    fun updateFamilySynergies(counts: Map<UnitFamily, Int>) {
+        _activeFamilySynergies.value = counts.toMap() // defensive copy — SynergySystem reuses internal map
+    }
+
+    fun updateRoleSynergies(counts: Map<UnitRole, Int>) {
+        _activeRoleSynergies.value = counts
+    }
+
     /** Z16: Debug overlay toggle */
     private val _debugMode = MutableStateFlow(false)
     val debugMode: StateFlow<Boolean> = _debugMode.asStateFlow()
@@ -661,6 +676,8 @@ object BattleBridge {
         _unitPullPity.value = 0
         zoneFrameCounter = 0L
         _zoneData.value = ZoneData()
+        _activeFamilySynergies.value = emptyMap()
+        _activeRoleSynergies.value = emptyMap()
         // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _debugMode.value = false

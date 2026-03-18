@@ -796,10 +796,22 @@ class BattleEngine(
             AbilitySystem.activeSynergy = SynergySystem.getSynergyBonus(activeUnitsScratch, dominantFamily)
         }
 
+        // Push family synergy counts to Compose
+        BattleBridge.updateFamilySynergies(familyCounts)
+
         // Role synergy
         roleSynergyCache = UnitRole.entries.associateWith { role ->
             RoleSynergySystem.getBonus(activeUnitsScratch, role)
         }
+
+        // Push role counts to Compose (count alive non-SPECIAL units per role)
+        val roleCounts = mutableMapOf<UnitRole, Int>()
+        for (unit in activeUnitsScratch) {
+            if (unit.alive && unit.unitCategory != UnitCategory.SPECIAL) {
+                roleCounts[unit.role] = (roleCounts[unit.role] ?: 0) + 1
+            }
+        }
+        BattleBridge.updateRoleSynergies(roleCounts)
     }
 
     /** Get role synergy bonus for a unit. SPECIAL category units get no bonus. */

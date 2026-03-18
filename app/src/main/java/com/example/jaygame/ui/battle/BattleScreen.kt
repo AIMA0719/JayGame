@@ -271,6 +271,18 @@ fun BattleScreen(
             )
         }
 
+        // Layer 2.5: Synergy panel (top-start corner)
+        val familySynergies by BattleBridge.activeFamilySynergies.collectAsState()
+        val roleSynergies by BattleBridge.activeRoleSynergies.collectAsState()
+        SynergyPanel(
+            familySynergies = familySynergies,
+            roleSynergies = roleSynergies,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .windowInsetsPadding(WindowInsets.displayCutout)
+                .padding(top = 48.dp, start = 4.dp),
+        )
+
         // Layer 3: Popups
         UnitDetailPopup()
         MergeEffectOverlay()
