@@ -8,6 +8,8 @@ import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
 import com.example.jaygame.data.unitGradeOf
 import com.example.jaygame.data.unitIdOf
+import com.example.jaygame.engine.behavior.BehaviorFactory
+import com.example.jaygame.engine.behavior.BehaviorRegistration
 import com.example.jaygame.engine.math.GameRect
 import com.example.jaygame.engine.math.Vec2
 import kotlinx.coroutines.*
@@ -91,6 +93,14 @@ class BattleEngine(
     private var upgradeSpRegen = 0f
 
     private var gridPushTimer = 0f
+
+    // NEW: Blueprint-based system
+    val blueprintRegistry = BlueprintRegistry()
+
+    init {
+        // Ensure all behavior factories are registered
+        BehaviorRegistration.ensureRegistered()
+    }
 
     // Square path around grid (480x480 centered at 640,360)
     // Grid: (400,120)~(880,600). Path margin: 60px outside grid.
@@ -470,10 +480,53 @@ class BattleEngine(
 
         units.forEach { unit ->
             if (!unit.alive) return@forEach
-            unit.update(dt) { pos, range -> findNearestEnemy(pos, range) }
-            if (unit.canAttack()) {
-                fireProjectile(unit)
-                unit.onAttack()
+
+            // NEW: Behavior-based update path — units with a behavior delegate to it
+            if (unit.behavior != null) {
+                unit.behavior!!.update(unit, dt) { pos, range -> findNearestEnemy(pos, range) }
+                // For behavior-based units, check if behavior produced an attack
+                if (unit.canAttack()) {
+                    val target = unit.currentTarget
+                    if (target != null && target.alive) {
+                        val result = unit.behavior!!.onAttack(unit, target)
+                        if (result.isInstant) {
+                            // Melee instant damage — apply directly
+                            val finalDmg = DamageCalculator.calculatePhysicalDamage(
+                                result.damage,
+                                if (result.isMagic) 0f else target.armor,
+                            )
+                            target.hp -= finalDmg
+                            if (target.hp <= 0f) target.alive = false
+                            val nx = target.position.x / W
+                            val ny = target.position.y / H
+                            BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), result.isCrit)
+                        } else {
+                            // Ranged — spawn projectile with behavior-computed damage
+                            val proj = projectiles.acquire()
+                            if (proj != null) {
+                                proj.init(
+                                    from = unit.position.copy(), target = target,
+                                    damage = result.damage, speed = 400f,
+                                    type = unit.family.coerceIn(0, 5),
+                                    isMagic = result.isMagic, isCrit = result.isCrit,
+                                    sourceUnitId = unit.tileIndex,
+                                    abilityType = unit.abilityType,
+                                    abilityValue = unit.abilityValue,
+                                    grade = unit.grade, family = unit.family,
+                                    attackerRange = unit.range,
+                                )
+                            }
+                        }
+                    }
+                    unit.onAttack()
+                }
+            } else {
+                // Legacy update path
+                unit.update(dt) { pos, range -> findNearestEnemy(pos, range) }
+                if (unit.canAttack()) {
+                    fireProjectile(unit)
+                    unit.onAttack()
+                }
             }
         }
     }
@@ -650,6 +703,47 @@ class BattleEngine(
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         BattleBridge.onSummonResult(unitDefId, grade)
+    }
+
+    // NEW: Blueprint-based summon path (alongside legacy requestSummon)
+    fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
+        val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
+        if (sp < effectiveSummonCost || grid.isFull()) return
+        sp -= effectiveSummonCost
+
+        val grade = if (gradeOverride != null) {
+            gradeOverride
+        } else {
+            val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
+            currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
+            BattleBridge.updateUnitPullPity(currentPity)
+            UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
+        }
+
+        val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
+        if (candidates.isEmpty()) return
+
+        // Weight-based selection
+        val totalWeight = candidates.sumOf { it.summonWeight }
+        if (totalWeight <= 0) return
+        var roll = (Math.random() * totalWeight).toInt()
+        var selected: UnitBlueprint? = null
+        for (bp in candidates) {
+            roll -= bp.summonWeight
+            if (roll <= 0) { selected = bp; break }
+        }
+        selected ?: return
+
+        val tileIndex = grid.findEmpty()
+        if (tileIndex < 0) return
+
+        val unit = units.acquire() ?: return
+        unit.initFromBlueprint(selected)
+        unit.tileIndex = tileIndex
+        unit.position = grid.cellCenter(tileIndex)
+        unit.homePosition = grid.cellCenter(tileIndex)
+        unit.behavior = BehaviorFactory.create(selected.behaviorId)
+        grid.placeUnit(tileIndex, unit)
     }
 
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {

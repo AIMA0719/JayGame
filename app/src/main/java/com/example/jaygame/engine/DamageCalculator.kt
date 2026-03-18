@@ -107,6 +107,16 @@ object DamageCalculator {
     fun gradeMultiplier(grade: Int): Float =
         GRADE_MULTIPLIERS.getOrElse(grade) { 1f }
 
+    // NEW: Behavior-based damage calculation — unified physical/magic with resist formula
+    /**
+     * Calculate damage to a GameUnit applying defense or magicResist reduction.
+     * Formula: rawDamage * (100 / (100 + resist))
+     */
+    fun calculateDamageToUnit(rawDamage: Float, isMagic: Boolean, targetUnit: GameUnit): Float {
+        val resist = if (isMagic) targetUnit.magicResist else targetUnit.defense
+        return rawDamage * (100f / (100f + resist))
+    }
+
     /**
      * 속성 상성 — 화염→냉기→바람→번개→독→화염 (1.2x),
      * 보조는 상성 없음 (1.0x)
