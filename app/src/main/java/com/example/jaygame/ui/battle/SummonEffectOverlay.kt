@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.cos
@@ -456,7 +457,7 @@ fun SummonEffectOverlay() {
 
             // Unit name — legacy or blueprint
             val unitName = unitDef?.name
-                ?: if (data.blueprintId.isNotEmpty()) BlueprintRegistry.instance.findById(data.blueprintId)?.name else null
+                ?: if (data.blueprintId.isNotEmpty()) blueprintDisplayName(data.blueprintId) else null
             if (unitName != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

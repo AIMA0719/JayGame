@@ -45,6 +45,8 @@ import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.blueprintDisplayName
+import com.example.jaygame.ui.components.roleColor
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkGold
 import com.example.jaygame.ui.theme.DarkNavy
@@ -195,7 +197,7 @@ fun UnitDetailPopup() {
                     // Role badge
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = getRoleColor(data.role)
+                        color = roleColor(data.role)
                     ) {
                         Text(
                             text = data.role.label,
@@ -400,11 +402,4 @@ private fun StatItem(label: String, value: String, color: Color) {
     }
 }
 
-/** Role-specific badge color. Used once bridge exposes role data (Task 18). */
-private fun getRoleColor(role: UnitRole): Color = when (role) {
-    UnitRole.TANK -> Color(0xFF607D8B)       // Blue Grey
-    UnitRole.MELEE_DPS -> Color(0xFFE53935)  // Red
-    UnitRole.RANGED_DPS -> Color(0xFF43A047) // Green
-    UnitRole.SUPPORT -> Color(0xFFFFB300)    // Amber
-    UnitRole.CONTROLLER -> Color(0xFF7E57C2) // Purple
-}
+// getRoleColor replaced by roleColor from UnitUiUtils

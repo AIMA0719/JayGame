@@ -19,21 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.engine.UnitRole
-
-// Pre-allocated role colors (avoid per-frame allocation)
-private val RoleTankColor = Color(0xFF78909C)       // blue-grey
-private val RoleMeleeDpsColor = Color(0xFFEF5350)   // red
-private val RoleRangedDpsColor = Color(0xFFFF8A65)   // orange
-private val RoleSupportColor = Color(0xFF81C784)     // green
-private val RoleControllerColor = Color(0xFF7E57C2)  // purple
-
-private fun roleColor(role: UnitRole): Color = when (role) {
-    UnitRole.TANK -> RoleTankColor
-    UnitRole.MELEE_DPS -> RoleMeleeDpsColor
-    UnitRole.RANGED_DPS -> RoleRangedDpsColor
-    UnitRole.SUPPORT -> RoleSupportColor
-    UnitRole.CONTROLLER -> RoleControllerColor
-}
+import com.example.jaygame.ui.components.roleColor
 
 @Composable
 fun SynergyPanel(

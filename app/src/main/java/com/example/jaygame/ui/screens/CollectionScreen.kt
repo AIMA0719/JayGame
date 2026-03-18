@@ -60,8 +60,17 @@ import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.engine.UnitRole
+import com.example.jaygame.ui.components.BEHAVIOR_LABELS
+import com.example.jaygame.ui.components.FAMILY_ICONS
 import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.GameFilterChip
+import com.example.jaygame.ui.components.GradeBgCommon
+import com.example.jaygame.ui.components.GradeBgHero
+import com.example.jaygame.ui.components.GradeBgRare
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.ROLE_LABELS
+import com.example.jaygame.ui.components.SortMode
+import com.example.jaygame.ui.components.UnitStatRow
 import com.example.jaygame.ui.theme.DarkSurface
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DimText
@@ -77,50 +86,16 @@ import java.text.NumberFormat
 private val CollectionTabBg = Color(0xFF1A1A2E)
 
 // ── Grade-based card background colors (pre-allocated) ──
-private val GradeBgCommon = Color(0xFF424242)
-private val GradeBgRare = Color(0xFF1A237E)
-private val GradeBgHero = Color(0xFF4A148C)
 private val GradeBorderGold = Color(0xFFFFD700)
 private val GradeBorderRed = Color(0xFFEF4444)
 private val GradeBorderRainbowStart = Color(0xFFFF6B35)
 private val GradeBorderRainbowEnd = Color(0xFFFBBF24)
 
-// ── Filter chip colors (pre-allocated) ──
-private val CollChipSelectedBg = Color(0xFF2A2A4E)
-private val CollChipUnselectedBg = Color(0xFF1A1A2E)
-private val CollChipSelectedBorder = Color(0xFFFFD700)
-private val CollChipUnselectedBorder = Color(0xFF333355)
-
 // ── Damage type indicator colors (pre-allocated) ──
 private val CollPhysicalColor = Color(0xFFFF8A65)
 private val CollMagicColor = Color(0xFFCE93D8)
 
-// ── Role icon labels (reuse from UnitCollectionScreen concept) ──
-private val COLL_ROLE_LABELS = mapOf(
-    UnitRole.TANK to "🛡탱커",
-    UnitRole.MELEE_DPS to "⚔근딜",
-    UnitRole.RANGED_DPS to "🏹원딜",
-    UnitRole.SUPPORT to "✚서포터",
-    UnitRole.CONTROLLER to "⛓컨트롤러",
-)
-
-// ── Behavior pattern labels ──
-private val COLL_BEHAVIOR_LABELS = mapOf(
-    "tank_blocker" to "전방 저지형",
-    "assassin_dash" to "돌진 암살형",
-    "ranged_mage" to "원거리 마법형",
-    "support_aura" to "오라 지원형",
-    "controller_cc_ranged" to "원거리 제어형",
-)
-
-private val COLL_FAMILY_ICONS = mapOf(
-    UnitFamily.FIRE to "\uD83D\uDD25",
-    UnitFamily.FROST to "\u2744\uFE0F",
-    UnitFamily.POISON to "\uD83D\uDCA8",
-    UnitFamily.LIGHTNING to "\u26A1",
-    UnitFamily.SUPPORT to "\uD83D\uDE4F",
-    UnitFamily.WIND to "\uD83C\uDF00",
-)
+// Grade/chip colors, label maps, and family icons imported from UnitUiUtils
 
 private fun gradeBackgroundColor(grade: UnitGrade): Color = when (grade) {
     UnitGrade.COMMON -> GradeBgCommon
@@ -337,8 +312,8 @@ private fun HeroCollectionTab(
                     Spacer(modifier = Modifier.width(2.dp))
                     UnitRole.entries.forEach { role ->
                         val selected = role in selectedRoles
-                        CollFilterChip(
-                            label = COLL_ROLE_LABELS[role] ?: role.label,
+                        GameFilterChip(
+                            label = ROLE_LABELS[role] ?: role.label,
                             selected = selected,
                             onClick = {
                                 selectedRoles = if (selected) selectedRoles - role
@@ -363,9 +338,9 @@ private fun HeroCollectionTab(
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     UnitFamily.entries.forEach { family ->
-                        val icon = COLL_FAMILY_ICONS[family] ?: ""
+                        val icon = FAMILY_ICONS[family] ?: ""
                         val selected = family in selectedFamilies
-                        CollFilterChip(
+                        GameFilterChip(
                             label = "$icon${family.label}",
                             selected = selected,
                             onClick = {
@@ -391,7 +366,7 @@ private fun HeroCollectionTab(
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     SortMode.entries.forEach { mode ->
-                        CollFilterChip(
+                        GameFilterChip(
                             label = mode.label,
                             selected = sortMode == mode,
                             onClick = { sortMode = mode },
@@ -450,33 +425,7 @@ private fun HeroCollectionTab(
     }
 }
 
-@Composable
-private fun CollFilterChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (selected) CollChipSelectedBg else CollChipUnselectedBg)
-            .border(
-                width = 1.dp,
-                color = if (selected) CollChipSelectedBorder else CollChipUnselectedBorder,
-                shape = RoundedCornerShape(16.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-    ) {
-        Text(
-            text = label,
-            color = if (selected) Gold else SubText,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
-        )
-    }
-}
+// CollFilterChip replaced by GameFilterChip from UnitUiUtils
 
 @Composable
 private fun CollectionBlueprintCard(
@@ -596,8 +545,8 @@ private fun CollectionBlueprintDetailDialog(
             && gold >= upgradeCost.second
     val fmt = NumberFormat.getNumberInstance()
     val iconRes = blueprintIconRes(blueprint)
-    val behaviorLabel = COLL_BEHAVIOR_LABELS[blueprint.behaviorId] ?: blueprint.behaviorId
-    val roleLabel = COLL_ROLE_LABELS[blueprint.role] ?: blueprint.role.label
+    val behaviorLabel = BEHAVIOR_LABELS[blueprint.behaviorId] ?: blueprint.behaviorId
+    val roleLabel = ROLE_LABELS[blueprint.role] ?: blueprint.role.label
 
     Box(
         modifier = Modifier
@@ -711,7 +660,7 @@ private fun CollectionBlueprintDetailDialog(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     blueprint.families.forEach { family ->
-                        val icon = COLL_FAMILY_ICONS[family] ?: ""
+                        val icon = FAMILY_ICONS[family] ?: ""
                         Box(
                             modifier = Modifier
                                 .background(family.color.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
@@ -734,14 +683,14 @@ private fun CollectionBlueprintDetailDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    StatRow("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF81C784))
-                    StatRow("공격력", fmt.format(calculatedATK), Gold)
-                    StatRow("공속", String.format("%.2f", blueprint.stats.baseSpeed), LightText)
-                    StatRow("사거리", String.format("%.0f", blueprint.stats.range), LightText)
-                    StatRow("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFFFFCC80))
-                    StatRow("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFFB39DDB))
-                    StatRow("이동속도", "${blueprint.stats.moveSpeed.toInt()}", Color(0xFF80CBC4))
-                    StatRow("블록 수", "${blueprint.stats.blockCount}", Gold)
+                    UnitStatRow("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF81C784))
+                    UnitStatRow("공격력", fmt.format(calculatedATK), Gold)
+                    UnitStatRow("공속", String.format("%.2f", blueprint.stats.baseSpeed), LightText)
+                    UnitStatRow("사거리", String.format("%.0f", blueprint.stats.range), LightText)
+                    UnitStatRow("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFFFFCC80))
+                    UnitStatRow("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFFB39DDB))
+                    UnitStatRow("이동속도", "${blueprint.stats.moveSpeed.toInt()}", Color(0xFF80CBC4))
+                    UnitStatRow("블록 수", "${blueprint.stats.blockCount}", Gold)
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -758,7 +707,7 @@ private fun CollectionBlueprintDetailDialog(
                 // Ability section
                 if (blueprint.ability != null) {
                     Spacer(modifier = Modifier.height(6.dp))
-                    StatRow("능력", blueprint.ability.name, NeonCyan)
+                    UnitStatRow("능력", blueprint.ability.name, NeonCyan)
                     Text(
                         text = blueprint.ability.description,
                         fontSize = 11.sp,
@@ -919,25 +868,7 @@ private fun CollectionBlueprintDetailDialog(
     }
 }
 
-@Composable
-private fun StatRow(label: String, value: String, valueColor: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = SubText,
-        )
-        Text(
-            text = value,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = valueColor,
-        )
-    }
-}
+// StatRow replaced by UnitStatRow from UnitUiUtils
 
 private fun buildStarString(level: Int): String {
     val filled = level.coerceIn(0, 7)

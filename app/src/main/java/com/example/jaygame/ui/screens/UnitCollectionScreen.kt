@@ -67,8 +67,14 @@ import com.example.jaygame.engine.RecipeSystem
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.engine.UnitRole
+import com.example.jaygame.ui.components.BEHAVIOR_LABELS
+import com.example.jaygame.ui.components.FAMILY_ICONS
 import com.example.jaygame.ui.components.GameCard
+import com.example.jaygame.ui.components.GameFilterChip
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.components.ROLE_LABELS
+import com.example.jaygame.ui.components.SortMode
+import com.example.jaygame.ui.components.UnitStatRow
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Gold
@@ -86,42 +92,13 @@ private val CodexGradeBorderRed = Color(0xFFEF4444)
 private val CodexGradeBorderRainbowStart = Color(0xFFFF6B35)
 private val CodexGradeBorderRainbowEnd = Color(0xFFFBBF24)
 
-// ── Filter chip colors (pre-allocated) ──
-private val ChipSelectedBg = Color(0xFF2A2A4E)
-private val ChipUnselectedBg = Color(0xFF1A1A2E)
-private val ChipSelectedBorder = Color(0xFFFFD700)
-private val ChipUnselectedBorder = Color(0xFF333355)
+// Filter chip colors imported from UnitUiUtils
 
 // ── Damage type indicator colors (pre-allocated) ──
 private val PhysicalColor = Color(0xFFFF8A65)
 private val MagicColor = Color(0xFFCE93D8)
 
-// ── Role icon labels ──
-private val ROLE_LABELS = mapOf(
-    UnitRole.TANK to "🛡탱커",
-    UnitRole.MELEE_DPS to "⚔근딜",
-    UnitRole.RANGED_DPS to "🏹원딜",
-    UnitRole.SUPPORT to "✚서포터",
-    UnitRole.CONTROLLER to "⛓컨트롤러",
-)
-
-// ── Behavior pattern labels ──
-private val BEHAVIOR_LABELS = mapOf(
-    "tank_blocker" to "전방 저지형",
-    "assassin_dash" to "돌진 암살형",
-    "ranged_mage" to "원거리 마법형",
-    "support_aura" to "오라 지원형",
-    "controller_cc_ranged" to "원거리 제어형",
-)
-
-private val FAMILY_ICONS = mapOf(
-    UnitFamily.FIRE to "\uD83D\uDD25",
-    UnitFamily.FROST to "\u2744\uFE0F",
-    UnitFamily.POISON to "\uD83D\uDCA8",
-    UnitFamily.LIGHTNING to "\u26A1",
-    UnitFamily.SUPPORT to "\uD83D\uDE4F",
-    UnitFamily.WIND to "\uD83C\uDF00",
-)
+// Label maps and family icons imported from UnitUiUtils
 
 // ── Special tab colors (pre-allocated) ──
 private val SpecialCardBg = Color(0xFF1A1020)
@@ -192,11 +169,7 @@ private fun codexGradeBorderColor(grade: UnitGrade): Color = when (grade) {
     else -> grade.color.copy(alpha = 0.4f)
 }
 
-enum class SortMode(val label: String) {
-    GRADE("등급순"),
-    ATK("공격력순"),
-    NAME("이름순"),
-}
+// SortMode imported from UnitUiUtils
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -322,7 +295,7 @@ fun UnitCollectionScreen(
                             Spacer(modifier = Modifier.width(2.dp))
                             UnitRole.entries.forEach { role ->
                                 val selected = role in selectedRoles
-                                FilterChip(
+                                GameFilterChip(
                                     label = ROLE_LABELS[role] ?: role.label,
                                     selected = selected,
                                     onClick = {
@@ -350,7 +323,7 @@ fun UnitCollectionScreen(
                             UnitFamily.entries.forEach { family ->
                                 val icon = FAMILY_ICONS[family] ?: ""
                                 val selected = family in selectedFamilies
-                                FilterChip(
+                                GameFilterChip(
                                     label = "$icon${family.label}",
                                     selected = selected,
                                     onClick = {
@@ -376,7 +349,7 @@ fun UnitCollectionScreen(
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             SortMode.entries.forEach { mode ->
-                                FilterChip(
+                                GameFilterChip(
                                     label = mode.label,
                                     selected = sortMode == mode,
                                     onClick = { sortMode = mode },
@@ -484,33 +457,7 @@ fun UnitCollectionScreen(
     }
 }
 
-@Composable
-private fun FilterChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (selected) ChipSelectedBg else ChipUnselectedBg)
-            .border(
-                width = 1.dp,
-                color = if (selected) ChipSelectedBorder else ChipUnselectedBorder,
-                shape = RoundedCornerShape(16.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-    ) {
-        Text(
-            text = label,
-            color = if (selected) Gold else SubText,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
-        )
-    }
-}
+// FilterChip replaced by GameFilterChip from UnitUiUtils
 
 @Composable
 private fun CodexBlueprintCard(
@@ -788,14 +735,14 @@ private fun BlueprintDetailDialog(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    DetailStatRow("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF81C784))
-                    DetailStatRow("공격력", "${blueprint.stats.baseATK.toInt()}", Color(0xFFFF8A80))
-                    DetailStatRow("공속", "%.2f".format(blueprint.stats.baseSpeed), Color(0xFF80D8FF))
-                    DetailStatRow("사거리", "${blueprint.stats.range.toInt()}", MagicColor)
-                    DetailStatRow("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFFFFCC80))
-                    DetailStatRow("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFFB39DDB))
-                    DetailStatRow("이동속도", "${blueprint.stats.moveSpeed.toInt()}", Color(0xFF80CBC4))
-                    DetailStatRow("블록 수", "${blueprint.stats.blockCount}", Gold)
+                    UnitStatRow("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF81C784))
+                    UnitStatRow("공격력", "${blueprint.stats.baseATK.toInt()}", Color(0xFFFF8A80))
+                    UnitStatRow("공속", "%.2f".format(blueprint.stats.baseSpeed), Color(0xFF80D8FF))
+                    UnitStatRow("사거리", "${blueprint.stats.range.toInt()}", MagicColor)
+                    UnitStatRow("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFFFFCC80))
+                    UnitStatRow("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFFB39DDB))
+                    UnitStatRow("이동속도", "${blueprint.stats.moveSpeed.toInt()}", Color(0xFF80CBC4))
+                    UnitStatRow("블록 수", "${blueprint.stats.blockCount}", Gold)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -987,29 +934,7 @@ private fun BlueprintDetailDialog(
     }
 }
 
-@Composable
-private fun DetailStatRow(
-    label: String,
-    value: String,
-    color: Color,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            color = SubText,
-            fontSize = 12.sp,
-        )
-        Text(
-            text = value,
-            color = color,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
+// DetailStatRow replaced by UnitStatRow from UnitUiUtils
 
 @Composable
 private fun StatItem(
