@@ -61,6 +61,9 @@ import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitBlueprint
+import com.example.jaygame.engine.HiddenRecipe
+import com.example.jaygame.engine.RecipeSlot
+import com.example.jaygame.engine.RecipeSystem
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.engine.UnitRole
@@ -119,6 +122,14 @@ private val FAMILY_ICONS = mapOf(
     UnitFamily.SUPPORT to "\uD83D\uDE4F",
     UnitFamily.WIND to "\uD83C\uDF00",
 )
+
+// ── Hidden tab colors (pre-allocated) ──
+private val HiddenCardDiscoveredBg = Color(0xFF1A1A2E)
+private val HiddenCardUndiscoveredBg = Color(0xFF0D0D15)
+private val HiddenCardUndiscoveredBorder = Color(0xFF2A2A3A)
+private val HiddenRecipeHintBg = Color(0xFF151520)
+private val HiddenIngredientPillBg = Color(0xFF1E1E30)
+private val HiddenPlusColor = Color(0xFF555577)
 
 // ── Blueprint ID → icon resource mapping ──
 private val BLUEPRINT_ICON_MAP: Map<String, Int> = mapOf(
@@ -392,34 +403,38 @@ fun UnitCollectionScreen(
                     val hiddenBlueprints = remember {
                         BlueprintRegistry.instance.findByCategory(UnitCategory.HIDDEN)
                     }
+                    val recipes = remember {
+                        RecipeSystem.instance.allRecipes()
+                    }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(horizontal = 12.dp),
                     ) {
                         Text(
                             text = "히든 유닛은 특수 조합으로 발견할 수 있습니다.",
                             color = SubText,
                             fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 8.dp),
                         )
-                        if (hiddenBlueprints.isEmpty()) {
-                            repeat(18) { index ->
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(hiddenBlueprints, key = { it.id }) { bp ->
+                                val recipe = recipes.find { it.resultId == bp.id }
+                                val discovered = recipe?.let {
+                                    RecipeSystem.instance.isDiscovered(it.id)
+                                } ?: false
                                 HiddenUnitCard(
-                                    blueprintId = "hidden_$index",
-                                    discovered = false,
-                                )
-                            }
-                        } else {
-                            hiddenBlueprints.forEach { bp ->
-                                HiddenUnitCard(
-                                    blueprintId = bp.id,
-                                    discovered = false,
+                                    blueprint = bp,
+                                    recipe = recipe,
+                                    discovered = discovered,
+                                    onClick = { if (discovered) selectedBlueprint = bp },
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
                 2 -> {
@@ -447,8 +462,10 @@ fun UnitCollectionScreen(
                         if (specialBlueprints.isNotEmpty()) {
                             specialBlueprints.forEach { bp ->
                                 HiddenUnitCard(
-                                    blueprintId = bp.id,
+                                    blueprint = bp,
+                                    recipe = null,
                                     discovered = true,
+                                    onClick = { selectedBlueprint = bp },
                                 )
                             }
                         }
@@ -1022,34 +1039,127 @@ private fun StatItem(
  * Hidden unit card — shows full info if discovered, silhouette if not.
  */
 @Composable
-private fun HiddenUnitCard(blueprintId: String, discovered: Boolean) {
-    Card(
-        modifier = Modifier
-            .padding(4.dp)
-            .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (discovered) Color(0xFF1A1A2E) else Color(0xFF0D0D0D)
+private fun HiddenUnitCard(
+    blueprint: UnitBlueprint,
+    recipe: HiddenRecipe?,
+    discovered: Boolean,
+    onClick: () -> Unit = {},
+) {
+    if (discovered) {
+        // ── Discovered: show full card like Normal tab ──
+        CodexBlueprintCard(
+            blueprint = blueprint,
+            onClick = onClick,
+            isOwned = true,
         )
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            if (discovered) {
-                Text(
-                    text = blueprintId,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
+    } else {
+        // ── Undiscovered: silhouette card with recipe hint ──
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(HiddenCardUndiscoveredBg, Color(0xFF0A0A12))
+                    )
                 )
-            } else {
+                .border(1.dp, HiddenCardUndiscoveredBorder, RoundedCornerShape(12.dp))
+                .padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Dark grade bar placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFF222233)),
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Silhouette icon circle
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF151525))
+                    .border(1.5.dp, Color(0xFF222233), CircleShape),
+            ) {
                 Text(
-                    text = "???",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF333333),
+                    text = "?",
+                    color = Color(0xFF333355),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
                 )
-                Text(
-                    text = "미발견",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF555555),
-                )
+            }
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            // "???" name
+            Text(
+                text = "???",
+                color = Color(0xFF444466),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            // "미발견" label
+            Text(
+                text = "미발견",
+                color = Color(0xFF555577),
+                fontSize = 8.sp,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Recipe hint
+            if (recipe != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(HiddenRecipeHintBg)
+                        .padding(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    recipe.ingredients.forEachIndexed { index, slot ->
+                        RecipeSlotHint(slot)
+                        if (index < recipe.ingredients.size - 1) {
+                            Text(
+                                text = "+",
+                                color = HiddenPlusColor,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun RecipeSlotHint(slot: RecipeSlot) {
+    val familyLabel = slot.family?.label ?: "아무"
+    val roleLabel = slot.role?.label ?: "아무"
+    val gradeLabel = if (slot.minGrade == UnitGrade.COMMON) "" else "(${slot.minGrade.label}+)"
+
+    Text(
+        text = "$familyLabel $roleLabel$gradeLabel",
+        color = Color(0xFF8888AA),
+        fontSize = 7.sp,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(HiddenIngredientPillBg)
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+    )
 }
