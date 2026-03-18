@@ -52,7 +52,7 @@ class GameUnit {
     private var chaseTarget: Enemy? = null
 
     private var attackCooldown = 0f
-    var currentTarget: Enemy? = null; private set
+    var currentTarget: Enemy? = null
 
     // ── New blueprint-based init (Task 4) ──
     fun initFromBlueprint(bp: UnitBlueprint) {
