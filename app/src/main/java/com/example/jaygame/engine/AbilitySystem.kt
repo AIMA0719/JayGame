@@ -7,7 +7,7 @@ object AbilitySystem {
     private const val AURA_RADIUS = 150f
     private const val AURA_TICK = 0.5f
 
-    /** Current deck synergy — set by BattleEngine at start */
+    /** Current field-based synergy — refreshed by BattleEngine when units change */
     var activeSynergy: SynergySystem.SynergyBonus = SynergySystem.SynergyBonus()
 
     fun onProjectileHit(

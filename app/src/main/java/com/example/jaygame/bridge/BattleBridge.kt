@@ -671,11 +671,7 @@ object BattleBridge {
 
     fun requestSummon() {
         val eng = engine ?: return
-        if (eng.blueprintRegistry.count() > 0) {
-            eng.requestSummonBlueprint()
-        } else {
-            eng.requestSummon()
-        }
+        eng.requestSummonBlueprint()
     }
 
     fun requestClickTile(tileIndex: Int) {

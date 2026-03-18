@@ -5,12 +5,11 @@ import android.util.Log
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.DungeonDef
 import com.example.jaygame.data.GameData
-// TODO(Task18): Remove these legacy imports once requestSummon/requestMerge/requestBuyUnit
-//  are fully migrated to blueprint-based paths (requestSummonBlueprint, tryMergeBlueprint, etc.)
+// TODO(Task18): Remove these legacy imports once requestMerge/requestBuyUnit
+//  are fully migrated to blueprint-based paths (tryMergeBlueprint, etc.)
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
 import com.example.jaygame.data.unitGradeOf
-import com.example.jaygame.data.unitIdOf
 import com.example.jaygame.engine.behavior.BehaviorFactory
 import com.example.jaygame.engine.behavior.BehaviorRegistration
 import com.example.jaygame.engine.math.GameRect
@@ -23,7 +22,6 @@ class BattleEngine(
     private val stageId: Int,
     private val difficulty: Int,
     private val maxWaves: Int,
-    private val deck: IntArray,
     gameData: GameData? = null,
     initialPity: Int = 0,
 ) {
@@ -217,12 +215,8 @@ class BattleEngine(
             val forceBoss = dungeonDef!!.type == com.example.jaygame.data.DungeonType.BOSS_RUSH
             waveSystem = WaveSystem(maxWaves, difficulty, forceBoss = forceBoss)
         }
-        // Set active synergy for AbilitySystem
-        // Use the most common family in deck for synergy calculation
-        if (deck.isNotEmpty()) {
-            val mainFamily = deck.groupBy { it }.maxByOrNull { it.value.size }?.key ?: 0
-            AbilitySystem.activeSynergy = SynergySystem.getSynergyBonus(deck, mainFamily)
-        }
+        // Initialize synergy as empty — will be refreshed when units are placed
+        AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
         UniqueAbilitySystem.zonePool = zones
         // Wire relic bonuses into subsystems
         relicManager?.let { rm ->
@@ -274,14 +268,10 @@ class BattleEngine(
                 } ?: mergeable.first()
                 requestMerge(bestMerge)
             }
-            // Auto-summon: summon when SP is enough (prefer blueprint path)
+            // Auto-summon: summon when SP is enough
             val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
             if (sp >= effectiveCost && !grid.isFull()) {
-                if (blueprintRegistry.count() > 0) {
-                    requestSummonBlueprint()
-                } else {
-                    requestSummon()
-                }
+                requestSummonBlueprint()
             }
         }
 
@@ -683,8 +673,8 @@ class BattleEngine(
         val relicArmorPen = rm?.totalArmorPenPercent() ?: 0f
         val relicMagicDmg = rm?.totalMagicDmgPercent() ?: 0f
 
-        // Synergy bonus
-        val synergy = SynergySystem.getSynergyBonus(deck, unit.family)
+        // Synergy bonus (field-based)
+        val synergy = AbilitySystem.activeSynergy
 
         val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance)
         val critMultiplier = 2f + relicCritDmg
@@ -728,47 +718,6 @@ class BattleEngine(
 
     // ── Player Actions ──
 
-    fun requestSummon() {
-        val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
-        if (sp < effectiveSummonCost || grid.isFull()) return
-        sp -= effectiveSummonCost
-
-        val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
-        currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
-        BattleBridge.updateUnitPullPity(currentPity)
-        // Pet ID 7 (9미호): chance to bump summon grade by 1
-        val gradeUpChance = petSystem.getSummonGradeUpChance()
-        val grade = if (gradeUpChance > 0f && Math.random() < gradeUpChance) {
-            (rawGrade + 1).coerceAtMost(3)  // cap at LEGEND (3)
-        } else rawGrade
-        if (deck.isEmpty()) return
-        val familyIndex = deck.random()  // deck stores family ordinals directly
-        val unitDefId = unitIdOf(grade, familyIndex) ?: return
-
-        val tileIndex = grid.findEmpty()
-        if (tileIndex < 0) return
-
-        val def = UNIT_DEFS.find { it.id == unitDefId } ?: return
-        val unit = units.acquire() ?: return
-        val abilityInfo = abilityForFamily(familyIndex)
-        val synergy = SynergySystem.getSynergyBonus(deck, familyIndex)
-        // Apply permanent unit level bonus from card upgrades
-        val blueprintId = com.example.jaygame.data.LegacyMigration.blueprintIdForLegacyIndex(unitDefId)
-        val permLevel = if (blueprintId != null) permanentUnitLevels.getOrElse(blueprintId) { 1 } else 1
-        val permLevelBonus = 1f + (permLevel - 1) * 0.02f // +2% ATK per permanent level
-        unit.init(
-            unitDefId = unitDefId, grade = grade, family = familyIndex, level = 1,
-            tileIndex = tileIndex, homePos = grid.cellCenter(tileIndex),
-            baseATK = def.baseATK.toFloat() * permLevelBonus, atkSpeed = def.baseSpeed * synergy.spdMultiplier,
-            range = def.range * upgradeRangeMult * synergy.rangeMultiplier,
-            abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
-        )
-        UniqueAbilitySystem.initUnit(unit)
-        grid.placeUnit(tileIndex, unit)
-        BattleBridge.onSummonResult(unitDefId, grade)
-    }
-
-    // NEW: Blueprint-based summon path (alongside legacy requestSummon)
     fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
         val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
         if (sp < effectiveSummonCost || grid.isFull()) return
@@ -807,11 +756,27 @@ class BattleEngine(
         unit.homePosition = grid.cellCenter(tileIndex)
         unit.behavior = BehaviorFactory.create(selected.behaviorId)
         grid.placeUnit(tileIndex, unit)
+        refreshSynergies()
         BattleBridge.onSummonResult(
             unitDefId = -1,
             grade = selected.grade.ordinal,
             blueprintId = selected.id,
         )
+    }
+
+    /** Recalculate field-based synergies from currently alive units.
+     *  Picks the dominant family (highest count >= 2) for the global synergy bonus. */
+    private fun refreshSynergies() {
+        activeUnitsScratch.clear()
+        units.forEach { if (it.alive) activeUnitsScratch.add(it) }
+        val familyCounts = SynergySystem.getActiveSynergies(activeUnitsScratch)
+        if (familyCounts.isEmpty()) {
+            AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
+        } else {
+            // Use the family with the highest count as the dominant synergy
+            val dominantFamily = familyCounts.maxByOrNull { it.value }!!.key
+            AbilitySystem.activeSynergy = SynergySystem.getSynergyBonus(activeUnitsScratch, dominantFamily)
+        }
     }
 
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
@@ -846,6 +811,7 @@ class BattleEngine(
         )
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
+        refreshSynergies()
         mergeCount++
         BattleBridge.onMergeComplete(tileIndex, result.isLucky, result.resultUnitDefId)
     }
@@ -854,6 +820,7 @@ class BattleEngine(
         val unit = grid.removeUnit(tileIndex) ?: return
         sp += 30f + unit.grade * 20f
         units.release(unit)
+        refreshSynergies()
     }
 
     fun requestBulkSell(grade: Int): Int {
@@ -867,6 +834,7 @@ class BattleEngine(
                 count++
             }
         }
+        if (count > 0) refreshSynergies()
         return count
     }
 
@@ -947,6 +915,7 @@ class BattleEngine(
         )
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
+        refreshSynergies()
         BattleBridge.onSummonResult(unitDefId, grade)
     }
 
