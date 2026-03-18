@@ -11,6 +11,7 @@ enum class UnitGrade(
     val label: String,
     val color: Color,
     val tier: Int,
+    @Deprecated("Use UnitBlueprint.summonWeight instead")
     val summonWeight: Int,
 ) {
     COMMON("일반", Color(0xFF9ca3af), 1, 60),
@@ -21,6 +22,7 @@ enum class UnitGrade(
     MYTHIC("신화", Color(0xFFfbbf24), 6, 0),
     IMMORTAL("불멸", Color(0xFFf0abfc), 7, 0);
 
+    @Deprecated("Use UnitBlueprint.summonWeight instead")
     val canSummon: Boolean get() = summonWeight > 0
 
     companion object {
