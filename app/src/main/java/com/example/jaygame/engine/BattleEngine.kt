@@ -95,6 +95,9 @@ class BattleEngine(
 
     private var gridPushTimer = 0f
 
+    // Role synergy cache — refreshed alongside family synergies
+    private var roleSynergyCache: Map<UnitRole, RoleSynergySystem.RoleSynergyBonus> = emptyMap()
+
     // PERF-02: Scratch lists for toActiveList replacements
     private val activeUnitsScratch = ArrayList<GameUnit>(MAX_UNITS)
     private val activeEnemiesScratch = ArrayList<Enemy>(MAX_ENEMIES)
@@ -533,7 +536,11 @@ class BattleEngine(
 
             // NEW: Behavior-based update path — units with a behavior delegate to it
             if (unit.behavior != null) {
-                unit.behavior!!.update(unit, dt) { pos, range -> findNearestEnemy(pos, range) }
+                val roleBonus = getRoleBonus(unit)
+                // Apply role synergy range multiplier to enemy detection
+                unit.behavior!!.update(unit, dt) { pos, range ->
+                    findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
+                }
                 // For behavior-based units, check if behavior produced an attack
                 // Use behavior's canAttack() for ranged units instead of legacy unit.canAttack()
                 val canFire = when (val b = unit.behavior) {
@@ -544,34 +551,44 @@ class BattleEngine(
                 if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
                     val target = unit.currentTarget!!
                     val result = unit.behavior!!.onAttack(unit, target)
+                    // Apply role synergy multipliers to behavior damage
+                    val boostedDamage = result.damage * roleBonus.atkMultiplier
+                    val boostedCrit = if (!result.isCrit && roleBonus.critBonus > 0f) {
+                        Math.random() < roleBonus.critBonus
+                    } else result.isCrit
+                    val finalBoostedDamage = if (boostedCrit && !result.isCrit) boostedDamage * 2f else boostedDamage
+
                     if (result.isInstant) {
                         // Melee instant damage — use Enemy.takeDamage() for proper boss/buff handling
-                        val finalDmg = target.takeDamage(result.damage, result.isMagic, unit.range)
+                        val finalDmg = target.takeDamage(finalBoostedDamage, result.isMagic, unit.range)
                         val nx = target.position.x / W
                         val ny = target.position.y / H
-                        BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), result.isCrit)
+                        BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
                     } else {
                         // Ranged — spawn projectile with behavior-computed damage
                         val proj = projectiles.acquire()
                         if (proj != null) {
                             proj.init(
                                 from = unit.position.copy(), target = target,
-                                damage = result.damage, speed = 400f,
+                                damage = finalBoostedDamage, speed = 400f,
                                 type = unit.family.coerceIn(0, 5),
-                                isMagic = result.isMagic, isCrit = result.isCrit,
+                                isMagic = result.isMagic, isCrit = boostedCrit,
                                 sourceUnitId = unit.tileIndex,
                                 abilityType = unit.abilityType,
                                 abilityValue = unit.abilityValue,
                                 grade = unit.grade, family = unit.family,
-                                attackerRange = unit.range,
+                                attackerRange = unit.range * roleBonus.rangeMultiplier,
                             )
                         }
                     }
                     unit.onAttack()
                 }
             } else {
-                // Legacy update path
-                unit.update(dt) { pos, range -> findNearestEnemy(pos, range) }
+                // Legacy update path — apply role synergy range multiplier
+                val legacyRoleBonus = getRoleBonus(unit)
+                unit.update(dt) { pos, range ->
+                    findNearestEnemy(pos, range * legacyRoleBonus.rangeMultiplier)
+                }
                 if (unit.canAttack()) {
                     fireProjectile(unit)
                     unit.onAttack()
@@ -675,14 +692,15 @@ class BattleEngine(
 
         // Synergy bonus (field-based)
         val synergy = AbilitySystem.activeSynergy
+        val roleBonus = getRoleBonus(unit)
 
-        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance)
+        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance + roleBonus.critBonus)
         val critMultiplier = 2f + relicCritDmg
         val isMagic = unit.family == 1 || unit.family == 4
         val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.001f // +0.1% per level
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
         val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
-        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus) * synergy.atkMultiplier * familyUpgradeBonus * gradeBonus * advantageMult
+        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus) * synergy.atkMultiplier * roleBonus.atkMultiplier * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
             (if (isMagic) (1f + relicMagicDmg) else 1f) *
             (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
@@ -696,7 +714,7 @@ class BattleEngine(
             abilityType = unit.abilityType,
             abilityValue = unit.abilityValue,
             grade = unit.grade, family = unit.family,
-            attackerRange = unit.range,
+            attackerRange = unit.range * roleBonus.rangeMultiplier,
         )
     }
 
@@ -777,6 +795,17 @@ class BattleEngine(
             val dominantFamily = familyCounts.maxByOrNull { it.value }!!.key
             AbilitySystem.activeSynergy = SynergySystem.getSynergyBonus(activeUnitsScratch, dominantFamily)
         }
+
+        // Role synergy
+        roleSynergyCache = UnitRole.entries.associateWith { role ->
+            RoleSynergySystem.getBonus(activeUnitsScratch, role)
+        }
+    }
+
+    /** Get role synergy bonus for a unit. SPECIAL category units get no bonus. */
+    private fun getRoleBonus(unit: GameUnit): RoleSynergySystem.RoleSynergyBonus {
+        if (unit.unitCategory == UnitCategory.SPECIAL) return RoleSynergySystem.RoleSynergyBonus()
+        return roleSynergyCache[unit.role] ?: RoleSynergySystem.RoleSynergyBonus()
     }
 
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
