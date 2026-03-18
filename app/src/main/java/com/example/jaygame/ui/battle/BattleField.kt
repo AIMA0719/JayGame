@@ -14,6 +14,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.UNIT_DEFS_MAP
@@ -109,10 +110,44 @@ fun BattleField() {
     val selectedTile by BattleBridge.selectedTile.collectAsState()
     val context = LocalContext.current
 
+    // Legacy unit bitmaps (keyed by unitDefId)
     val unitBitmaps = remember {
         UNIT_DEFS_MAP.mapValues { (_, def) ->
             ContextCompat.getDrawable(context, def.iconRes)?.toBitmap(128, 128)?.asImageBitmap()
         }
+    }
+
+    // Blueprint fallback bitmaps — map family+grade to existing icon resources.
+    // Legacy icon pattern: family 0-4 → id = grade*5+family; family 5 (wind) → id = 35+grade
+    // UNIT_ICONS covers ids 0-24 and 35-39, higher grades fall back to family's base icon.
+    val blueprintBitmapCache = remember {
+        val cache = mutableMapOf<String, ImageBitmap?>()
+        val iconMap = mapOf(
+            0 to R.drawable.ic_unit_0, 1 to R.drawable.ic_unit_1, 2 to R.drawable.ic_unit_2,
+            3 to R.drawable.ic_unit_3, 4 to R.drawable.ic_unit_4, 5 to R.drawable.ic_unit_5,
+            6 to R.drawable.ic_unit_6, 7 to R.drawable.ic_unit_7, 8 to R.drawable.ic_unit_8,
+            9 to R.drawable.ic_unit_9, 10 to R.drawable.ic_unit_10, 11 to R.drawable.ic_unit_11,
+            12 to R.drawable.ic_unit_12, 13 to R.drawable.ic_unit_13, 14 to R.drawable.ic_unit_14,
+            15 to R.drawable.ic_unit_15, 16 to R.drawable.ic_unit_16, 17 to R.drawable.ic_unit_17,
+            18 to R.drawable.ic_unit_18, 19 to R.drawable.ic_unit_19, 20 to R.drawable.ic_unit_20,
+            21 to R.drawable.ic_unit_21, 22 to R.drawable.ic_unit_22, 23 to R.drawable.ic_unit_23,
+            24 to R.drawable.ic_unit_24,
+            35 to R.drawable.ic_unit_35, 36 to R.drawable.ic_unit_36, 37 to R.drawable.ic_unit_37,
+            38 to R.drawable.ic_unit_38, 39 to R.drawable.ic_unit_39,
+        )
+        fun iconForFamilyGrade(familyOrd: Int, gradeOrd: Int): Int {
+            val id = if (familyOrd < 5) gradeOrd * 5 + familyOrd else 35 + gradeOrd
+            return iconMap[id] ?: iconMap[familyOrd.coerceIn(0, 4)] ?: R.drawable.ic_unit_0
+        }
+        // Pre-load bitmaps for all blueprints
+        val registry = com.example.jaygame.engine.BlueprintRegistry.instance
+        for (bp in registry.all()) {
+            val familyOrd = bp.families.firstOrNull()?.ordinal ?: 0
+            val gradeOrd = bp.grade.ordinal
+            val resId = iconForFamilyGrade(familyOrd, gradeOrd)
+            cache[bp.id] = ContextCompat.getDrawable(context, resId)?.toBitmap(128, 128)?.asImageBitmap()
+        }
+        cache
     }
 
     val stageId by BattleBridge.stageId.collectAsState()
@@ -543,7 +578,9 @@ fun BattleField() {
             }
 
             // Unit sprite (proper drawable icon) with bounce + attack scale + breathing
+            // Try legacy unitDefId first, fallback to blueprintId-based cache
             val bitmap = unitBitmaps[unitDefId]
+                ?: (if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null)
             if (bitmap != null) {
                 val spriteSize = unitSize * 0.85f * finalScale
                 val spriteY = screenY - spriteSize - pedestalRy * 0.3f + bounceOffset
