@@ -5,6 +5,25 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class BlueprintRegistry {
+    companion object {
+        lateinit var instance: BlueprintRegistry
+            private set
+
+        fun initialize(context: android.content.Context) {
+            if (::instance.isInitialized) return
+            val registry = BlueprintRegistry()
+            // Load normal + hidden units from blueprints.json
+            val blueprintsJson = context.assets.open("units/blueprints.json")
+                .bufferedReader().use { it.readText() }
+            registry.loadFromJson(blueprintsJson)
+            // Load special units from special_units.json
+            val specialJson = context.assets.open("units/special_units.json")
+                .bufferedReader().use { it.readText() }
+            registry.loadFromJson(specialJson)
+            instance = registry
+        }
+    }
+
     private val blueprints = mutableMapOf<String, UnitBlueprint>()
 
     // Pre-computed caches — rebuilt after loadFromJson

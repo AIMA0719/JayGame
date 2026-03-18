@@ -148,8 +148,8 @@ class BattleEngine(
     private val gridFamiliesListBuf = Array<List<com.example.jaygame.data.UnitFamily>>(Grid.TOTAL) { emptyList() }
     private val gridRoleBuf = Array(Grid.TOTAL) { UnitRole.RANGED_DPS }
 
-    // NEW: Blueprint-based system
-    val blueprintRegistry = BlueprintRegistry()
+    // NEW: Blueprint-based system (singleton, loaded at app startup)
+    val blueprintRegistry = BlueprintRegistry.instance
 
     init {
         // Ensure all behavior factories are registered
