@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.NeonCyan
@@ -376,9 +377,11 @@ fun MergeEffectOverlay() {
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // Grade + unit name
+                // Grade + unit name (legacy or blueprint)
+                val unitName = unitDef?.name
+                    ?: if (data.resultBlueprintId.isNotEmpty()) BlueprintRegistry.instance.findById(data.resultBlueprintId)?.name else null
                 Text(
-                    text = "$gradeName ${unitDef?.name ?: ""}",
+                    text = "$gradeName ${unitName ?: ""}",
                     color = gradeColor,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,

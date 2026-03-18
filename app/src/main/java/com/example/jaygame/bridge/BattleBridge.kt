@@ -349,7 +349,7 @@ object BattleBridge {
     val summonResult: StateFlow<SummonResult?> = _summonResult.asStateFlow()
 
     /** 머지 이펙트 (타일 인덱스, lucky 여부, 결과 유닛 ID) */
-    data class MergeEffect(val tileIndex: Int, val isLucky: Boolean, val resultUnitId: Int = -1)
+    data class MergeEffect(val tileIndex: Int, val isLucky: Boolean, val resultUnitId: Int = -1, val resultBlueprintId: String = "")
     private val _mergeEffect = MutableStateFlow<MergeEffect?>(null)
     val mergeEffect: StateFlow<MergeEffect?> = _mergeEffect.asStateFlow()
 
@@ -508,8 +508,8 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun onMergeComplete(tileIndex: Int, isLucky: Boolean, resultUnitId: Int) {
-        _mergeEffect.value = MergeEffect(tileIndex, isLucky, resultUnitId)
+    fun onMergeComplete(tileIndex: Int, isLucky: Boolean, resultUnitId: Int, resultBlueprintId: String = "") {
+        _mergeEffect.value = MergeEffect(tileIndex, isLucky, resultUnitId, resultBlueprintId)
     }
 
     fun dismissPopup() {

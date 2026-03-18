@@ -854,7 +854,7 @@ class BattleEngine(
         grid.placeUnit(tileIndex, unit)
         refreshSynergies()
         mergeCount++
-        BattleBridge.onMergeComplete(tileIndex, result.isLucky, result.resultUnitDefId)
+        BattleBridge.onMergeComplete(tileIndex, result.isLucky, result.resultUnitDefId, unit.blueprintId)
     }
 
     fun requestSell(tileIndex: Int) {
