@@ -123,6 +123,13 @@ private val FAMILY_ICONS = mapOf(
     UnitFamily.WIND to "\uD83C\uDF00",
 )
 
+// ── Special tab colors (pre-allocated) ──
+private val SpecialCardBg = Color(0xFF1A1020)
+private val SpecialCardBorder = Color(0xFF6B3FA0)
+private val SpecialFieldEffectBg = Color(0xFF1A1508)
+private val SpecialFieldEffectBorder = Color(0xFF5C4A1E)
+private val SpecialImmortalGlow = Color(0xFFD4AF37)
+
 // ── Hidden tab colors (pre-allocated) ──
 private val HiddenCardDiscoveredBg = Color(0xFF1A1A2E)
 private val HiddenCardUndiscoveredBg = Color(0xFF0D0D15)
@@ -447,27 +454,18 @@ fun UnitCollectionScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
-                            text = "특수 유닛은 필드 효과를 가진 유닛입니다.",
+                            text = "최대 2기 배치 가능",
                             color = SubText,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                         )
-                        Text(
-                            text = "최대 2기까지 배치 가능합니다.",
-                            color = SubText.copy(alpha = 0.7f),
-                            fontSize = 11.sp,
-                        )
-                        if (specialBlueprints.isNotEmpty()) {
-                            specialBlueprints.forEach { bp ->
-                                HiddenUnitCard(
-                                    blueprint = bp,
-                                    recipe = null,
-                                    discovered = true,
-                                    onClick = { selectedBlueprint = bp },
-                                )
-                            }
+                        specialBlueprints.forEach { bp ->
+                            SpecialUnitCard(
+                                blueprint = bp,
+                                onClick = { selectedBlueprint = bp },
+                            )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -1162,4 +1160,166 @@ private fun RecipeSlotHint(slot: RecipeSlot) {
             .background(HiddenIngredientPillBg)
             .padding(horizontal = 4.dp, vertical = 1.dp),
     )
+}
+
+// ══════════════════════════════════════════════════════════════
+// Special Unit Card — full-width card for SPECIAL (IMMORTAL) units
+// ══════════════════════════════════════════════════════════════
+@Composable
+private fun SpecialUnitCard(
+    blueprint: UnitBlueprint,
+    onClick: () -> Unit = {},
+) {
+    val roleLabel = ROLE_LABELS[blueprint.role] ?: blueprint.role.name
+    val behaviorLabel = BEHAVIOR_LABELS[blueprint.behaviorId] ?: blueprint.behaviorId
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(SpecialCardBg, Color(0xFF100818))
+                )
+            )
+            .border(
+                width = 1.5.dp,
+                brush = Brush.verticalGradient(
+                    listOf(SpecialImmortalGlow, SpecialCardBorder)
+                ),
+                shape = RoundedCornerShape(12.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        // ── Header row: Grade label + Name ──
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // Grade badge
+            Box(
+                modifier = Modifier
+                    .background(
+                        SpecialImmortalGlow.copy(alpha = 0.15f),
+                        RoundedCornerShape(4.dp),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = blueprint.grade.label,
+                    color = SpecialImmortalGlow,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text(
+                text = blueprint.name,
+                color = LightText,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ── Multi-family badges ──
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            blueprint.families.forEach { family ->
+                val icon = FAMILY_ICONS[family] ?: ""
+                Box(
+                    modifier = Modifier
+                        .background(family.color.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                        .border(1.dp, family.color.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        text = "$icon ${family.label}",
+                        color = family.color,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ── Role + Damage type + Attack range row ──
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Role
+            Text(
+                text = roleLabel,
+                color = NeonCyan,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(text = "|", color = SubText, fontSize = 11.sp)
+            // Damage type
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (blueprint.damageType == DamageType.PHYSICAL) PhysicalColor
+                            else MagicColor
+                        ),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (blueprint.damageType == DamageType.PHYSICAL) "물리" else "마법",
+                    color = if (blueprint.damageType == DamageType.PHYSICAL) PhysicalColor else MagicColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text(text = "|", color = SubText, fontSize = 11.sp)
+            // Attack range
+            Text(
+                text = if (blueprint.attackRange == AttackRange.MELEE) "근접" else "원거리",
+                color = SubText,
+                fontSize = 11.sp,
+            )
+            Text(text = "|", color = SubText, fontSize = 11.sp)
+            // Behavior
+            Text(
+                text = behaviorLabel,
+                color = SubText,
+                fontSize = 11.sp,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // ── Field effect description (main feature) ──
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(SpecialFieldEffectBg)
+                .border(1.dp, SpecialFieldEffectBorder, RoundedCornerShape(8.dp))
+                .padding(10.dp),
+        ) {
+            Text(
+                text = "필드 효과",
+                color = Gold,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = blueprint.description,
+                color = Gold.copy(alpha = 0.9f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 18.sp,
+            )
+        }
+    }
 }
