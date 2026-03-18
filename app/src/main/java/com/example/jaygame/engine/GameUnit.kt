@@ -1,13 +1,16 @@
 package com.example.jaygame.engine
 
+import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.engine.math.Vec2
 import kotlin.math.cos
 import kotlin.math.sin
 
 class GameUnit {
     var alive = false
+    @Deprecated("Use blueprintId instead")
     var unitDefId = -1
     var grade = 0
+    @Deprecated("Use families instead")
     var family = 0
     var level = 1
     var tileIndex = -1
@@ -27,14 +30,53 @@ class GameUnit {
     var uniqueAbilityMaxCd = 0f      // max cooldown for this ability
     var passiveCounter = 0           // generic counter for passive triggers (e.g., hit count)
 
+    // ── New Strategy-pattern fields (Task 4) ──
+    var blueprintId: String = ""
+    var families: List<UnitFamily> = emptyList()
+    var role: UnitRole = UnitRole.RANGED_DPS
+    var attackRange: AttackRange = AttackRange.RANGED
+    var damageType: DamageType = DamageType.PHYSICAL
+    var unitCategory: UnitCategory = UnitCategory.NORMAL
+    var hp: Float = 0f
+    var maxHp: Float = 0f
+    var defense: Float = 0f
+    var magicResist: Float = 0f
+    var blockCount: Int = 0
+    var behavior: UnitBehavior? = null
+    var fieldController: FieldEffectController? = null
+    var state: UnitState = UnitState.IDLE
+
     private var wanderTarget = Vec2()
     private var wanderTimer = 0f
-    private var moveSpeed = 75f
+    var moveSpeed = 75f
     private var chaseTarget: Enemy? = null
 
     private var attackCooldown = 0f
-    var currentTarget: Enemy? = null; private set
+    var currentTarget: Enemy? = null
 
+    // ── New blueprint-based init (Task 4) ──
+    fun initFromBlueprint(bp: UnitBlueprint) {
+        blueprintId = bp.id
+        families = bp.families
+        grade = bp.grade.ordinal
+        role = bp.role
+        attackRange = bp.attackRange
+        damageType = bp.damageType
+        unitCategory = bp.unitCategory
+        hp = bp.stats.hp
+        maxHp = bp.stats.hp
+        baseATK = bp.stats.baseATK
+        atkSpeed = bp.stats.baseSpeed
+        range = bp.stats.range
+        defense = bp.stats.defense
+        magicResist = bp.stats.magicResist
+        moveSpeed = bp.stats.moveSpeed
+        blockCount = bp.stats.blockCount
+        state = UnitState.IDLE
+        alive = true
+    }
+
+    @Deprecated("Use initFromBlueprint instead")
     fun init(
         unitDefId: Int, grade: Int, family: Int, level: Int,
         tileIndex: Int, homePos: Vec2,
@@ -146,6 +188,26 @@ class GameUnit {
     }
 
     fun reset() {
+        // Reset new strategy-pattern fields
+        behavior?.reset()
+        fieldController?.reset()
+        behavior = null
+        fieldController = null
+        state = UnitState.IDLE
+        blueprintId = ""
+        families = emptyList()
+        role = UnitRole.RANGED_DPS
+        attackRange = AttackRange.RANGED
+        damageType = DamageType.PHYSICAL
+        unitCategory = UnitCategory.NORMAL
+        hp = 0f
+        maxHp = 0f
+        defense = 0f
+        magicResist = 0f
+        moveSpeed = 75f
+        blockCount = 0
+
+        // Existing reset logic
         alive = false
         currentTarget = null
         chaseTarget = null

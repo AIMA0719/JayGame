@@ -49,6 +49,7 @@ data class UniqueAbility(
     val description: String,
 )
 
+@Deprecated("Use UnitBlueprint from BlueprintRegistry instead. Data now lives in blueprints.json.")
 data class UnitDef(
     val id: Int,
     val name: String,
@@ -73,6 +74,9 @@ typealias UnitElement = UnitFamily
 val UPGRADE_COSTS = listOf(2 to 100, 4 to 200, 10 to 500, 20 to 1000, 50 to 2000, 100 to 5000)
 val LEVEL_MULTIPLIER = floatArrayOf(1.0f, 1.5f, 2.2f, 3.2f, 4.5f, 6.0f, 8.0f)
 
+// TODO(Task18): Remove UNIT_DEFS once BattleEngine, UI screens, and BattleBridge are fully migrated to BlueprintRegistry.
+@Deprecated("Use BlueprintRegistry.allBlueprints() instead. Data now lives in blueprints.json.")
+@Suppress("DEPRECATION")
 val UNIT_DEFS: List<UnitDef> = listOf(
     // ===== 화염 계열 (Splash → 고유 능력) =====
     UnitDef(id = 0, name = "루비", grade = UnitGrade.COMMON, family = UnitFamily.FIRE,
@@ -363,14 +367,23 @@ val UNIT_DEFS: List<UnitDef> = listOf(
         )),
 )
 
+// TODO(Task18): Remove UNIT_DEFS_MAP and helper functions once BattleEngine is migrated to BlueprintRegistry.
+@Deprecated("Use BlueprintRegistry.findById() instead")
+@Suppress("DEPRECATION")
 val UNIT_DEFS_MAP: Map<Int, UnitDef> = UNIT_DEFS.associateBy { it.id }
 
 /** Look up grade ordinal from unitDefId (replaces id / 5) */
+@Deprecated("Use BlueprintRegistry.findById(blueprintId)?.grade instead")
+@Suppress("DEPRECATION")
 fun unitGradeOf(id: Int): Int = UNIT_DEFS_MAP[id]?.grade?.ordinal ?: 0
 
 /** Look up family ordinal from unitDefId (replaces id % 5) */
+@Deprecated("Use BlueprintRegistry.findById(blueprintId)?.families instead")
+@Suppress("DEPRECATION")
 fun unitFamilyOf(id: Int): Int = UNIT_DEFS_MAP[id]?.family?.ordinal ?: 0
 
 /** Find unitDefId for a given grade+family combination */
+@Deprecated("Use BlueprintRegistry.findByGradeAndFamily() instead")
+@Suppress("DEPRECATION")
 fun unitIdOf(grade: Int, familyOrdinal: Int): Int? =
     UNIT_DEFS.find { it.grade.ordinal == grade && it.family.ordinal == familyOrdinal }?.id

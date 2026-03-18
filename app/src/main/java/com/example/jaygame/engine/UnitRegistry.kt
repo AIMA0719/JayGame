@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
 /**
@@ -5,7 +6,11 @@ package com.example.jaygame.engine
  * 5계열 x 7등급 = 35종 유닛.
  *
  * 머지 규칙: 동일 계열 동일 등급 3개 → 같은 계열 상위 등급 1개
+ *
+ * @deprecated Use [BlueprintRegistry] instead. Unit data now lives in blueprints.json.
+ * TODO(Task18): Remove once all consumers are migrated.
  */
+@Deprecated("Use BlueprintRegistry instead. Unit data now lives in blueprints.json.")
 object UnitRegistry {
 
     val specs: List<UnitSpec> = buildList {

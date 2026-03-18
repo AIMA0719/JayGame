@@ -97,8 +97,7 @@ private const val GRID_NORM_Y = 107.5f / 720f    // 0.14931 (Grid.ORIGIN_Y / 720
 private const val GRID_NORM_W = CPP_GRID_W / 720f   // 0.66667
 private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
 
-private const val GRID_COLS = 5
-private const val GRID_ROWS = 5
+// Use BattleBridge.GRID_COLS and BattleBridge.GRID_ROWS instead of local copies
 
 /**
  * Battlefield overlay — unit sprites rendered in Compose (proper drawable icons),
@@ -137,9 +136,12 @@ fun BattleField() {
     val prevFamilyMap = remember { mutableStateOf(mapOf<Int, Int>()) }
 
     LaunchedEffect(Unit) {
+        var lastFrameNanos = 0L
         while (true) {
             withFrameNanos { frameTimeNanos ->
-                val dt = 1f / 60f // approximate
+                val dt = if (lastFrameNanos == 0L) 1f / 60f
+                         else ((frameTimeNanos - lastFrameNanos) / 1_000_000_000f).coerceIn(0.001f, 0.05f)
+                lastFrameNanos = frameTimeNanos
                 animTime.floatValue += dt
 
                 val data = BattleBridge.unitPositions.value
@@ -314,13 +316,15 @@ fun BattleField() {
         val useMicro = moArr.size == data.count * 2
 
         // Size based on cell height (grid is 880x440, 6cols x 5rows -> cells are 146x88)
-        val cellH = gridH / GRID_ROWS.toFloat()
+        val cellH = gridH / BattleBridge.GRID_ROWS.toFloat()
         val unitSize = cellH * 0.65f
         val pedestalRx = unitSize * 0.45f
         val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
 
         for (i in 0 until data.count) {
+            if (i >= data.xs.size || i >= data.ys.size || i >= data.grades.size ||
+                i >= data.tileIndices.size || i >= data.unitDefIds.size || i >= data.levels.size) continue
             val baseScreenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
             val baseScreenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
             // G3: micro-movement offset
@@ -334,7 +338,11 @@ fun BattleField() {
             val tileIdx = data.tileIndices[i]
             val isSelected = selectedTile == tileIdx
             val isAttacking = data.isAttacking.getOrElse(i) { false }
-            val family = com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+            val family = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
+                data.familiesList[i].first().ordinal
+            } else {
+                com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+            }
             val unitDefId = data.unitDefIds[i]
             val level = data.levels[i]
 
@@ -604,6 +612,52 @@ fun BattleField() {
                         center = Offset(sx2, sy2),
                     )
                 }
+            }
+
+            // ── Task 18: Tank HP bar (activated) ──
+            val unitRole = data.roles.getOrElse(i) { com.example.jaygame.engine.UnitRole.RANGED_DPS }
+            val unitState = data.states.getOrElse(i) { com.example.jaygame.engine.UnitState.IDLE }
+            val unitHp = data.hps.getOrElse(i) { 0f }
+            val unitMaxHp = data.maxHps.getOrElse(i) { 0f }
+            val unitCategory = data.unitCategories.getOrElse(i) { com.example.jaygame.engine.UnitCategory.NORMAL }
+
+            if (unitRole == com.example.jaygame.engine.UnitRole.TANK && unitState == com.example.jaygame.engine.UnitState.BLOCKING && unitMaxHp > 0f) {
+                val hpPercent = (unitHp / unitMaxHp).coerceIn(0f, 1f)
+                val barWidth = 40f
+                val barHeight = 4f
+                val barX = screenX - barWidth / 2
+                val barY = screenY - unitSize * 0.9f
+                drawRect(Color(0xFF333333), Offset(barX, barY), Size(barWidth, barHeight))
+                drawRect(Color(0xFF4CAF50), Offset(barX, barY), Size(barWidth * hpPercent, barHeight))
+            }
+
+            // ── Task 18: Dash trail (activated) ──
+            if (unitState == com.example.jaygame.engine.UnitState.DASHING) {
+                val homeScreenX = data.homeXs.getOrElse(i) { data.xs[i] } * w
+                val homeScreenY = data.homeYs.getOrElse(i) { data.ys[i] } * h
+                drawLine(
+                    color = Color.White.copy(alpha = 0.3f),
+                    start = Offset(homeScreenX, homeScreenY),
+                    end = Offset(screenX, screenY),
+                    strokeWidth = 2f,
+                )
+            }
+
+            // ── Task 18: Field effect range circles for SPECIAL units (activated) ──
+            if (unitCategory == com.example.jaygame.engine.UnitCategory.SPECIAL) {
+                // Use unit range as field effect radius (approximation)
+                val effectRadius = (200f / 720f) * w // default field effect radius
+                drawCircle(
+                    color = Color(0xFF9C27B0).copy(alpha = 0.12f),
+                    radius = effectRadius,
+                    center = Offset(screenX, screenY),
+                )
+                drawCircle(
+                    color = Color(0xFF9C27B0).copy(alpha = 0.25f),
+                    radius = effectRadius,
+                    center = Offset(screenX, screenY),
+                    style = Stroke(width = 1.5f),
+                )
             }
 
             // Merge indicator (pulsing)

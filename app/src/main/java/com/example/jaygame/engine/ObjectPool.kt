@@ -42,4 +42,11 @@ class ObjectPool<T>(
     }
 
     fun toActiveList(): List<T> = objects.filterIndexed { i, _ -> active[i] }
+
+    fun fillActiveList(out: MutableList<T>) {
+        out.clear()
+        for (i in objects.indices) {
+            if (i < active.size && active[i]) out.add(objects[i])
+        }
+    }
 }

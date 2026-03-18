@@ -1,0 +1,146 @@
+[
+  {
+    "id": "recipe_thunder_flame_knight",
+    "ingredients": [
+      { "family": "FIRE", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "LIGHTNING", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_thunder_flame_knight"
+  },
+  {
+    "id": "recipe_ice_poison_sage",
+    "ingredients": [
+      { "family": "FROST", "role": "CONTROLLER", "minGrade": "RARE", "specificUnitId": null },
+      { "family": "POISON", "role": "CONTROLLER", "minGrade": "RARE", "specificUnitId": null }
+    ],
+    "resultId": "hidden_ice_poison_sage"
+  },
+  {
+    "id": "recipe_storm_guardian",
+    "ingredients": [
+      { "family": "WIND", "role": "RANGED_DPS", "minGrade": "LEGEND", "specificUnitId": null },
+      { "family": "SUPPORT", "role": "TANK", "minGrade": "LEGEND", "specificUnitId": null }
+    ],
+    "resultId": "hidden_storm_guardian"
+  },
+  {
+    "id": "recipe_shadow_assassin",
+    "ingredients": [
+      { "family": "POISON", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "WIND", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_shadow_assassin"
+  },
+  {
+    "id": "recipe_divine_archangel",
+    "ingredients": [
+      { "family": "SUPPORT", "role": "SUPPORT", "minGrade": "ANCIENT", "specificUnitId": null },
+      { "family": "LIGHTNING", "role": "RANGED_DPS", "minGrade": "ANCIENT", "specificUnitId": null }
+    ],
+    "resultId": "hidden_divine_archangel"
+  },
+  {
+    "id": "recipe_blaze_frost_spirit",
+    "ingredients": [
+      { "family": "FIRE", "role": "RANGED_DPS", "minGrade": "COMMON", "specificUnitId": null },
+      { "family": "FROST", "role": "RANGED_DPS", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_blaze_frost_spirit"
+  },
+  {
+    "id": "recipe_venom_thunder_drake",
+    "ingredients": [
+      { "family": "POISON", "role": "RANGED_DPS", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "LIGHTNING", "role": "RANGED_DPS", "minGrade": "LEGEND", "specificUnitId": null }
+    ],
+    "resultId": "hidden_venom_thunder_drake"
+  },
+  {
+    "id": "recipe_frost_wind_dancer",
+    "ingredients": [
+      { "family": "FROST", "role": "TANK", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "WIND", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_frost_wind_dancer"
+  },
+  {
+    "id": "recipe_fire_support_phoenix_priest",
+    "ingredients": [
+      { "family": "FIRE", "role": "TANK", "minGrade": "LEGEND", "specificUnitId": null },
+      { "family": "SUPPORT", "role": "SUPPORT", "minGrade": "LEGEND", "specificUnitId": null }
+    ],
+    "resultId": "hidden_fire_support_phoenix_priest"
+  },
+  {
+    "id": "recipe_lightning_wind_tempest",
+    "ingredients": [
+      { "family": "LIGHTNING", "role": "RANGED_DPS", "minGrade": "ANCIENT", "specificUnitId": null },
+      { "family": "WIND", "role": "RANGED_DPS", "minGrade": "ANCIENT", "specificUnitId": null }
+    ],
+    "resultId": "hidden_lightning_wind_tempest"
+  },
+  {
+    "id": "recipe_poison_support_plague_healer",
+    "ingredients": [
+      { "family": "POISON", "role": "CONTROLLER", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "SUPPORT", "role": "SUPPORT", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_poison_support_plague_healer"
+  },
+  {
+    "id": "recipe_frost_lightning_glacial_storm",
+    "ingredients": [
+      { "family": "FROST", "role": "RANGED_DPS", "minGrade": "LEGEND", "specificUnitId": null },
+      { "family": "LIGHTNING", "role": "SUPPORT", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_frost_lightning_glacial_storm"
+  },
+  {
+    "id": "recipe_fire_wind_inferno_gale",
+    "ingredients": [
+      { "family": "FIRE", "role": "MELEE_DPS", "minGrade": "LEGEND", "specificUnitId": null },
+      { "family": "WIND", "role": "RANGED_DPS", "minGrade": "LEGEND", "specificUnitId": null }
+    ],
+    "resultId": "hidden_fire_wind_inferno_gale"
+  },
+  {
+    "id": "recipe_poison_frost_toxic_ice",
+    "ingredients": [
+      { "family": "POISON", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "FROST", "role": "CONTROLLER", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_poison_frost_toxic_ice"
+  },
+  {
+    "id": "recipe_fire_poison_molten_venom",
+    "ingredients": [
+      { "family": "FIRE", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "POISON", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_fire_poison_molten_venom"
+  },
+  {
+    "id": "recipe_wind_support_sky_healer",
+    "ingredients": [
+      { "family": "WIND", "role": "SUPPORT", "minGrade": "HERO", "specificUnitId": null },
+      { "family": "SUPPORT", "role": "TANK", "minGrade": "HERO", "specificUnitId": null }
+    ],
+    "resultId": "hidden_wind_support_sky_healer"
+  },
+  {
+    "id": "recipe_lightning_support_thunder_saint",
+    "ingredients": [
+      { "family": "LIGHTNING", "role": "MELEE_DPS", "minGrade": "LEGEND", "specificUnitId": null },
+      { "family": "SUPPORT", "role": "SUPPORT", "minGrade": "LEGEND", "specificUnitId": null }
+    ],
+    "resultId": "hidden_lightning_support_thunder_saint"
+  },
+  {
+    "id": "recipe_frost_support_ice_guardian_angel",
+    "ingredients": [
+      { "family": "FROST", "role": "TANK", "minGrade": "LEGEND", "specificUnitId": null },
+      { "family": "SUPPORT", "role": "TANK", "minGrade": "ANCIENT", "specificUnitId": null }
+    ],
+    "resultId": "hidden_frost_support_ice_guardian_angel"
+  }
+]

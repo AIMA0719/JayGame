@@ -1,13 +1,18 @@
+@file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
 import android.util.Log
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.DungeonDef
 import com.example.jaygame.data.GameData
+// TODO(Task18): Remove these legacy imports once requestSummon/requestMerge/requestBuyUnit
+//  are fully migrated to blueprint-based paths (requestSummonBlueprint, tryMergeBlueprint, etc.)
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
 import com.example.jaygame.data.unitGradeOf
 import com.example.jaygame.data.unitIdOf
+import com.example.jaygame.engine.behavior.BehaviorFactory
+import com.example.jaygame.engine.behavior.BehaviorRegistration
 import com.example.jaygame.engine.math.GameRect
 import com.example.jaygame.engine.math.Vec2
 import kotlinx.coroutines.*
@@ -91,6 +96,65 @@ class BattleEngine(
     private var upgradeSpRegen = 0f
 
     private var gridPushTimer = 0f
+
+    // PERF-02: Scratch lists for toActiveList replacements
+    private val activeUnitsScratch = ArrayList<GameUnit>(MAX_UNITS)
+    private val activeEnemiesScratch = ArrayList<Enemy>(MAX_ENEMIES)
+
+    // PERF-03: Pre-allocated dead/scratch lists (cleared each frame instead of re-created)
+    private val deadEnemies = ArrayList<Enemy>(64)
+    private val deadProjectiles = ArrayList<Projectile>(32)
+    private val deadZones = ArrayList<ZoneEffect>(8)
+    private val splitQueue = ArrayList<Enemy>(16)
+
+    // PERF-01: Pre-allocated buffers for pushStateToCompose
+    private val enemyXBuf = FloatArray(MAX_ENEMIES)
+    private val enemyYBuf = FloatArray(MAX_ENEMIES)
+    private val enemyTypeBuf = IntArray(MAX_ENEMIES)
+    private val enemyHpBuf = FloatArray(MAX_ENEMIES)
+    private val enemyBuffBuf = IntArray(MAX_ENEMIES)
+
+    private val unitXBuf = FloatArray(MAX_UNITS)
+    private val unitYBuf = FloatArray(MAX_UNITS)
+    private val unitDefIdBuf = IntArray(MAX_UNITS)
+    private val unitGradeBuf = IntArray(MAX_UNITS)
+    private val unitLevelBuf = IntArray(MAX_UNITS)
+    private val unitAttackingBuf = BooleanArray(MAX_UNITS)
+    private val unitTileBuf = IntArray(MAX_UNITS)
+    private val unitBlueprintIdBuf = Array(MAX_UNITS) { "" }
+    private val unitFamiliesListBuf = Array<List<com.example.jaygame.data.UnitFamily>>(MAX_UNITS) { emptyList() }
+    private val unitRoleBuf = Array(MAX_UNITS) { UnitRole.RANGED_DPS }
+    private val unitAttackRangeBuf = Array(MAX_UNITS) { AttackRange.RANGED }
+    private val unitDamageTypeBuf = Array(MAX_UNITS) { DamageType.PHYSICAL }
+    private val unitCategoryBuf = Array(MAX_UNITS) { UnitCategory.NORMAL }
+    private val unitHpBuf = FloatArray(MAX_UNITS)
+    private val unitMaxHpBuf = FloatArray(MAX_UNITS)
+    private val unitStateBuf = Array(MAX_UNITS) { UnitState.IDLE }
+    private val unitHomeXBuf = FloatArray(MAX_UNITS)
+    private val unitHomeYBuf = FloatArray(MAX_UNITS)
+
+    private val projSrcXBuf = FloatArray(MAX_PROJECTILES)
+    private val projSrcYBuf = FloatArray(MAX_PROJECTILES)
+    private val projDstXBuf = FloatArray(MAX_PROJECTILES)
+    private val projDstYBuf = FloatArray(MAX_PROJECTILES)
+    private val projTypeBuf = IntArray(MAX_PROJECTILES)
+
+    private val gridIdBuf = IntArray(Grid.TOTAL)
+    private val gridGradeBuf = IntArray(Grid.TOTAL)
+    private val gridFamilyBuf = IntArray(Grid.TOTAL)
+    private val gridCanMergeBuf = BooleanArray(Grid.TOTAL)
+    private val gridLevelBuf = IntArray(Grid.TOTAL)
+    private val gridBlueprintIdBuf = Array(Grid.TOTAL) { "" }
+    private val gridFamiliesListBuf = Array<List<com.example.jaygame.data.UnitFamily>>(Grid.TOTAL) { emptyList() }
+    private val gridRoleBuf = Array(Grid.TOTAL) { UnitRole.RANGED_DPS }
+
+    // NEW: Blueprint-based system
+    val blueprintRegistry = BlueprintRegistry()
+
+    init {
+        // Ensure all behavior factories are registered
+        BehaviorRegistration.ensureRegistered()
+    }
 
     // Square path around grid (480x480 centered at 640,360)
     // Grid: (400,120)~(880,600). Path margin: 60px outside grid.
@@ -210,10 +274,14 @@ class BattleEngine(
                 } ?: mergeable.first()
                 requestMerge(bestMerge)
             }
-            // Auto-summon: summon when SP is enough
+            // Auto-summon: summon when SP is enough (prefer blueprint path)
             val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
             if (sp >= effectiveCost && !grid.isFull()) {
-                requestSummon()
+                if (blueprintRegistry.count() > 0) {
+                    requestSummonBlueprint()
+                } else {
+                    requestSummon()
+                }
             }
         }
 
@@ -341,7 +409,7 @@ class BattleEngine(
 
     private fun updateEnemies(dt: Float) {
         spatialHash.clear()
-        val splitQueue = mutableListOf<Enemy>() // Deferred SPLITTER spawns
+        splitQueue.clear() // Reuse pre-allocated list
         enemies.forEach { enemy ->
             if (!enemy.alive) return@forEach
             enemy.update(dt, enemyPath)
@@ -417,10 +485,10 @@ class BattleEngine(
                 mini.pathIndex = parent.pathIndex
             }
         }
-        val deadList = mutableListOf<Enemy>()
-        enemies.forEach { if (!it.alive) deadList.add(it) }
+        deadEnemies.clear()
+        enemies.forEach { if (!it.alive) deadEnemies.add(it) }
         val poisonSpread = AbilitySystem.activeSynergy.specialEffect == SynergySystem.SpecialEffect.POISON_SPREAD
-        deadList.forEach { dead ->
+        deadEnemies.forEach { dead ->
             val deathX = dead.position.x / W
             val deathY = dead.position.y / H
 
@@ -461,27 +529,71 @@ class BattleEngine(
     }
 
     private fun updateUnits(dt: Float) {
-        val unitList = units.toActiveList()
+        units.fillActiveList(activeUnitsScratch)
+        val unitList = activeUnitsScratch
         AbilitySystem.applyAuraEffects(unitList, dt, auraTicks)
 
         // Update unique abilities (hero+ grade skills)
-        val activeEnemies = enemies.toActiveList()
+        enemies.fillActiveList(activeEnemiesScratch)
+        val activeEnemies = activeEnemiesScratch
         UniqueAbilitySystem.update(unitList, dt, activeEnemies)
 
         units.forEach { unit ->
-            if (!unit.alive) return@forEach
-            unit.update(dt) { pos, range -> findNearestEnemy(pos, range) }
-            if (unit.canAttack()) {
-                fireProjectile(unit)
-                unit.onAttack()
+            if (!unit.alive && unit.state != UnitState.RESPAWNING) return@forEach
+
+            // NEW: Behavior-based update path — units with a behavior delegate to it
+            if (unit.behavior != null) {
+                unit.behavior!!.update(unit, dt) { pos, range -> findNearestEnemy(pos, range) }
+                // For behavior-based units, check if behavior produced an attack
+                // Use behavior's canAttack() for ranged units instead of legacy unit.canAttack()
+                val canFire = when (val b = unit.behavior) {
+                    is com.example.jaygame.engine.behavior.RangedShooterBehavior -> b.canAttack()
+                    is com.example.jaygame.engine.behavior.ControllerCCBehavior -> b.canAttack()
+                    else -> unit.canAttack()
+                }
+                if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
+                    val target = unit.currentTarget!!
+                    val result = unit.behavior!!.onAttack(unit, target)
+                    if (result.isInstant) {
+                        // Melee instant damage — use Enemy.takeDamage() for proper boss/buff handling
+                        val finalDmg = target.takeDamage(result.damage, result.isMagic, unit.range)
+                        val nx = target.position.x / W
+                        val ny = target.position.y / H
+                        BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), result.isCrit)
+                    } else {
+                        // Ranged — spawn projectile with behavior-computed damage
+                        val proj = projectiles.acquire()
+                        if (proj != null) {
+                            proj.init(
+                                from = unit.position.copy(), target = target,
+                                damage = result.damage, speed = 400f,
+                                type = unit.family.coerceIn(0, 5),
+                                isMagic = result.isMagic, isCrit = result.isCrit,
+                                sourceUnitId = unit.tileIndex,
+                                abilityType = unit.abilityType,
+                                abilityValue = unit.abilityValue,
+                                grade = unit.grade, family = unit.family,
+                                attackerRange = unit.range,
+                            )
+                        }
+                    }
+                    unit.onAttack()
+                }
+            } else {
+                // Legacy update path
+                unit.update(dt) { pos, range -> findNearestEnemy(pos, range) }
+                if (unit.canAttack()) {
+                    fireProjectile(unit)
+                    unit.onAttack()
+                }
             }
         }
     }
 
     private fun updateProjectiles(dt: Float) {
-        val deadProj = mutableListOf<Projectile>()
+        deadProjectiles.clear()
         projectiles.forEach { proj ->
-            if (!proj.alive) { deadProj.add(proj); return@forEach }
+            if (!proj.alive) { deadProjectiles.add(proj); return@forEach }
             val stillAlive = proj.update(dt)
             val target = proj.target
             if (!stillAlive && target != null && target.alive) {
@@ -493,14 +605,15 @@ class BattleEngine(
                 val ny = target.position.y / H
                 BattleBridge.onDamageDealt(nx, ny, proj.damage.toInt(), proj.isCrit)
             }
-            if (!proj.alive) deadProj.add(proj)
+            if (!proj.alive) deadProjectiles.add(proj)
         }
-        deadProj.forEach { projectiles.release(it) }
+        deadProjectiles.forEach { projectiles.release(it) }
     }
 
     private fun updateZones(dt: Float) {
-        val activeEnemies = enemies.toActiveList()
-        val deadZones = mutableListOf<ZoneEffect>()
+        enemies.fillActiveList(activeEnemiesScratch)
+        val activeEnemies = activeEnemiesScratch
+        deadZones.clear()
         zones.forEach { zone ->
             if (!zone.alive) { deadZones.add(zone); return@forEach }
             val stillAlive = zone.update(dt, activeEnemies)
@@ -532,8 +645,10 @@ class BattleEngine(
     }
 
     private fun updatePets(dt: Float) {
-        val activeEnemies = enemies.toActiveList()
-        val activeUnits = units.toActiveList()
+        enemies.fillActiveList(activeEnemiesScratch)
+        val activeEnemies = activeEnemiesScratch
+        units.fillActiveList(activeUnitsScratch)
+        val activeUnits = activeUnitsScratch
         petSystem.update(
             dt = dt,
             enemies = activeEnemies,
@@ -652,6 +767,52 @@ class BattleEngine(
         BattleBridge.onSummonResult(unitDefId, grade)
     }
 
+    // NEW: Blueprint-based summon path (alongside legacy requestSummon)
+    fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
+        val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
+        if (sp < effectiveSummonCost || grid.isFull()) return
+        sp -= effectiveSummonCost
+
+        val grade = if (gradeOverride != null) {
+            gradeOverride
+        } else {
+            val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
+            currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
+            BattleBridge.updateUnitPullPity(currentPity)
+            UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
+        }
+
+        val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
+        if (candidates.isEmpty()) return
+
+        // Weight-based selection
+        val totalWeight = candidates.sumOf { it.summonWeight }
+        if (totalWeight <= 0) return
+        var roll = (Math.random() * totalWeight).toInt()
+        var selected: UnitBlueprint? = null
+        for (bp in candidates) {
+            roll -= bp.summonWeight
+            if (roll <= 0) { selected = bp; break }
+        }
+        selected ?: return
+
+        val tileIndex = grid.findEmpty()
+        if (tileIndex < 0) return
+
+        val unit = units.acquire() ?: return
+        unit.initFromBlueprint(selected)
+        unit.tileIndex = tileIndex
+        unit.position = grid.cellCenter(tileIndex)
+        unit.homePosition = grid.cellCenter(tileIndex)
+        unit.behavior = BehaviorFactory.create(selected.behaviorId)
+        grid.placeUnit(tileIndex, unit)
+        BattleBridge.onSummonResult(
+            unitDefId = -1,
+            grade = selected.grade.ordinal,
+            blueprintId = selected.id,
+        )
+    }
+
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
         0 -> 1 to 80f      // Fire: Splash
         1 -> 2 to 0.3f     // Frost: Slow
@@ -663,6 +824,8 @@ class BattleEngine(
     }
 
     fun requestMerge(tileIndex: Int) {
+        val existingUnit = grid.getUnit(tileIndex) ?: return
+        if (existingUnit.unitCategory == UnitCategory.HIDDEN || existingUnit.unitCategory == UnitCategory.SPECIAL) return
         val result = MergeSystem.tryMerge(grid, tileIndex) ?: return
         result.consumedTiles.forEach { i ->
             val u = grid.removeUnit(i)
@@ -712,6 +875,13 @@ class BattleEngine(
         BattleBridge.onUnitClicked(
             tileIndex, unit.unitDefId, unit.grade, unit.family,
             tileIndex in mergeable, unit.level,
+            blueprintId = unit.blueprintId,
+            families = unit.families,
+            role = unit.role,
+            attackRange = unit.attackRange,
+            damageType = unit.damageType,
+            hp = unit.hp,
+            maxHp = unit.maxHp,
         )
     }
 
@@ -805,20 +975,15 @@ class BattleEngine(
             enemies.activeCount, if (isBossRound) 1 else 0, waveSystem.timeRemaining,
         )
 
-        // Enemy positions + buff bitmasks
+        // Enemy positions + buff bitmasks — reuse pre-allocated buffers
         val eCount = enemies.activeCount
-        val exs = FloatArray(eCount)
-        val eys = FloatArray(eCount)
-        val etypes = IntArray(eCount)
-        val ehp = FloatArray(eCount)
-        val ebuffs = IntArray(eCount)
         var ei = 0
         enemies.forEach { e ->
             if (ei < eCount) {
-                exs[ei] = e.position.x / W
-                eys[ei] = e.position.y / H
-                etypes[ei] = e.type
-                ehp[ei] = e.hpRatio
+                enemyXBuf[ei] = e.position.x / W
+                enemyYBuf[ei] = e.position.y / H
+                enemyTypeBuf[ei] = e.type
+                enemyHpBuf[ei] = e.hpRatio
                 // Build buff bitmask from enemy buff container
                 var bits = 0
                 val hasSlow = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.Slow)
@@ -832,77 +997,85 @@ class BattleEngine(
                 // Lightning & Wind tracked via recentHitFlags
                 if (e.recentHitFlags and 1 != 0) bits = bits or com.example.jaygame.bridge.BUFF_BIT_LIGHTNING
                 if (e.recentHitFlags and 2 != 0) bits = bits or com.example.jaygame.bridge.BUFF_BIT_WIND
-                ebuffs[ei] = bits
+                enemyBuffBuf[ei] = bits
                 ei++
             }
         }
-        BattleBridge.updateEnemyPositions(exs, eys, etypes, ehp, ebuffs, ei)
+        BattleBridge.updateEnemyPositions(enemyXBuf, enemyYBuf, enemyTypeBuf, enemyHpBuf, enemyBuffBuf, ei)
 
-        // Unit positions
+        // Unit positions — reuse pre-allocated buffers
         val uCount = units.activeCount
-        val uxs = FloatArray(uCount)
-        val uys = FloatArray(uCount)
-        val uDefIds = IntArray(uCount)
-        val uGrades = IntArray(uCount)
-        val uLevels = IntArray(uCount)
-        val uAttacking = BooleanArray(uCount)
-        val uTiles = IntArray(uCount)
         var ui = 0
         units.forEach { u ->
             if (ui < uCount) {
-                uxs[ui] = u.position.x / W
-                uys[ui] = u.position.y / H
-                uDefIds[ui] = u.unitDefId
-                uGrades[ui] = u.grade
-                uLevels[ui] = u.level
-                uAttacking[ui] = u.isAttacking
-                uTiles[ui] = u.tileIndex
+                unitXBuf[ui] = u.position.x / W
+                unitYBuf[ui] = u.position.y / H
+                unitDefIdBuf[ui] = u.unitDefId
+                unitGradeBuf[ui] = u.grade
+                unitLevelBuf[ui] = u.level
+                unitAttackingBuf[ui] = u.isAttacking
+                unitTileBuf[ui] = u.tileIndex
+                unitBlueprintIdBuf[ui] = u.blueprintId
+                unitFamiliesListBuf[ui] = u.families
+                unitRoleBuf[ui] = u.role
+                unitAttackRangeBuf[ui] = u.attackRange
+                unitDamageTypeBuf[ui] = u.damageType
+                unitCategoryBuf[ui] = u.unitCategory
+                unitHpBuf[ui] = u.hp
+                unitMaxHpBuf[ui] = u.maxHp
+                unitStateBuf[ui] = u.state
+                unitHomeXBuf[ui] = u.homePosition.x / W
+                unitHomeYBuf[ui] = u.homePosition.y / H
                 ui++
             }
         }
-        BattleBridge.updateUnitPositions(uxs, uys, uDefIds, uGrades, uLevels, uAttacking, uTiles, ui)
+        BattleBridge.updateUnitPositions(
+            unitXBuf, unitYBuf, unitDefIdBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui,
+            unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
+            unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf,
+        )
 
-        // Projectiles
+        // Projectiles — reuse pre-allocated buffers
         val pCount = projectiles.activeCount
-        val psxs = FloatArray(pCount)
-        val psys = FloatArray(pCount)
-        val pdxs = FloatArray(pCount)
-        val pdys = FloatArray(pCount)
-        val ptypes = IntArray(pCount)
         var pi = 0
         projectiles.forEach { p ->
             if (pi < pCount) {
-                psxs[pi] = p.sourcePos.x / W
-                psys[pi] = p.sourcePos.y / H
-                pdxs[pi] = p.position.x / W
-                pdys[pi] = p.position.y / H
-                ptypes[pi] = p.type
+                projSrcXBuf[pi] = p.sourcePos.x / W
+                projSrcYBuf[pi] = p.sourcePos.y / H
+                projDstXBuf[pi] = p.position.x / W
+                projDstYBuf[pi] = p.position.y / H
+                projTypeBuf[pi] = p.type
                 pi++
             }
         }
-        BattleBridge.updateProjectiles(psxs, psys, pdxs, pdys, ptypes, pi)
+        BattleBridge.updateProjectiles(projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf, projTypeBuf, pi)
 
-        // Grid state
+        // Grid state — reuse pre-allocated buffers
         if (gridPushTimer >= 0.1f) {
             gridPushTimer = 0f
-            val ids = IntArray(Grid.TOTAL)
-            val grades = IntArray(Grid.TOTAL)
-            val families = IntArray(Grid.TOTAL)
-            val canMerge = BooleanArray(Grid.TOTAL)
-            val levels = IntArray(Grid.TOTAL)
             for (i in 0 until Grid.TOTAL) {
                 val u = grid.getUnit(i)
                 if (u != null) {
-                    ids[i] = u.unitDefId
-                    grades[i] = u.grade
-                    families[i] = u.family
-                    canMerge[i] = i in mergeable
-                    levels[i] = u.level
+                    gridIdBuf[i] = u.unitDefId
+                    gridGradeBuf[i] = u.grade
+                    gridFamilyBuf[i] = u.family
+                    gridCanMergeBuf[i] = i in mergeable
+                    gridLevelBuf[i] = u.level
+                    gridBlueprintIdBuf[i] = u.blueprintId
+                    gridFamiliesListBuf[i] = u.families
+                    gridRoleBuf[i] = u.role
                 } else {
-                    ids[i] = -1
+                    gridIdBuf[i] = -1
+                    gridGradeBuf[i] = 0
+                    gridFamilyBuf[i] = 0
+                    gridCanMergeBuf[i] = false
+                    gridLevelBuf[i] = 0
+                    gridBlueprintIdBuf[i] = ""
+                    gridFamiliesListBuf[i] = emptyList()
+                    gridRoleBuf[i] = UnitRole.RANGED_DPS
                 }
             }
-            BattleBridge.updateGridState(ids, grades, families, canMerge, levels)
+            BattleBridge.updateGridState(gridIdBuf, gridGradeBuf, gridFamilyBuf, gridCanMergeBuf, gridLevelBuf, gridBlueprintIdBuf, gridFamiliesListBuf, gridRoleBuf)
         }
     }
 

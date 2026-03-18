@@ -18,6 +18,23 @@ class Enemy {
     var recentHitFlags = 0
     var recentHitTimer = 0f
 
+    /** Blocking support — set when a GameUnit is blocking this enemy */
+    var blockedBy: GameUnit? = null
+    var blockedPosition: Vec2? = null
+
+    fun applyBlock(blocker: GameUnit) {
+        blockedBy = blocker
+        blockedPosition = position.copy()
+    }
+
+    fun releaseBlock() {
+        blockedBy = null
+        blockedPosition = null
+    }
+
+    /** Convenience property: true when bossModifier is non-null */
+    val isBoss: Boolean get() = bossModifier != null
+
     /** Boss modifier — null for non-boss enemies */
     var bossModifier: BossModifier? = null
     /** Timer for REGENERATION modifier: heals 5% maxHp every 10 seconds */
@@ -66,6 +83,9 @@ class Enemy {
 
         // Stun: skip movement and boss abilities
         if (buffs.isStunned()) return true
+
+        // Blocked by a unit: skip path movement entirely
+        if (blockedBy != null) return true
 
         val effectiveSpeed = baseSpeed * buffs.getSlowFactor()
         if (pathIndex < path.size) {
@@ -136,6 +156,8 @@ class Enemy {
         buffs.clear()
         recentHitFlags = 0
         recentHitTimer = 0f
+        blockedBy = null
+        blockedPosition = null
         bossModifier = null
         regenTimer = 10f
         ccResistance = 0f

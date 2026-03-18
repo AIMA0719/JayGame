@@ -17,8 +17,16 @@ data class Vec2(var x: Float = 0f, var y: Float = 0f) {
         return if (len > 0.0001f) Vec2(x / len, y / len) else Vec2()
     }
 
-    fun distanceTo(o: Vec2): Float = (this - o).length
-    fun distanceSqTo(o: Vec2): Float = (this - o).lengthSq
+    fun distanceTo(o: Vec2): Float {
+        val dx = x - o.x
+        val dy = y - o.y
+        return sqrt(dx * dx + dy * dy)
+    }
+    fun distanceSqTo(o: Vec2): Float {
+        val dx = x - o.x
+        val dy = y - o.y
+        return dx * dx + dy * dy
+    }
 
     companion object {
         fun lerp(a: Vec2, b: Vec2, t: Float) = Vec2(

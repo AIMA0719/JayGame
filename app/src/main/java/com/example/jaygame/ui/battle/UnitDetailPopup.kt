@@ -34,8 +34,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.data.UnitGrade
+import com.example.jaygame.engine.AttackRange
+import com.example.jaygame.engine.DamageType
+import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkGold
@@ -56,7 +63,8 @@ fun UnitDetailPopup() {
     val popupData by BattleBridge.unitPopup.collectAsState()
     val data = popupData ?: return
 
-    val unitDef = UNIT_DEFS_MAP[data.unitDefId] ?: return
+    val unitDef = UNIT_DEFS_MAP[data.unitDefId]
+    if (unitDef == null && data.blueprintId.isEmpty()) return
 
     // G4: 3D card rotation animation (90 -> 0 degrees)
     val targetRotation = remember(data.tileIndex, data.unitDefId) { mutableFloatStateOf(90f) }
@@ -114,91 +122,188 @@ fun UnitDetailPopup() {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
             // Unit header: icon + name + grade badge
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = unitDef.iconRes),
-                    contentDescription = unitDef.name,
-                    modifier = Modifier.size(48.dp),
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
+            val displayGrade = UnitGrade.entries.getOrNull(data.grade)
+            if (unitDef != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = unitDef.iconRes),
+                        contentDescription = unitDef.name,
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = unitDef.name,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Row {
+                            Text(
+                                text = unitDef.grade.label,
+                                color = unitDef.grade.color,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = unitDef.family.label,
+                                color = unitDef.family.color,
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Blueprint unit without legacy UnitDef — show basic info from bridge data
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = unitDef.name,
+                        text = data.blueprintId,
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Row {
                         Text(
-                            text = unitDef.grade.label,
-                            color = unitDef.grade.color,
+                            text = displayGrade?.label ?: "???",
+                            color = displayGrade?.color ?: Color.Gray,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        if (data.families.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = data.families.joinToString("/") { it.label },
+                                color = data.families.first().color,
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Role / AttackRange / DamageType badges (Task 18: activated)
+            if (data.blueprintId.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Role badge
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = getRoleColor(data.role)
+                    ) {
                         Text(
-                            text = unitDef.family.label,
-                            color = unitDef.family.color,
-                            fontSize = 12.sp,
+                            text = data.role.label,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+
+                    // Attack Range badge
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = DarkNavy,
+                    ) {
+                        Text(
+                            text = data.attackRange.label,
+                            color = NeonCyan,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+
+                    // Damage Type badge
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = DarkNavy,
+                    ) {
+                        Text(
+                            text = if (data.damageType == DamageType.PHYSICAL) "물리" else "마법",
+                            color = if (data.damageType == DamageType.PHYSICAL) NeonRed else Color(0xFF7E57C2),
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Stats grid: ATK, SPD, Range
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                StatItem("ATK", "${unitDef.baseATK}", NeonRed)
-                StatItem("SPD", "%.1f".format(unitDef.baseSpeed), NeonCyan)
-                StatItem("Range", "${unitDef.range.toInt()}", Gold)
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Ability description
-            Text(
-                text = "${unitDef.abilityName}: ${unitDef.description}",
-                color = SubText,
-                fontSize = 11.sp,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            // Unique Ability (Hero grade and above)
-            if (unitDef.uniqueAbility != null) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Column(
+            // HP bar for melee/tank units (Task 18: activated)
+            if (data.attackRange == AttackRange.MELEE && data.maxHp > 0f) {
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { (data.hp / data.maxHp).coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            unitDef.grade.color.copy(alpha = 0.1f),
-                            RoundedCornerShape(6.dp),
-                        )
-                        .padding(8.dp),
+                        .height(6.dp),
+                    color = Color(0xFF4CAF50),
+                    trackColor = Color(0xFF333333),
+                )
+                Text(
+                    text = "HP: ${data.hp.toInt()} / ${data.maxHp.toInt()}",
+                    color = SubText,
+                    fontSize = 10.sp,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Stats grid: ATK, SPD, Range (only for legacy UnitDef units)
+            if (unitDef != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    Text(
-                        text = "\u2726 ${unitDef.uniqueAbility.name}",
-                        color = unitDef.grade.color,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    if (unitDef.uniqueAbility.cooldown > 0) {
+                    StatItem("ATK", "${unitDef.baseATK}", NeonRed)
+                    StatItem("SPD", "%.1f".format(unitDef.baseSpeed), NeonCyan)
+                    StatItem("Range", "${unitDef.range.toInt()}", Gold)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Ability description
+                Text(
+                    text = "${unitDef.abilityName}: ${unitDef.description}",
+                    color = SubText,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                // Unique Ability (Hero grade and above)
+                if (unitDef.uniqueAbility != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                unitDef.grade.color.copy(alpha = 0.1f),
+                                RoundedCornerShape(6.dp),
+                            )
+                            .padding(8.dp),
+                    ) {
                         Text(
-                            text = "쿨타임: ${unitDef.uniqueAbility.cooldown}초",
-                            color = NeonCyan,
-                            fontSize = 9.sp,
+                            text = "\u2726 ${unitDef.uniqueAbility.name}",
+                            color = unitDef.grade.color,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (unitDef.uniqueAbility.cooldown > 0) {
+                            Text(
+                                text = "쿨타임: ${unitDef.uniqueAbility.cooldown}초",
+                                color = NeonCyan,
+                                fontSize = 9.sp,
+                            )
+                        }
+                        Text(
+                            text = unitDef.uniqueAbility.description,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 2.dp),
                         )
                     }
-                    Text(
-                        text = unitDef.uniqueAbility.description,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 10.sp,
-                        lineHeight = 14.sp,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
                 }
             }
 
@@ -257,4 +362,13 @@ private fun StatItem(label: String, value: String, color: Color) {
         Text(label, color = SubText, fontSize = 10.sp)
         Text(value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
+}
+
+/** Role-specific badge color. Used once bridge exposes role data (Task 18). */
+private fun getRoleColor(role: UnitRole): Color = when (role) {
+    UnitRole.TANK -> Color(0xFF607D8B)       // Blue Grey
+    UnitRole.MELEE_DPS -> Color(0xFFE53935)  // Red
+    UnitRole.RANGED_DPS -> Color(0xFF43A047) // Green
+    UnitRole.SUPPORT -> Color(0xFFFFB300)    // Amber
+    UnitRole.CONTROLLER -> Color(0xFF7E57C2) // Purple
 }

@@ -1,6 +1,12 @@
 package com.example.jaygame.bridge
 
+import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BossModifier
+import com.example.jaygame.engine.DamageType
+import com.example.jaygame.engine.UnitCategory
+import com.example.jaygame.engine.UnitRole
+import com.example.jaygame.engine.UnitState
 import com.example.jaygame.ui.battle.GambleResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,13 +101,25 @@ data class DamageEvent(
 data class UnitPositionData(
     val xs: FloatArray = FloatArray(0),
     val ys: FloatArray = FloatArray(0),
-    val unitDefIds: IntArray = IntArray(0),
+    @Deprecated("Use blueprintIds instead") val unitDefIds: IntArray = IntArray(0),
     val grades: IntArray = IntArray(0),
     val levels: IntArray = IntArray(0),
     val isAttacking: BooleanArray = BooleanArray(0),
     val tileIndices: IntArray = IntArray(0),
     val count: Int = 0,
     val frameId: Long = 0L,
+    // Blueprint-system fields (Task 18)
+    val blueprintIds: Array<String> = emptyArray(),
+    val familiesList: Array<List<UnitFamily>> = emptyArray(),
+    val roles: Array<UnitRole> = emptyArray(),
+    val attackRanges: Array<AttackRange> = emptyArray(),
+    val damageTypes: Array<DamageType> = emptyArray(),
+    val unitCategories: Array<UnitCategory> = emptyArray(),
+    val hps: FloatArray = FloatArray(0),
+    val maxHps: FloatArray = FloatArray(0),
+    val states: Array<UnitState> = emptyArray(),
+    val homeXs: FloatArray = FloatArray(0),
+    val homeYs: FloatArray = FloatArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -129,11 +147,15 @@ data class BattleResultData(
  * 그리드 타일 상태 (6x5 = 30타일)
  */
 data class GridTileState(
-    val unitDefId: Int = -1,    // -1 = empty
+    @Deprecated("Use blueprintId instead") val unitDefId: Int = -1,    // -1 = empty
     val grade: Int = -1,        // 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legend, 5=Hero, 6=Immortal
-    val family: Int = -1,       // 0=Fire, 1=Frost, 2=Poison, 3=Lightning, 4=Support, 5=Wind
+    @Deprecated("Use families instead") val family: Int = -1,       // 0=Fire, 1=Frost, 2=Poison, 3=Lightning, 4=Support, 5=Wind
     val canMerge: Boolean = false,
     val level: Int = 0,
+    // Blueprint-system fields (Task 18)
+    val blueprintId: String = "",
+    val families: List<UnitFamily> = emptyList(),
+    val role: UnitRole = UnitRole.RANGED_DPS,
 )
 
 /**
@@ -191,6 +213,12 @@ object BattleBridge {
     private var enemyFrameCounter = 0L
     private var projFrameCounter = 0L
     private var unitFrameCounter = 0L
+
+    // Pre-allocated event buffers to avoid per-event list allocations
+    private val damageBuffer = ArrayDeque<DamageEvent>(32)
+    private val skillBuffer = ArrayDeque<SkillEvent>(16)
+    private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
+    private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
 
     /** Z16: Debug overlay toggle */
     private val _debugMode = MutableStateFlow(false)
@@ -278,17 +306,29 @@ object BattleBridge {
     /** 유닛 정보 팝업 데이터 */
     data class UnitPopupData(
         val tileIndex: Int,
-        val unitDefId: Int,
+        @Deprecated("Use blueprintId instead") val unitDefId: Int,
         val grade: Int,
-        val family: Int,
+        @Deprecated("Use families instead") val family: Int,
         val canMerge: Boolean,
         val level: Int = 1,
+        // Blueprint-system fields (Task 18)
+        val blueprintId: String = "",
+        val families: List<UnitFamily> = emptyList(),
+        val role: UnitRole = UnitRole.RANGED_DPS,
+        val attackRange: AttackRange = AttackRange.RANGED,
+        val damageType: DamageType = DamageType.PHYSICAL,
+        val hp: Float = 0f,
+        val maxHp: Float = 0f,
     )
     private val _unitPopup = MutableStateFlow<UnitPopupData?>(null)
     val unitPopup: StateFlow<UnitPopupData?> = _unitPopup.asStateFlow()
 
     /** 소환 결과 데이터 */
-    data class SummonResult(val unitDefId: Int, val grade: Int)
+    data class SummonResult(
+        @Deprecated("Use blueprintId instead") val unitDefId: Int,
+        val grade: Int,
+        val blueprintId: String = "",
+    )
 
     private val _summonResult = MutableStateFlow<SummonResult?>(null)
     val summonResult: StateFlow<SummonResult?> = _summonResult.asStateFlow()
@@ -376,24 +416,47 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun updateUnitPositions(xs: FloatArray, ys: FloatArray, unitDefIds: IntArray,
-                            grades: IntArray, levels: IntArray, isAttacking: BooleanArray,
-                            tileIndices: IntArray, count: Int) {
-        _unitPositions.value = UnitPositionData(xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, ++unitFrameCounter)
+    fun updateUnitPositions(
+        xs: FloatArray, ys: FloatArray, unitDefIds: IntArray,
+        grades: IntArray, levels: IntArray, isAttacking: BooleanArray,
+        tileIndices: IntArray, count: Int,
+        blueprintIds: Array<String> = emptyArray(),
+        familiesList: Array<List<UnitFamily>> = emptyArray(),
+        roles: Array<UnitRole> = emptyArray(),
+        attackRanges: Array<AttackRange> = emptyArray(),
+        damageTypes: Array<DamageType> = emptyArray(),
+        unitCategories: Array<UnitCategory> = emptyArray(),
+        hps: FloatArray = FloatArray(0),
+        maxHps: FloatArray = FloatArray(0),
+        states: Array<UnitState> = emptyArray(),
+        homeXs: FloatArray = FloatArray(0),
+        homeYs: FloatArray = FloatArray(0),
+    ) {
+        _unitPositions.value = UnitPositionData(
+            xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, ++unitFrameCounter,
+            blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
+            hps, maxHps, states, homeXs, homeYs,
+        )
     }
 
     @JvmStatic
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
-        val event = DamageEvent(x, y, damage, isCrit)
-        val current = _damageEvents.value.toMutableList()
-        current.add(event)
-        // Keep only recent events (last 800ms)
         val cutoff = System.currentTimeMillis() - 800L
-        _damageEvents.value = current.filter { it.timestamp > cutoff }
+        while (damageBuffer.isNotEmpty() && damageBuffer.first().timestamp <= cutoff) {
+            damageBuffer.removeFirst()
+        }
+        damageBuffer.addLast(DamageEvent(x, y, damage, isCrit))
+        _damageEvents.value = damageBuffer.toList()
     }
 
     @JvmStatic
-    fun updateGridState(unitIds: IntArray, grades: IntArray, families: IntArray, canMerge: BooleanArray, levels: IntArray) {
+    fun updateGridState(
+        unitIds: IntArray, grades: IntArray, families: IntArray,
+        canMerge: BooleanArray, levels: IntArray,
+        blueprintIds: Array<String> = emptyArray(),
+        familiesList: Array<List<UnitFamily>> = emptyArray(),
+        roles: Array<UnitRole> = emptyArray(),
+    ) {
         val count = unitIds.size.coerceAtMost(GRID_TOTAL)
         val tiles = List(count) { i ->
             GridTileState(
@@ -402,20 +465,31 @@ object BattleBridge {
                 family = families[i],
                 canMerge = canMerge[i],
                 level = levels[i],
+                blueprintId = blueprintIds.getOrElse(i) { "" },
+                families = familiesList.getOrElse(i) { emptyList() },
+                role = roles.getOrElse(i) { UnitRole.RANGED_DPS },
             )
         }
         _gridState.value = tiles
     }
 
     @JvmStatic
-    fun onUnitClicked(tileIndex: Int, unitDefId: Int, grade: Int, family: Int, canMerge: Boolean, level: Int) {
+    fun onUnitClicked(
+        tileIndex: Int, unitDefId: Int, grade: Int, family: Int, canMerge: Boolean, level: Int,
+        blueprintId: String = "", families: List<UnitFamily> = emptyList(),
+        role: UnitRole = UnitRole.RANGED_DPS, attackRange: AttackRange = AttackRange.RANGED,
+        damageType: DamageType = DamageType.PHYSICAL, hp: Float = 0f, maxHp: Float = 0f,
+    ) {
         _selectedTile.value = tileIndex
-        _unitPopup.value = UnitPopupData(tileIndex, unitDefId, grade, family, canMerge, level)
+        _unitPopup.value = UnitPopupData(
+            tileIndex, unitDefId, grade, family, canMerge, level,
+            blueprintId, families, role, attackRange, damageType, hp, maxHp,
+        )
     }
 
     @JvmStatic
-    fun onSummonResult(unitDefId: Int, grade: Int) {
-        _summonResult.value = SummonResult(unitDefId, grade)
+    fun onSummonResult(unitDefId: Int, grade: Int, blueprintId: String = "") {
+        _summonResult.value = SummonResult(unitDefId, grade, blueprintId)
     }
 
     @JvmStatic
@@ -447,11 +521,11 @@ object BattleBridge {
 
     fun emitSkillEvent(event: SkillEvent) {
         val now = System.currentTimeMillis()
-        val current = _skillEvents.value.filter {
-            (now - it.startTime) < (it.duration * 1000f).toLong()
-        }.toMutableList()
-        current.add(event)
-        _skillEvents.value = current
+        while (skillBuffer.isNotEmpty() && (now - skillBuffer.first().startTime) >= (skillBuffer.first().duration * 1000f).toLong()) {
+            skillBuffer.removeFirst()
+        }
+        skillBuffer.addLast(event)
+        _skillEvents.value = skillBuffer.toList()
     }
 
     /** 골드 획득 이벤트 (C6) */
@@ -459,11 +533,12 @@ object BattleBridge {
     val goldPickupEvents: StateFlow<List<GoldPickupEvent>> = _goldPickupEvents.asStateFlow()
 
     fun onGoldPickup(x: Float, y: Float, amount: Int) {
-        val event = GoldPickupEvent(x, y, amount)
-        val current = _goldPickupEvents.value.toMutableList()
-        current.add(event)
         val cutoff = System.currentTimeMillis() - 1500L
-        _goldPickupEvents.value = current.filter { it.timestamp > cutoff }
+        while (goldPickupBuffer.isNotEmpty() && goldPickupBuffer.first().timestamp <= cutoff) {
+            goldPickupBuffer.removeFirst()
+        }
+        goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
+        _goldPickupEvents.value = goldPickupBuffer.toList()
     }
 
     /** 유닛 레벨업 이벤트 (C7) */
@@ -471,18 +546,20 @@ object BattleBridge {
     val levelUpEvents: StateFlow<List<LevelUpEvent>> = _levelUpEvents.asStateFlow()
 
     fun onUnitLevelUp(x: Float, y: Float) {
-        val event = LevelUpEvent(x, y)
-        val current = _levelUpEvents.value.toMutableList()
-        current.add(event)
         val cutoff = System.currentTimeMillis() - 1500L
-        _levelUpEvents.value = current.filter { it.timestamp > cutoff }
+        while (levelUpBuffer.isNotEmpty() && levelUpBuffer.first().timestamp <= cutoff) {
+            levelUpBuffer.removeFirst()
+        }
+        levelUpBuffer.addLast(LevelUpEvent(x, y))
+        _levelUpEvents.value = levelUpBuffer.toList()
     }
 
     fun clearExpiredSkillEvents() {
         val now = System.currentTimeMillis()
-        _skillEvents.value = _skillEvents.value.filter {
-            (now - it.startTime) < (it.duration * 1000f).toLong()
+        while (skillBuffer.isNotEmpty() && (now - skillBuffer.first().startTime) >= (skillBuffer.first().duration * 1000f).toLong()) {
+            skillBuffer.removeFirst()
         }
+        _skillEvents.value = skillBuffer.toList()
     }
 
     /** 유닛 소환 천장(Pity) 카운터 */
@@ -567,14 +644,18 @@ object BattleBridge {
         _projectiles.value = ProjectileData()
         unitFrameCounter = 0L
         _unitPositions.value = UnitPositionData()
+        damageBuffer.clear()
         _damageEvents.value = emptyList()
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
         _unitPopup.value = null
         _mergeEffect.value = null
         _summonResult.value = null
+        skillBuffer.clear()
         _skillEvents.value = emptyList()
+        goldPickupBuffer.clear()
         _goldPickupEvents.value = emptyList()
+        levelUpBuffer.clear()
         _levelUpEvents.value = emptyList()
         _bossModifier.value = null
         _unitPullPity.value = 0
@@ -589,7 +670,12 @@ object BattleBridge {
     var engine: com.example.jaygame.engine.BattleEngine? = null
 
     fun requestSummon() {
-        engine?.requestSummon()
+        val eng = engine ?: return
+        if (eng.blueprintRegistry.count() > 0) {
+            eng.requestSummonBlueprint()
+        } else {
+            eng.requestSummon()
+        }
     }
 
     fun requestClickTile(tileIndex: Int) {

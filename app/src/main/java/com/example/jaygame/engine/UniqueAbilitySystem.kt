@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
 import com.example.jaygame.bridge.BattleBridge

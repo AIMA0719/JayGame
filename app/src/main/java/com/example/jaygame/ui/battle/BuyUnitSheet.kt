@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,10 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitGrade
+import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.*
@@ -55,15 +59,26 @@ private val BUYABLE_UNITS: List<UnitDef> = UNIT_DEFS.filter {
     it.grade == UnitGrade.MYTHIC || it.grade == UnitGrade.IMMORTAL
 }
 
+/** Derive role from family for legacy UnitDef (until fully migrated to BlueprintRegistry) */
+private fun inferRoleFromFamily(def: UnitDef): UnitRole = when (def.family) {
+    com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
+    com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
+    com.example.jaygame.data.UnitFamily.FIRE -> UnitRole.RANGED_DPS
+    com.example.jaygame.data.UnitFamily.FROST -> UnitRole.RANGED_DPS
+    com.example.jaygame.data.UnitFamily.POISON -> UnitRole.RANGED_DPS
+    com.example.jaygame.data.UnitFamily.LIGHTNING -> UnitRole.RANGED_DPS
+}
+
 @Composable
 fun BuyUnitSheet(
     onDismiss: () -> Unit,
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
-    val gridFull = gridState.all { it.unitDefId >= 0 }
+    val gridFull = gridState.all { it.unitDefId >= 0 || it.blueprintId.isNotEmpty() }
 
     var confirmUnit by remember { mutableStateOf<UnitDef?>(null) }
+    var selectedRole by remember { mutableStateOf<UnitRole?>(null) }
 
     Box(
         modifier = Modifier
@@ -214,6 +229,31 @@ fun BuyUnitSheet(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Role filter tabs (Task 18: activated with family-based role inference)
+                    ScrollableTabRow(
+                        selectedTabIndex = if (selectedRole == null) 0 else UnitRole.entries.indexOf(selectedRole) + 1,
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = Color.Transparent,
+                        contentColor = Gold,
+                    ) {
+                        Tab(selected = selectedRole == null, onClick = { selectedRole = null }) {
+                            Text("전체", modifier = Modifier.padding(8.dp), color = if (selectedRole == null) Gold else SubText)
+                        }
+                        UnitRole.entries.forEach { role ->
+                            Tab(selected = selectedRole == role, onClick = { selectedRole = role }) {
+                                Text(role.label, modifier = Modifier.padding(8.dp), color = if (selectedRole == role) Gold else SubText)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val filteredUnits = if (selectedRole == null) {
+                        BUYABLE_UNITS
+                    } else {
+                        BUYABLE_UNITS.filter { inferRoleFromFamily(it) == selectedRole }
+                    }
+
                     // Unit grid
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
@@ -221,13 +261,23 @@ fun BuyUnitSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(BUYABLE_UNITS) { unit ->
+                        items(filteredUnits) { unit ->
                             BuyUnitCard(
                                 unit = unit,
                                 price = BUY_PRICES[unit.grade] ?: 300,
                                 canAfford = battle.sp >= (BUY_PRICES[unit.grade] ?: 300),
                                 onClick = { confirmUnit = unit },
                             )
+                        }
+                        if (filteredUnits.isEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    "해당 역할의 유닛이 없습니다.",
+                                    color = Color.Gray,
+                                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
                     }
 

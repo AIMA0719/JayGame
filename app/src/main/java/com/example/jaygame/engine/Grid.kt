@@ -58,10 +58,18 @@ class Grid {
         return row * COLS + col
     }
 
+    @Deprecated("Use findMergeCandidatesByBlueprint instead")
     fun findMergeCandidates(unitDefId: Int, grade: Int): List<Int> {
         return (0 until TOTAL).filter { i ->
             val u = cells[i]
             u != null && u.unitDefId == unitDefId && u.grade == grade
+        }
+    }
+
+    fun findMergeCandidatesByBlueprint(blueprintId: String): List<Int> {
+        return (0 until TOTAL).filter { i ->
+            val u = cells[i]
+            u != null && u.blueprintId == blueprintId
         }
     }
 
