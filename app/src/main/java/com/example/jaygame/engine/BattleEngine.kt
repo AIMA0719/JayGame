@@ -1,9 +1,12 @@
+@file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
 import android.util.Log
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.DungeonDef
 import com.example.jaygame.data.GameData
+// TODO(Task18): Remove these legacy imports once requestSummon/requestMerge/requestBuyUnit
+//  are fully migrated to blueprint-based paths (requestSummonBlueprint, tryMergeBlueprint, etc.)
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.unitFamilyOf
 import com.example.jaygame.data.unitGradeOf

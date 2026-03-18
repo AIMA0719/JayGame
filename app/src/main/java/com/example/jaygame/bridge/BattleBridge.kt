@@ -92,6 +92,8 @@ data class DamageEvent(
     val timestamp: Long = System.currentTimeMillis(),
 )
 
+// TODO(Task18): Replace unitDefIds with blueprintIds (String array or mapped ints)
+//  once BattleEngine.pushStateToCompose() is migrated to blueprint system.
 data class UnitPositionData(
     val xs: FloatArray = FloatArray(0),
     val ys: FloatArray = FloatArray(0),
@@ -128,6 +130,8 @@ data class BattleResultData(
 /**
  * 그리드 타일 상태 (6x5 = 30타일)
  */
+// TODO(Task18): Replace unitDefId/family ints with blueprintId (String) and families (List<UnitFamily>)
+//  once BattleEngine grid push is migrated.
 data class GridTileState(
     val unitDefId: Int = -1,    // -1 = empty
     val grade: Int = -1,        // 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legend, 5=Hero, 6=Immortal
@@ -275,6 +279,7 @@ object BattleBridge {
     private val _selectedTile = MutableStateFlow(-1)
     val selectedTile: StateFlow<Int> = _selectedTile.asStateFlow()
 
+    // TODO(Task18): Replace unitDefId with blueprintId once BattleEngine is migrated
     /** 유닛 정보 팝업 데이터 */
     data class UnitPopupData(
         val tileIndex: Int,
@@ -287,6 +292,7 @@ object BattleBridge {
     private val _unitPopup = MutableStateFlow<UnitPopupData?>(null)
     val unitPopup: StateFlow<UnitPopupData?> = _unitPopup.asStateFlow()
 
+    // TODO(Task18): Replace unitDefId with blueprintId once BattleEngine is migrated
     /** 소환 결과 데이터 */
     data class SummonResult(val unitDefId: Int, val grade: Int)
 

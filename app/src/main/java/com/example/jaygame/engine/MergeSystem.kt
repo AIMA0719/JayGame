@@ -1,5 +1,7 @@
+@file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
+// TODO(Task18): Remove UNIT_DEFS import once legacy tryMerge/findMergeableTiles are removed
 import com.example.jaygame.data.UNIT_DEFS
 
 object MergeSystem {

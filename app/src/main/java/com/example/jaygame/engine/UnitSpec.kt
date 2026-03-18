@@ -3,7 +3,11 @@ package com.example.jaygame.engine
 /**
  * 유닛 정의 (불변 데이터).
  * 게임 내 존재하는 모든 유닛 종류를 정의.
+ *
+ * @deprecated Use [UnitBlueprint] from [BlueprintRegistry] instead.
+ * TODO(Task18): Remove once ProbabilityEngine and UnitManager are migrated.
  */
+@Deprecated("Use UnitBlueprint from BlueprintRegistry instead")
 data class UnitSpec(
     val id: Int,
     val name: String,
@@ -17,6 +21,11 @@ data class UnitSpec(
     val mergeResultId: Int = -1,
 )
 
+/**
+ * @deprecated Ability types are now defined in AbilityDef/UniqueAbilityDef within UnitBlueprint.
+ * TODO(Task18): Remove once AbilitySystem and UniqueAbilitySystem are migrated.
+ */
+@Deprecated("Ability types are now defined in UnitBlueprint's AbilityDef/UniqueAbilityDef")
 enum class AbilityType {
     NONE,
     SPLASH,
@@ -56,7 +65,11 @@ enum class AbilityType {
 
 /**
  * 배틀 중 그리드 위 실제 유닛 인스턴스.
+ *
+ * @deprecated Use [GameUnit] with [initFromBlueprint] instead.
+ * TODO(Task18): Remove once UnitManager is migrated.
  */
+@Deprecated("Use GameUnit with initFromBlueprint instead")
 data class BattleUnit(
     val instanceId: Int,
     val specId: Int,
