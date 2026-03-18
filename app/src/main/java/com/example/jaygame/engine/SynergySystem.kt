@@ -94,20 +94,26 @@ object SynergySystem {
 
     // ── New GameUnit-based methods (Task 9) ──
 
+    /** Reusable map for countFamilies to avoid per-call allocation */
+    private val cachedCounts = mutableMapOf<UnitFamily, Int>()
+
     /**
      * 활성 유닛 리스트에서 가족별 카운트를 계산.
      * - 듀얼 패밀리 유닛은 양쪽 모두 카운트
      * - SPECIAL 카테고리 유닛은 제외
      * - 죽은 유닛은 제외
+     *
+     * NOTE: Returns a reused internal map — do not store the reference across calls.
      */
     fun countFamilies(units: List<GameUnit>): Map<UnitFamily, Int> {
-        val counts = mutableMapOf<UnitFamily, Int>()
-        units.filter { it.alive && it.unitCategory != UnitCategory.SPECIAL }.forEach { unit ->
-            unit.families.forEach { family ->
-                counts[family] = (counts[family] ?: 0) + 1
+        cachedCounts.clear()
+        for (unit in units) {
+            if (!unit.alive || unit.unitCategory == UnitCategory.SPECIAL) continue
+            for (family in unit.families) {
+                cachedCounts[family] = (cachedCounts[family] ?: 0) + 1
             }
         }
-        return counts
+        return cachedCounts
     }
 
     /**

@@ -7,12 +7,19 @@ import org.json.JSONObject
 class BlueprintRegistry {
     private val blueprints = mutableMapOf<String, UnitBlueprint>()
 
+    // Pre-computed caches — rebuilt after loadFromJson
+    private var summonableCache: List<UnitBlueprint> = emptyList()
+    private var summonableByGradeCache: Map<UnitGrade, List<UnitBlueprint>> = emptyMap()
+
     fun loadFromJson(jsonString: String) {
         val arr = JSONArray(jsonString)
         for (i in 0 until arr.length()) {
             val bp = parseBlueprint(arr.getJSONObject(i))
             blueprints[bp.id] = bp
         }
+        // Build caches
+        summonableCache = blueprints.values.filter { it.isSummonable }
+        summonableByGradeCache = summonableCache.groupBy { it.grade }
     }
 
     fun findById(id: String): UnitBlueprint? = blueprints[id]
@@ -20,14 +27,13 @@ class BlueprintRegistry {
     fun findByFamilyAndRole(family: UnitFamily, role: UnitRole): List<UnitBlueprint> =
         blueprints.values.filter { family in it.families && it.role == role }
 
-    fun findSummonable(): List<UnitBlueprint> =
-        blueprints.values.filter { it.isSummonable }
+    fun findSummonable(): List<UnitBlueprint> = summonableCache
 
     fun findByCategory(category: UnitCategory): List<UnitBlueprint> =
         blueprints.values.filter { it.unitCategory == category }
 
     fun findByGradeAndSummonable(grade: UnitGrade): List<UnitBlueprint> =
-        blueprints.values.filter { it.isSummonable && it.grade == grade }
+        summonableByGradeCache[grade] ?: emptyList()
 
     fun all(): List<UnitBlueprint> = blueprints.values.toList()
 

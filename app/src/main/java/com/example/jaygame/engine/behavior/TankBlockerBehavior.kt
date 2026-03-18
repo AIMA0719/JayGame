@@ -30,8 +30,8 @@ class TankBlockerBehavior : UnitBehavior {
                 val dir = target.position.minus(unit.position).normalized()
                 unit.position = unit.position.plus(dir.times(unit.moveSpeed * dt))
                 // Close enough to block
-                val dist = unit.position.distanceTo(target.position)
-                if (dist < 30f) {
+                val distSq = unit.position.distanceSqTo(target.position)
+                if (distSq < 30f * 30f) {
                     blockEnemy(target, unit)
                     unit.state = UnitState.BLOCKING
                 }

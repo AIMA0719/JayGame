@@ -51,8 +51,8 @@ class RangedShooterBehavior(
                     return
                 }
                 // Check if still in detection range
-                val dist = unit.position.distanceTo(target.position)
-                if (dist > unit.range * 1.5f) {
+                val distSq = unit.position.distanceSqTo(target.position)
+                if (distSq > (unit.range * 1.5f) * (unit.range * 1.5f)) {
                     unit.currentTarget = null
                     unit.state = UnitState.IDLE
                     return

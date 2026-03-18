@@ -214,6 +214,12 @@ object BattleBridge {
     private var projFrameCounter = 0L
     private var unitFrameCounter = 0L
 
+    // Pre-allocated event buffers to avoid per-event list allocations
+    private val damageBuffer = ArrayDeque<DamageEvent>(32)
+    private val skillBuffer = ArrayDeque<SkillEvent>(16)
+    private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
+    private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
+
     /** Z16: Debug overlay toggle */
     private val _debugMode = MutableStateFlow(false)
     val debugMode: StateFlow<Boolean> = _debugMode.asStateFlow()
@@ -435,12 +441,12 @@ object BattleBridge {
 
     @JvmStatic
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
-        val event = DamageEvent(x, y, damage, isCrit)
-        val current = _damageEvents.value.toMutableList()
-        current.add(event)
-        // Keep only recent events (last 800ms)
         val cutoff = System.currentTimeMillis() - 800L
-        _damageEvents.value = current.filter { it.timestamp > cutoff }
+        while (damageBuffer.isNotEmpty() && damageBuffer.first().timestamp <= cutoff) {
+            damageBuffer.removeFirst()
+        }
+        damageBuffer.addLast(DamageEvent(x, y, damage, isCrit))
+        _damageEvents.value = damageBuffer.toList()
     }
 
     @JvmStatic
@@ -515,11 +521,11 @@ object BattleBridge {
 
     fun emitSkillEvent(event: SkillEvent) {
         val now = System.currentTimeMillis()
-        val current = _skillEvents.value.filter {
-            (now - it.startTime) < (it.duration * 1000f).toLong()
-        }.toMutableList()
-        current.add(event)
-        _skillEvents.value = current
+        while (skillBuffer.isNotEmpty() && (now - skillBuffer.first().startTime) >= (skillBuffer.first().duration * 1000f).toLong()) {
+            skillBuffer.removeFirst()
+        }
+        skillBuffer.addLast(event)
+        _skillEvents.value = skillBuffer.toList()
     }
 
     /** 골드 획득 이벤트 (C6) */
@@ -527,11 +533,12 @@ object BattleBridge {
     val goldPickupEvents: StateFlow<List<GoldPickupEvent>> = _goldPickupEvents.asStateFlow()
 
     fun onGoldPickup(x: Float, y: Float, amount: Int) {
-        val event = GoldPickupEvent(x, y, amount)
-        val current = _goldPickupEvents.value.toMutableList()
-        current.add(event)
         val cutoff = System.currentTimeMillis() - 1500L
-        _goldPickupEvents.value = current.filter { it.timestamp > cutoff }
+        while (goldPickupBuffer.isNotEmpty() && goldPickupBuffer.first().timestamp <= cutoff) {
+            goldPickupBuffer.removeFirst()
+        }
+        goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
+        _goldPickupEvents.value = goldPickupBuffer.toList()
     }
 
     /** 유닛 레벨업 이벤트 (C7) */
@@ -539,18 +546,20 @@ object BattleBridge {
     val levelUpEvents: StateFlow<List<LevelUpEvent>> = _levelUpEvents.asStateFlow()
 
     fun onUnitLevelUp(x: Float, y: Float) {
-        val event = LevelUpEvent(x, y)
-        val current = _levelUpEvents.value.toMutableList()
-        current.add(event)
         val cutoff = System.currentTimeMillis() - 1500L
-        _levelUpEvents.value = current.filter { it.timestamp > cutoff }
+        while (levelUpBuffer.isNotEmpty() && levelUpBuffer.first().timestamp <= cutoff) {
+            levelUpBuffer.removeFirst()
+        }
+        levelUpBuffer.addLast(LevelUpEvent(x, y))
+        _levelUpEvents.value = levelUpBuffer.toList()
     }
 
     fun clearExpiredSkillEvents() {
         val now = System.currentTimeMillis()
-        _skillEvents.value = _skillEvents.value.filter {
-            (now - it.startTime) < (it.duration * 1000f).toLong()
+        while (skillBuffer.isNotEmpty() && (now - skillBuffer.first().startTime) >= (skillBuffer.first().duration * 1000f).toLong()) {
+            skillBuffer.removeFirst()
         }
+        _skillEvents.value = skillBuffer.toList()
     }
 
     /** 유닛 소환 천장(Pity) 카운터 */
@@ -635,14 +644,18 @@ object BattleBridge {
         _projectiles.value = ProjectileData()
         unitFrameCounter = 0L
         _unitPositions.value = UnitPositionData()
+        damageBuffer.clear()
         _damageEvents.value = emptyList()
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
         _unitPopup.value = null
         _mergeEffect.value = null
         _summonResult.value = null
+        skillBuffer.clear()
         _skillEvents.value = emptyList()
+        goldPickupBuffer.clear()
         _goldPickupEvents.value = emptyList()
+        levelUpBuffer.clear()
         _levelUpEvents.value = emptyList()
         _bossModifier.value = null
         _unitPullPity.value = 0
