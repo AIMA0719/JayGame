@@ -88,7 +88,8 @@ fun NavGraph(
                 )
             }
             composable(Routes.COLLECTION) {
-                val petMgr = remember { PetManager(repository.gameData.value) }
+                val gameData by repository.gameData.collectAsState()
+                val petMgr = remember { PetManager(gameData) }
                 CollectionScreen(
                     repository = repository,
                     onRelicUpgrade = { relicId ->

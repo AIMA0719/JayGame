@@ -162,7 +162,8 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                     )
 
                     // Difficulty badge (settings-style)
-                    val diffInfo = when (BattleBridge.difficulty.value) {
+                    val difficulty by BattleBridge.difficulty.collectAsState()
+                    val diffInfo = when (difficulty) {
                         0 -> "초보" to NeonGreen
                         1 -> "숙련자" to NeonCyan
                         2 -> "고인물" to Gold

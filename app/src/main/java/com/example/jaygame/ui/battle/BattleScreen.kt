@@ -312,10 +312,10 @@ fun BattleScreen(
 
         // Layer 4: Result screen with A3 transition
         result?.let { data ->
+            val dungeonId by BattleBridge.dungeonId.collectAsState()
             BattleResultTransition(
                 victory = data.victory,
             ) {
-                val dungeonId = BattleBridge.dungeonId.value
                 val dDef = if (dungeonId >= 0) com.example.jaygame.data.ALL_DUNGEONS.getOrNull(dungeonId) else null
                 val displayGold = if (dDef != null) (data.goldEarned * dDef.rewardMultiplier).toInt() else data.goldEarned
                 val displayTrophy = if (dDef != null) 0 else data.trophyChange
