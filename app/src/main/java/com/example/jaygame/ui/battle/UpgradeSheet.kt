@@ -46,7 +46,7 @@ enum class BattleUpgradeType(
         label = "공격력",
         icon = "\u2694\uFE0F",
         description = "전체 유닛 공격력 증가",
-        effectPerLevel = "+15%",
+        effectPerLevel = "+10%",
         maxLevel = 5,
         costs = listOf(50, 100, 180, 280, 400),
         color = Color(0xFFFF6B35),
@@ -55,7 +55,7 @@ enum class BattleUpgradeType(
         label = "공격속도",
         icon = "\u26A1",
         description = "전체 유닛 공격속도 증가",
-        effectPerLevel = "+12%",
+        effectPerLevel = "+8%",
         maxLevel = 5,
         costs = listOf(60, 120, 200, 300, 450),
         color = Color(0xFFFFD54F),
@@ -64,7 +64,7 @@ enum class BattleUpgradeType(
         label = "치명타",
         icon = "\uD83D\uDCA5",
         description = "전체 유닛 치명타 확률 증가",
-        effectPerLevel = "+8%",
+        effectPerLevel = "+5%",
         maxLevel = 5,
         costs = listOf(80, 150, 250, 380, 550),
         color = Color(0xFFEF4444),
@@ -244,7 +244,7 @@ private fun UpgradeRow(
             )
         } else {
             NeonButton(
-                text = "\uD83D\uDC8E$nextCost",
+                text = "$nextCost SP",
                 onClick = onClick,
                 modifier = Modifier
                     .width(72.dp)

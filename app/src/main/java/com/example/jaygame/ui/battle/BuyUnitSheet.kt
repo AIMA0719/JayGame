@@ -333,7 +333,7 @@ private fun BuyUnitCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "\uD83D\uDC8E $price",
+                text = "$price SP",
                 color = if (canAfford) Gold else NeonRed,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,

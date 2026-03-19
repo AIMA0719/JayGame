@@ -452,14 +452,23 @@ object BattleBridge {
         )
     }
 
+    // PERF: Throttle damage event list emission to avoid per-hit List allocation
+    private var lastDamageEmitTime = 0L
+    private const val DAMAGE_EMIT_INTERVAL_MS = 33L // ~30 FPS for damage numbers
+
     @JvmStatic
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
-        val cutoff = System.currentTimeMillis() - 800L
+        val now = System.currentTimeMillis()
+        val cutoff = now - 800L
         while (damageBuffer.isNotEmpty() && damageBuffer.first().timestamp <= cutoff) {
             damageBuffer.removeFirst()
         }
         damageBuffer.addLast(DamageEvent(x, y, damage, isCrit))
-        _damageEvents.value = damageBuffer.toList()
+        // Only emit a new list at throttled rate (crits always emit immediately)
+        if (isCrit || now - lastDamageEmitTime >= DAMAGE_EMIT_INTERVAL_MS) {
+            lastDamageEmitTime = now
+            _damageEvents.value = damageBuffer.toList()
+        }
     }
 
     @JvmStatic
@@ -545,13 +554,20 @@ object BattleBridge {
     private val _goldPickupEvents = MutableStateFlow<List<GoldPickupEvent>>(emptyList())
     val goldPickupEvents: StateFlow<List<GoldPickupEvent>> = _goldPickupEvents.asStateFlow()
 
+    // PERF: Throttle gold pickup event list emission
+    private var lastGoldEmitTime = 0L
+
     fun onGoldPickup(x: Float, y: Float, amount: Int) {
-        val cutoff = System.currentTimeMillis() - 1500L
+        val now = System.currentTimeMillis()
+        val cutoff = now - 1500L
         while (goldPickupBuffer.isNotEmpty() && goldPickupBuffer.first().timestamp <= cutoff) {
             goldPickupBuffer.removeFirst()
         }
         goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
-        _goldPickupEvents.value = goldPickupBuffer.toList()
+        if (now - lastGoldEmitTime >= 50L) {
+            lastGoldEmitTime = now
+            _goldPickupEvents.value = goldPickupBuffer.toList()
+        }
     }
 
     /** 유닛 레벨업 이벤트 (C7) */

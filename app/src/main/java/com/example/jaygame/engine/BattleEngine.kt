@@ -95,6 +95,20 @@ class BattleEngine(
 
     private var gridPushTimer = 0f
 
+    // PERF: Cached mergeable tiles — recalculated only on grid changes (summon/merge/sell/swap)
+    private var mergeableTilesCache: Set<Int> = emptySet()
+    private var mergeableDirty = true
+
+    private fun invalidateMergeCache() { mergeableDirty = true }
+
+    private fun getMergeableTiles(): Set<Int> {
+        if (mergeableDirty) {
+            mergeableTilesCache = MergeSystem.findMergeableTiles(grid)
+            mergeableDirty = false
+        }
+        return mergeableTilesCache
+    }
+
     // Role synergy cache — refreshed alongside family synergies
     private var roleSynergyCache: Map<UnitRole, RoleSynergySystem.RoleSynergyBonus> = emptyMap()
 
@@ -244,7 +258,7 @@ class BattleEngine(
                 }
 
                 pushStateToCompose()
-                delay(8)
+                delay(16) // ~60 FPS — sufficient for TD game, halves GC pressure
             }
         }
     }
@@ -263,7 +277,7 @@ class BattleEngine(
         // Auto-summon & auto-merge
         if (BattleBridge.autoSummon.value && state == State.Playing) {
             // Auto-merge first: merge any available units
-            val mergeable = MergeSystem.findMergeableTiles(grid)
+            val mergeable = getMergeableTiles()
             if (mergeable.isNotEmpty()) {
                 // Auto-merge: prioritize lowest grade first (clear space for better units)
                 val bestMerge = mergeable.minByOrNull { tileIdx ->
@@ -774,6 +788,7 @@ class BattleEngine(
         unit.homePosition = Grid.FIELD_CENTER.copy()
         unit.behavior = BehaviorFactory.create(selected.behaviorId)
         grid.placeUnit(tileIndex, unit)
+        invalidateMergeCache()
         refreshSynergies()
         BattleBridge.onSummonResult(
             unitDefId = -1,
@@ -867,6 +882,7 @@ class BattleEngine(
         unit.position = mergePos
         UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
+        invalidateMergeCache()
         refreshSynergies()
         mergeCount++
         BattleBridge.onMergeComplete(tileIndex, result.isLucky, result.resultUnitDefId, unit.blueprintId)
@@ -876,6 +892,7 @@ class BattleEngine(
         val unit = grid.removeUnit(tileIndex) ?: return
         sp += 30f + unit.grade * 20f
         units.release(unit)
+        invalidateMergeCache()
         refreshSynergies()
     }
 
@@ -890,13 +907,16 @@ class BattleEngine(
                 count++
             }
         }
-        if (count > 0) refreshSynergies()
+        if (count > 0) {
+            invalidateMergeCache()
+            refreshSynergies()
+        }
         return count
     }
 
     fun requestClickTile(tileIndex: Int) {
         val unit = grid.getUnit(tileIndex) ?: return
-        val mergeable = MergeSystem.findMergeableTiles(grid)
+        val mergeable = getMergeableTiles()
         BattleBridge.onUnitClicked(
             tileIndex, unit.unitDefId, unit.grade, unit.family,
             tileIndex in mergeable, unit.level,
@@ -923,6 +943,7 @@ class BattleEngine(
         val unitB = grid.removeUnit(to)
         if (unitA != null) grid.placeUnit(to, unitA)
         if (unitB != null) grid.placeUnit(from, unitB)
+        invalidateMergeCache()
     }
 
     fun requestUpgrade(tileIndex: Int) {
@@ -950,26 +971,58 @@ class BattleEngine(
 
     fun requestBuyUnit(unitDefId: Int, cost: Float) {
         if (sp < cost || units.activeCount >= Grid.TOTAL) return
-        sp -= cost
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
-        val def = UNIT_DEFS.find { it.id == unitDefId } ?: return
-        val grade = unitGradeOf(unitDefId)
-        val family = unitFamilyOf(unitDefId)
         val unit = units.acquire() ?: return
-        val abilityInfo = abilityForFamily(family)
-        unit.init(
-            unitDefId = unitDefId, grade = grade, family = family, level = 1,
-            tileIndex = tileIndex, homePos = Grid.FIELD_CENTER.copy(),
-            baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
-            range = def.range * upgradeRangeMult,
-            abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
-        )
-        unit.position = Grid.FIELD_CENTER.copy()
-        UniqueAbilitySystem.initUnit(unit)
+
+        // Try blueprint-based init first (preferred path)
+        val def = UNIT_DEFS.find { it.id == unitDefId }
+        val familyEnum = def?.family ?: com.example.jaygame.data.UnitFamily.entries[unitFamilyOf(unitDefId)]
+        val gradeOrdinal = unitGradeOf(unitDefId)
+        val gradeEnum = UnitGrade.entries.getOrElse(gradeOrdinal) { UnitGrade.COMMON }
+        val bp = blueprintRegistry.all().find { it.grade == gradeEnum && familyEnum in it.families }
+
+        if (bp != null) {
+            unit.initFromBlueprint(bp)
+            unit.tileIndex = tileIndex
+            unit.position = Grid.FIELD_CENTER.copy()
+            unit.homePosition = Grid.FIELD_CENTER.copy()
+            unit.behavior = BehaviorFactory.create(bp.behaviorId)
+        } else if (def != null) {
+            // Fallback: legacy init with proper field assignments
+            val family = unitFamilyOf(unitDefId)
+            val abilityInfo = abilityForFamily(family)
+            unit.init(
+                unitDefId = unitDefId, grade = gradeOrdinal, family = family, level = 1,
+                tileIndex = tileIndex, homePos = Grid.FIELD_CENTER.copy(),
+                baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
+                range = def.range * upgradeRangeMult,
+                abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
+            )
+            unit.position = Grid.FIELD_CENTER.copy()
+            unit.families = listOf(familyEnum)
+            unit.role = inferRole(familyEnum)
+            UniqueAbilitySystem.initUnit(unit)
+        } else {
+            units.release(unit)
+            return
+        }
+
+        sp -= cost
         grid.placeUnit(tileIndex, unit)
+        invalidateMergeCache()
         refreshSynergies()
-        BattleBridge.onSummonResult(unitDefId, grade)
+        BattleBridge.onSummonResult(
+            unitDefId = if (bp != null) -1 else unitDefId,
+            grade = gradeOrdinal,
+            blueprintId = bp?.id ?: "",
+        )
+    }
+
+    private fun inferRole(family: com.example.jaygame.data.UnitFamily): UnitRole = when (family) {
+        com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
+        com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
+        else -> UnitRole.RANGED_DPS
     }
 
     fun applyBattleUpgrade(type: Int, level: Int, cost: Float) {
@@ -989,7 +1042,7 @@ class BattleEngine(
     // ── Push State to Compose ──
 
     private fun pushStateToCompose() {
-        val mergeable = MergeSystem.findMergeableTiles(grid)
+        val mergeable = getMergeableTiles()
 
         BattleBridge.updateState(
             waveSystem.currentWave + 1, maxWaves,

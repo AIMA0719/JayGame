@@ -186,48 +186,57 @@ fun BattleField() {
                     smoothYs.value = data.ys.copyOf(data.count)
                     microOffsets.value = FloatArray(data.count * 2)
                 } else if (data.count > 0) {
+                    // PERF: Mutate arrays in-place instead of allocating new ones each frame
                     val lerpFactor = 0.25f
-                    val newX = FloatArray(data.count)
-                    val newY = FloatArray(data.count)
                     for (i in 0 until data.count) {
-                        newX[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
-                        newY[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
+                        sx[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
+                        sy[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
                     }
-                    smoothXs.value = newX
-                    smoothYs.value = newY
+                    // Trigger recomposition by reassigning the same array wrapped in a new state
+                    smoothXs.value = sx
+                    smoothYs.value = sy
                 }
 
-                // G3: Update micro-movement offsets slowly
+                // G3: Update micro-movement offsets slowly (in-place)
                 val mo = microOffsets.value
                 if (mo.size == data.count * 2) {
-                    val newMo = mo.copyOf()
                     for (idx in 0 until data.count * 2) {
                         val target = sin(animTime.floatValue * 0.3f + idx * 1.7f) * 1.2f
-                        newMo[idx] = newMo[idx] + (target - newMo[idx]) * 0.02f
+                        mo[idx] = mo[idx] + (target - mo[idx]) * 0.02f
                     }
-                    microOffsets.value = newMo
+                    microOffsets.value = mo
                 }
 
                 // G5: Detect removed units by comparing tile sets
-                val currentTiles = mutableMapOf<Int, Pair<Float, Float>>()
-                val currentGrades = mutableMapOf<Int, Int>()
-                val currentFamilies = mutableMapOf<Int, Int>()
+                // PERF: Reuse maps — clear instead of re-creating
+                val currentTiles = prevTileMap.value.toMutableMap().also { it.clear() }
+                val currentGrades = prevGradeMap.value.toMutableMap().also { it.clear() }
+                val currentFamilies = prevFamilyMap.value.toMutableMap().also { it.clear() }
                 for (i in 0 until data.count) {
                     val tile = data.tileIndices[i]
                     currentTiles[tile] = Pair(data.xs[i], data.ys[i])
                     currentGrades[tile] = data.grades[i]
-                    currentFamilies[tile] = com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+                    currentFamilies[tile] = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
+                        data.familiesList[i].first().ordinal
+                    } else {
+                        com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+                    }
                 }
                 val prev = prevTileMap.value
                 if (prev.isNotEmpty()) {
-                    val removed = prev.keys - currentTiles.keys
-                    if (removed.isNotEmpty()) {
+                    var hasRemoved = false
+                    for (tile in prev.keys) {
+                        if (tile !in currentTiles) { hasRemoved = true; break }
+                    }
+                    if (hasRemoved) {
                         val newEffects = deathEffects.value.toMutableList()
-                        for (tile in removed) {
-                            val pos = prev[tile] ?: continue
-                            val gr = prevGradeMap.value[tile] ?: 0
-                            val fam = prevFamilyMap.value[tile] ?: 0
-                            newEffects.add(UnitDissolutionEffect(pos.first, pos.second, gr, fam, animTime.floatValue))
+                        for (tile in prev.keys) {
+                            if (tile !in currentTiles) {
+                                val pos = prev[tile] ?: continue
+                                val gr = prevGradeMap.value[tile] ?: 0
+                                val fam = prevFamilyMap.value[tile] ?: 0
+                                newEffects.add(UnitDissolutionEffect(pos.first, pos.second, gr, fam, animTime.floatValue))
+                            }
                         }
                         deathEffects.value = newEffects
                     }
@@ -238,7 +247,10 @@ fun BattleField() {
 
                 // Expire old death effects (> 1s)
                 val tNow = animTime.floatValue
-                deathEffects.value = deathEffects.value.filter { tNow - it.startTime < 1f }
+                val effects = deathEffects.value
+                if (effects.isNotEmpty()) {
+                    deathEffects.value = effects.filter { tNow - it.startTime < 1f }
+                }
             }
         }
     }
@@ -337,19 +349,21 @@ fun BattleField() {
         val pedestalRx = unitSize * 0.45f
         val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
+        // PERF: Reduce visual detail when many units exist
+        val highUnitCount = data.count > 50
 
         for (i in 0 until data.count) {
             if (i >= data.xs.size || i >= data.ys.size || i >= data.grades.size ||
                 i >= data.tileIndices.size || i >= data.unitDefIds.size || i >= data.levels.size) continue
             val baseScreenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
             val baseScreenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
-            // G3: micro-movement offset
-            val microDx = if (useMicro) moArr[i * 2] else 0f
-            val microDy = if (useMicro) moArr[i * 2 + 1] else 0f
+            val grade = data.grades[i]
+            // G3: micro-movement offset (skip for common units in high-count mode)
+            val skipMicro = highUnitCount && grade <= 1
+            val microDx = if (useMicro && !skipMicro) moArr[i * 2] else 0f
+            val microDy = if (useMicro && !skipMicro) moArr[i * 2 + 1] else 0f
             val screenXBase = baseScreenX + microDx
             val screenYBase = baseScreenY + microDy
-
-            val grade = data.grades[i]
             val gradeColor = GradeColors.getOrElse(grade) { Color.Gray }
             val tileIdx = data.tileIndices[i]
             val isSelected = selectedTile == tileIdx
@@ -365,8 +379,8 @@ fun BattleField() {
             // Skip dragged unit at original position
             if (isDragging && dragFromTile == tileIdx) continue
 
-            // ── G3: Breathing scale (slow sine 0.97-1.03) ──
-            val breathScale = 1f + sin(t * 1.8f + unitDefId * 0.3f) * 0.03f
+            // ── G3: Breathing scale (slow sine 0.97-1.03, skip for low grade in high-count) ──
+            val breathScale = if (skipMicro) 1f else 1f + sin(t * 1.8f + unitDefId * 0.3f) * 0.03f
 
             // ── G2: Family-specific attack motion offsets ──
             var attackOffsetX = 0f
@@ -452,7 +466,7 @@ fun BattleField() {
             }
 
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
-            if (family == 4 && grade >= 2) {
+            if (family == 4 && grade >= 2 && (!highUnitCount || grade >= 3)) {
                 // AURA_RADIUS=150 in game world (720x720), convert to screen
                 val auraRadiusScreen = (150f / 720f) * w
                 val auraPulse = 0.08f + sin(t * 2f + unitDefId * 0.5f) * 0.04f
@@ -523,10 +537,11 @@ fun BattleField() {
                 size = Size(pedestalRx * 2.4f, pedestalRy * 2.5f),
             )
 
-            // ── Pedestal Particles (grade 3+) ──
-            if (grade >= 3) {
+            // ── Pedestal Particles (grade 3+, reduced when many units) ──
+            if (grade >= 3 && !(highUnitCount && grade <= 3)) {
+                val maxParticles = if (highUnitCount) 4 else 12
                 val particleCount = (grade - 1) * 2
-                for (p in 0 until particleCount.coerceAtMost(12)) {
+                for (p in 0 until particleCount.coerceAtMost(maxParticles)) {
                     val px = screenX + cos(t * 1.5f + p * 1.2f) * pedestalRx * 0.8f
                     val py = screenY + sin(t * 2f + p * 0.9f) * pedestalRy * 0.5f
                     val pAlpha = (0.3f + sin(t * 3f + p * 0.5f) * 0.15f).coerceIn(0.1f, 0.5f)
