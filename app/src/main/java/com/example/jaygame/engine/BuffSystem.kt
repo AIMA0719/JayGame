@@ -1,6 +1,6 @@
 package com.example.jaygame.engine
 
-enum class BuffType { Slow, DoT, ArmorBreak, AtkUp, SpdUp, Shield, Stun, Silence }
+enum class BuffType { Slow, DoT, ArmorBreak, AtkUp, SpdUp, Shield, Stun, Silence, DefUp }
 
 data class BuffEntry(
     val type: BuffType,
@@ -81,6 +81,12 @@ class BuffContainer {
     fun getSpdMultiplier(): Float {
         var mult = 1f
         buffs.forEach { if (it.type == BuffType.SpdUp) mult += it.value }
+        return mult
+    }
+
+    fun getDefMultiplier(): Float {
+        var mult = 1f
+        buffs.forEach { if (it.type == BuffType.DefUp) mult += it.value }
         return mult
     }
 

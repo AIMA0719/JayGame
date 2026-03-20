@@ -9,8 +9,7 @@ import android.util.Log
  * SFX playback manager backed by [SoundPool].
  *
  * Call [init] once with an application/activity Context to set up the pool,
- * then [play] with any [SoundEvent].  Until real .ogg files are placed in
- * assets/sfx/ and registered in [assetPaths], every call is a no-op log stub.
+ * then [play] with any [SoundEvent].  Sound assets are in assets/sfx/ (CC0, Kenney.nl).
  */
 object SfxManager {
 
@@ -25,25 +24,25 @@ object SfxManager {
      * Future mapping: SoundEvent -> asset path under assets/sfx/.
      * Add entries here when real sound files are available.
      */
-    private val assetPaths = mapOf<SoundEvent, String>(
-        // SoundEvent.Summon       to "sfx/summon.ogg",
-        // SoundEvent.SummonRare   to "sfx/summon_rare.ogg",
-        // SoundEvent.SummonLegend to "sfx/summon_legend.ogg",
-        // SoundEvent.Merge        to "sfx/merge.ogg",
-        // SoundEvent.MergeLucky   to "sfx/merge_lucky.ogg",
-        // SoundEvent.Attack       to "sfx/attack.ogg",
-        // SoundEvent.CriticalHit  to "sfx/critical.ogg",
-        // SoundEvent.EnemyDeath   to "sfx/enemy_death.ogg",
-        // SoundEvent.BossAppear   to "sfx/boss_appear.ogg",
-        // SoundEvent.BossDefeat   to "sfx/boss_defeat.ogg",
-        // SoundEvent.WaveStart    to "sfx/wave_start.ogg",
-        // SoundEvent.WaveClear    to "sfx/wave_clear.ogg",
-        // SoundEvent.Victory      to "sfx/victory.ogg",
-        // SoundEvent.Defeat       to "sfx/defeat.ogg",
-        // SoundEvent.ButtonClick  to "sfx/button_click.ogg",
-        // SoundEvent.GoldPickup   to "sfx/gold_pickup.ogg",
-        // SoundEvent.LevelUp      to "sfx/level_up.ogg",
-        // SoundEvent.SkillActivate to "sfx/skill_activate.ogg",
+    private val assetPaths = mapOf(
+        SoundEvent.Summon        to "sfx/summon.ogg",
+        SoundEvent.SummonRare    to "sfx/summon_rare.ogg",
+        SoundEvent.SummonLegend  to "sfx/summon_legend.ogg",
+        SoundEvent.Merge         to "sfx/merge.ogg",
+        SoundEvent.MergeLucky    to "sfx/merge_lucky.ogg",
+        SoundEvent.Attack        to "sfx/attack.ogg",
+        SoundEvent.CriticalHit   to "sfx/critical.ogg",
+        SoundEvent.EnemyDeath    to "sfx/enemy_death.ogg",
+        SoundEvent.BossAppear    to "sfx/boss_appear.ogg",
+        SoundEvent.BossDefeat    to "sfx/boss_defeat.ogg",
+        SoundEvent.WaveStart     to "sfx/wave_start.ogg",
+        SoundEvent.WaveClear     to "sfx/wave_clear.ogg",
+        SoundEvent.Victory       to "sfx/victory.ogg",
+        SoundEvent.Defeat        to "sfx/defeat.ogg",
+        SoundEvent.ButtonClick   to "sfx/button_click.ogg",
+        SoundEvent.GoldPickup    to "sfx/gold_pickup.ogg",
+        SoundEvent.LevelUp       to "sfx/level_up.ogg",
+        SoundEvent.SkillActivate to "sfx/skill_activate.ogg",
     )
 
     /** Initialise the SoundPool and preload all registered assets. */

@@ -287,7 +287,7 @@ private fun PetEquippedSlotsBar(
             modifier = Modifier.padding(bottom = 6.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(2) { slotIndex ->
+            repeat(slotCount) { slotIndex ->
                 val isUnlocked = slotIndex < slotCount
                 val equippedPetId = gameData.equippedPets.getOrNull(slotIndex)
                 val equippedDef = if (equippedPetId != null) ALL_PETS.getOrNull(equippedPetId) else null

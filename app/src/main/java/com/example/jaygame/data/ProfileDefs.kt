@@ -1,5 +1,7 @@
 package com.example.jaygame.data
 
+import com.example.jaygame.engine.BlueprintRegistry
+
 data class ProfileDef(
     val id: Int,
     val name: String,
@@ -15,7 +17,7 @@ val ALL_PROFILES: List<ProfileDef> = listOf(
     ProfileDef(3, "무상 돌파", "무피해 클리어", { it.wonWithoutDamage }),
     ProfileDef(4, "순혈주의", "단일 패밀리 클리어", { it.wonWithSingleType }),
     ProfileDef(5, "수집가", "유닛 20종 보유", { it.units.count { (_, u) -> u.owned } >= 20 }),
-    ProfileDef(6, "만물박사", "전 유닛 보유", { it.units.values.size >= 30 && it.units.values.all { u -> u.owned } }, isAnimated = true),
+    ProfileDef(6, "만물박사", "전 유닛 보유", { it.units.count { (_, u) -> u.owned } >= BlueprintRegistry.instance.count() }, isAnimated = true),
     ProfileDef(7, "유물 사냥꾼", "유물 6종 보유", { it.relics.count { r -> r.owned } >= 6 }),
     ProfileDef(8, "펫 마스터", "펫 전종 보유", { it.pets.all { p -> p.owned } }, isAnimated = true),
     ProfileDef(9, "부자", "총 골드 100,000 획득", { it.totalGoldEarned >= 100000 }),

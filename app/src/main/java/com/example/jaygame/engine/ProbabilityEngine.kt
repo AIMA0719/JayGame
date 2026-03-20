@@ -32,14 +32,14 @@ class DefaultProbabilityEngine(
     )
 
     override fun rollUnit(availableUnits: List<UnitSpec>): UnitSpec {
+        require(availableUnits.isNotEmpty()) { "availableUnits must not be empty" }
         // 1단계: 등급 결정
         val grade = rollGrade()
         // 2단계: 해당 등급 유닛 중 랜덤 선택
         val candidates = availableUnits.filter { it.grade == grade }
         if (candidates.isEmpty()) {
-            // 해당 등급 유닛이 없으면 하급에서 선택
-            val fallback = availableUnits.filter { it.grade == UnitGrade.COMMON }
-            return fallback.random(random)
+            // 해당 등급 유닛이 없으면 전체 목록에서 선택
+            return availableUnits.random(random)
         }
         return candidates.random(random)
     }
@@ -77,14 +77,17 @@ class DefaultProbabilityEngine(
         val heroBoost = if (pity >= 30) 2f else 1f
 
         val r = random.nextFloat() * 100f
+        val commonCap = 60f - 12f * (heroBoost - 1f)    // 60 normal, 48 boosted
+        val rareCap = commonCap + 25f                    // 85 normal, 73 boosted
+        val heroCap = rareCap + 12f * heroBoost          // 97 normal, 97 boosted
         return when {
-            r < 60f -> 0 to false                        // COMMON 60%
-            r < 85f -> 1 to false                        // RARE 25%
-            r < 85f + 12f * heroBoost -> {               // HERO (부스트 후 최대 24%)
+            r < commonCap -> 0 to false                  // COMMON
+            r < rareCap   -> 1 to false                  // RARE
+            r < heroCap   -> {                           // HERO (12% normal, 24% boosted)
                 val reset = pity >= 30
                 2 to reset
             }
-            else -> 3 to true                            // LEGEND
+            else -> 3 to true                            // LEGEND 3%
         }
     }
 }

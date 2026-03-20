@@ -94,6 +94,7 @@ class GameRepository(context: Context) {
             val settings = JSONObject()
             settings.put("soundEnabled", if (data.soundEnabled) 1 else 0)
             settings.put("musicEnabled", if (data.musicEnabled) 1 else 0)
+            settings.put("hapticEnabled", if (data.hapticEnabled) 1 else 0)
             settings.put("defaultBattleSpeed", data.defaultBattleSpeed.toDouble())
             settings.put("showDamageNumbers", if (data.showDamageNumbers) 1 else 0)
             settings.put("healthBarMode", data.healthBarMode)
@@ -223,15 +224,20 @@ class GameRepository(context: Context) {
         fun deserialize(jsonStr: String): GameData {
             val root = JSONObject(jsonStr)
 
-            // Verify checksum if present
+            // Verify checksum if present (warning only — JSONObject.toString()
+            // does not guarantee key ordering across Android versions, so a
+            // mismatch is expected after OS upgrades / library changes).
             if (root.has("checksum")) {
                 val savedChecksum = root.getLong("checksum")
                 val copy = JSONObject(jsonStr)
                 copy.remove("checksum")
                 val computed = fnv1aHash(copy.toString())
                 if (computed != savedChecksum) {
-                    // Checksum mismatch — return default data
-                    return GameData()
+                    android.util.Log.w(
+                        "GameRepository",
+                        "Save-data checksum mismatch (expected=$savedChecksum, computed=$computed). " +
+                                "Proceeding with loaded data."
+                    )
                 }
             }
 
@@ -299,6 +305,7 @@ class GameRepository(context: Context) {
             val settings = root.optJSONObject("settings")
             val soundEnabled = (settings?.optInt("soundEnabled", 1) ?: 1) != 0
             val musicEnabled = (settings?.optInt("musicEnabled", 1) ?: 1) != 0
+            val hapticEnabled = (settings?.optInt("hapticEnabled", 1) ?: 1) != 0
             val defaultBattleSpeed = settings?.optDouble("defaultBattleSpeed", 1.0)?.toFloat() ?: 1f
             val showDamageNumbers = (settings?.optInt("showDamageNumbers", 1) ?: 1) != 0
             val healthBarMode = settings?.optInt("healthBarMode", 0) ?: 0
@@ -452,6 +459,7 @@ class GameRepository(context: Context) {
                 wonWithSingleType = wonWithSingleType,
                 soundEnabled = soundEnabled,
                 musicEnabled = musicEnabled,
+                hapticEnabled = hapticEnabled,
                 defaultBattleSpeed = defaultBattleSpeed,
                 showDamageNumbers = showDamageNumbers,
                 healthBarMode = healthBarMode,

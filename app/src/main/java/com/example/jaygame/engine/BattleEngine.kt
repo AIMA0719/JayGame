@@ -563,12 +563,40 @@ class BattleEngine(
                 if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
                     val target = unit.currentTarget!!
                     val result = unit.behavior!!.onAttack(unit, target)
-                    // Apply role synergy multipliers to behavior damage
-                    val boostedDamage = result.damage * roleBonus.atkMultiplier
-                    val boostedCrit = if (!result.isCrit && roleBonus.critBonus > 0f) {
-                        Math.random() < roleBonus.critBonus
-                    } else result.isCrit
-                    val finalBoostedDamage = if (boostedCrit && !result.isCrit) boostedDamage * 2f else boostedDamage
+                    // Apply relic & synergy bonuses to behavior damage (mirrors fireProjectile logic)
+                    val rm = relicManager
+                    val relicAtkBonus = rm?.totalAtkPercent() ?: 0f
+                    val relicCritChance = rm?.totalCritChanceBonus() ?: 0f
+                    val relicCritDmg = rm?.totalCritDamageBonus() ?: 0f
+                    val relicArmorPen = rm?.totalArmorPenPercent() ?: 0f
+                    val relicMagicDmg = rm?.totalMagicDmgPercent() ?: 0f
+                    val synergy = AbilitySystem.activeSynergy
+
+                    // Re-evaluate crit with relic crit chance bonus
+                    val boostedCrit = if (result.isCrit) true
+                        else if (roleBonus.critBonus + relicCritChance > 0f)
+                            Math.random() < (roleBonus.critBonus + relicCritChance)
+                        else false
+
+                    // Crit damage handling:
+                    // - If behavior already flagged isCrit, damage has behavior's own crit multiplier baked in;
+                    //   apply only the relic crit damage bonus portion additively (relicCritDmg / behaviorCritMult).
+                    // - If crit was newly promoted by relic/role bonus, apply full (2f + relicCritDmg) multiplier.
+                    val critBoost = when {
+                        result.isCrit && relicCritDmg > 0f -> 1f + relicCritDmg / 2f  // scale up behavior's baked-in crit
+                        !result.isCrit && boostedCrit -> 2f + relicCritDmg              // newly promoted crit
+                        else -> 1f                                                       // no crit
+                    }
+
+                    val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.001f
+                    val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
+                    val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
+                    val boostedDamage = result.damage * critBoost *
+                        upgradeAtkMult * (1f + relicAtkBonus) * synergy.atkMultiplier *
+                        roleBonus.atkMultiplier * familyUpgradeBonus * gradeBonus * advantageMult *
+                        (if (result.isMagic) (1f + relicMagicDmg) else 1f) *
+                        (if (!result.isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
+                    val finalBoostedDamage = boostedDamage
 
                     if (result.isInstant) {
                         // Melee instant damage — use Enemy.takeDamage() for proper boss/buff handling

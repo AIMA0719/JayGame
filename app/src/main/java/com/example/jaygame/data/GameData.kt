@@ -38,6 +38,7 @@ data class GameData(
     val wonWithSingleType: Boolean = false,
     val soundEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
+    val hapticEnabled: Boolean = true,
     val lastLoginDate: String = "",
     val loginStreak: Int = 0,
     val lastClaimedDay: Int = 0,

@@ -84,10 +84,15 @@ class ComposeActivity : ComponentActivity() {
                     }
                 }
 
-                // Sync SFX / haptic enabled state with settings
+                // Sync SFX enabled state with settings
                 androidx.compose.runtime.DisposableEffect(data.soundEnabled) {
                     SfxManager.setEnabled(data.soundEnabled)
-                    HapticManager.setEnabled(data.soundEnabled)
+                    onDispose { }
+                }
+
+                // Sync haptic enabled state with settings
+                androidx.compose.runtime.DisposableEffect(data.hapticEnabled) {
+                    HapticManager.setEnabled(data.hapticEnabled)
                     onDispose { }
                 }
 
@@ -165,30 +170,34 @@ class ComposeActivity : ComponentActivity() {
         }
         repository.refresh()
         BattleBridge.clearResult()
+
+        // Combine all data transformations into a single save to avoid UI thread blocking
+        var data = repository.gameData.value
+
         // Auto-unlock stages based on trophies
-        val data = repository.gameData.value
         val newUnlocked = STAGES.filter { it.unlockTrophies <= data.trophies }.map { it.id }
         if (newUnlocked.toSet() != data.unlockedStages.toSet()) {
-            repository.save(data.copy(unlockedStages = newUnlocked))
+            data = data.copy(unlockedStages = newUnlocked)
         }
+
         // Apply offline rewards and update last online time
-        val afterOffline = OfflineRewardManager.claimReward(repository.gameData.value)
-        repository.save(afterOffline)
+        data = OfflineRewardManager.claimReward(data)
 
         // Season reset check (monthly)
         val currentMonth = java.time.YearMonth.now().toString() // "2026-03"
-        val latestData = repository.gameData.value
-        if (latestData.seasonMonth != currentMonth && latestData.seasonMonth.isNotEmpty()) {
+        if (data.seasonMonth != currentMonth && data.seasonMonth.isNotEmpty()) {
             // New month → reset season XP and claimed tier
-            repository.save(latestData.copy(
+            data = data.copy(
                 seasonXP = 0,
                 seasonClaimedTier = 0,
                 seasonMonth = currentMonth,
-            ))
-        } else if (latestData.seasonMonth.isEmpty()) {
+            )
+        } else if (data.seasonMonth.isEmpty()) {
             // First time — set current month
-            repository.save(latestData.copy(seasonMonth = currentMonth))
+            data = data.copy(seasonMonth = currentMonth)
         }
+
+        repository.save(data)
     }
 
     private fun actuallyLaunchBattle() {
