@@ -890,30 +890,23 @@ class BattleEngine(
         // Remember position of the merge anchor before consuming
         val mergePos = existingUnit.position.copy()
         val mergeHomePos = existingUnit.homePosition.copy()
-        val result = MergeSystem.tryMerge(grid, tileIndex) ?: return
+        val result = MergeSystem.tryMergeBlueprint(grid, tileIndex, blueprintRegistry) ?: return
         result.consumedTiles.forEach { i ->
             val u = grid.removeUnit(i)
             if (u != null) units.release(u)
         }
-        val def = UNIT_DEFS.find { it.id == result.resultUnitDefId } ?: return
-        val newGrade = unitGradeOf(result.resultUnitDefId)
-        val newFamily = unitFamilyOf(result.resultUnitDefId)
+        val bp = blueprintRegistry.findById(result.resultBlueprintId) ?: return
         val unit = units.acquire() ?: return
-        val abilityInfo = abilityForFamily(newFamily)
-        unit.init(
-            unitDefId = result.resultUnitDefId, grade = newGrade, family = newFamily, level = 1,
-            tileIndex = tileIndex, homePos = mergeHomePos,
-            baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
-            range = def.range * upgradeRangeMult,
-            abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
-        )
+        unit.initFromBlueprint(bp)
+        unit.tileIndex = tileIndex
         unit.position = mergePos
-        UniqueAbilitySystem.initUnit(unit)
+        unit.homePosition = mergeHomePos
+        unit.behavior = BehaviorFactory.create(bp.behaviorId)
         grid.placeUnit(tileIndex, unit)
         invalidateMergeCache()
         refreshSynergies()
         mergeCount++
-        BattleBridge.onMergeComplete(tileIndex, result.isLucky, result.resultUnitDefId, unit.blueprintId)
+        BattleBridge.onMergeComplete(tileIndex, result.isLucky, -1, unit.blueprintId)
     }
 
     fun requestSell(tileIndex: Int) {
