@@ -87,9 +87,17 @@ class MainActivity : ComponentActivity() {
             it.start(engineScope)
         }
 
-        // Play battle BGM
+        // Play biome-specific battle BGM
         if (data.musicEnabled) {
-            BgmManager.play(this, "audio/battle_bgm.mp3")
+            val bgmAsset = when (stageId) {
+                1 -> "audio/battle_jungle.mp3"
+                2 -> "audio/battle_desert.mp3"
+                3 -> "audio/battle_glacier.mp3"
+                4 -> "audio/battle_volcano.mp3"
+                5 -> "audio/battle_abyss.mp3"
+                else -> "audio/battle_plains.mp3"
+            }
+            BgmManager.play(this, bgmAsset)
         }
 
         setContent {
@@ -188,9 +196,16 @@ class MainActivity : ComponentActivity() {
 
                             // Pet card bonus for PET_EXPEDITION dungeon
                             val finalPets = if (petCardBonus > 0) {
+                                val ownedCount = afterRelicData.pets.count { it.owned }.coerceAtLeast(1)
+                                val perPet = petCardBonus / ownedCount
+                                val remainder = petCardBonus % ownedCount
+                                var given = 0
                                 afterRelicData.pets.mapIndexed { idx, pet ->
-                                    if (pet.owned) pet.copy(cards = pet.cards + petCardBonus / afterRelicData.pets.count { it.owned }.coerceAtLeast(1))
-                                    else pet
+                                    if (pet.owned) {
+                                        val extra = if (given < remainder) 1 else 0
+                                        given++
+                                        pet.copy(cards = pet.cards + perPet + extra)
+                                    } else pet
                                 }
                             } else afterRelicData.pets
 

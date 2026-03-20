@@ -60,8 +60,10 @@ import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.navigationBarsPadding
 
-private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, UPGRADE, DATA, PROFILE }
+private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, UPGRADE, DATA, PROFILE, PRIVACY, LICENSES }
 
 @Composable
 fun SettingsScreen(
@@ -149,6 +151,7 @@ fun SettingsScreen(
                     onBack = { currentPage = SettingsPage.MAIN },
                     onToggleSound = { repository.save(data.copy(soundEnabled = !data.soundEnabled)) },
                     onToggleMusic = { repository.save(data.copy(musicEnabled = !data.musicEnabled)) },
+                    onToggleHaptic = { repository.save(data.copy(hapticEnabled = !data.hapticEnabled)) },
                 )
                 SettingsPage.GAMEPLAY -> SettingsGameplay(
                     data = data,
@@ -166,6 +169,12 @@ fun SettingsScreen(
                 )
                 SettingsPage.PROFILE -> SettingsProfile(
                     repository = repository,
+                    onBack = { currentPage = SettingsPage.MAIN },
+                )
+                SettingsPage.PRIVACY -> SettingsPrivacy(
+                    onBack = { currentPage = SettingsPage.MAIN },
+                )
+                SettingsPage.LICENSES -> SettingsLicenses(
                     onBack = { currentPage = SettingsPage.MAIN },
                 )
             }
@@ -249,6 +258,22 @@ private fun SettingsMain(
                     onClick = { onPageSelected(SettingsPage.DATA) },
                 )
             }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsCategoryRow(
+                    iconRes = R.drawable.ic_settings_privacy,
+                    title = "개인정보 처리방침",
+                    iconTint = SubText,
+                    onClick = { onPageSelected(SettingsPage.PRIVACY) },
+                )
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsCategoryRow(
+                    iconRes = R.drawable.ic_settings_license,
+                    title = "오픈소스 라이선스",
+                    iconTint = SubText,
+                    onClick = { onPageSelected(SettingsPage.LICENSES) },
+                )
+            }
         }
     }
 }
@@ -326,6 +351,7 @@ private fun SettingsAudio(
     onBack: () -> Unit,
     onToggleSound: () -> Unit,
     onToggleMusic: () -> Unit,
+    onToggleHaptic: () -> Unit,
 ) {
     Column {
         SubPageHeader(title = "오디오", onBack = onBack)
@@ -362,6 +388,23 @@ private fun SettingsAudio(
                         onClick = onToggleMusic,
                         accentColor = if (data.musicEnabled) NeonGreen else NeonRed,
                         accentColorDark = if (data.musicEnabled) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                        modifier = Modifier
+                            .width(72.dp)
+                            .height(34.dp),
+                        fontSize = 13.sp,
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("진동", fontSize = 14.sp, color = LightText)
+                    Spacer(Modifier.weight(1f))
+                    NeonButton(
+                        text = if (data.hapticEnabled) "ON" else "OFF",
+                        onClick = onToggleHaptic,
+                        accentColor = if (data.hapticEnabled) NeonGreen else NeonRed,
+                        accentColorDark = if (data.hapticEnabled) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
                         modifier = Modifier
                             .width(72.dp)
                             .height(34.dp),
@@ -667,5 +710,158 @@ private fun SettingsData(
                 }
             }
         }
+    }
+}
+
+// ── Privacy Policy Sub-page ──
+
+@Composable
+private fun SettingsPrivacy(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        SubPageHeader(title = "개인정보 처리방침", onBack = onBack)
+
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                PrivacySection(
+                    title = "1. 수집하는 개인정보",
+                    body = "본 앱은 별도의 개인정보를 수집하지 않습니다. 게임 진행 데이터(스테이지 진행도, 유닛 보유 현황, 재화 등)는 사용자의 기기에만 저장되며, 외부 서버로 전송되지 않습니다.",
+                )
+                HorizontalDivider(color = Divider)
+                PrivacySection(
+                    title = "2. 개인정보의 이용 목적",
+                    body = "기기에 저장되는 게임 데이터는 오직 게임 플레이 진행 상태를 유지하기 위한 목적으로만 사용됩니다.",
+                )
+                HorizontalDivider(color = Divider)
+                PrivacySection(
+                    title = "3. 개인정보의 보관 및 파기",
+                    body = "모든 데이터는 사용자 기기의 로컬 저장소에 보관됩니다. 앱을 삭제하거나 설정에서 데이터를 초기화하면 모든 정보가 영구적으로 삭제됩니다.",
+                )
+                HorizontalDivider(color = Divider)
+                PrivacySection(
+                    title = "4. 제3자 제공",
+                    body = "본 앱은 어떠한 개인정보도 제3자에게 제공하지 않습니다.",
+                )
+                HorizontalDivider(color = Divider)
+                PrivacySection(
+                    title = "5. 광고 및 분석",
+                    body = "현재 본 앱은 광고 SDK나 분석 도구를 사용하지 않습니다. 향후 도입 시 본 방침을 업데이트하고 사용자에게 고지합니다.",
+                )
+                HorizontalDivider(color = Divider)
+                PrivacySection(
+                    title = "6. 문의",
+                    body = "개인정보 처리방침에 대한 문의 사항이 있으시면 앱 스토어 페이지를 통해 연락해 주시기 바랍니다.",
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun PrivacySection(title: String, body: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Bold)
+        Text(body, fontSize = 12.sp, color = LightText, lineHeight = 18.sp)
+    }
+}
+
+// ── Open Source Licenses Sub-page ──
+
+@Composable
+private fun SettingsLicenses(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val creditsText = remember {
+        try {
+            context.assets.open("CREDITS.txt").bufferedReader().readText()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        SubPageHeader(title = "오픈소스 라이선스", onBack = onBack)
+
+        // Audio credits from CREDITS.txt
+        if (creditsText.isNotBlank()) {
+            GameCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text("오디오 에셋", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Bold)
+                    Text(creditsText, fontSize = 11.sp, color = LightText, lineHeight = 16.sp)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Third-party libraries
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("사용된 라이브러리", fontSize = 14.sp, color = Gold, fontWeight = FontWeight.Bold)
+
+                LicenseItem(
+                    name = "Jetpack Compose",
+                    license = "Apache License 2.0",
+                    copyright = "Copyright Google LLC",
+                )
+                HorizontalDivider(color = Divider)
+                LicenseItem(
+                    name = "AndroidX Core / AppCompat / Lifecycle",
+                    license = "Apache License 2.0",
+                    copyright = "Copyright Google LLC",
+                )
+                HorizontalDivider(color = Divider)
+                LicenseItem(
+                    name = "Material Components for Android",
+                    license = "Apache License 2.0",
+                    copyright = "Copyright Google LLC",
+                )
+                HorizontalDivider(color = Divider)
+                LicenseItem(
+                    name = "Navigation Compose",
+                    license = "Apache License 2.0",
+                    copyright = "Copyright Google LLC",
+                )
+                HorizontalDivider(color = Divider)
+                LicenseItem(
+                    name = "Coil (Image Loading)",
+                    license = "Apache License 2.0",
+                    copyright = "Copyright Coil Contributors",
+                )
+                HorizontalDivider(color = Divider)
+                LicenseItem(
+                    name = "Kotlin / Kotlinx Coroutines",
+                    license = "Apache License 2.0",
+                    copyright = "Copyright JetBrains s.r.o.",
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun LicenseItem(name: String, license: String, copyright: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(name, fontSize = 13.sp, color = LightText, fontWeight = FontWeight.Medium)
+        Text(copyright, fontSize = 11.sp, color = SubText)
+        Text(license, fontSize = 11.sp, color = DimText)
     }
 }

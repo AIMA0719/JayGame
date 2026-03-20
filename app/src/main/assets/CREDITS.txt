@@ -4,3 +4,33 @@ Home BGM: "Ravi de te revoir" (Main Menu OST)
   By: YannZ (https://yziango.itch.io)
   License: CC-BY 4.0
   Source: https://opengameart.org/content/free-contemplative-fantasy-music-pack
+
+Battle BGM (Plains): "Battle Theme A"
+  By: cynicmusic (Pixelsphere)
+  License: CC0 (Public Domain)
+  Source: https://opengameart.org/content/battle-theme-a
+
+Battle BGM (Jungle): "Battle Theme B for RPG"
+  By: cynicmusic (Pixelsphere)
+  License: CC0 (Public Domain)
+  Source: https://opengameart.org/content/battle-theme-b-for-rpg
+
+Battle BGM (Desert): "Desert Battle Theme"
+  By: antonioraymond71
+  License: GPL 2.0
+  Source: https://opengameart.org/content/desert-battle-theme
+
+Battle BGM (Glacier): "Battle Theme"
+  By: Wolfgang_
+  License: CC0 (Public Domain)
+  Source: https://opengameart.org/content/battle-theme-0
+
+Battle BGM (Volcano): "Battle in the Winter"
+  By: Johan Brodd (Jobromedia)
+  License: CC-BY 3.0
+  Source: https://opengameart.org/content/battle-in-the-winter
+
+Battle BGM (Abyss): "Boss Battle Theme"
+  By: CleytonKauffman (CleytonRX)
+  License: CC0 (Public Domain)
+  Source: https://opengameart.org/content/boss-battle-theme
