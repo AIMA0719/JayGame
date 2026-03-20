@@ -250,12 +250,19 @@ class BattleEngine(
                 val now = System.nanoTime()
                 val frameDt = ((now - lastTime) / 1_000_000_000f).coerceAtMost(0.1f)
                 lastTime = now
-                accumulator += frameDt * BattleBridge.battleSpeed.value
+                val speed = BattleBridge.battleSpeed.value
+                accumulator += frameDt * speed
 
-                while (accumulator >= FIXED_DT) {
+                // Cap iterations per frame to avoid spiral-of-death at high speed
+                val maxSteps = (speed * 2).toInt().coerceIn(1, 16)
+                var steps = 0
+                while (accumulator >= FIXED_DT && steps < maxSteps) {
                     update(FIXED_DT)
                     accumulator -= FIXED_DT
+                    steps++
                 }
+                // Drain excess accumulator to prevent unbounded buildup
+                if (accumulator > FIXED_DT * 4) accumulator = FIXED_DT * 2
 
                 pushStateToCompose()
                 delay(16) // ~60 FPS — sufficient for TD game, halves GC pressure
