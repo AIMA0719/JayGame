@@ -103,7 +103,7 @@ class BattleEngine(
 
     private fun getMergeableTiles(): Set<Int> {
         if (mergeableDirty) {
-            mergeableTilesCache = MergeSystem.findMergeableTiles(grid)
+            mergeableTilesCache = MergeSystem.findMergeableTilesByBlueprint(grid, BlueprintRegistry.instance)
             mergeableDirty = false
         }
         return mergeableTilesCache
@@ -984,16 +984,15 @@ class BattleEngine(
         BattleBridge.onUnitLevelUp(unit.position.x / W, unit.position.y / H)
     }
 
-    fun applyGamble(newSp: Float) {
-        sp = newSp.coerceAtLeast(0f)
-    }
+    var gambleLosingStreak: Int = 0
+        private set
 
-    fun requestGamble(betPercent: Float, option: GambleSystem.GambleOption): GambleSystem.GambleResult? {
-        val bet = sp * betPercent
-        if (bet < 10f) return null
+    fun requestGamble(option: GambleSystem.GambleOption): GambleSystem.GambleResult? {
+        if (sp < GambleSystem.ENTRY_FEE) return null
         val luckBonus = relicManager?.totalGambleBonus() ?: 0f
-        val result = GambleSystem.gamble(bet, option, luckBonus)
-        sp = if (result.won) sp - bet + result.reward else sp - bet
+        val result = GambleSystem.gamble(sp, option, luckBonus, gambleLosingStreak)
+        sp = result.spAfter
+        gambleLosingStreak = if (result.won) 0 else gambleLosingStreak + 1
         return result
     }
 

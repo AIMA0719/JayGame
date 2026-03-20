@@ -693,7 +693,7 @@ private fun SettingsData(
                 ) {
                     Text("버전", fontSize = 14.sp, color = LightText)
                     Spacer(Modifier.weight(1f))
-                    Text("v0.5.0", fontSize = 14.sp, color = SubText)
+                    Text("v1.0.0", fontSize = 14.sp, color = SubText)
                 }
                 HorizontalDivider(color = Divider)
                 Box(

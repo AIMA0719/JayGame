@@ -15,13 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
@@ -45,7 +41,6 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
-// Pre-allocated option colors
 private val SafeGreen = Color(0xFF43A047)
 private val SafeGreenDark = Color(0xFF2E7D32)
 private val NormalBlue = Color(0xFF1E88E5)
@@ -62,20 +57,10 @@ private val OptionColors = mapOf(
     GambleSystem.GambleOption.JACKPOT to (JackpotPurple to JackpotPurpleDark),
 )
 
-/**
- * 4-tier gamble dialog.
- *
- * Phase 1 — Select option + bet amount, confirm.
- * Phase 2 — Show result (win = gold, lose = red).
- */
 @Composable
-fun GambleDialog(
-    onDismiss: () -> Unit,
-) {
+fun GambleDialog(onDismiss: () -> Unit) {
     val battle by BattleBridge.state.collectAsState()
     var selectedOption by remember { mutableStateOf(GambleSystem.GambleOption.SAFE) }
-    // betPercent: 10% ~ 80%, default 30%
-    var betPercent by remember { mutableFloatStateOf(0.30f) }
     var result by remember { mutableStateOf<GambleSystem.GambleResult?>(null) }
 
     Box(
@@ -83,10 +68,7 @@ fun GambleDialog(
             .fillMaxSize()
             .background(
                 Brush.radialGradient(
-                    colors = listOf(
-                        Color.Black.copy(alpha = 0.55f),
-                        Color.Black.copy(alpha = 0.82f),
-                    ),
+                    colors = listOf(Color.Black.copy(alpha = 0.55f), Color.Black.copy(alpha = 0.82f)),
                 )
             )
             .clickable(
@@ -105,249 +87,293 @@ fun GambleDialog(
             borderColor = JackpotPurple.copy(alpha = 0.5f),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 val currentResult = result
                 if (currentResult == null) {
-                    // ── Phase 1: selection ──
-
-                    // Title + close
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "\uD83C\uDFB2 도박",
-                            color = JackpotPurple,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                        Text(
-                            text = "\u2715",
-                            color = SubText,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .clickable { onDismiss() }
-                                .padding(4.dp),
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // ── 4 option buttons ──
-                    GambleSystem.GambleOption.entries.forEach { option ->
-                        val colors = OptionColors[option]!!
-                        val isSelected = selectedOption == option
-                        val borderCol = if (isSelected) colors.first else Color.White.copy(alpha = 0.15f)
-                        val bgBrush = if (isSelected)
-                            Brush.horizontalGradient(listOf(colors.first.copy(alpha = 0.35f), colors.second.copy(alpha = 0.25f)))
-                        else
-                            Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.04f)))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 3.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(bgBrush)
-                                .border(
-                                    width = if (isSelected) 1.5.dp else 1.dp,
-                                    color = borderCol,
-                                    shape = RoundedCornerShape(10.dp),
-                                )
-                                .clickable { selectedOption = option }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Column {
-                                    Text(
-                                        text = option.label,
-                                        color = if (isSelected) colors.first else LightText,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                                    )
-                                    Text(
-                                        text = "성공률 ${(option.baseSuccessRate * 100).toInt()}%",
-                                        color = SubText,
-                                        fontSize = 11.sp,
-                                    )
-                                }
-                                Text(
-                                    text = "x${option.multiplier}",
-                                    color = if (isSelected) colors.first else Color.White.copy(alpha = 0.7f),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // ── Bet slider ──
-                    val betAmount = battle.sp * betPercent
-                    Text(
-                        text = "베팅 비율: ${(betPercent * 100).toInt()}%",
-                        color = Gold,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Slider(
-                        value = betPercent,
-                        onValueChange = { betPercent = it },
-                        valueRange = 0.10f..0.80f,
-                        steps = 6, // 10, 20, 30, 40, 50, 60, 70, 80 = 8 points, 6 steps between
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = SliderDefaults.colors(
-                            thumbColor = JackpotPurple,
-                            activeTrackColor = JackpotPurple,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.2f),
-                        ),
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text("현재 SP: ${battle.sp.toInt()}", color = SubText, fontSize = 12.sp)
-                        Text("베팅: ${betAmount.toInt()} SP", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // ── Confirm button ──
-                    val canGamble = betAmount >= 10f
-                    val optColors = OptionColors[selectedOption]!!
-                    NeonButton(
-                        text = "\uD83C\uDFB2 도박!",
-                        onClick = {
-                            if (canGamble) {
-                                val r = BattleBridge.requestGamble(betPercent, selectedOption)
-                                if (r != null) result = r
-                            }
+                    GambleSelectionPhase(
+                        currentSp = battle.sp,
+                        selectedOption = selectedOption,
+                        onSelectOption = { selectedOption = it },
+                        onConfirm = {
+                            val r = BattleBridge.requestGamble(selectedOption)
+                            if (r != null) result = r
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        accentColor = optColors.first,
-                        accentColorDark = optColors.second,
-                        enabled = canGamble,
+                        onDismiss = onDismiss,
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
                 } else {
-                    // ── Phase 2: result ──
-                    val isWin = currentResult.won
-                    val winColor = if (isWin) Gold else NeonRed
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = if (isWin) "\uD83C\uDF89 성공!" else "\uD83D\uDCA5 실패!",
-                        color = winColor,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                    GambleResultPhase(
+                        result = currentResult,
+                        currentSp = battle.sp,
+                        onRetry = { result = null },
+                        onDismiss = onDismiss,
                     )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Option name
-                    val optColors = OptionColors[selectedOption]!!
-                    Text(
-                        text = selectedOption.label,
-                        color = optColors.first,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Bet → reward
-                    Text(
-                        text = "베팅: ${currentResult.bet.toInt()} SP",
-                        color = SubText,
-                        fontSize = 13.sp,
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    if (isWin) {
-                        Text(
-                            text = "+${currentResult.reward.toInt()} SP",
-                            color = NeonGreen,
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                        Text(
-                            text = "x${currentResult.multiplier} 배율 적용",
-                            color = Gold,
-                            fontSize = 13.sp,
-                        )
-                    } else {
-                        Text(
-                            text = "-${currentResult.bet.toInt()} SP",
-                            color = NeonRed,
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                        Text(
-                            text = "아깝다...",
-                            color = SubText,
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "남은 SP: ${battle.sp.toInt()}",
-                        color = Gold,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        // Again
-                        NeonButton(
-                            text = "다시",
-                            onClick = { result = null },
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            accentColor = SubText,
-                            accentColorDark = SubText.copy(alpha = 0.6f),
-                            enabled = battle.sp >= 10f,
-                        )
-                        // Close
-                        NeonButton(
-                            text = "확인",
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            accentColor = if (isWin) NeonGreen else NeonRed,
-                            accentColorDark = if (isWin) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
     }
 }
 
-data class GambleResult(
-    val spChange: Float,
-    val newSp: Float,
-    val percentage: Float,
-)
+@Composable
+private fun GambleSelectionPhase(
+    currentSp: Float,
+    selectedOption: GambleSystem.GambleOption,
+    onSelectOption: (GambleSystem.GambleOption) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val losingStreak = BattleBridge.gambleLosingStreak
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "\uD83C\uDFB2 도박",
+            color = JackpotPurple,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.align(Alignment.Center),
+        )
+        Text(
+            text = "\u2715",
+            color = SubText,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .clickable { onDismiss() }
+                .padding(4.dp),
+        )
+    }
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Text(
+        text = "입장료: ${GambleSystem.ENTRY_FEE.toInt()} SP",
+        color = SubText,
+        fontSize = 12.sp,
+    )
+
+    if (losingStreak >= 1) {
+        val streakColor = if (losingStreak >= 3) NeonGreen else Color(0xFFFF8844)
+        Text(
+            text = if (losingStreak >= 3) "\uD83D\uDD25 연패 보호 발동! 성공률 +15%"
+            else "연패: ${losingStreak}회 (3연패 시 보호 발동)",
+            color = streakColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    GambleSystem.GambleOption.entries.forEach { option ->
+        val colors = OptionColors[option]!!
+        val isSelected = selectedOption == option
+        val borderCol = if (isSelected) colors.first else Color.White.copy(alpha = 0.15f)
+        val bgBrush = if (isSelected)
+            Brush.horizontalGradient(listOf(colors.first.copy(alpha = 0.35f), colors.second.copy(alpha = 0.25f)))
+        else
+            Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.04f)))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(bgBrush)
+                .border(
+                    width = if (isSelected) 1.5.dp else 1.dp,
+                    color = borderCol,
+                    shape = RoundedCornerShape(10.dp),
+                )
+                .clickable { onSelectOption(option) }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text(
+                        text = option.label,
+                        color = if (isSelected) colors.first else LightText,
+                        fontSize = 14.sp,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                    )
+                    Row {
+                        Text(
+                            text = "성공 ${(option.baseSuccessRate * 100).toInt()}%",
+                            color = SubText,
+                            fontSize = 11.sp,
+                        )
+                        Text(
+                            text = "  실패 시 -${(option.lossPenaltyRate * 100).toInt()}%",
+                            color = NeonRed.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                        )
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "x${option.multiplier}",
+                        color = if (isSelected) colors.first else Color.White.copy(alpha = 0.7f),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Text(
+                        text = "+${(GambleSystem.ENTRY_FEE * option.multiplier).toInt()} SP",
+                        color = if (isSelected) colors.first.copy(alpha = 0.8f) else SubText,
+                        fontSize = 10.sp,
+                    )
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text("현재 SP: ${currentSp.toInt()}", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        val lossOnFail = ((currentSp - GambleSystem.ENTRY_FEE) * selectedOption.lossPenaltyRate).toInt()
+        Text(
+            "실패 시 손실: -${GambleSystem.ENTRY_FEE.toInt() + lossOnFail} SP",
+            color = NeonRed.copy(alpha = 0.7f),
+            fontSize = 11.sp,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    val canGamble = currentSp >= GambleSystem.ENTRY_FEE
+    val optColors = OptionColors[selectedOption]!!
+    NeonButton(
+        text = "\uD83C\uDFB2 도박! (${GambleSystem.ENTRY_FEE.toInt()} SP)",
+        onClick = { if (canGamble) onConfirm() },
+        modifier = Modifier.fillMaxWidth().height(44.dp),
+        accentColor = optColors.first,
+        accentColorDark = optColors.second,
+        enabled = canGamble,
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+}
+
+@Composable
+private fun GambleResultPhase(
+    result: GambleSystem.GambleResult,
+    currentSp: Float,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val isWin = result.won
+    val winColor = if (isWin) Gold else NeonRed
+    val optColors = OptionColors[result.option]!!
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Text(
+        text = if (isWin) "\uD83C\uDF89 성공!" else "\uD83D\uDCA5 실패!",
+        color = winColor,
+        fontSize = 26.sp,
+        fontWeight = FontWeight.ExtraBold,
+    )
+
+    if (result.streakBroken) {
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "연패 보호 발동!",
+            color = NeonGreen,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Text(
+        text = result.option.label,
+        color = optColors.first,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    if (isWin) {
+        Text(
+            text = "+${result.reward.toInt()} SP",
+            color = NeonGreen,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Text(
+            text = "x${result.option.multiplier} 배율 적용",
+            color = Gold,
+            fontSize = 13.sp,
+        )
+    } else {
+        Text(
+            text = "-${result.penalty.toInt()} SP",
+            color = NeonRed,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Row {
+            Text(
+                text = "입장료 ${GambleSystem.ENTRY_FEE.toInt()}",
+                color = SubText,
+                fontSize = 11.sp,
+            )
+            Text(
+                text = " + 추가 손실 ${(result.penalty - GambleSystem.ENTRY_FEE).toInt()} SP",
+                color = NeonRed.copy(alpha = 0.7f),
+                fontSize = 11.sp,
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text("${result.spBefore.toInt()}", color = SubText, fontSize = 14.sp)
+        Text(" \u2192 ", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+        Text(
+            "${result.spAfter.toInt()} SP",
+            color = if (isWin) NeonGreen else NeonRed,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        NeonButton(
+            text = "다시",
+            onClick = onRetry,
+            modifier = Modifier.weight(1f).height(40.dp),
+            accentColor = SubText,
+            accentColorDark = SubText.copy(alpha = 0.6f),
+            enabled = currentSp >= GambleSystem.ENTRY_FEE,
+        )
+        NeonButton(
+            text = "확인",
+            onClick = onDismiss,
+            modifier = Modifier.weight(1f).height(40.dp),
+            accentColor = if (isWin) NeonGreen else NeonRed,
+            accentColorDark = if (isWin) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+        )
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+}

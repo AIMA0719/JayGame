@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -299,18 +300,19 @@ fun UnitCardStrip(modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier
+            .widthIn(min = 80.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(Color.Black.copy(alpha = 0.65f))
             .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
             .clickable { showUnitListDialog = true }
-            .padding(6.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         // Header: total count
         Text(
             text = "\uC720\uB2DB ${activeUnits.size}",  // 유닛
             color = Color.White.copy(alpha = 0.8f),
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
         )
 
@@ -331,7 +333,7 @@ fun UnitCardStrip(modifier: Modifier = Modifier) {
                 Text(
                     text = "$gradeName ${units.size}",
                     color = gradeColor,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }

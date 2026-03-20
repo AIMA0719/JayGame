@@ -112,27 +112,25 @@ fun BattleScreen(
     } else 0f
 
     val damageEvents by BattleBridge.damageEvents.collectAsState()
-    val shakeScope = rememberCoroutineScope()
-
     // C3: Skill flash for high-grade skills
     val skillEvents by BattleBridge.skillEvents.collectAsState()
     val skillFlashAlpha = remember { Animatable(0f) }
     val skillFlashFamily = remember { mutableStateOf(0) }
     val prevSkillCount = remember { mutableStateOf(0) }
     val currentSkillCount = skillEvents.size
-    if (currentSkillCount > prevSkillCount.value) {
-        val newEvents = skillEvents.takeLast(currentSkillCount - prevSkillCount.value)
-        val highGradeEvent = newEvents.firstOrNull { it.grade >= 3 }
-        if (highGradeEvent != null) {
-            skillFlashFamily.value = highGradeEvent.family
-            shakeScope.launch {
+    LaunchedEffect(currentSkillCount) {
+        if (currentSkillCount > prevSkillCount.value) {
+            val newEvents = skillEvents.takeLast(currentSkillCount - prevSkillCount.value)
+            val highGradeEvent = newEvents.firstOrNull { it.grade >= 3 }
+            if (highGradeEvent != null) {
+                skillFlashFamily.value = highGradeEvent.family
                 skillFlashAlpha.snapTo(0f)
                 skillFlashAlpha.animateTo(0.3f, animationSpec = tween(100))
                 skillFlashAlpha.animateTo(0f, animationSpec = tween(100))
             }
         }
+        prevSkillCount.value = currentSkillCount
     }
-    prevSkillCount.value = currentSkillCount
 
     // Load background image from assets
     val bgAssetName = remember(stageId) {
@@ -429,13 +427,27 @@ private fun TutorialHintOverlay() {
     val battle by BattleBridge.state.collectAsState()
     val unitCount by remember { derivedStateOf { BattleBridge.unitPositions.value.count } }
 
+    // Boss hint: show for 3 seconds then hide
+    var showBossHint by remember { mutableStateOf(false) }
+    var lastBossWave by remember { mutableStateOf(-1) }
+    LaunchedEffect(battle.isBossRound, battle.currentWave) {
+        if (battle.isBossRound && battle.currentWave != lastBossWave) {
+            lastBossWave = battle.currentWave
+            showBossHint = true
+            kotlinx.coroutines.delay(3000)
+            showBossHint = false
+        } else if (!battle.isBossRound) {
+            showBossHint = false
+        }
+    }
+
     // Determine which hint to show based on game state
     val hintText = when {
         battle.currentWave == 0 && unitCount == 0 -> "하단의 소환 버튼을 탭하여 유닛을 배치하세요!"
         unitCount in 1..2 -> "유닛을 더 소환하세요. 같은 유닛 3개를 합성할 수 있습니다!"
         battle.currentWave == 0 && unitCount >= 3 -> "적이 곧 나타납니다. 유닛이 자동으로 공격합니다."
         battle.currentWave in 1..2 && battle.sp > 80 -> "SP가 충분합니다! 유닛을 더 소환하세요."
-        battle.isBossRound -> "보스 웨이브! 제한 시간 내에 처치하세요!"
+        showBossHint -> "보스 웨이브! 제한 시간 내에 처치하세요!"
         else -> null
     }
 

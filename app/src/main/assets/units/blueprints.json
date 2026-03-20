@@ -2,12 +2,23 @@
   {
     "id": "fire_tank_01",
     "name": "이그나",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "COMMON",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 200, "baseATK": 8, "baseSpeed": 0.6, "range": 40, "defense": 12, "magicResist": 4, "moveSpeed": 70, "blockCount": 1 },
+    "stats": {
+      "hp": 200,
+      "baseATK": 8,
+      "baseSpeed": 0.6,
+      "range": 40,
+      "defense": 12,
+      "magicResist": 4,
+      "moveSpeed": 70,
+      "blockCount": 1
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -21,12 +32,23 @@
   {
     "id": "fire_tank_02",
     "name": "블레이저",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "RARE",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 260, "baseATK": 10.4, "baseSpeed": 0.65, "range": 45, "defense": 16, "magicResist": 5, "moveSpeed": 75, "blockCount": 1 },
+    "stats": {
+      "hp": 260,
+      "baseATK": 10.4,
+      "baseSpeed": 0.65,
+      "range": 45,
+      "defense": 16,
+      "magicResist": 5,
+      "moveSpeed": 75,
+      "blockCount": 1
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -40,12 +62,23 @@
   {
     "id": "fire_tank_03",
     "name": "카르나",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "HERO",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 340, "baseATK": 13.6, "baseSpeed": 0.7, "range": 50, "defense": 20, "magicResist": 7, "moveSpeed": 80, "blockCount": 2 },
+    "stats": {
+      "hp": 340,
+      "baseATK": 13.6,
+      "baseSpeed": 0.7,
+      "range": 50,
+      "defense": 20,
+      "magicResist": 7,
+      "moveSpeed": 80,
+      "blockCount": 2
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -59,12 +92,23 @@
   {
     "id": "fire_tank_04",
     "name": "이프리트",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "LEGEND",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 440, "baseATK": 17.6, "baseSpeed": 0.75, "range": 55, "defense": 26, "magicResist": 9, "moveSpeed": 85, "blockCount": 2 },
+    "stats": {
+      "hp": 440,
+      "baseATK": 17.6,
+      "baseSpeed": 0.75,
+      "range": 55,
+      "defense": 26,
+      "magicResist": 9,
+      "moveSpeed": 85,
+      "blockCount": 2
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -75,16 +119,26 @@
     "iconRes": 0,
     "description": "용암으로 단련된 불멸의 수호자"
   },
-
   {
     "id": "fire_mdps_01",
     "name": "스파이크",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "COMMON",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 80, "baseATK": 20, "baseSpeed": 1, "range": 50, "defense": 4, "magicResist": 2, "moveSpeed": 120, "blockCount": 0 },
+    "stats": {
+      "hp": 80,
+      "baseATK": 20,
+      "baseSpeed": 1,
+      "range": 50,
+      "defense": 4,
+      "magicResist": 2,
+      "moveSpeed": 120,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -98,12 +152,23 @@
   {
     "id": "fire_mdps_02",
     "name": "아그니",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "RARE",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 104, "baseATK": 26, "baseSpeed": 1.05, "range": 55, "defense": 5, "magicResist": 3, "moveSpeed": 125, "blockCount": 0 },
+    "stats": {
+      "hp": 104,
+      "baseATK": 26,
+      "baseSpeed": 1.05,
+      "range": 55,
+      "defense": 5,
+      "magicResist": 3,
+      "moveSpeed": 125,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -117,12 +182,23 @@
   {
     "id": "fire_mdps_03",
     "name": "크림슨",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 136, "baseATK": 34, "baseSpeed": 1.1, "range": 55, "defense": 7, "magicResist": 3, "moveSpeed": 130, "blockCount": 0 },
+    "stats": {
+      "hp": 136,
+      "baseATK": 34,
+      "baseSpeed": 1.1,
+      "range": 55,
+      "defense": 7,
+      "magicResist": 3,
+      "moveSpeed": 130,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -136,12 +212,23 @@
   {
     "id": "fire_mdps_04",
     "name": "아수라",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "LEGEND",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 176, "baseATK": 44, "baseSpeed": 1.15, "range": 60, "defense": 9, "magicResist": 4, "moveSpeed": 135, "blockCount": 0 },
+    "stats": {
+      "hp": 176,
+      "baseATK": 44,
+      "baseSpeed": 1.15,
+      "range": 60,
+      "defense": 9,
+      "magicResist": 4,
+      "moveSpeed": 135,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -155,12 +242,23 @@
   {
     "id": "fire_mdps_05",
     "name": "이그니스",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "ANCIENT",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 224, "baseATK": 56, "baseSpeed": 1.25, "range": 60, "defense": 11, "magicResist": 5, "moveSpeed": 140, "blockCount": 0 },
+    "stats": {
+      "hp": 224,
+      "baseATK": 56,
+      "baseSpeed": 1.25,
+      "range": 60,
+      "defense": 11,
+      "magicResist": 5,
+      "moveSpeed": 140,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -174,12 +272,23 @@
   {
     "id": "fire_mdps_06",
     "name": "인페르노",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 280, "baseATK": 70, "baseSpeed": 1.35, "range": 65, "defense": 14, "magicResist": 6, "moveSpeed": 145, "blockCount": 0 },
+    "stats": {
+      "hp": 280,
+      "baseATK": 70,
+      "baseSpeed": 1.35,
+      "range": 65,
+      "defense": 14,
+      "magicResist": 6,
+      "moveSpeed": 145,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -193,12 +302,23 @@
   {
     "id": "fire_mdps_07",
     "name": "솔라리스",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "IMMORTAL",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 360, "baseATK": 90, "baseSpeed": 1.45, "range": 70, "defense": 18, "magicResist": 8, "moveSpeed": 150, "blockCount": 0 },
+    "stats": {
+      "hp": 360,
+      "baseATK": 90,
+      "baseSpeed": 1.45,
+      "range": 70,
+      "defense": 18,
+      "magicResist": 8,
+      "moveSpeed": 150,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -209,36 +329,176 @@
     "iconRes": 0,
     "description": "태양의 불꽃을 검에 담은 불멸의 검신"
   },
-
   {
     "id": "fire_rdps_01",
     "name": "루비",
-    "families": ["FIRE"],
+    "families": [
+      "FIRE"
+    ],
     "grade": "COMMON",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 60, "baseATK": 15, "baseSpeed": 1, "range": 120, "defense": 2, "magicResist": 3, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 60,
+      "baseATK": 15,
+      "baseSpeed": 1,
+      "range": 150,
+      "defense": 2,
+      "magicResist": 3,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
-    "mergeResultId": null,
+    "mergeResultId": "fire_rdps_02",
     "isSummonable": true,
     "summonWeight": 60,
     "unitCategory": "NORMAL",
     "iconRes": 0,
     "description": "작지만 뜨거운 화염구를 던진다"
   },
-
+  {
+    "id": "fire_rdps_02",
+    "name": "플레어",
+    "families": [
+      "FIRE"
+    ],
+    "grade": "RARE",
+    "role": "RANGED_DPS",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 78,
+      "baseATK": 19.5,
+      "baseSpeed": 1,
+      "range": 165,
+      "defense": 3,
+      "magicResist": 5,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
+    "behaviorId": "ranged_mage",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": "fire_rdps_03",
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "화염 폭발로 적을 태운다"
+  },
+  {
+    "id": "fire_rdps_03",
+    "name": "메테오",
+    "families": [
+      "FIRE"
+    ],
+    "grade": "HERO",
+    "role": "RANGED_DPS",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 102,
+      "baseATK": 25.5,
+      "baseSpeed": 1.1,
+      "range": 180,
+      "defense": 3,
+      "magicResist": 7,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
+    "behaviorId": "ranged_mage",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": "fire_rdps_04",
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "하늘에서 유성을 떨어뜨리는 화염 현자"
+  },
+  {
+    "id": "fire_rdps_04",
+    "name": "헬파이어",
+    "families": [
+      "FIRE"
+    ],
+    "grade": "LEGEND",
+    "role": "RANGED_DPS",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 132,
+      "baseATK": 33,
+      "baseSpeed": 1.15,
+      "range": 195,
+      "defense": 4,
+      "magicResist": 9,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
+    "behaviorId": "ranged_mage",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": "fire_rdps_05",
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "지옥불을 소환하는 화염 마법사"
+  },
+  {
+    "id": "fire_rdps_05",
+    "name": "라그나로크",
+    "families": [
+      "FIRE"
+    ],
+    "grade": "ANCIENT",
+    "role": "RANGED_DPS",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 168,
+      "baseATK": 42,
+      "baseSpeed": 1.25,
+      "range": 210,
+      "defense": 5,
+      "magicResist": 11,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
+    "behaviorId": "ranged_mage",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "세계를 불태우는 종말의 화염 군주"
+  },
   {
     "id": "frost_tank_01",
     "name": "프리즈",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "COMMON",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 200, "baseATK": 8, "baseSpeed": 0.6, "range": 40, "defense": 12, "magicResist": 6, "moveSpeed": 70, "blockCount": 1 },
+    "stats": {
+      "hp": 200,
+      "baseATK": 8,
+      "baseSpeed": 0.6,
+      "range": 40,
+      "defense": 12,
+      "magicResist": 6,
+      "moveSpeed": 70,
+      "blockCount": 1
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -252,12 +512,23 @@
   {
     "id": "frost_tank_02",
     "name": "글라시아",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "RARE",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 260, "baseATK": 10.4, "baseSpeed": 0.65, "range": 45, "defense": 16, "magicResist": 8, "moveSpeed": 75, "blockCount": 1 },
+    "stats": {
+      "hp": 260,
+      "baseATK": 10.4,
+      "baseSpeed": 0.65,
+      "range": 45,
+      "defense": 16,
+      "magicResist": 8,
+      "moveSpeed": 75,
+      "blockCount": 1
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -271,12 +542,23 @@
   {
     "id": "frost_tank_03",
     "name": "아이시클",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "HERO",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 340, "baseATK": 13.6, "baseSpeed": 0.7, "range": 50, "defense": 20, "magicResist": 10, "moveSpeed": 80, "blockCount": 2 },
+    "stats": {
+      "hp": 340,
+      "baseATK": 13.6,
+      "baseSpeed": 0.7,
+      "range": 50,
+      "defense": 20,
+      "magicResist": 10,
+      "moveSpeed": 80,
+      "blockCount": 2
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -290,12 +572,23 @@
   {
     "id": "frost_tank_04",
     "name": "퍼마프로스트",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "LEGEND",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 440, "baseATK": 17.6, "baseSpeed": 0.75, "range": 55, "defense": 26, "magicResist": 13, "moveSpeed": 85, "blockCount": 2 },
+    "stats": {
+      "hp": 440,
+      "baseATK": 17.6,
+      "baseSpeed": 0.75,
+      "range": 55,
+      "defense": 26,
+      "magicResist": 13,
+      "moveSpeed": 85,
+      "blockCount": 2
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -306,16 +599,26 @@
     "iconRes": 0,
     "description": "빙하에서 태어난 불멸의 수호자"
   },
-
   {
     "id": "frost_rdps_01",
     "name": "미스트",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "COMMON",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 60, "baseATK": 15, "baseSpeed": 0.9, "range": 120, "defense": 2, "magicResist": 4, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 60,
+      "baseATK": 15,
+      "baseSpeed": 0.9,
+      "range": 150,
+      "defense": 2,
+      "magicResist": 4,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -329,12 +632,23 @@
   {
     "id": "frost_rdps_02",
     "name": "프로스트",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "RARE",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 78, "baseATK": 19.5, "baseSpeed": 1, "range": 130, "defense": 3, "magicResist": 5, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 78,
+      "baseATK": 19.5,
+      "baseSpeed": 1,
+      "range": 165,
+      "defense": 3,
+      "magicResist": 5,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -348,12 +662,23 @@
   {
     "id": "frost_rdps_03",
     "name": "블리자드",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "HERO",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 102, "baseATK": 25.5, "baseSpeed": 1.1, "range": 140, "defense": 3, "magicResist": 7, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 102,
+      "baseATK": 25.5,
+      "baseSpeed": 1.1,
+      "range": 180,
+      "defense": 3,
+      "magicResist": 7,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -367,12 +692,23 @@
   {
     "id": "frost_rdps_04",
     "name": "아이스본",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "LEGEND",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 132, "baseATK": 33, "baseSpeed": 1.15, "range": 150, "defense": 4, "magicResist": 9, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 132,
+      "baseATK": 33,
+      "baseSpeed": 1.15,
+      "range": 195,
+      "defense": 4,
+      "magicResist": 9,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -386,12 +722,23 @@
   {
     "id": "frost_rdps_05",
     "name": "니플헤임",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "ANCIENT",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 168, "baseATK": 42, "baseSpeed": 1.25, "range": 155, "defense": 5, "magicResist": 11, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 168,
+      "baseATK": 42,
+      "baseSpeed": 1.25,
+      "range": 210,
+      "defense": 5,
+      "magicResist": 11,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -402,16 +749,26 @@
     "iconRes": 0,
     "description": "영구동토의 냉기를 지배하는 군주"
   },
-
   {
     "id": "frost_ctrl_01",
     "name": "슬릿",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "COMMON",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 75, "baseATK": 8, "baseSpeed": 0.7, "range": 110, "defense": 3, "magicResist": 4, "moveSpeed": 50, "blockCount": 0 },
+    "stats": {
+      "hp": 75,
+      "baseATK": 8,
+      "baseSpeed": 0.7,
+      "range": 200,
+      "defense": 3,
+      "magicResist": 4,
+      "moveSpeed": 50,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -425,12 +782,23 @@
   {
     "id": "frost_ctrl_02",
     "name": "빙아",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "RARE",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 97, "baseATK": 10.4, "baseSpeed": 0.75, "range": 115, "defense": 4, "magicResist": 5, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 97,
+      "baseATK": 10.4,
+      "baseSpeed": 0.75,
+      "range": 215,
+      "defense": 4,
+      "magicResist": 5,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -444,12 +812,23 @@
   {
     "id": "frost_ctrl_03",
     "name": "아브솔루트",
-    "families": ["FROST"],
+    "families": [
+      "FROST"
+    ],
     "grade": "HERO",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 127, "baseATK": 13.6, "baseSpeed": 0.8, "range": 120, "defense": 5, "magicResist": 7, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 127,
+      "baseATK": 13.6,
+      "baseSpeed": 0.8,
+      "range": 230,
+      "defense": 5,
+      "magicResist": 7,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -460,16 +839,26 @@
     "iconRes": 0,
     "description": "냉기 파동으로 전장을 지배하는 현자"
   },
-
   {
     "id": "poison_mdps_01",
     "name": "베놈",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "COMMON",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 80, "baseATK": 20, "baseSpeed": 1, "range": 50, "defense": 3, "magicResist": 2, "moveSpeed": 120, "blockCount": 0 },
+    "stats": {
+      "hp": 80,
+      "baseATK": 20,
+      "baseSpeed": 1,
+      "range": 50,
+      "defense": 3,
+      "magicResist": 2,
+      "moveSpeed": 120,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -483,12 +872,23 @@
   {
     "id": "poison_mdps_02",
     "name": "바이퍼",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "RARE",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 104, "baseATK": 26, "baseSpeed": 1.05, "range": 55, "defense": 4, "magicResist": 3, "moveSpeed": 125, "blockCount": 0 },
+    "stats": {
+      "hp": 104,
+      "baseATK": 26,
+      "baseSpeed": 1.05,
+      "range": 55,
+      "defense": 4,
+      "magicResist": 3,
+      "moveSpeed": 125,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -502,12 +902,23 @@
   {
     "id": "poison_mdps_03",
     "name": "플레이그",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 136, "baseATK": 34, "baseSpeed": 1.1, "range": 55, "defense": 5, "magicResist": 3, "moveSpeed": 130, "blockCount": 0 },
+    "stats": {
+      "hp": 136,
+      "baseATK": 34,
+      "baseSpeed": 1.1,
+      "range": 55,
+      "defense": 5,
+      "magicResist": 3,
+      "moveSpeed": 130,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -521,12 +932,23 @@
   {
     "id": "poison_mdps_04",
     "name": "코로시브",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "LEGEND",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 176, "baseATK": 44, "baseSpeed": 1.15, "range": 60, "defense": 7, "magicResist": 4, "moveSpeed": 135, "blockCount": 0 },
+    "stats": {
+      "hp": 176,
+      "baseATK": 44,
+      "baseSpeed": 1.15,
+      "range": 60,
+      "defense": 7,
+      "magicResist": 4,
+      "moveSpeed": 135,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -540,12 +962,23 @@
   {
     "id": "poison_mdps_05",
     "name": "헤카테",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "ANCIENT",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 224, "baseATK": 56, "baseSpeed": 1.25, "range": 60, "defense": 9, "magicResist": 5, "moveSpeed": 140, "blockCount": 0 },
+    "stats": {
+      "hp": 224,
+      "baseATK": 56,
+      "baseSpeed": 1.25,
+      "range": 60,
+      "defense": 9,
+      "magicResist": 5,
+      "moveSpeed": 140,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -556,16 +989,26 @@
     "iconRes": 0,
     "description": "독의 여신, 죽음의 표식을 남긴다"
   },
-
   {
     "id": "poison_rdps_01",
     "name": "톡신",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "COMMON",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 60, "baseATK": 15, "baseSpeed": 0.9, "range": 120, "defense": 2, "magicResist": 3, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 60,
+      "baseATK": 15,
+      "baseSpeed": 0.9,
+      "range": 150,
+      "defense": 2,
+      "magicResist": 3,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -579,12 +1022,23 @@
   {
     "id": "poison_rdps_02",
     "name": "벨라돈나",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "RARE",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 78, "baseATK": 19.5, "baseSpeed": 1, "range": 130, "defense": 3, "magicResist": 4, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 78,
+      "baseATK": 19.5,
+      "baseSpeed": 1,
+      "range": 165,
+      "defense": 3,
+      "magicResist": 4,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -598,12 +1052,23 @@
   {
     "id": "poison_rdps_03",
     "name": "미아즈마",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "HERO",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 102, "baseATK": 25.5, "baseSpeed": 1.1, "range": 140, "defense": 3, "magicResist": 5, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 102,
+      "baseATK": 25.5,
+      "baseSpeed": 1.1,
+      "range": 180,
+      "defense": 3,
+      "magicResist": 5,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -614,16 +1079,26 @@
     "iconRes": 0,
     "description": "역병 구름을 소환하는 마도사"
   },
-
   {
     "id": "poison_ctrl_01",
     "name": "스포어",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "COMMON",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 75, "baseATK": 8, "baseSpeed": 0.7, "range": 110, "defense": 3, "magicResist": 3, "moveSpeed": 50, "blockCount": 0 },
+    "stats": {
+      "hp": 75,
+      "baseATK": 8,
+      "baseSpeed": 0.7,
+      "range": 200,
+      "defense": 3,
+      "magicResist": 3,
+      "moveSpeed": 50,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -637,12 +1112,23 @@
   {
     "id": "poison_ctrl_02",
     "name": "커스",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "RARE",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 97, "baseATK": 10.4, "baseSpeed": 0.75, "range": 115, "defense": 4, "magicResist": 4, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 97,
+      "baseATK": 10.4,
+      "baseSpeed": 0.75,
+      "range": 215,
+      "defense": 4,
+      "magicResist": 4,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -656,12 +1142,23 @@
   {
     "id": "poison_ctrl_03",
     "name": "말리스",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "HERO",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 127, "baseATK": 13.6, "baseSpeed": 0.8, "range": 120, "defense": 5, "magicResist": 5, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 127,
+      "baseATK": 13.6,
+      "baseSpeed": 0.8,
+      "range": 230,
+      "defense": 5,
+      "magicResist": 5,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -675,12 +1172,23 @@
   {
     "id": "poison_ctrl_04",
     "name": "나이트셰이드",
-    "families": ["POISON"],
+    "families": [
+      "POISON"
+    ],
     "grade": "LEGEND",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 165, "baseATK": 17.6, "baseSpeed": 0.85, "range": 130, "defense": 6, "magicResist": 7, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 165,
+      "baseATK": 17.6,
+      "baseSpeed": 0.85,
+      "range": 245,
+      "defense": 6,
+      "magicResist": 7,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -691,16 +1199,26 @@
     "iconRes": 0,
     "description": "독룡을 부리는 지배자"
   },
-
   {
     "id": "lightning_mdps_01",
     "name": "스파크",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "COMMON",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 80, "baseATK": 20, "baseSpeed": 1, "range": 50, "defense": 3, "magicResist": 2, "moveSpeed": 120, "blockCount": 0 },
+    "stats": {
+      "hp": 80,
+      "baseATK": 20,
+      "baseSpeed": 1,
+      "range": 50,
+      "defense": 3,
+      "magicResist": 2,
+      "moveSpeed": 120,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -714,12 +1232,23 @@
   {
     "id": "lightning_mdps_02",
     "name": "볼트",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "RARE",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 104, "baseATK": 26, "baseSpeed": 1.1, "range": 55, "defense": 4, "magicResist": 3, "moveSpeed": 125, "blockCount": 0 },
+    "stats": {
+      "hp": 104,
+      "baseATK": 26,
+      "baseSpeed": 1.1,
+      "range": 55,
+      "defense": 4,
+      "magicResist": 3,
+      "moveSpeed": 125,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -733,12 +1262,23 @@
   {
     "id": "lightning_mdps_03",
     "name": "썬더",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 136, "baseATK": 34, "baseSpeed": 1.15, "range": 55, "defense": 5, "magicResist": 4, "moveSpeed": 130, "blockCount": 0 },
+    "stats": {
+      "hp": 136,
+      "baseATK": 34,
+      "baseSpeed": 1.15,
+      "range": 55,
+      "defense": 5,
+      "magicResist": 4,
+      "moveSpeed": 130,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -752,12 +1292,23 @@
   {
     "id": "lightning_mdps_04",
     "name": "라이덴",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "LEGEND",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 176, "baseATK": 44, "baseSpeed": 1.2, "range": 60, "defense": 7, "magicResist": 5, "moveSpeed": 135, "blockCount": 0 },
+    "stats": {
+      "hp": 176,
+      "baseATK": 44,
+      "baseSpeed": 1.2,
+      "range": 60,
+      "defense": 7,
+      "magicResist": 5,
+      "moveSpeed": 135,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -771,12 +1322,23 @@
   {
     "id": "lightning_mdps_05",
     "name": "인드라",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "ANCIENT",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 224, "baseATK": 56, "baseSpeed": 1.3, "range": 60, "defense": 9, "magicResist": 6, "moveSpeed": 140, "blockCount": 0 },
+    "stats": {
+      "hp": 224,
+      "baseATK": 56,
+      "baseSpeed": 1.3,
+      "range": 60,
+      "defense": 9,
+      "magicResist": 6,
+      "moveSpeed": 140,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -787,16 +1349,26 @@
     "iconRes": 0,
     "description": "번개의 검을 극한까지 단련한 검성"
   },
-
   {
     "id": "lightning_rdps_01",
     "name": "테슬라",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "COMMON",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 60, "baseATK": 15, "baseSpeed": 1, "range": 120, "defense": 2, "magicResist": 3, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 60,
+      "baseATK": 15,
+      "baseSpeed": 1,
+      "range": 150,
+      "defense": 2,
+      "magicResist": 3,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -810,12 +1382,23 @@
   {
     "id": "lightning_rdps_02",
     "name": "아크",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "RARE",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 78, "baseATK": 19.5, "baseSpeed": 1.05, "range": 130, "defense": 3, "magicResist": 4, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 78,
+      "baseATK": 19.5,
+      "baseSpeed": 1.05,
+      "range": 165,
+      "defense": 3,
+      "magicResist": 4,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -829,12 +1412,23 @@
   {
     "id": "lightning_rdps_03",
     "name": "플라즈마",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "HERO",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 102, "baseATK": 25.5, "baseSpeed": 1.1, "range": 140, "defense": 3, "magicResist": 5, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 102,
+      "baseATK": 25.5,
+      "baseSpeed": 1.1,
+      "range": 180,
+      "defense": 3,
+      "magicResist": 5,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -848,12 +1442,23 @@
   {
     "id": "lightning_rdps_04",
     "name": "토르",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "LEGEND",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 132, "baseATK": 33, "baseSpeed": 1.2, "range": 150, "defense": 4, "magicResist": 7, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 132,
+      "baseATK": 33,
+      "baseSpeed": 1.2,
+      "range": 195,
+      "defense": 4,
+      "magicResist": 7,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -867,12 +1472,23 @@
   {
     "id": "lightning_rdps_05",
     "name": "뇌신",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "ANCIENT",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 168, "baseATK": 42, "baseSpeed": 1.3, "range": 155, "defense": 5, "magicResist": 9, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 168,
+      "baseATK": 42,
+      "baseSpeed": 1.3,
+      "range": 210,
+      "defense": 5,
+      "magicResist": 9,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -883,16 +1499,26 @@
     "iconRes": 0,
     "description": "천둥의 마법을 지배하는 마도왕"
   },
-
   {
     "id": "lightning_support_01",
     "name": "스태틱",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "COMMON",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 70, "baseATK": 5, "baseSpeed": 0.8, "range": 100, "defense": 2, "magicResist": 4, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 70,
+      "baseATK": 5,
+      "baseSpeed": 0.8,
+      "range": 170,
+      "defense": 2,
+      "magicResist": 4,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -906,12 +1532,23 @@
   {
     "id": "lightning_support_02",
     "name": "차저",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "RARE",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 91, "baseATK": 6.5, "baseSpeed": 0.85, "range": 110, "defense": 3, "magicResist": 5, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 91,
+      "baseATK": 6.5,
+      "baseSpeed": 0.85,
+      "range": 185,
+      "defense": 3,
+      "magicResist": 5,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -925,12 +1562,23 @@
   {
     "id": "lightning_support_03",
     "name": "일렉트라",
-    "families": ["LIGHTNING"],
+    "families": [
+      "LIGHTNING"
+    ],
     "grade": "HERO",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 119, "baseATK": 8.5, "baseSpeed": 0.9, "range": 120, "defense": 4, "magicResist": 7, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 119,
+      "baseATK": 8.5,
+      "baseSpeed": 0.9,
+      "range": 200,
+      "defense": 4,
+      "magicResist": 7,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -941,16 +1589,26 @@
     "iconRes": 0,
     "description": "아군의 공속을 극한까지 끌어올리는 현자"
   },
-
   {
     "id": "support_tank_01",
     "name": "쉴라",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "COMMON",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 200, "baseATK": 8, "baseSpeed": 0.6, "range": 40, "defense": 10, "magicResist": 8, "moveSpeed": 70, "blockCount": 1 },
+    "stats": {
+      "hp": 200,
+      "baseATK": 8,
+      "baseSpeed": 0.6,
+      "range": 40,
+      "defense": 10,
+      "magicResist": 8,
+      "moveSpeed": 70,
+      "blockCount": 1
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -964,12 +1622,23 @@
   {
     "id": "support_tank_02",
     "name": "바스티온",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "RARE",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 260, "baseATK": 10.4, "baseSpeed": 0.65, "range": 45, "defense": 14, "magicResist": 10, "moveSpeed": 75, "blockCount": 1 },
+    "stats": {
+      "hp": 260,
+      "baseATK": 10.4,
+      "baseSpeed": 0.65,
+      "range": 45,
+      "defense": 14,
+      "magicResist": 10,
+      "moveSpeed": 75,
+      "blockCount": 1
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -983,12 +1652,23 @@
   {
     "id": "support_tank_03",
     "name": "팔라딘",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "HERO",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 340, "baseATK": 13.6, "baseSpeed": 0.7, "range": 50, "defense": 18, "magicResist": 13, "moveSpeed": 80, "blockCount": 2 },
+    "stats": {
+      "hp": 340,
+      "baseATK": 13.6,
+      "baseSpeed": 0.7,
+      "range": 50,
+      "defense": 18,
+      "magicResist": 13,
+      "moveSpeed": 80,
+      "blockCount": 2
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -1002,12 +1682,23 @@
   {
     "id": "support_tank_04",
     "name": "발키리아",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "LEGEND",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 440, "baseATK": 17.6, "baseSpeed": 0.75, "range": 55, "defense": 24, "magicResist": 16, "moveSpeed": 85, "blockCount": 2 },
+    "stats": {
+      "hp": 440,
+      "baseATK": 17.6,
+      "baseSpeed": 0.75,
+      "range": 55,
+      "defense": 24,
+      "magicResist": 16,
+      "moveSpeed": 85,
+      "blockCount": 2
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -1021,12 +1712,23 @@
   {
     "id": "support_tank_05",
     "name": "세라피엘",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "ANCIENT",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 560, "baseATK": 22.4, "baseSpeed": 0.8, "range": 60, "defense": 30, "magicResist": 20, "moveSpeed": 90, "blockCount": 3 },
+    "stats": {
+      "hp": 560,
+      "baseATK": 22.4,
+      "baseSpeed": 0.8,
+      "range": 60,
+      "defense": 30,
+      "magicResist": 20,
+      "moveSpeed": 90,
+      "blockCount": 3
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -1037,16 +1739,26 @@
     "iconRes": 0,
     "description": "천사의 가호를 받은 불멸의 수호자"
   },
-
   {
     "id": "support_support_01",
     "name": "뮤즈",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "COMMON",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 70, "baseATK": 5, "baseSpeed": 0.8, "range": 100, "defense": 2, "magicResist": 5, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 70,
+      "baseATK": 5,
+      "baseSpeed": 0.8,
+      "range": 170,
+      "defense": 2,
+      "magicResist": 5,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1060,12 +1772,23 @@
   {
     "id": "support_support_02",
     "name": "가디언",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "RARE",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 91, "baseATK": 6.5, "baseSpeed": 0.85, "range": 110, "defense": 3, "magicResist": 7, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 91,
+      "baseATK": 6.5,
+      "baseSpeed": 0.85,
+      "range": 185,
+      "defense": 3,
+      "magicResist": 7,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1079,12 +1802,23 @@
   {
     "id": "support_support_03",
     "name": "오라클",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "HERO",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 119, "baseATK": 8.5, "baseSpeed": 0.9, "range": 120, "defense": 4, "magicResist": 9, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 119,
+      "baseATK": 8.5,
+      "baseSpeed": 0.9,
+      "range": 200,
+      "defense": 4,
+      "magicResist": 9,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1098,12 +1832,23 @@
   {
     "id": "support_support_04",
     "name": "발키리",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "LEGEND",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 154, "baseATK": 11, "baseSpeed": 0.95, "range": 130, "defense": 5, "magicResist": 11, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 154,
+      "baseATK": 11,
+      "baseSpeed": 0.95,
+      "range": 215,
+      "defense": 5,
+      "magicResist": 11,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1117,12 +1862,23 @@
   {
     "id": "support_support_05",
     "name": "세라핌",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "ANCIENT",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 196, "baseATK": 14, "baseSpeed": 1, "range": 140, "defense": 6, "magicResist": 14, "moveSpeed": 80, "blockCount": 0 },
+    "stats": {
+      "hp": 196,
+      "baseATK": 14,
+      "baseSpeed": 1,
+      "range": 230,
+      "defense": 6,
+      "magicResist": 14,
+      "moveSpeed": 80,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1133,16 +1889,26 @@
     "iconRes": 0,
     "description": "천사의 가호로 아군을 부활시킨다"
   },
-
   {
     "id": "support_ctrl_01",
     "name": "리브라",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "COMMON",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 75, "baseATK": 8, "baseSpeed": 0.7, "range": 110, "defense": 3, "magicResist": 5, "moveSpeed": 50, "blockCount": 0 },
+    "stats": {
+      "hp": 75,
+      "baseATK": 8,
+      "baseSpeed": 0.7,
+      "range": 200,
+      "defense": 3,
+      "magicResist": 5,
+      "moveSpeed": 50,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -1156,12 +1922,23 @@
   {
     "id": "support_ctrl_02",
     "name": "이노센트",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "RARE",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 97, "baseATK": 10.4, "baseSpeed": 0.75, "range": 115, "defense": 4, "magicResist": 7, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 97,
+      "baseATK": 10.4,
+      "baseSpeed": 0.75,
+      "range": 215,
+      "defense": 4,
+      "magicResist": 7,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -1175,12 +1952,23 @@
   {
     "id": "support_ctrl_03",
     "name": "디바인",
-    "families": ["SUPPORT"],
+    "families": [
+      "SUPPORT"
+    ],
     "grade": "HERO",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 127, "baseATK": 13.6, "baseSpeed": 0.8, "range": 120, "defense": 5, "magicResist": 9, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 127,
+      "baseATK": 13.6,
+      "baseSpeed": 0.8,
+      "range": 230,
+      "defense": 5,
+      "magicResist": 9,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -1191,16 +1979,26 @@
     "iconRes": 0,
     "description": "신성의 힘으로 전장을 지배하는 자"
   },
-
   {
     "id": "wind_mdps_01",
     "name": "제피르",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "COMMON",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 80, "baseATK": 20, "baseSpeed": 1, "range": 50, "defense": 3, "magicResist": 2, "moveSpeed": 120, "blockCount": 0 },
+    "stats": {
+      "hp": 80,
+      "baseATK": 20,
+      "baseSpeed": 1,
+      "range": 50,
+      "defense": 3,
+      "magicResist": 2,
+      "moveSpeed": 120,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1214,12 +2012,23 @@
   {
     "id": "wind_mdps_02",
     "name": "게일",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "RARE",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 104, "baseATK": 26, "baseSpeed": 1.1, "range": 55, "defense": 4, "magicResist": 3, "moveSpeed": 125, "blockCount": 0 },
+    "stats": {
+      "hp": 104,
+      "baseATK": 26,
+      "baseSpeed": 1.1,
+      "range": 55,
+      "defense": 4,
+      "magicResist": 3,
+      "moveSpeed": 125,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1233,12 +2042,23 @@
   {
     "id": "wind_mdps_03",
     "name": "사이클론",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 136, "baseATK": 34, "baseSpeed": 1.15, "range": 55, "defense": 5, "magicResist": 4, "moveSpeed": 130, "blockCount": 0 },
+    "stats": {
+      "hp": 136,
+      "baseATK": 34,
+      "baseSpeed": 1.15,
+      "range": 55,
+      "defense": 5,
+      "magicResist": 4,
+      "moveSpeed": 130,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1252,12 +2072,23 @@
   {
     "id": "wind_mdps_04",
     "name": "타이푼",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "LEGEND",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 176, "baseATK": 44, "baseSpeed": 1.2, "range": 60, "defense": 7, "magicResist": 5, "moveSpeed": 135, "blockCount": 0 },
+    "stats": {
+      "hp": 176,
+      "baseATK": 44,
+      "baseSpeed": 1.2,
+      "range": 60,
+      "defense": 7,
+      "magicResist": 5,
+      "moveSpeed": 135,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1271,12 +2102,23 @@
   {
     "id": "wind_mdps_05",
     "name": "실프리드",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "ANCIENT",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 224, "baseATK": 56, "baseSpeed": 1.3, "range": 60, "defense": 9, "magicResist": 6, "moveSpeed": 140, "blockCount": 0 },
+    "stats": {
+      "hp": 224,
+      "baseATK": 56,
+      "baseSpeed": 1.3,
+      "range": 60,
+      "defense": 9,
+      "magicResist": 6,
+      "moveSpeed": 140,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1287,16 +2129,26 @@
     "iconRes": 0,
     "description": "하늘을 지배하는 바람의 검성"
   },
-
   {
     "id": "wind_rdps_01",
     "name": "에어리스",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "COMMON",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 60, "baseATK": 15, "baseSpeed": 1, "range": 120, "defense": 2, "magicResist": 2, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 60,
+      "baseATK": 15,
+      "baseSpeed": 1,
+      "range": 150,
+      "defense": 2,
+      "magicResist": 2,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_shooter",
     "ability": null,
     "uniqueAbility": null,
@@ -1310,12 +2162,23 @@
   {
     "id": "wind_rdps_02",
     "name": "위스프",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "RARE",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 78, "baseATK": 19.5, "baseSpeed": 1.05, "range": 130, "defense": 3, "magicResist": 3, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 78,
+      "baseATK": 19.5,
+      "baseSpeed": 1.05,
+      "range": 165,
+      "defense": 3,
+      "magicResist": 3,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_shooter",
     "ability": null,
     "uniqueAbility": null,
@@ -1329,12 +2192,23 @@
   {
     "id": "wind_rdps_03",
     "name": "템페스트",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "HERO",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 102, "baseATK": 25.5, "baseSpeed": 1.1, "range": 140, "defense": 3, "magicResist": 4, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 102,
+      "baseATK": 25.5,
+      "baseSpeed": 1.1,
+      "range": 180,
+      "defense": 3,
+      "magicResist": 4,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_shooter",
     "ability": null,
     "uniqueAbility": null,
@@ -1348,12 +2222,23 @@
   {
     "id": "wind_rdps_04",
     "name": "스카이런",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "LEGEND",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 132, "baseATK": 33, "baseSpeed": 1.2, "range": 150, "defense": 4, "magicResist": 5, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 132,
+      "baseATK": 33,
+      "baseSpeed": 1.2,
+      "range": 195,
+      "defense": 4,
+      "magicResist": 5,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_shooter",
     "ability": null,
     "uniqueAbility": null,
@@ -1367,12 +2252,23 @@
   {
     "id": "wind_rdps_05",
     "name": "아스트라",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "ANCIENT",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 168, "baseATK": 42, "baseSpeed": 1.3, "range": 155, "defense": 5, "magicResist": 6, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 168,
+      "baseATK": 42,
+      "baseSpeed": 1.3,
+      "range": 210,
+      "defense": 5,
+      "magicResist": 6,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_shooter",
     "ability": null,
     "uniqueAbility": null,
@@ -1383,16 +2279,26 @@
     "iconRes": 0,
     "description": "바람의 정령의 축복을 받은 궁사"
   },
-
   {
     "id": "wind_support_01",
     "name": "브리즈",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "COMMON",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 70, "baseATK": 5, "baseSpeed": 0.8, "range": 100, "defense": 2, "magicResist": 3, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 70,
+      "baseATK": 5,
+      "baseSpeed": 0.8,
+      "range": 170,
+      "defense": 2,
+      "magicResist": 3,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1406,12 +2312,23 @@
   {
     "id": "wind_support_02",
     "name": "하르모니",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "RARE",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 91, "baseATK": 6.5, "baseSpeed": 0.85, "range": 110, "defense": 3, "magicResist": 4, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 91,
+      "baseATK": 6.5,
+      "baseSpeed": 0.85,
+      "range": 185,
+      "defense": 3,
+      "magicResist": 4,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1425,12 +2342,23 @@
   {
     "id": "wind_support_03",
     "name": "실피드",
-    "families": ["WIND"],
+    "families": [
+      "WIND"
+    ],
     "grade": "HERO",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 119, "baseATK": 8.5, "baseSpeed": 0.9, "range": 120, "defense": 4, "magicResist": 5, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 119,
+      "baseATK": 8.5,
+      "baseSpeed": 0.9,
+      "range": 200,
+      "defense": 4,
+      "magicResist": 5,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1441,16 +2369,27 @@
     "iconRes": 0,
     "description": "바람의 지혜로 아군의 속도를 높인다"
   },
-
   {
     "id": "hidden_thunder_flame_knight",
     "name": "뇌염의 기사",
-    "families": ["FIRE", "LIGHTNING"],
+    "families": [
+      "FIRE",
+      "LIGHTNING"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 150, "baseATK": 38, "baseSpeed": 1.2, "range": 55, "defense": 8, "magicResist": 6, "moveSpeed": 135, "blockCount": 0 },
+    "stats": {
+      "hp": 150,
+      "baseATK": 38,
+      "baseSpeed": 1.2,
+      "range": 55,
+      "defense": 8,
+      "magicResist": 6,
+      "moveSpeed": 135,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1461,16 +2400,27 @@
     "iconRes": 0,
     "description": "화염과 번개를 동시에 휘두르는 기사"
   },
-
   {
     "id": "hidden_ice_poison_sage",
     "name": "빙독의 현자",
-    "families": ["FROST", "POISON"],
+    "families": [
+      "FROST",
+      "POISON"
+    ],
     "grade": "RARE",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 110, "baseATK": 12, "baseSpeed": 0.8, "range": 120, "defense": 4, "magicResist": 6, "moveSpeed": 55, "blockCount": 0 },
+    "stats": {
+      "hp": 110,
+      "baseATK": 12,
+      "baseSpeed": 0.8,
+      "range": 215,
+      "defense": 4,
+      "magicResist": 6,
+      "moveSpeed": 55,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -1481,16 +2431,27 @@
     "iconRes": 0,
     "description": "냉기와 독을 결합한 치명적인 제어 마법사"
   },
-
   {
     "id": "hidden_storm_guardian",
     "name": "폭풍의 수호자",
-    "families": ["WIND", "SUPPORT"],
+    "families": [
+      "WIND",
+      "SUPPORT"
+    ],
     "grade": "LEGEND",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 500, "baseATK": 20, "baseSpeed": 0.8, "range": 55, "defense": 30, "magicResist": 18, "moveSpeed": 90, "blockCount": 3 },
+    "stats": {
+      "hp": 500,
+      "baseATK": 20,
+      "baseSpeed": 0.8,
+      "range": 55,
+      "defense": 30,
+      "magicResist": 18,
+      "moveSpeed": 90,
+      "blockCount": 3
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,
@@ -1501,16 +2462,27 @@
     "iconRes": 0,
     "description": "폭풍과 신성의 힘으로 아군을 지키는 수호자"
   },
-
   {
     "id": "hidden_shadow_assassin",
     "name": "그림자 암살자",
-    "families": ["POISON", "WIND"],
+    "families": [
+      "POISON",
+      "WIND"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 120, "baseATK": 40, "baseSpeed": 1.3, "range": 55, "defense": 5, "magicResist": 4, "moveSpeed": 145, "blockCount": 0 },
+    "stats": {
+      "hp": 120,
+      "baseATK": 40,
+      "baseSpeed": 1.3,
+      "range": 55,
+      "defense": 5,
+      "magicResist": 4,
+      "moveSpeed": 145,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1521,16 +2493,27 @@
     "iconRes": 0,
     "description": "바람처럼 나타나 독으로 적을 처단하는 암살자"
   },
-
   {
     "id": "hidden_divine_archangel",
     "name": "신성 대천사",
-    "families": ["SUPPORT", "LIGHTNING"],
+    "families": [
+      "SUPPORT",
+      "LIGHTNING"
+    ],
     "grade": "ANCIENT",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 220, "baseATK": 16, "baseSpeed": 1, "range": 150, "defense": 8, "magicResist": 16, "moveSpeed": 80, "blockCount": 0 },
+    "stats": {
+      "hp": 220,
+      "baseATK": 16,
+      "baseSpeed": 1,
+      "range": 230,
+      "defense": 8,
+      "magicResist": 16,
+      "moveSpeed": 80,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1541,16 +2524,27 @@
     "iconRes": 0,
     "description": "번개와 신성의 힘으로 아군을 강화하는 대천사"
   },
-
   {
     "id": "hidden_blaze_frost_spirit",
     "name": "빙염 정령",
-    "families": ["FIRE", "FROST"],
+    "families": [
+      "FIRE",
+      "FROST"
+    ],
     "grade": "HERO",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 115, "baseATK": 30, "baseSpeed": 1.15, "range": 145, "defense": 4, "magicResist": 8, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 115,
+      "baseATK": 30,
+      "baseSpeed": 1.15,
+      "range": 180,
+      "defense": 4,
+      "magicResist": 8,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -1561,16 +2555,27 @@
     "iconRes": 0,
     "description": "얼음과 불꽃을 동시에 다루는 정령"
   },
-
   {
     "id": "hidden_venom_thunder_drake",
     "name": "뇌독룡",
-    "families": ["POISON", "LIGHTNING"],
+    "families": [
+      "POISON",
+      "LIGHTNING"
+    ],
     "grade": "LEGEND",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 150, "baseATK": 38, "baseSpeed": 1.2, "range": 155, "defense": 5, "magicResist": 10, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 150,
+      "baseATK": 38,
+      "baseSpeed": 1.2,
+      "range": 195,
+      "defense": 5,
+      "magicResist": 10,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -1581,16 +2586,27 @@
     "iconRes": 0,
     "description": "독전기를 뿜는 용"
   },
-
   {
     "id": "hidden_frost_wind_dancer",
     "name": "빙풍의 무희",
-    "families": ["FROST", "WIND"],
+    "families": [
+      "FROST",
+      "WIND"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 125, "baseATK": 36, "baseSpeed": 1.25, "range": 55, "defense": 5, "magicResist": 5, "moveSpeed": 140, "blockCount": 0 },
+    "stats": {
+      "hp": 125,
+      "baseATK": 36,
+      "baseSpeed": 1.25,
+      "range": 55,
+      "defense": 5,
+      "magicResist": 5,
+      "moveSpeed": 140,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1601,16 +2617,27 @@
     "iconRes": 0,
     "description": "냉기와 바람의 춤으로 적을 얼린다"
   },
-
   {
     "id": "hidden_fire_support_phoenix_priest",
     "name": "불사조 사제",
-    "families": ["FIRE", "SUPPORT"],
+    "families": [
+      "FIRE",
+      "SUPPORT"
+    ],
     "grade": "LEGEND",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 170, "baseATK": 13, "baseSpeed": 0.95, "range": 135, "defense": 6, "magicResist": 12, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 170,
+      "baseATK": 13,
+      "baseSpeed": 0.95,
+      "range": 215,
+      "defense": 6,
+      "magicResist": 12,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1621,16 +2648,27 @@
     "iconRes": 0,
     "description": "불사조의 축복으로 아군을 부활시키는 사제"
   },
-
   {
     "id": "hidden_lightning_wind_tempest",
     "name": "뇌풍의 군주",
-    "families": ["LIGHTNING", "WIND"],
+    "families": [
+      "LIGHTNING",
+      "WIND"
+    ],
     "grade": "ANCIENT",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 185, "baseATK": 48, "baseSpeed": 1.35, "range": 160, "defense": 6, "magicResist": 10, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 185,
+      "baseATK": 48,
+      "baseSpeed": 1.35,
+      "range": 210,
+      "defense": 6,
+      "magicResist": 10,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -1641,16 +2679,27 @@
     "iconRes": 0,
     "description": "번개와 폭풍을 동시에 부르는 군주"
   },
-
   {
     "id": "hidden_poison_support_plague_healer",
     "name": "역병 치유사",
-    "families": ["POISON", "SUPPORT"],
+    "families": [
+      "POISON",
+      "SUPPORT"
+    ],
     "grade": "HERO",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 130, "baseATK": 10, "baseSpeed": 0.9, "range": 125, "defense": 4, "magicResist": 8, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 130,
+      "baseATK": 10,
+      "baseSpeed": 0.9,
+      "range": 200,
+      "defense": 4,
+      "magicResist": 8,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1661,16 +2710,27 @@
     "iconRes": 0,
     "description": "독을 치유로 바꾸는 역설의 마법사"
   },
-
   {
     "id": "hidden_frost_lightning_glacial_storm",
     "name": "빙뢰의 폭풍",
-    "families": ["FROST", "LIGHTNING"],
+    "families": [
+      "FROST",
+      "LIGHTNING"
+    ],
     "grade": "LEGEND",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 175, "baseATK": 20, "baseSpeed": 0.85, "range": 135, "defense": 6, "magicResist": 12, "moveSpeed": 65, "blockCount": 0 },
+    "stats": {
+      "hp": 175,
+      "baseATK": 20,
+      "baseSpeed": 0.85,
+      "range": 245,
+      "defense": 6,
+      "magicResist": 12,
+      "moveSpeed": 65,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -1681,16 +2741,27 @@
     "iconRes": 0,
     "description": "빙결과 전격을 동시에 가하는 폭풍 제어자"
   },
-
   {
     "id": "hidden_fire_wind_inferno_gale",
     "name": "화염폭풍 소환사",
-    "families": ["FIRE", "WIND"],
+    "families": [
+      "FIRE",
+      "WIND"
+    ],
     "grade": "LEGEND",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 145, "baseATK": 36, "baseSpeed": 1.2, "range": 150, "defense": 5, "magicResist": 8, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 145,
+      "baseATK": 36,
+      "baseSpeed": 1.2,
+      "range": 195,
+      "defense": 5,
+      "magicResist": 8,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "ranged_mage",
     "ability": null,
     "uniqueAbility": null,
@@ -1701,16 +2772,27 @@
     "iconRes": 0,
     "description": "화염과 바람을 합쳐 불 폭풍을 일으킨다"
   },
-
   {
     "id": "hidden_poison_frost_toxic_ice",
     "name": "독빙의 마녀",
-    "families": ["POISON", "FROST"],
+    "families": [
+      "POISON",
+      "FROST"
+    ],
     "grade": "HERO",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 135, "baseATK": 15, "baseSpeed": 0.8, "range": 125, "defense": 5, "magicResist": 7, "moveSpeed": 60, "blockCount": 0 },
+    "stats": {
+      "hp": 135,
+      "baseATK": 15,
+      "baseSpeed": 0.8,
+      "range": 230,
+      "defense": 5,
+      "magicResist": 7,
+      "moveSpeed": 60,
+      "blockCount": 0
+    },
     "behaviorId": "controller_cc_ranged",
     "ability": null,
     "uniqueAbility": null,
@@ -1721,16 +2803,27 @@
     "iconRes": 0,
     "description": "독을 얼려 만든 결정으로 적을 제압하는 마녀"
   },
-
   {
     "id": "hidden_fire_poison_molten_venom",
     "name": "용암독사",
-    "families": ["FIRE", "POISON"],
+    "families": [
+      "FIRE",
+      "POISON"
+    ],
     "grade": "HERO",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 140, "baseATK": 37, "baseSpeed": 1.15, "range": 55, "defense": 6, "magicResist": 5, "moveSpeed": 135, "blockCount": 0 },
+    "stats": {
+      "hp": 140,
+      "baseATK": 37,
+      "baseSpeed": 1.15,
+      "range": 55,
+      "defense": 6,
+      "magicResist": 5,
+      "moveSpeed": 135,
+      "blockCount": 0
+    },
     "behaviorId": "assassin_dash",
     "ability": null,
     "uniqueAbility": null,
@@ -1741,16 +2834,27 @@
     "iconRes": 0,
     "description": "불타는 독을 품은 맹독의 뱀"
   },
-
   {
     "id": "hidden_wind_support_sky_healer",
     "name": "천공 축복사",
-    "families": ["WIND", "SUPPORT"],
+    "families": [
+      "WIND",
+      "SUPPORT"
+    ],
     "grade": "HERO",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 125, "baseATK": 10, "baseSpeed": 0.9, "range": 125, "defense": 4, "magicResist": 7, "moveSpeed": 70, "blockCount": 0 },
+    "stats": {
+      "hp": 125,
+      "baseATK": 10,
+      "baseSpeed": 0.9,
+      "range": 200,
+      "defense": 4,
+      "magicResist": 7,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1761,16 +2865,27 @@
     "iconRes": 0,
     "description": "하늘의 축복으로 아군의 속도를 높이는 사제"
   },
-
   {
     "id": "hidden_lightning_support_thunder_saint",
     "name": "뇌성인",
-    "families": ["LIGHTNING", "SUPPORT"],
+    "families": [
+      "LIGHTNING",
+      "SUPPORT"
+    ],
     "grade": "LEGEND",
     "role": "SUPPORT",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
-    "stats": { "hp": 165, "baseATK": 12, "baseSpeed": 0.95, "range": 135, "defense": 5, "magicResist": 12, "moveSpeed": 75, "blockCount": 0 },
+    "stats": {
+      "hp": 165,
+      "baseATK": 12,
+      "baseSpeed": 0.95,
+      "range": 215,
+      "defense": 5,
+      "magicResist": 12,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
     "behaviorId": "support_aura",
     "ability": null,
     "uniqueAbility": null,
@@ -1781,16 +2896,27 @@
     "iconRes": 0,
     "description": "번개와 신성의 힘을 하나로 합친 성인"
   },
-
   {
     "id": "hidden_frost_support_ice_guardian_angel",
     "name": "빙결 수호천사",
-    "families": ["FROST", "SUPPORT"],
+    "families": [
+      "FROST",
+      "SUPPORT"
+    ],
     "grade": "ANCIENT",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
-    "stats": { "hp": 600, "baseATK": 24, "baseSpeed": 0.8, "range": 60, "defense": 35, "magicResist": 22, "moveSpeed": 90, "blockCount": 3 },
+    "stats": {
+      "hp": 600,
+      "baseATK": 24,
+      "baseSpeed": 0.8,
+      "range": 60,
+      "defense": 35,
+      "magicResist": 22,
+      "moveSpeed": 90,
+      "blockCount": 3
+    },
     "behaviorId": "tank_blocker",
     "ability": null,
     "uniqueAbility": null,

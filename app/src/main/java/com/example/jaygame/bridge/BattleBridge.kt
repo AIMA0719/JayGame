@@ -7,11 +7,9 @@ import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.engine.UnitState
-import com.example.jaygame.ui.battle.GambleResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.random.Random
 
 data class BattleState(
     val currentWave: Int = 0,
@@ -745,35 +743,17 @@ object BattleBridge {
 
     // ── Gamble ──────────────────────────────────────────────
 
-    private const val GAMBLE_COST = 10f
+    /** Current losing streak count for UI display. */
+    val gambleLosingStreak: Int get() = engine?.gambleLosingStreak ?: 0
 
     /**
-     * Perform gamble: costs 10 SP, random -100% to +100% of remaining SP.
-     * Returns result for UI display.
-     */
-    fun performGamble(): GambleResult {
-        val currentSp = _state.value.sp
-        if (currentSp < GAMBLE_COST) return GambleResult(0f, currentSp, 0f)
-
-        val spAfterCost = currentSp - GAMBLE_COST
-        val percentage = Random.nextFloat() * 2f - 1f
-        val spChange = spAfterCost * percentage
-        val newSp = (spAfterCost + spChange).coerceAtLeast(0f)
-
-        engine?.applyGamble(newSp)
-
-        return GambleResult(spChange, newSp, percentage)
-    }
-
-    /**
-     * New 4-tier gamble: bet betPercent of current SP on the chosen option.
-     * Returns null if SP is insufficient (bet < 10).
+     * 4-tier gamble: fixed 10 SP entry fee.
+     * Win → entry × multiplier reward. Lose → entry + X% of remaining SP.
      */
     fun requestGamble(
-        betPercent: Float,
         option: com.example.jaygame.engine.GambleSystem.GambleOption,
     ): com.example.jaygame.engine.GambleSystem.GambleResult? {
-        return engine?.requestGamble(betPercent, option)
+        return engine?.requestGamble(option)
     }
 
     // ── Buy Unit ────────────────────────────────────────────
