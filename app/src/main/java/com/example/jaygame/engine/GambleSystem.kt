@@ -3,83 +3,91 @@ package com.example.jaygame.engine
 import kotlin.random.Random
 
 /**
- * 도박 시스템 — 고정 입장료 + 티어별 리스크/리워드.
+ * 도박 시스템 — 카지노 수학 기반.
  *
- * - 입장료: 10 SP (항상 소모)
- * - 승리: 입장료 × 배율 SP 획득
- * - 패배: 입장료 + 잔여 SP의 X% 추가 손실
- * - 연패 보호: 3연패 시 다음 판 성공률 +15%
+ * 핵심 공식: EV = successRate × multiplier
+ * 모든 티어에서 EV ≈ 0.95 (하우스 엣지 ~5%)
+ * → 장기적으로 플레이어가 약간 손해, 단기적으론 운에 따라 이득 가능.
+ *
+ * 플레이어가 판돈(betAmount)을 선택:
+ * - 승리: +betAmount × (multiplier - 1)  (판돈 돌려받고 + 이익)
+ * - 패배: -betAmount (판돈 전액 잃음)
+ *
+ * 연패 보호 없음 — 도박은 도박.
  */
 object GambleSystem {
-
-    const val ENTRY_FEE = 10f
-    private const val LOSING_STREAK_THRESHOLD = 3
-    private const val LOSING_STREAK_BONUS = 0.15f
 
     data class GambleResult(
         val won: Boolean,
         val option: GambleOption,
-        val reward: Float,          // SP gained on win (0 on loss)
-        val penalty: Float,         // total SP lost (entry fee + % loss)
+        val betSize: BetSize,
+        val betAmount: Float,       // how much was wagered
+        val reward: Float,          // net SP gained on win (0 on loss)
+        val penalty: Float,         // SP lost on failure (= betAmount)
         val spBefore: Float,
         val spAfter: Float,
-        val streakBroken: Boolean,  // true if losing streak pity triggered
     )
 
+    /**
+     * 판돈 크기 — 현재 SP의 비율
+     */
+    enum class BetSize(val label: String, val ratio: Float) {
+        SMALL("10%", 0.10f),
+        MEDIUM("25%", 0.25f),
+        LARGE("50%", 0.50f),
+        ALL_IN("올인", 1.0f),
+    }
+
+    /**
+     * 리스크 티어 — 배율과 성공률.
+     *
+     * EV = successRate × multiplier
+     * SAFE:    0.48 × 2  = 0.96
+     * NORMAL:  0.32 × 3  = 0.96
+     * RISKY:   0.19 × 5  = 0.95
+     * JACKPOT: 0.09 × 10 = 0.90
+     *
+     * 높은 리스크일수록 하우스 엣지가 살짝 높음 (현실 카지노와 동일).
+     */
     enum class GambleOption(
         val label: String,
         val multiplier: Float,
         val baseSuccessRate: Float,
-        val lossPenaltyRate: Float,  // % of remaining SP lost on failure
     ) {
-        SAFE("안전 베팅", 1.3f, 0.51f, 0.03f),
-        NORMAL("일반 베팅", 2.0f, 0.40f, 0.08f),
-        RISKY("위험 베팅", 4.0f, 0.25f, 0.15f),
-        JACKPOT("잭팟", 8.0f, 0.10f, 0.25f),
+        SAFE("안전", 2f, 0.48f),
+        NORMAL("일반", 3f, 0.32f),
+        RISKY("위험", 5f, 0.19f),
+        JACKPOT("잭팟", 10f, 0.09f),
     }
 
     fun gamble(
         currentSp: Float,
         option: GambleOption,
+        betSize: BetSize,
         luckBonus: Float = 0f,
-        losingStreak: Int = 0,
     ): GambleResult {
-        if (currentSp < ENTRY_FEE) return GambleResult(
-            won = false, option = option, reward = 0f, penalty = 0f,
-            spBefore = currentSp, spAfter = currentSp, streakBroken = false,
+        val betAmount = currentSp * betSize.ratio
+        if (betAmount <= 0f) return GambleResult(
+            won = false, option = option, betSize = betSize,
+            betAmount = 0f, reward = 0f, penalty = 0f,
+            spBefore = currentSp, spAfter = currentSp,
         )
 
-        val spBefore = currentSp
-        val spAfterFee = currentSp - ENTRY_FEE
-
-        // Losing streak pity
-        val streakBonus = if (losingStreak >= LOSING_STREAK_THRESHOLD) LOSING_STREAK_BONUS else 0f
-        val successRate = (option.baseSuccessRate + luckBonus + streakBonus).coerceAtMost(0.90f)
+        val successRate = (option.baseSuccessRate + luckBonus).coerceAtMost(0.85f)
         val won = Random.nextFloat() < successRate
-        val usedPity = streakBonus > 0f
 
         return if (won) {
-            val reward = ENTRY_FEE * option.multiplier
+            val netGain = betAmount * (option.multiplier - 1f)
             GambleResult(
-                won = true,
-                option = option,
-                reward = reward,
-                penalty = ENTRY_FEE,
-                spBefore = spBefore,
-                spAfter = spAfterFee + reward,
-                streakBroken = usedPity,
+                won = true, option = option, betSize = betSize,
+                betAmount = betAmount, reward = netGain, penalty = 0f,
+                spBefore = currentSp, spAfter = currentSp + netGain,
             )
         } else {
-            val extraLoss = spAfterFee * option.lossPenaltyRate
-            val totalPenalty = ENTRY_FEE + extraLoss
             GambleResult(
-                won = false,
-                option = option,
-                reward = 0f,
-                penalty = totalPenalty,
-                spBefore = spBefore,
-                spAfter = (spAfterFee - extraLoss).coerceAtLeast(0f),
-                streakBroken = false,
+                won = false, option = option, betSize = betSize,
+                betAmount = betAmount, reward = 0f, penalty = betAmount,
+                spBefore = currentSp, spAfter = (currentSp - betAmount).coerceAtLeast(0f),
             )
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.R
 import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.LEVEL_MULTIPLIER
 import com.example.jaygame.data.UPGRADE_COSTS
@@ -834,14 +836,34 @@ private fun CollectionBlueprintDetailDialog(
                     } else {
                         val goldCost = upgradeCost?.second ?: 0
                         NeonButton(
-                            text = "업그레이드 (골드 ${fmt.format(goldCost)})",
                             onClick = onUpgrade,
                             enabled = canUpgrade,
                             modifier = Modifier.fillMaxWidth(),
-                            fontSize = 14.sp,
                             accentColor = NeonGreen,
                             accentColorDark = NeonGreen.copy(alpha = 0.5f),
-                        )
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "업그레이드 ",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = LightText,
+                                )
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_gold),
+                                    contentDescription = null,
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = fmt.format(goldCost),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = LightText,
+                                )
+                            }
+                        }
                     }
                 } else {
                     NeonButton(

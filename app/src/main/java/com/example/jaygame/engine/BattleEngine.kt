@@ -41,6 +41,15 @@ class BattleEngine(
     enum class State { WaveDelay, Playing, Victory, Defeat }
     var state = State.WaveDelay; private set
 
+    /** 난이도별 유닛 최대 수: 초보50, 숙련40, 고인물30, 썩은물24, 챌린저20 */
+    val maxUnitSlots: Int = when (difficulty) {
+        0 -> 50
+        1 -> 40
+        2 -> 30
+        3 -> 24
+        else -> 20
+    }
+
     var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
     val petSystem = PetBattleSystem().also { ps -> gameData?.let { ps.init(it) } }
 
@@ -294,7 +303,7 @@ class BattleEngine(
             }
             // Auto-summon: summon when SP is enough
             val effectiveCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
-            if (sp >= effectiveCost && units.activeCount < Grid.TOTAL) {
+            if (sp >= effectiveCost && units.activeCount < maxUnitSlots) {
                 requestSummonBlueprint()
             }
         }
@@ -787,7 +796,7 @@ class BattleEngine(
 
     fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
         val effectiveSummonCost = (BASE_SUMMON_COST * (1f - (relicManager?.totalSummonCostReduction() ?: 0f))).toInt().coerceAtLeast(BASE_SUMMON_COST / 2)
-        if (sp < effectiveSummonCost || units.activeCount >= Grid.TOTAL) return
+        if (sp < effectiveSummonCost || units.activeCount >= maxUnitSlots) return
         sp -= effectiveSummonCost
 
         val grade = if (gradeOverride != null) {
@@ -822,6 +831,7 @@ class BattleEngine(
         unit.position = Grid.FIELD_CENTER.copy()
         unit.homePosition = Grid.FIELD_CENTER.copy()
         unit.behavior = BehaviorFactory.create(selected.behaviorId)
+        UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         invalidateMergeCache()
         refreshSynergies()
@@ -894,9 +904,6 @@ class BattleEngine(
     fun requestMerge(tileIndex: Int) {
         val existingUnit = grid.getUnit(tileIndex) ?: return
         if (existingUnit.unitCategory == UnitCategory.HIDDEN || existingUnit.unitCategory == UnitCategory.SPECIAL) return
-        // Remember position of the merge anchor before consuming
-        val mergePos = existingUnit.position.copy()
-        val mergeHomePos = existingUnit.homePosition.copy()
         val result = MergeSystem.tryMergeBlueprint(grid, tileIndex, blueprintRegistry) ?: return
         result.consumedTiles.forEach { i ->
             val u = grid.removeUnit(i)
@@ -906,9 +913,10 @@ class BattleEngine(
         val unit = units.acquire() ?: return
         unit.initFromBlueprint(bp)
         unit.tileIndex = tileIndex
-        unit.position = mergePos
-        unit.homePosition = mergeHomePos
+        unit.position = Grid.FIELD_CENTER.copy()
+        unit.homePosition = Grid.FIELD_CENTER.copy()
         unit.behavior = BehaviorFactory.create(bp.behaviorId)
+        UniqueAbilitySystem.initUnit(unit)
         grid.placeUnit(tileIndex, unit)
         invalidateMergeCache()
         refreshSynergies()
@@ -984,20 +992,16 @@ class BattleEngine(
         BattleBridge.onUnitLevelUp(unit.position.x / W, unit.position.y / H)
     }
 
-    var gambleLosingStreak: Int = 0
-        private set
-
-    fun requestGamble(option: GambleSystem.GambleOption): GambleSystem.GambleResult? {
-        if (sp < GambleSystem.ENTRY_FEE) return null
+    fun requestGamble(option: GambleSystem.GambleOption, betSize: GambleSystem.BetSize): GambleSystem.GambleResult? {
+        if (sp <= 0f) return null
         val luckBonus = relicManager?.totalGambleBonus() ?: 0f
-        val result = GambleSystem.gamble(sp, option, luckBonus, gambleLosingStreak)
+        val result = GambleSystem.gamble(sp, option, betSize, luckBonus)
         sp = result.spAfter
-        gambleLosingStreak = if (result.won) 0 else gambleLosingStreak + 1
         return result
     }
 
     fun requestBuyUnit(unitDefId: Int, cost: Float) {
-        if (sp < cost || units.activeCount >= Grid.TOTAL) return
+        if (sp < cost || units.activeCount >= maxUnitSlots) return
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
         val unit = units.acquire() ?: return
@@ -1015,6 +1019,7 @@ class BattleEngine(
             unit.position = Grid.FIELD_CENTER.copy()
             unit.homePosition = Grid.FIELD_CENTER.copy()
             unit.behavior = BehaviorFactory.create(bp.behaviorId)
+            UniqueAbilitySystem.initUnit(unit)
         } else if (def != null) {
             // Fallback: legacy init with proper field assignments
             val family = unitFamilyOf(unitDefId)

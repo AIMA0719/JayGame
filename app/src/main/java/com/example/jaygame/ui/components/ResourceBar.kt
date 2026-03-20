@@ -29,9 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.ui.theme.DarkNavy
-import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.theme.GoldCoin
 import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.StaminaGreen
 import com.example.jaygame.ui.theme.SubText
@@ -61,7 +59,6 @@ fun AnimatedCounter(
 fun ResourceItem(
     iconRes: Int,
     value: Int,
-    tintColor: Color,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -71,7 +68,7 @@ fun ResourceItem(
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            tint = tintColor,
+            tint = Color.Unspecified,
             modifier = Modifier.size(20.dp),
         )
         Spacer(modifier = Modifier.width(4.dp))
@@ -138,8 +135,8 @@ fun ProfileHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ResourceItem(iconRes = R.drawable.ic_diamond, value = diamonds, tintColor = DiamondBlue)
-                ResourceItem(iconRes = R.drawable.ic_gold, value = gold, tintColor = GoldCoin)
+                ResourceItem(iconRes = R.drawable.ic_diamond, value = diamonds)
+                ResourceItem(iconRes = R.drawable.ic_gold, value = gold)
                 StaminaItem(stamina = stamina, maxStamina = maxStamina)
             }
         }
@@ -190,9 +187,9 @@ fun CurrencyHeader(
                 .fillMaxSize()
                 .padding(horizontal = 12.dp),
         ) {
-            ResourceItem(iconRes = R.drawable.ic_gold, value = gold, tintColor = GoldCoin)
+            ResourceItem(iconRes = R.drawable.ic_gold, value = gold)
             Spacer(modifier = Modifier.width(12.dp))
-            ResourceItem(iconRes = R.drawable.ic_diamond, value = diamonds, tintColor = DiamondBlue)
+            ResourceItem(iconRes = R.drawable.ic_diamond, value = diamonds)
         }
     }
 }

@@ -184,7 +184,7 @@ fun ProfileBanner(
                 Icon(
                     painter = painterResource(R.drawable.ic_gold),
                     contentDescription = null,
-                    tint = GoldCoin,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(14.dp),
                 )
                 Spacer(Modifier.width(3.dp))
@@ -198,7 +198,7 @@ fun ProfileBanner(
                 Icon(
                     painter = painterResource(R.drawable.ic_diamond),
                     contentDescription = null,
-                    tint = DiamondBlue,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(14.dp),
                 )
                 Spacer(Modifier.width(3.dp))

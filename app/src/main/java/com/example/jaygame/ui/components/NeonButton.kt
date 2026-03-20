@@ -43,6 +43,7 @@ import kotlin.math.max
 // Pre-allocated color for ripple wave
 private val RippleWhite = Color.White
 
+/** Text-only convenience overload. Delegates to the content-lambda variant. */
 @Composable
 fun NeonButton(
     text: String,
@@ -53,6 +54,34 @@ fun NeonButton(
     accentColor: Color = NeonRed,
     accentColorDark: Color = NeonRedDark,
     glowPulse: Boolean = false,
+) {
+    NeonButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        accentColor = accentColor,
+        accentColorDark = accentColorDark,
+        glowPulse = glowPulse,
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            fontSize = fontSize,
+            color = LightText,
+        )
+    }
+}
+
+/** NeonButton with custom content (e.g. icon + text). Full ripple + glow support. */
+@Composable
+fun NeonButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    accentColor: Color = NeonRed,
+    accentColorDark: Color = NeonRedDark,
+    glowPulse: Boolean = false,
+    content: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -159,11 +188,6 @@ fun NeonButton(
             )
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Text(
-            text = text,
-            fontWeight = FontWeight.Bold,
-            fontSize = fontSize,
-            color = LightText,
-        )
+        content()
     }
 }

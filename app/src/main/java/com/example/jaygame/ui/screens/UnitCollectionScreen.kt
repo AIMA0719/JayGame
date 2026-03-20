@@ -122,6 +122,8 @@ private val BLUEPRINT_ICON_MAP: Map<String, Int> = mapOf(
     "fire_mdps_03" to R.drawable.ic_unit_10,
     "fire_mdps_04" to R.drawable.ic_unit_15,
     "fire_mdps_05" to R.drawable.ic_unit_20,
+    "fire_mdps_06" to R.drawable.ic_unit_20,
+    "fire_mdps_07" to R.drawable.ic_unit_20,
     "frost_rdps_01" to R.drawable.ic_unit_1,
     "frost_rdps_02" to R.drawable.ic_unit_6,
     "frost_rdps_03" to R.drawable.ic_unit_11,

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
+import androidx.compose.ui.graphics.Color
 import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.GoldCoin
 import java.text.NumberFormat
@@ -38,7 +39,7 @@ fun ResourceHeader(
         Icon(
             painter = painterResource(id = R.drawable.ic_gold),
             contentDescription = "Gold",
-            tint = GoldCoin,
+            tint = Color.Unspecified,
             modifier = Modifier.size(18.dp),
         )
         Spacer(modifier = Modifier.width(4.dp))
@@ -52,7 +53,7 @@ fun ResourceHeader(
         Icon(
             painter = painterResource(id = R.drawable.ic_diamond),
             contentDescription = "Diamond",
-            tint = DiamondBlue,
+            tint = Color.Unspecified,
             modifier = Modifier.size(18.dp),
         )
         Spacer(modifier = Modifier.width(4.dp))

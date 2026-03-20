@@ -1,6 +1,7 @@
 package com.example.jaygame.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -355,7 +356,7 @@ private fun AchievementItem(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_gold),
                                 contentDescription = null,
-                                tint = GoldCoin,
+                                tint = Color.Unspecified,
                                 modifier = Modifier.size(13.dp),
                             )
                             Spacer(Modifier.width(2.dp))
@@ -371,7 +372,7 @@ private fun AchievementItem(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_diamond),
                                 contentDescription = null,
-                                tint = DiamondBlue,
+                                tint = Color.Unspecified,
                                 modifier = Modifier.size(13.dp),
                             )
                             Spacer(Modifier.width(2.dp))

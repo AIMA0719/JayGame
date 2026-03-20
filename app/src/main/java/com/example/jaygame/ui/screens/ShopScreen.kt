@@ -2,6 +2,7 @@ package com.example.jaygame.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,10 +62,13 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 
+private enum class CurrencyType { GOLD, DIAMOND, FREE }
+
 private data class ShopItem(
     val name: String,
     val description: String,
-    val priceText: String,
+    val currencyType: CurrencyType,
+    val priceAmount: String,
     val onPurchase: ((GameData, GameRepository) -> Boolean)?,
 )
 
@@ -99,19 +103,19 @@ fun ShopScreen(repository: GameRepository) {
 
     val goldPackItems = remember {
         listOf(
-            ShopItem("골드 100개", "소량의 골드를 획득합니다.", "다이아 10",
+            ShopItem("골드 100개", "소량의 골드를 획득합니다.", CurrencyType.DIAMOND, "10",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 10) { repo.save(d.copy(diamonds = d.diamonds - 10, gold = d.gold + 100)); true } else false
                 }),
-            ShopItem("골드 500개", "적당한 양의 골드를 획득합니다.", "다이아 40",
+            ShopItem("골드 500개", "적당한 양의 골드를 획득합니다.", CurrencyType.DIAMOND, "40",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 40) { repo.save(d.copy(diamonds = d.diamonds - 40, gold = d.gold + 500)); true } else false
                 }),
-            ShopItem("골드 2,000개", "대량의 골드를 획득합니다.", "다이아 150",
+            ShopItem("골드 2,000개", "대량의 골드를 획득합니다.", CurrencyType.DIAMOND, "150",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 150) { repo.save(d.copy(diamonds = d.diamonds - 150, gold = d.gold + 2000)); true } else false
                 }),
-            ShopItem("골드 10,000개", "엄청난 양의 골드를 획득합니다.", "다이아 700",
+            ShopItem("골드 10,000개", "엄청난 양의 골드를 획득합니다.", CurrencyType.DIAMOND, "700",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 700) { repo.save(d.copy(diamonds = d.diamonds - 700, gold = d.gold + 10000)); true } else false
                 }),
@@ -120,15 +124,15 @@ fun ShopScreen(repository: GameRepository) {
 
     val diamondPackItems = remember {
         listOf(
-            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", "골드 5,000",
+            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "5,000",
                 onPurchase = { d, repo ->
                     if (d.gold >= 5000) { repo.save(d.copy(gold = d.gold - 5000, diamonds = d.diamonds + 50)); true } else false
                 }),
-            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", "골드 18,000",
+            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "18,000",
                 onPurchase = { d, repo ->
                     if (d.gold >= 18000) { repo.save(d.copy(gold = d.gold - 18000, diamonds = d.diamonds + 200)); true } else false
                 }),
-            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", "골드 40,000",
+            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "40,000",
                 onPurchase = { d, repo ->
                     if (d.gold >= 40000) { repo.save(d.copy(gold = d.gold - 40000, diamonds = d.diamonds + 500)); true } else false
                 }),
@@ -137,19 +141,19 @@ fun ShopScreen(repository: GameRepository) {
 
     val specialItems = remember {
         listOf(
-            ShopItem("랜덤 유닛 카드 5장", "랜덤한 보유 유닛의 카드 5장을 획득합니다.", "골드 1,000",
+            ShopItem("랜덤 유닛 카드 5장", "랜덤한 보유 유닛의 카드 5장을 획득합니다.", CurrencyType.GOLD, "1,000",
                 onPurchase = { d, repo ->
                     if (d.gold >= 1000) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 5), gold = d.gold - 1000)); true } else false
                 }),
-            ShopItem("랜덤 유닛 카드 20장", "랜덤한 보유 유닛의 카드 20장을 획득합니다.", "다이아 50",
+            ShopItem("랜덤 유닛 카드 20장", "랜덤한 보유 유닛의 카드 20장을 획득합니다.", CurrencyType.DIAMOND, "50",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 50) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 20), diamonds = d.diamonds - 50)); true } else false
                 }),
-            ShopItem("스태미나 충전", "스태미나를 50 회복합니다.", "다이아 30",
+            ShopItem("스태미나 충전", "스태미나를 50 회복합니다.", CurrencyType.DIAMOND, "30",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 30) { repo.save(d.copy(diamonds = d.diamonds - 30, stamina = (d.stamina + 50).coerceAtMost(d.maxStamina))); true } else false
                 }),
-            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", "다이아 100",
+            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", CurrencyType.DIAMOND, "100",
                 onPurchase = { d, repo ->
                     if (d.diamonds >= 100) {
                         repo.save(d.copy(
@@ -160,7 +164,7 @@ fun ShopScreen(repository: GameRepository) {
                         true
                     } else false
                 }),
-            ShopItem("\uD83D\uDD27 개발자 모드", "재화 MAX + 스태미나 무한 + 도감 올 해금", "FREE",
+            ShopItem("\uD83D\uDD27 개발자 모드", "재화 MAX + 스태미나 무한 + 도감 올 해금", CurrencyType.FREE, "FREE",
                 onPurchase = { d, repo ->
                     val allUnlocked = d.units.mapValues { (_, u) -> u.copy(owned = true, cards = 999) }
                     repo.save(d.copy(
@@ -503,25 +507,53 @@ private fun ShopItemCard(
 
             val btnAccent = when {
                 item.onPurchase == null -> DimText
-                item.priceText.contains("다이아") -> NeonCyan
-                item.priceText.contains("골드") -> Gold
+                item.currencyType == CurrencyType.DIAMOND -> NeonCyan
+                item.currencyType == CurrencyType.GOLD -> Gold
                 else -> SubText
             }
             val btnAccentDark = when {
                 item.onPurchase == null -> DimText.copy(alpha = 0.6f)
-                item.priceText.contains("다이아") -> NeonCyan.copy(alpha = 0.7f)
-                item.priceText.contains("골드") -> DarkGold
+                item.currencyType == CurrencyType.DIAMOND -> NeonCyan.copy(alpha = 0.7f)
+                item.currencyType == CurrencyType.GOLD -> DarkGold
                 else -> SubText.copy(alpha = 0.7f)
             }
 
-            NeonButton(
-                text = item.priceText,
-                onClick = onBuy,
-                fontSize = 11.sp,
-                enabled = item.onPurchase != null,
-                accentColor = btnAccent,
-                accentColorDark = btnAccentDark,
-            )
+            if (item.currencyType == CurrencyType.FREE) {
+                NeonButton(
+                    text = item.priceAmount,
+                    onClick = onBuy,
+                    fontSize = 11.sp,
+                    enabled = item.onPurchase != null,
+                    accentColor = btnAccent,
+                    accentColorDark = btnAccentDark,
+                )
+            } else {
+                NeonButton(
+                    onClick = onBuy,
+                    enabled = item.onPurchase != null,
+                    accentColor = btnAccent,
+                    accentColorDark = btnAccentDark,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(
+                                id = if (item.currencyType == CurrencyType.DIAMOND)
+                                    R.drawable.ic_diamond else R.drawable.ic_gold,
+                            ),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = item.priceAmount,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = LightText,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -574,7 +606,7 @@ private fun TierCard(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_gold),
                     contentDescription = null,
-                    tint = GoldCoin,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(14.dp),
                 )
                 Spacer(Modifier.width(3.dp))
@@ -590,7 +622,7 @@ private fun TierCard(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_diamond),
                         contentDescription = null,
-                        tint = DiamondBlue,
+                        tint = Color.Unspecified,
                         modifier = Modifier.size(14.dp),
                     )
                     Spacer(Modifier.width(3.dp))

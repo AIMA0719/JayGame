@@ -43,9 +43,12 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS
 import com.example.jaygame.data.UnitDef
 import com.example.jaygame.data.UnitGrade
+import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.ui.screens.blueprintIconRes
 import com.example.jaygame.ui.theme.*
 
 /** Price table for buyable units */
@@ -60,13 +63,25 @@ private val BUYABLE_UNITS: List<UnitDef> = UNIT_DEFS.filter {
 }
 
 /** Derive role from family for legacy UnitDef (until fully migrated to BlueprintRegistry) */
-private fun inferRoleFromFamily(def: UnitDef): UnitRole = when (def.family) {
-    com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
-    com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
-    com.example.jaygame.data.UnitFamily.FIRE -> UnitRole.RANGED_DPS
-    com.example.jaygame.data.UnitFamily.FROST -> UnitRole.RANGED_DPS
-    com.example.jaygame.data.UnitFamily.POISON -> UnitRole.RANGED_DPS
-    com.example.jaygame.data.UnitFamily.LIGHTNING -> UnitRole.RANGED_DPS
+private fun inferRoleFromFamily(def: UnitDef): UnitRole {
+    val bp = findMatchingBlueprint(def)
+    if (bp != null) return bp.role
+    return when (def.family) {
+        com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
+        com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
+        com.example.jaygame.data.UnitFamily.FIRE -> UnitRole.RANGED_DPS
+        com.example.jaygame.data.UnitFamily.FROST -> UnitRole.RANGED_DPS
+        com.example.jaygame.data.UnitFamily.POISON -> UnitRole.RANGED_DPS
+        com.example.jaygame.data.UnitFamily.LIGHTNING -> UnitRole.RANGED_DPS
+    }
+}
+
+/** Find the blueprint that matches a legacy UnitDef by grade + family */
+private fun findMatchingBlueprint(def: UnitDef): UnitBlueprint? {
+    if (!BlueprintRegistry.isReady) return null
+    val registry = BlueprintRegistry.instance
+    val gradeEnum = com.example.jaygame.engine.UnitGrade.entries.getOrNull(def.grade.ordinal) ?: return null
+    return registry.all().find { it.grade == gradeEnum && def.family in it.families }
 }
 
 @Composable
@@ -102,6 +117,9 @@ fun BuyUnitSheet(
             val unit = confirmUnit ?: return@Box
             val price = BUY_PRICES[unit.grade] ?: 300
             val canAfford = battle.sp >= price && !gridFull
+            val matchedBp = remember(unit.id) { findMatchingBlueprint(unit) }
+            val displayName = matchedBp?.name ?: unit.name
+            val displayIcon = if (matchedBp != null) blueprintIconRes(matchedBp) else unit.iconRes
 
             GameCard(
                 modifier = Modifier
@@ -124,13 +142,13 @@ fun BuyUnitSheet(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Image(
-                        painter = painterResource(id = unit.iconRes),
-                        contentDescription = unit.name,
+                        painter = painterResource(id = displayIcon),
+                        contentDescription = displayName,
                         modifier = Modifier.size(56.dp),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = unit.name,
+                        text = displayName,
                         color = unit.grade.color,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -248,10 +266,12 @@ fun BuyUnitSheet(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    val filteredUnits = if (selectedRole == null) {
-                        BUYABLE_UNITS
-                    } else {
-                        BUYABLE_UNITS.filter { inferRoleFromFamily(it) == selectedRole }
+                    val filteredUnits = remember(selectedRole) {
+                        if (selectedRole == null) {
+                            BUYABLE_UNITS
+                        } else {
+                            BUYABLE_UNITS.filter { inferRoleFromFamily(it) == selectedRole }
+                        }
                     }
 
                     // Unit grid
@@ -295,6 +315,10 @@ private fun BuyUnitCard(
     canAfford: Boolean,
     onClick: () -> Unit,
 ) {
+    val matchedBp = remember(unit.id) { findMatchingBlueprint(unit) }
+    val displayName = matchedBp?.name ?: unit.name
+    val displayIcon = if (matchedBp != null) blueprintIconRes(matchedBp) else unit.iconRes
+
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
@@ -314,13 +338,13 @@ private fun BuyUnitCard(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Image(
-                painter = painterResource(id = unit.iconRes),
-                contentDescription = unit.name,
+                painter = painterResource(id = displayIcon),
+                contentDescription = displayName,
                 modifier = Modifier.size(40.dp),
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = unit.name,
+                text = displayName,
                 color = unit.grade.color,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,

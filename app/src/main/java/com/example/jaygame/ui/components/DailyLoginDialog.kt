@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Brush
@@ -232,14 +233,14 @@ fun DailyLoginDialog(
                         // Gold
                         RewardChip(
                             iconRes = R.drawable.ic_gold,
-                            iconTint = GoldCoin,
+                            iconTint = Color.Unspecified,
                             text = "${currentReward.gold}",
                         )
                         if (currentReward.diamonds > 0) {
                             Spacer(modifier = Modifier.width(12.dp))
                             RewardChip(
                                 iconRes = R.drawable.ic_diamond,
-                                iconTint = DiamondBlue,
+                                iconTint = Color.Unspecified,
                                 text = "${currentReward.diamonds}",
                             )
                         }
@@ -359,7 +360,7 @@ private fun DayBox(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_gold),
                     contentDescription = null,
-                    tint = GoldCoin,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(10.dp),
                 )
                 Spacer(modifier = Modifier.width(2.dp))
@@ -375,8 +376,10 @@ private fun DayBox(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_diamond),
                     contentDescription = null,
-                    tint = if (reward.diamonds > 0) DiamondBlue else DimText.copy(alpha = 0.3f),
-                    modifier = Modifier.size(10.dp),
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .size(10.dp)
+                        .alpha(if (reward.diamonds > 0) 1f else 0.3f),
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Text(

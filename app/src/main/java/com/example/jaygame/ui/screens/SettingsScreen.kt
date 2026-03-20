@@ -190,7 +190,11 @@ private fun SettingsMain(
     onShowDailyLogin: () -> Unit,
     onNavigate: (String) -> Unit,
 ) {
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
         Text(
             text = "설정",
             fontWeight = FontWeight.Bold,

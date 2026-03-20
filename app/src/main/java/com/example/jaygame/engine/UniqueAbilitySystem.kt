@@ -20,15 +20,58 @@ object UniqueAbilitySystem {
     /**
      * Initialize unique ability fields on a newly placed unit.
      * Should be called when a unit is placed/summoned/merged.
+     *
+     * Supports both legacy UnitDef and blueprint-based units:
+     * - Legacy: reads cooldown from UnitDef.uniqueAbility
+     * - Blueprint: infers cooldown from family+grade if grade >= 2 (Hero+)
      */
     fun initUnit(unit: GameUnit) {
-        val def = UNIT_DEFS_MAP[unit.unitDefId] ?: return
-        val ability = def.uniqueAbility ?: return
-
-        unit.uniqueAbilityType = resolveVfxType(unit.family, unit.grade)
-        unit.uniqueAbilityMaxCd = ability.cooldown.toFloat()
-        unit.uniqueAbilityCooldown = ability.cooldown.toFloat() * 0.5f // start half-ready
+        // Always reset ability fields first (GameUnit pool recycling safety)
+        unit.uniqueAbilityType = -1
+        unit.uniqueAbilityMaxCd = 0f
+        unit.uniqueAbilityCooldown = 0f
         unit.passiveCounter = 0
+
+        // Only Hero (grade 2) and above have unique abilities
+        if (unit.grade < 2) return
+
+        val vfxType = resolveVfxType(unit.family, unit.grade)
+        if (vfxType < 0) return
+
+        // Try legacy UnitDef for cooldown data first (canonical balance values)
+        val legacyDef = UNIT_DEFS_MAP[unit.unitDefId]
+        val legacyCooldown = legacyDef?.uniqueAbility?.cooldown?.toFloat()
+
+        // Fallback: infer cooldown from family+grade if legacy data not available
+        val cooldown = legacyCooldown ?: inferCooldownFromGrade(unit.family, unit.grade)
+
+        unit.uniqueAbilityType = vfxType
+        unit.uniqueAbilityMaxCd = cooldown
+        unit.uniqueAbilityCooldown = cooldown * 0.5f // start half-ready
+    }
+
+    /**
+     * Infer ability cooldown based on family and grade when JSON data is missing.
+     * Hero (grade 2) = passive only (cooldown 0, triggers on attack).
+     * Legend+ = active abilities with longer cooldowns for stronger (higher-grade) skills.
+     * Values are modeled after legacy UnitDef cooldowns in UNIT_DEFS.
+     */
+    // Pre-allocated cooldown tables per family: [Legend, Ancient, Mythic, Immortal]
+    // Values modeled after legacy UnitDef cooldowns in UNIT_DEFS.
+    private val COOLDOWNS = arrayOf(
+        floatArrayOf(12f, 20f, 25f, 45f),   // 0: Fire
+        floatArrayOf(15f, 22f, 30f, 45f),   // 1: Frost
+        floatArrayOf(10f, 15f, 20f, 35f),   // 2: Poison
+        floatArrayOf(14f, 18f, 25f, 40f),   // 3: Lightning
+        floatArrayOf(15f, 20f, 25f, 40f),   // 4: Support
+        floatArrayOf(10f, 15f, 20f, 35f),   // 5: Wind
+    )
+    private val COOLDOWNS_DEFAULT = floatArrayOf(12f, 18f, 25f, 40f)
+
+    private fun inferCooldownFromGrade(family: Int, grade: Int): Float {
+        if (grade <= 2) return 0f // Hero: passive only
+        val table = COOLDOWNS.getOrElse(family) { COOLDOWNS_DEFAULT }
+        return table[(grade - 3).coerceIn(0, table.size - 1)]
     }
 
     // Reference to engine zone pool — set by BattleEngine

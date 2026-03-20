@@ -519,8 +519,8 @@ fun BattleBottomHud(
         if (occupied) unitCount++
         if (tile.canMerge) canMerge = true
     }
-    val canSummon = battle.sp >= battle.summonCost && unitCount < BattleBridge.GRID_TOTAL
-    val canGamble = battle.sp >= 10
+    val canSummon = battle.sp >= battle.summonCost && unitCount < battle.maxUnitSlots
+    val canGamble = battle.sp > 0f
     val hasUnits = unitCount > 0
     val context = LocalContext.current
     val view = LocalView.current
@@ -662,7 +662,7 @@ fun BattleBottomHud(
                 SummonButton(
                     cost = battle.summonCost,
                     enabled = canSummon,
-                    gridFull = unitCount >= BattleBridge.GRID_TOTAL,
+                    gridFull = unitCount >= battle.maxUnitSlots,
                     pity = unitPullPity,
                     onClick = {
                         HapticManager.medium(view)
@@ -678,7 +678,6 @@ fun BattleBottomHud(
                     enabled = canGamble,
                     onClick = { onGambleClick() },
                     modifier = Modifier.weight(1f),
-                    goldIcon = goldIcon,
                 )
             }
 
@@ -974,7 +973,6 @@ private fun GambleButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    goldIcon: androidx.compose.ui.graphics.ImageBitmap? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -1027,29 +1025,11 @@ private fun GambleButton(
                 ) else Modifier
             ),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "\uD83C\uDFB2 도박",
-                color = if (enabled) Color.White else Color(0xFF888888),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (goldIcon != null) {
-                    Image(
-                        bitmap = goldIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                }
-                Text(
-                    text = "10",
-                    color = if (enabled) Color.White.copy(alpha = 0.8f) else Color(0xFF666666),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
+        Text(
+            text = "\uD83C\uDFB2 도박",
+            color = if (enabled) Color.White else Color(0xFF888888),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
     }
 }

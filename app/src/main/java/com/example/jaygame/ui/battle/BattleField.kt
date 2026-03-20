@@ -36,6 +36,38 @@ private val BadgeBorderStroke = Stroke(width = 1f)
 private val AttackGlow = Color.White.copy(alpha = 0.4f)
 private val DragGhost = Color(0xFF00D4FF).copy(alpha = 0.3f)
 
+// Family idle effect colors (pre-allocated)
+private val FireEmberColor = Color(0xFFFF9800)
+private val FireEmberBright = Color(0xFFFFDD44)
+private val FrostSnowColor = Color(0xFFBBDDFF)
+private val FrostSnowBright = Color(0xFFE3F2FD)
+private val PoisonDripColor = Color(0xFF81C784)
+private val PoisonDripBright = Color(0xFFCCFF00)
+private val LightSparkColor = Color(0xFFFFD54F)
+private val LightSparkBright = Color(0xFFFFFF88)
+private val SupportGlowColor = Color(0xFFCE93D8)
+private val SupportGlowBright = Color(0xFFF0ABFC)
+private val WindLeafColor = Color(0xFF80CBC4)
+private val WindLeafBright = Color(0xFFB2EBF2)
+private val WindLeafIdle03 = Color(0xFF80CBC4).copy(alpha = 0.3f)
+
+// Attack flash colors per family (pre-allocated)
+private val FireAttackFlash = Color(0xFFFF4400)
+private val FrostAttackFlash = Color(0xFF90CAF9)
+private val PoisonAttackFlash = Color(0xFF66BB6A)
+private val LightAttackFlash = Color(0xFFFFFF00)
+private val SupportAttackFlash = Color(0xFFE1BEE7)
+private val WindAttackFlash = Color(0xFF4DD0E1)
+
+// Pre-allocated constant-alpha colors for hot loop
+private val SelectedCyan07 = Color(0xFF5BA4CF).copy(alpha = 0.7f)
+private val TankHpBg = Color(0xFF333333)
+private val TankHpBar = Color(0xFF4CAF50)
+private val DashTrailWhite03 = Color.White.copy(alpha = 0.3f)
+private val SpecialFieldFill = Color(0xFF9C27B0).copy(alpha = 0.12f)
+private val SpecialFieldStroke = Color(0xFF9C27B0).copy(alpha = 0.25f)
+private val DragShadow03 = Color.Black.copy(alpha = 0.3f)
+
 // Star badge colors
 private val StarColor = Color(0xFFFFD700)
 private val StarBgGlow = Color(0xFF1A1A2E).copy(alpha = 0.9f)
@@ -164,9 +196,11 @@ fun BattleField() {
 
     // G5: Death effects list + previous tile set for detection
     val deathEffects = remember { mutableStateOf(listOf<UnitDissolutionEffect>()) }
-    val prevTileMap = remember { mutableStateOf(mapOf<Int, Pair<Float, Float>>()) }
-    val prevGradeMap = remember { mutableStateOf(mapOf<Int, Int>()) }
-    val prevFamilyMap = remember { mutableStateOf(mapOf<Int, Int>()) }
+    // PERF: Persistent mutable maps — reused each frame (clear + refill) to avoid HashMap allocation
+    val prevTileXs = remember { mutableStateOf(mutableMapOf<Int, Float>()) }
+    val prevTileYs = remember { mutableStateOf(mutableMapOf<Int, Float>()) }
+    val prevGradeMap = remember { mutableStateOf(mutableMapOf<Int, Int>()) }
+    val prevFamilyMap = remember { mutableStateOf(mutableMapOf<Int, Int>()) }
 
     LaunchedEffect(Unit) {
         var lastFrameNanos = 0L
@@ -208,42 +242,55 @@ fun BattleField() {
                 }
 
                 // G5: Detect removed units by comparing tile sets
-                // PERF: Reuse maps — clear instead of re-creating
-                val currentTiles = prevTileMap.value.toMutableMap().also { it.clear() }
-                val currentGrades = prevGradeMap.value.toMutableMap().also { it.clear() }
-                val currentFamilies = prevFamilyMap.value.toMutableMap().also { it.clear() }
-                for (i in 0 until data.count) {
-                    val tile = data.tileIndices[i]
-                    currentTiles[tile] = Pair(data.xs[i], data.ys[i])
-                    currentGrades[tile] = data.grades[i]
-                    currentFamilies[tile] = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
-                        data.familiesList[i].first().ordinal
-                    } else {
-                        com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
-                    }
-                }
-                val prev = prevTileMap.value
-                if (prev.isNotEmpty()) {
+                // PERF: Reuse persistent maps — clear + refill avoids HashMap allocation per frame
+                val pxs = prevTileXs.value
+                val pys = prevTileYs.value
+                val pGrades = prevGradeMap.value
+                val pFamilies = prevFamilyMap.value
+
+                // Check for removals before clearing
+                if (pxs.isNotEmpty()) {
                     var hasRemoved = false
-                    for (tile in prev.keys) {
-                        if (tile !in currentTiles) { hasRemoved = true; break }
+                    // Build current tile set cheaply (just check tileIndices)
+                    for (tile in pxs.keys) {
+                        var found = false
+                        for (j in 0 until data.count) {
+                            if (data.tileIndices[j] == tile) { found = true; break }
+                        }
+                        if (!found) { hasRemoved = true; break }
                     }
                     if (hasRemoved) {
                         val newEffects = deathEffects.value.toMutableList()
-                        for (tile in prev.keys) {
-                            if (tile !in currentTiles) {
-                                val pos = prev[tile] ?: continue
-                                val gr = prevGradeMap.value[tile] ?: 0
-                                val fam = prevFamilyMap.value[tile] ?: 0
-                                newEffects.add(UnitDissolutionEffect(pos.first, pos.second, gr, fam, animTime.floatValue))
+                        for (tile in pxs.keys) {
+                            var found = false
+                            for (j in 0 until data.count) {
+                                if (data.tileIndices[j] == tile) { found = true; break }
+                            }
+                            if (!found) {
+                                val ex = pxs[tile] ?: continue
+                                val ey = pys[tile] ?: continue
+                                val gr = pGrades[tile] ?: 0
+                                val fam = pFamilies[tile] ?: 0
+                                newEffects.add(UnitDissolutionEffect(ex, ey, gr, fam, animTime.floatValue))
                             }
                         }
                         deathEffects.value = newEffects
                     }
                 }
-                prevTileMap.value = currentTiles
-                prevGradeMap.value = currentGrades
-                prevFamilyMap.value = currentFamilies
+
+                // Clear and refill (no allocation — reuses existing maps)
+                pxs.clear(); pys.clear(); pGrades.clear(); pFamilies.clear()
+                for (i in 0 until data.count) {
+                    val tile = data.tileIndices[i]
+                    pxs[tile] = data.xs[i]
+                    pys[tile] = data.ys[i]
+                    pGrades[tile] = data.grades[i]
+                    pFamilies[tile] = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
+                        data.familiesList[i].first().ordinal
+                    } else {
+                        com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+                    }
+                }
 
                 // Expire old death effects (> 1s)
                 val tNow = animTime.floatValue
@@ -518,6 +565,7 @@ fun BattleField() {
             )
 
             // Pedestal glow (grade + family blend)
+            // PERF: Use layered ovals instead of Brush.radialGradient to avoid per-frame list+brush allocation
             val familyTint = FamilyAuraColors.getOrElse(family) { FamilyAuraColors[0] }
             val pedestalColor = if (isSelected) NeonCyan else Color(
                 red = gradeColor.red * 0.65f + familyTint.red * 0.35f,
@@ -525,16 +573,17 @@ fun BattleField() {
                 blue = gradeColor.blue * 0.65f + familyTint.blue * 0.35f,
                 alpha = 1f,
             )
+            // Outer soft glow
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        pedestalColor.copy(alpha = 0.5f),
-                        pedestalColor.copy(alpha = 0.15f),
-                        Color.Transparent,
-                    ),
-                ),
+                color = pedestalColor.copy(alpha = 0.15f),
                 topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
                 size = Size(pedestalRx * 2.4f, pedestalRy * 2.5f),
+            )
+            // Inner bright glow
+            drawOval(
+                color = pedestalColor.copy(alpha = 0.4f),
+                topLeft = Offset(screenX - pedestalRx * 0.7f, screenY - pedestalRy * 0.1f),
+                size = Size(pedestalRx * 1.4f, pedestalRy * 1.5f),
             )
 
             // ── Pedestal Particles (grade 3+, reduced when many units) ──
@@ -556,21 +605,231 @@ fun BattleField() {
             // Selected ring
             if (isSelected) {
                 drawOval(
-                    color = NeonCyan.copy(alpha = 0.7f),
+                    color = SelectedCyan07,
                     topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.3f),
                     size = Size(pedestalRx * 2.2f, pedestalRy * 2.2f),
                     style = SelectedStroke,
                 )
             }
 
-            // Attack glow (pulsing with family color only, no white)
+            // ── Family-specific attack flash (unique per family) ──
             if (isAttacking) {
-                val glowAlpha = 0.3f + sin(t * 12f) * 0.15f
-                drawCircle(
-                    color = familyTint.copy(alpha = glowAlpha),
-                    radius = unitSize * 0.55f,
-                    center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                )
+                val attackPhase = t * 12f
+                when (family) {
+                    0 -> { // Fire: expanding flame burst
+                        val burstAlpha = (0.35f + sin(attackPhase) * 0.2f).coerceIn(0.1f, 0.55f)
+                        val burstR = unitSize * (0.5f + sin(attackPhase * 1.5f) * 0.1f)
+                        drawCircle(
+                            color = FireAttackFlash.copy(alpha = burstAlpha * 0.4f),
+                            radius = burstR,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                        drawCircle(
+                            color = FireEmberBright.copy(alpha = burstAlpha * 0.3f),
+                            radius = burstR * 0.6f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                    }
+                    1 -> { // Frost: ice crystal flash
+                        val iceAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.5f)
+                        val iceR = unitSize * 0.5f
+                        drawCircle(
+                            color = FrostAttackFlash.copy(alpha = iceAlpha * 0.4f),
+                            radius = iceR,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                        // Crystal sparkle points
+                        for (sp in 0 until 4) {
+                            val spAngle = sp * (PI.toFloat() / 2f) + attackPhase * 0.5f
+                            val spR = iceR * 0.7f
+                            drawCircle(
+                                color = FrostSnowBright.copy(alpha = iceAlpha * 0.5f),
+                                radius = 1.5f,
+                                center = Offset(
+                                    screenX + cos(spAngle) * spR,
+                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spR,
+                                ),
+                            )
+                        }
+                    }
+                    2 -> { // Poison: toxic splash
+                        val toxicAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.45f)
+                        drawCircle(
+                            color = PoisonAttackFlash.copy(alpha = toxicAlpha * 0.35f),
+                            radius = unitSize * 0.5f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                        // Drip splashes
+                        for (sp in 0 until 3) {
+                            val spAngle = sp * 2.094f + attackPhase * 0.3f
+                            val spDist = unitSize * 0.35f
+                            drawCircle(
+                                color = PoisonDripBright.copy(alpha = toxicAlpha * 0.4f),
+                                radius = 2f,
+                                center = Offset(
+                                    screenX + cos(spAngle) * spDist,
+                                    screenY - unitSize * 0.2f + bounceOffset + sin(spAngle) * spDist * 0.5f,
+                                ),
+                            )
+                        }
+                    }
+                    3 -> { // Lightning: electric spark burst
+                        val sparkAlpha = (0.35f + sin(attackPhase * 2f) * 0.25f).coerceIn(0.1f, 0.6f)
+                        drawCircle(
+                            color = LightAttackFlash.copy(alpha = sparkAlpha * 0.35f),
+                            radius = unitSize * 0.5f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                        // Electric arc lines
+                        for (sp in 0 until 4) {
+                            val spAngle = sp * (PI.toFloat() / 2f) + sin(attackPhase * 3f + sp) * 0.8f
+                            val spLen = unitSize * 0.4f
+                            drawLine(
+                                color = LightSparkBright.copy(alpha = sparkAlpha * 0.5f),
+                                start = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                                end = Offset(
+                                    screenX + cos(spAngle) * spLen,
+                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spLen,
+                                ),
+                                strokeWidth = 1.5f,
+                            )
+                        }
+                    }
+                    4 -> { // Support: holy glow pulse
+                        val holyAlpha = (0.25f + sin(attackPhase * 0.8f) * 0.15f).coerceIn(0.1f, 0.4f)
+                        drawCircle(
+                            color = SupportAttackFlash.copy(alpha = holyAlpha * 0.3f),
+                            radius = unitSize * 0.6f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                        drawCircle(
+                            color = SupportGlowBright.copy(alpha = holyAlpha * 0.2f),
+                            radius = unitSize * 0.4f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                    }
+                    5 -> { // Wind: swirl gust
+                        val gustAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.45f)
+                        drawCircle(
+                            color = WindAttackFlash.copy(alpha = gustAlpha * 0.3f),
+                            radius = unitSize * 0.5f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                        // Wind streak arcs
+                        for (sp in 0 until 3) {
+                            val spAngle = sp * 2.094f + attackPhase * 2f
+                            val spR = unitSize * 0.35f
+                            drawLine(
+                                color = WindLeafBright.copy(alpha = gustAlpha * 0.4f),
+                                start = Offset(
+                                    screenX + cos(spAngle) * spR * 0.5f,
+                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spR * 0.3f,
+                                ),
+                                end = Offset(
+                                    screenX + cos(spAngle + 0.5f) * spR,
+                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle + 0.5f) * spR * 0.5f,
+                                ),
+                                strokeWidth = 1.5f,
+                            )
+                        }
+                    }
+                    else -> {
+                        val glowAlpha = 0.3f + sin(attackPhase) * 0.15f
+                        drawCircle(
+                            color = familyTint.copy(alpha = glowAlpha),
+                            radius = unitSize * 0.55f,
+                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
+                        )
+                    }
+                }
+            }
+
+            // ── Family-specific idle ambient effects (grade 1+, skip common in high-count) ──
+            if (grade >= 1 && !skipMicro) {
+                when (family) {
+                    0 -> { // Fire: rising ember particles
+                        val emberCount = if (highUnitCount) 2 else (1 + grade).coerceAtMost(4)
+                        for (e in 0 until emberCount) {
+                            val emberPhase = (t * 0.8f + e * 0.5f + unitDefId * 0.17f) % 1f
+                            val emberX = screenX + sin(t * 1.5f + e * 2.3f + unitDefId * 0.3f) * unitSize * 0.2f
+                            val emberY = screenY - unitSize * 0.2f - emberPhase * unitSize * 0.5f
+                            val emberAlpha = sin(emberPhase * PI.toFloat()) * 0.4f
+                            drawCircle(
+                                color = FireEmberColor.copy(alpha = emberAlpha),
+                                radius = 1.5f + sin(t * 3f + e) * 0.5f,
+                                center = Offset(emberX, emberY),
+                            )
+                        }
+                    }
+                    1 -> { // Frost: gentle snowflake drift
+                        val snowCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
+                        for (s in 0 until snowCount) {
+                            val snowPhase = (t * 0.5f + s * 0.6f + unitDefId * 0.13f) % 1f
+                            val drift = sin(t * 1.2f + s * 1.7f) * unitSize * 0.15f
+                            val snowX = screenX + drift
+                            val snowY = screenY - unitSize * 0.5f + snowPhase * unitSize * 0.3f
+                            val snowAlpha = sin(snowPhase * PI.toFloat()) * 0.35f
+                            drawCircle(
+                                color = FrostSnowColor.copy(alpha = snowAlpha),
+                                radius = 1.5f,
+                                center = Offset(snowX, snowY),
+                            )
+                        }
+                    }
+                    2 -> { // Poison: dripping droplets
+                        val dripCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
+                        for (d in 0 until dripCount) {
+                            val dripPhase = (t * 0.6f + d * 0.7f + unitDefId * 0.19f) % 1f
+                            val dripX = screenX + sin(d * 2.7f + unitDefId * 0.2f) * unitSize * 0.15f
+                            val dripY = screenY - unitSize * 0.1f + dripPhase * unitSize * 0.25f
+                            val dripAlpha = sin(dripPhase * PI.toFloat()) * 0.35f
+                            drawCircle(
+                                color = PoisonDripColor.copy(alpha = dripAlpha),
+                                radius = 1.5f + (1f - dripPhase) * 0.5f,
+                                center = Offset(dripX, dripY),
+                            )
+                        }
+                    }
+                    3 -> { // Lightning: occasional spark flickers
+                        val sparkPhase = (t * 2f + unitDefId * 0.31f) % 1f
+                        if (sparkPhase < 0.15f) { // Brief flicker
+                            val sparkAlpha = (0.15f - sparkPhase) / 0.15f * 0.5f
+                            val sparkAngle = sin(t * 7f + unitDefId * 0.5f) * PI.toFloat()
+                            val sparkLen = unitSize * 0.2f
+                            drawLine(
+                                color = LightSparkColor.copy(alpha = sparkAlpha),
+                                start = Offset(screenX, screenY - unitSize * 0.3f),
+                                end = Offset(
+                                    screenX + cos(sparkAngle) * sparkLen,
+                                    screenY - unitSize * 0.3f + sin(sparkAngle) * sparkLen,
+                                ),
+                                strokeWidth = 1f,
+                            )
+                        }
+                    }
+                    4 -> { // Support: soft pulsing halo
+                        val haloPulse = 0.12f + sin(t * 1.5f + unitDefId * 0.4f) * 0.06f
+                        drawCircle(
+                            color = SupportGlowColor.copy(alpha = haloPulse),
+                            radius = unitSize * 0.4f,
+                            center = Offset(screenX, screenY - unitSize * 0.35f),
+                        )
+                    }
+                    5 -> { // Wind: orbiting leaf particles
+                        val leafCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
+                        for (l in 0 until leafCount) {
+                            val leafAngle = t * 2.5f + l * (6.283f / leafCount) + unitDefId * 0.2f
+                            val leafR = unitSize * 0.25f
+                            val leafX = screenX + cos(leafAngle) * leafR
+                            val leafY = screenY - unitSize * 0.3f + sin(leafAngle) * leafR * 0.4f
+                            drawCircle(
+                                color = WindLeafIdle03,
+                                radius = 1.5f,
+                                center = Offset(leafX, leafY),
+                            )
+                        }
+                    }
+                }
             }
 
             // Unit sprite (proper drawable icon) with bounce + attack scale + breathing
@@ -660,8 +919,8 @@ fun BattleField() {
                 val barHeight = 4f
                 val barX = screenX - barWidth / 2
                 val barY = screenY - unitSize * 0.9f
-                drawRect(Color(0xFF333333), Offset(barX, barY), Size(barWidth, barHeight))
-                drawRect(Color(0xFF4CAF50), Offset(barX, barY), Size(barWidth * hpPercent, barHeight))
+                drawRect(TankHpBg, Offset(barX, barY), Size(barWidth, barHeight))
+                drawRect(TankHpBar, Offset(barX, barY), Size(barWidth * hpPercent, barHeight))
             }
 
             // ── Task 18: Dash trail (activated) ──
@@ -669,7 +928,7 @@ fun BattleField() {
                 val homeScreenX = data.homeXs.getOrElse(i) { data.xs[i] } * w
                 val homeScreenY = data.homeYs.getOrElse(i) { data.ys[i] } * h
                 drawLine(
-                    color = Color.White.copy(alpha = 0.3f),
+                    color = DashTrailWhite03,
                     start = Offset(homeScreenX, homeScreenY),
                     end = Offset(screenX, screenY),
                     strokeWidth = 2f,
@@ -681,12 +940,12 @@ fun BattleField() {
                 // Use unit range as field effect radius (approximation)
                 val effectRadius = (200f / 720f) * w // default field effect radius
                 drawCircle(
-                    color = Color(0xFF9C27B0).copy(alpha = 0.12f),
+                    color = SpecialFieldFill,
                     radius = effectRadius,
                     center = Offset(screenX, screenY),
                 )
                 drawCircle(
-                    color = Color(0xFF9C27B0).copy(alpha = 0.25f),
+                    color = SpecialFieldStroke,
                     radius = effectRadius,
                     center = Offset(screenX, screenY),
                     style = Stroke(width = 1.5f),
@@ -786,7 +1045,7 @@ fun BattleField() {
 
                 // Drop shadow (on ground)
                 drawOval(
-                    color = Color.Black.copy(alpha = 0.3f),
+                    color = DragShadow03,
                     topLeft = Offset(dragOffset.x - liftedSize * 0.4f, dragOffset.y + liftedSize * 0.1f),
                     size = Size(liftedSize * 0.8f, liftedSize * 0.3f),
                 )
@@ -841,33 +1100,31 @@ private fun DrawScope.drawGradePlatform(
             )
         }
         1 -> {
-            // Rare: blue soft glow circle
+            // Rare: blue soft glow circle — PERF: layered ovals instead of gradient
             val glowAlpha = 0.2f + sin(t * 2f + unitDefId * 0.5f) * 0.05f
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        PlatformRareColor.copy(alpha = glowAlpha + 0.15f),
-                        PlatformRareGlow,
-                        Color.Transparent,
-                    ),
-                ),
+                color = PlatformRareGlow.copy(alpha = glowAlpha),
                 topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.4f),
                 size = Size(pedestalRx * 2.2f, pedestalRy * 2.2f),
             )
+            drawOval(
+                color = PlatformRareColor.copy(alpha = glowAlpha + 0.1f),
+                topLeft = Offset(screenX - pedestalRx * 0.8f, screenY - pedestalRy * 0.2f),
+                size = Size(pedestalRx * 1.6f, pedestalRy * 1.6f),
+            )
         }
         2 -> {
-            // Hero: purple glow with subtle orbiting particles
+            // Hero: purple glow with subtle orbiting particles — PERF: layered ovals
             val glowAlpha = 0.25f + sin(t * 2.5f + unitDefId * 0.4f) * 0.08f
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        PlatformHeroColor.copy(alpha = glowAlpha + 0.1f),
-                        PlatformHeroGlow,
-                        Color.Transparent,
-                    ),
-                ),
+                color = PlatformHeroGlow.copy(alpha = glowAlpha),
                 topLeft = Offset(screenX - pedestalRx * 1.15f, screenY - pedestalRy * 0.45f),
                 size = Size(pedestalRx * 2.3f, pedestalRy * 2.3f),
+            )
+            drawOval(
+                color = PlatformHeroColor.copy(alpha = glowAlpha + 0.05f),
+                topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
+                size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
             )
             for (p in 0 until 4) {
                 val angle = t * 1.2f + p * (PI.toFloat() / 2f)
@@ -882,18 +1139,17 @@ private fun DrawScope.drawGradePlatform(
             }
         }
         3 -> {
-            // Legend: gold flaming circle with animated alpha
+            // Legend: gold flaming circle — PERF: layered ovals
             val flameAlpha = 0.3f + sin(t * 4f + unitDefId * 0.6f) * 0.12f
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        PlatformLegendFlame.copy(alpha = flameAlpha + 0.1f),
-                        PlatformLegendColor.copy(alpha = flameAlpha),
-                        Color.Transparent,
-                    ),
-                ),
+                color = PlatformLegendColor.copy(alpha = flameAlpha * 0.6f),
                 topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
                 size = Size(pedestalRx * 2.4f, pedestalRy * 2.4f),
+            )
+            drawOval(
+                color = PlatformLegendFlame.copy(alpha = flameAlpha + 0.05f),
+                topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
+                size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
             )
             drawOval(
                 color = PlatformLegendColor.copy(alpha = flameAlpha + 0.1f),
@@ -903,21 +1159,20 @@ private fun DrawScope.drawGradePlatform(
             )
         }
         4 -> {
-            // Ancient: red fire ring with animated pulse
+            // Ancient: red fire ring — PERF: layered ovals
             val pulseScale = 1f + sin(t * 3f + unitDefId * 0.4f) * 0.08f
             val ringAlpha = 0.35f + sin(t * 5f + unitDefId * 0.3f) * 0.15f
             val rx = pedestalRx * 1.1f * pulseScale
             val ry = pedestalRy * 1.1f * pulseScale
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        PlatformAncientRing.copy(alpha = ringAlpha),
-                        PlatformAncientColor.copy(alpha = ringAlpha * 0.7f),
-                        Color.Transparent,
-                    ),
-                ),
+                color = PlatformAncientColor.copy(alpha = ringAlpha * 0.5f),
                 topLeft = Offset(screenX - rx, screenY - ry * 0.4f),
                 size = Size(rx * 2f, ry * 2f),
+            )
+            drawOval(
+                color = PlatformAncientRing.copy(alpha = ringAlpha * 0.7f),
+                topLeft = Offset(screenX - rx * 0.7f, screenY - ry * 0.2f),
+                size = Size(rx * 1.4f, ry * 1.4f),
             )
             drawOval(
                 color = PlatformAncientColor.copy(alpha = ringAlpha + 0.1f),
@@ -945,16 +1200,16 @@ private fun DrawScope.drawGradePlatform(
                 alpha = 0.35f,
             )
             val mythicAlpha = 0.3f + sin(t * 3f) * 0.1f
+            // PERF: layered ovals instead of gradient
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        PlatformMythicGold.copy(alpha = mythicAlpha + 0.1f),
-                        PlatformMythicGold.copy(alpha = mythicAlpha * 0.5f),
-                        Color.Transparent,
-                    ),
-                ),
+                color = PlatformMythicGold.copy(alpha = mythicAlpha * 0.4f),
                 topLeft = Offset(screenX - pedestalRx * 1.3f, screenY - pedestalRy * 0.6f),
                 size = Size(pedestalRx * 2.6f, pedestalRy * 2.6f),
+            )
+            drawOval(
+                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.05f),
+                topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.3f),
+                size = Size(pedestalRx * 1.8f, pedestalRy * 1.8f),
             )
             drawOval(
                 color = shimmerColor,
@@ -975,16 +1230,16 @@ private fun DrawScope.drawGradePlatform(
             val pulseScale = 1f + sin(t * 1.5f) * 0.05f
             val rx = pedestalRx * 1.4f * pulseScale
             val ry = pedestalRy * 1.4f * pulseScale
+            // PERF: layered ovals instead of gradient
             drawOval(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        PlatformImmortalWhite.copy(alpha = divineAlpha * 0.5f),
-                        PlatformImmortalPink.copy(alpha = divineAlpha * 0.4f),
-                        Color.Transparent,
-                    ),
-                ),
+                color = PlatformImmortalPink.copy(alpha = divineAlpha * 0.3f),
                 topLeft = Offset(screenX - rx, screenY - ry * 0.5f),
                 size = Size(rx * 2f, ry * 2f),
+            )
+            drawOval(
+                color = PlatformImmortalWhite.copy(alpha = divineAlpha * 0.4f),
+                topLeft = Offset(screenX - rx * 0.7f, screenY - ry * 0.3f),
+                size = Size(rx * 1.4f, ry * 1.4f),
             )
             // Radiant rays
             for (r in 0 until 8) {

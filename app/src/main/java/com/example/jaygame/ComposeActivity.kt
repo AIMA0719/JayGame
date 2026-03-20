@@ -1,5 +1,6 @@
 package com.example.jaygame
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -40,6 +42,7 @@ class ComposeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
         BlueprintRegistry.initialize(applicationContext)
         RecipeSystem.initialize(applicationContext)
@@ -47,7 +50,7 @@ class ComposeActivity : ComponentActivity() {
         SfxManager.init(this)
         setContent {
             JayGameTheme {
-                var showSplash by remember { mutableStateOf(true) }
+                var showSplash by rememberSaveable { mutableStateOf(true) }
                 val data by repository.gameData.collectAsState()
 
                 // Offline reward dialog

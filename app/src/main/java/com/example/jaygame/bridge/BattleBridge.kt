@@ -25,6 +25,7 @@ data class BattleState(
     val maxEnemyCount: Int = 100,
     val isBossRound: Boolean = false,
     val waveTimeRemaining: Float = 0f,
+    val maxUnitSlots: Int = 50,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -35,7 +36,8 @@ data class BattleState(
                 state == other.state && summonCost == other.summonCost &&
                 deckUnits.contentEquals(other.deckUnits) &&
                 enemyCount == other.enemyCount && maxEnemyCount == other.maxEnemyCount &&
-                isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining
+                isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining &&
+                maxUnitSlots == other.maxUnitSlots
     }
     override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + if (isBossRound) 1 else 0
 }
@@ -370,6 +372,7 @@ object BattleBridge {
             enemyCount = enemyCount,
             isBossRound = isBossRound != 0,
             waveTimeRemaining = waveTimeRemaining,
+            maxUnitSlots = engine?.maxUnitSlots ?: 50,
         )
 
         // Clear visual effects on wave end
@@ -458,8 +461,9 @@ object BattleBridge {
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
         val now = System.currentTimeMillis()
         val cutoff = now - 800L
-        while (damageBuffer.isNotEmpty() && damageBuffer.first().timestamp <= cutoff) {
-            damageBuffer.removeFirst()
+        while (damageBuffer.isNotEmpty()) {
+            val first = damageBuffer.firstOrNull() ?: break
+            if (first.timestamp <= cutoff) damageBuffer.removeFirst() else break
         }
         damageBuffer.addLast(DamageEvent(x, y, damage, isCrit))
         // Only emit a new list at throttled rate (crits always emit immediately)
@@ -541,8 +545,11 @@ object BattleBridge {
 
     fun emitSkillEvent(event: SkillEvent) {
         val now = System.currentTimeMillis()
-        while (skillBuffer.isNotEmpty() && (now - skillBuffer.first().startTime) >= (skillBuffer.first().duration * 1000f).toLong()) {
-            skillBuffer.removeFirst()
+        while (skillBuffer.isNotEmpty()) {
+            val first = skillBuffer.firstOrNull() ?: break
+            if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
+                skillBuffer.removeFirst()
+            } else break
         }
         skillBuffer.addLast(event)
         _skillEvents.value = skillBuffer.toList()
@@ -558,8 +565,9 @@ object BattleBridge {
     fun onGoldPickup(x: Float, y: Float, amount: Int) {
         val now = System.currentTimeMillis()
         val cutoff = now - 1500L
-        while (goldPickupBuffer.isNotEmpty() && goldPickupBuffer.first().timestamp <= cutoff) {
-            goldPickupBuffer.removeFirst()
+        while (goldPickupBuffer.isNotEmpty()) {
+            val first = goldPickupBuffer.firstOrNull() ?: break
+            if (first.timestamp <= cutoff) goldPickupBuffer.removeFirst() else break
         }
         goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
         if (now - lastGoldEmitTime >= 50L) {
@@ -574,8 +582,9 @@ object BattleBridge {
 
     fun onUnitLevelUp(x: Float, y: Float) {
         val cutoff = System.currentTimeMillis() - 1500L
-        while (levelUpBuffer.isNotEmpty() && levelUpBuffer.first().timestamp <= cutoff) {
-            levelUpBuffer.removeFirst()
+        while (levelUpBuffer.isNotEmpty()) {
+            val first = levelUpBuffer.firstOrNull() ?: break
+            if (first.timestamp <= cutoff) levelUpBuffer.removeFirst() else break
         }
         levelUpBuffer.addLast(LevelUpEvent(x, y))
         _levelUpEvents.value = levelUpBuffer.toList()
@@ -583,10 +592,17 @@ object BattleBridge {
 
     fun clearExpiredSkillEvents() {
         val now = System.currentTimeMillis()
-        while (skillBuffer.isNotEmpty() && (now - skillBuffer.first().startTime) >= (skillBuffer.first().duration * 1000f).toLong()) {
-            skillBuffer.removeFirst()
+        var removed = false
+        while (skillBuffer.isNotEmpty()) {
+            val first = skillBuffer.firstOrNull() ?: break
+            if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
+                skillBuffer.removeFirst()
+                removed = true
+            } else {
+                break
+            }
         }
-        _skillEvents.value = skillBuffer.toList()
+        if (removed) _skillEvents.value = skillBuffer.toList()
     }
 
     /** 유닛 소환 천장(Pity) 카운터 */
@@ -743,17 +759,15 @@ object BattleBridge {
 
     // ── Gamble ──────────────────────────────────────────────
 
-    /** Current losing streak count for UI display. */
-    val gambleLosingStreak: Int get() = engine?.gambleLosingStreak ?: 0
-
     /**
-     * 4-tier gamble: fixed 10 SP entry fee.
-     * Win → entry × multiplier reward. Lose → entry + X% of remaining SP.
+     * Casino-style gamble: player bets a % of current SP.
+     * Win → bet × multiplier reward. Lose → lose bet.
      */
     fun requestGamble(
         option: com.example.jaygame.engine.GambleSystem.GambleOption,
+        betSize: com.example.jaygame.engine.GambleSystem.BetSize = com.example.jaygame.engine.GambleSystem.BetSize.SMALL,
     ): com.example.jaygame.engine.GambleSystem.GambleResult? {
-        return engine?.requestGamble(option)
+        return engine?.requestGamble(option, betSize)
     }
 
     // ── Buy Unit ────────────────────────────────────────────

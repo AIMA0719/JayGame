@@ -10,6 +10,8 @@ class BlueprintRegistry {
         lateinit var instance: BlueprintRegistry
             private set
 
+        val isReady: Boolean get() = ::instance.isInitialized
+
         @Synchronized
         fun initialize(context: android.content.Context) {
             if (::instance.isInitialized) return
@@ -31,6 +33,7 @@ class BlueprintRegistry {
     // Pre-computed caches — rebuilt after loadFromJson
     private var summonableCache: List<UnitBlueprint> = emptyList()
     private var summonableByGradeCache: Map<UnitGrade, List<UnitBlueprint>> = emptyMap()
+    private var normalByGradeCache: Map<UnitGrade, List<UnitBlueprint>> = emptyMap()
 
     fun loadFromJson(jsonString: String) {
         val arr = JSONArray(jsonString)
@@ -41,6 +44,9 @@ class BlueprintRegistry {
         // Build caches
         summonableCache = blueprints.values.filter { it.isSummonable }
         summonableByGradeCache = summonableCache.groupBy { it.grade }
+        normalByGradeCache = blueprints.values
+            .filter { it.unitCategory == UnitCategory.NORMAL }
+            .groupBy { it.grade }
     }
 
     fun findById(id: String): UnitBlueprint? = blueprints[id]
@@ -55,6 +61,9 @@ class BlueprintRegistry {
 
     fun findByGradeAndSummonable(grade: UnitGrade): List<UnitBlueprint> =
         summonableByGradeCache[grade] ?: emptyList()
+
+    fun findNormalByGrade(grade: UnitGrade): List<UnitBlueprint> =
+        normalByGradeCache[grade] ?: emptyList()
 
     fun all(): List<UnitBlueprint> = blueprints.values.toList()
 

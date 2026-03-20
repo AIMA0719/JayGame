@@ -53,18 +53,12 @@ class Grid {
         return -1
     }
 
-    @Deprecated("Use findMergeCandidatesByBlueprint instead")
-    fun findMergeCandidates(unitDefId: Int, grade: Int): List<Int> {
+    fun findMergeCandidatesByGrade(grade: Int): List<Int> {
         return (0 until TOTAL).filter { i ->
             val u = cells[i]
-            u != null && u.unitDefId == unitDefId && u.grade == grade
-        }
-    }
-
-    fun findMergeCandidatesByBlueprint(blueprintId: String): List<Int> {
-        return (0 until TOTAL).filter { i ->
-            val u = cells[i]
-            u != null && u.blueprintId == blueprintId
+            u != null && u.grade == grade &&
+                    u.unitCategory != UnitCategory.HIDDEN &&
+                    u.unitCategory != UnitCategory.SPECIAL
         }
     }
 

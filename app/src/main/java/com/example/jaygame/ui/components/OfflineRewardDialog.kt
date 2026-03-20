@@ -81,7 +81,7 @@ fun OfflineRewardDialog(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_gold),
                     contentDescription = null,
-                    tint = GoldCoin,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(4.dp))
