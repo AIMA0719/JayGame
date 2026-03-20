@@ -99,7 +99,7 @@ fun BuyUnitSheet(
     ) {
         if (confirmUnit != null) {
             // ── Purchase confirmation dialog ──
-            val unit = confirmUnit!!
+            val unit = confirmUnit ?: return@Box
             val price = BUY_PRICES[unit.grade] ?: 300
             val canAfford = battle.sp >= price && !gridFull
 

@@ -415,7 +415,7 @@ private fun HeroCollectionTab(
                             cards = cur.cards - cost.first,
                         )
                         val newGold = data.gold - cost.second
-                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[bp.id]!!.level)
+                        val newMaxLevel = maxOf(data.maxUnitLevel, newUnits[bp.id]?.level ?: 0)
                         repository.save(data.copy(units = newUnits, gold = newGold, maxUnitLevel = newMaxLevel))
                     }
                 },

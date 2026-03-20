@@ -49,16 +49,17 @@ class Projectile {
     fun update(dt: Float): Boolean {
         if (!alive) return false
         lifetime -= dt
-        if (lifetime <= 0f || target?.alive != true) {
+        val t = target
+        if (lifetime <= 0f || t == null || !t.alive) {
             alive = false
             return false
         }
 
-        val dir = target!!.position - position
+        val dir = t.position - position
         val dist = dir.length
         val step = speed * dt
 
-        if (dist <= step + target!!.size * 0.5f) {
+        if (dist <= step + t.size * 0.5f) {
             alive = false
             return false
         }

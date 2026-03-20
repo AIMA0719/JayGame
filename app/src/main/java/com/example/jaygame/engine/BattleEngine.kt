@@ -229,7 +229,7 @@ class BattleEngine(
     fun start(scope: CoroutineScope) {
         // Reinitialize wave system for dungeon mode
         if (isDungeonMode && dungeonDef != null) {
-            val forceBoss = dungeonDef!!.type == com.example.jaygame.data.DungeonType.BOSS_RUSH
+            val forceBoss = dungeonDef?.type == com.example.jaygame.data.DungeonType.BOSS_RUSH
             waveSystem = WaveSystem(maxWaves, difficulty, forceBoss = forceBoss)
         }
         // Initialize synergy as empty — will be refreshed when units are placed
@@ -559,17 +559,17 @@ class BattleEngine(
             if (unit.behavior != null) {
                 val roleBonus = getRoleBonus(unit)
                 // Apply role synergy range multiplier to enemy detection
-                unit.behavior!!.update(unit, dt) { pos, range ->
+                unit.behavior?.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
                 }
                 // Clamp position within field bounds (behaviors move units directly)
                 unit.position.x = unit.position.x.coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
                 unit.position.y = unit.position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
                 // For behavior-based units, use behavior's canAttack() (interface default = true)
-                val canFire = unit.behavior!!.canAttack()
+                val canFire = unit.behavior?.canAttack() == true
                 if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
-                    val target = unit.currentTarget!!
-                    val result = unit.behavior!!.onAttack(unit, target)
+                    val target = unit.currentTarget ?: return@forEach
+                    val result = unit.behavior?.onAttack(unit, target) ?: return@forEach
                     // Apply relic & synergy bonuses to behavior damage (mirrors fireProjectile logic)
                     val rm = relicManager
                     val relicAtkBonus = rm?.totalAtkPercent() ?: 0f
@@ -852,7 +852,7 @@ class BattleEngine(
         if (familyCounts.isEmpty()) {
             AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
         } else {
-            val dominantFamily = familyCounts.maxByOrNull { it.value }!!.key
+            val dominantFamily = familyCounts.maxByOrNull { it.value }?.key ?: return
             // Reuse cached counts from getActiveSynergies — avoid second countFamilies call
             AbilitySystem.activeSynergy = SynergySystem.getSynergyBonusFromCached(dominantFamily)
         }
@@ -1184,7 +1184,7 @@ class BattleEngine(
 
     private fun onBattleEnd(victory: Boolean) {
         val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
-            dungeonDef!!.difficultyMultiplier
+            dungeonDef?.difficultyMultiplier ?: 1f
         } else {
             1f + difficulty * 0.25f // 초보1.0, 숙련자1.25, 고인물1.5, 썩은물1.75, 챌린저2.0
         }

@@ -335,7 +335,7 @@ private fun PetEquippedSlotsBar(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = "Lv.${progress?.level ?: 1}",
+                                text = "Lv.${progress?.level ?: 0}",
                                 fontSize = 8.sp,
                                 color = petGradeColor(equippedDef.grade),
                             )
@@ -411,7 +411,7 @@ private fun PetGridItem(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Lv.${progress!!.level}",
+                    text = "Lv.${progress?.level ?: 0}",
                     fontSize = 9.sp,
                     color = gc,
                 )

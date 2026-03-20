@@ -166,9 +166,10 @@ fun BattleParticleOverlay() {
     prevEnemyCount.value = curEnemyCount
 
     // Spawn summon particles
-    if (summonResult != null && summonResult != prevSummonResult.value) {
-        prevSummonResult.value = summonResult
-        val grade = summonResult!!.grade
+    val sr = summonResult
+    if (sr != null && sr != prevSummonResult.value) {
+        prevSummonResult.value = sr
+        val grade = sr.grade
         val color = GradeParticleColors.getOrElse(grade) { ParticleWhite }
         val colorEnd = GradeParticleColorsEnd.getOrElse(grade) { AmbientParticleColorEnd }
         val count = (8 + grade * 4).coerceAtMost(30)
@@ -190,9 +191,10 @@ fun BattleParticleOverlay() {
     }
 
     // Spawn merge particles
-    if (mergeEffect != null && mergeEffect != prevMergeEffect.value) {
-        prevMergeEffect.value = mergeEffect
-        val isLucky = mergeEffect!!.isLucky
+    val me = mergeEffect
+    if (me != null && me != prevMergeEffect.value) {
+        prevMergeEffect.value = me
+        val isLucky = me.isLucky
         val color = if (isLucky) ParticleGold else ParticleCyan
         val colorEnd = if (isLucky) MergeGoldColorEnd else MergeCyanColorEnd
         val count = if (isLucky) 24 else 12

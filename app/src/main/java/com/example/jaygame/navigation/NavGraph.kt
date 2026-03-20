@@ -183,7 +183,7 @@ fun NavGraph(
                     navArgument("merges") { type = NavType.IntType; defaultValue = 0 },
                 ),
             ) { entry ->
-                val args = entry.arguments!!
+                val args = entry.arguments ?: return@composable
                 ResultScreen(
                     victory = args.getBoolean("victory"),
                     waveReached = args.getInt("wave"),
