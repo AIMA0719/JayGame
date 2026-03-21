@@ -11,7 +11,7 @@ class ControllerCCBehavior(
     private val CC_DURATION = 2f  // Base CC duration in seconds
 
     override fun update(unit: GameUnit, dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
-        attackCooldown -= dt
+        attackCooldown -= dt * unit.spdMultiplier
         when (unit.state) {
             UnitState.IDLE -> {
                 val enemy = findEnemy(unit.position, 720f)

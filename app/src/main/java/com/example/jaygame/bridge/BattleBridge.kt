@@ -7,9 +7,12 @@ import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.engine.UnitState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class BattleState(
     val currentWave: Int = 0,
@@ -221,6 +224,43 @@ object BattleBridge {
     private val skillBuffer = ArrayDeque<SkillEvent>(16)
     private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
     private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
+
+    // Lock objects for thread-safe buffer access (game thread writes, UI thread reads)
+    private val skillLock = Any()
+    private val damageLock = Any()
+    private val goldLock = Any()
+    private val levelUpLock = Any()
+
+    // ── Thread-safe command queue — UI thread enqueues, game loop dequeues ──
+    private val commandQueue = java.util.concurrent.ConcurrentLinkedQueue<BattleCommand>()
+
+    sealed class BattleCommand {
+        object Summon : BattleCommand()
+        data class ClickTile(val tileIndex: Int) : BattleCommand()
+        data class Merge(val tileIndex: Int) : BattleCommand()
+        data class Sell(val tileIndex: Int) : BattleCommand()
+        data class BulkSell(val grade: Int, val result: CompletableDeferred<Int>) : BattleCommand()
+        data class Upgrade(val tileIndex: Int) : BattleCommand()
+        data class Swap(val from: Int, val to: Int) : BattleCommand()
+        data class Relocate(val tileIndex: Int, val x: Float, val y: Float) : BattleCommand()
+        data class Gamble(
+            val option: com.example.jaygame.engine.GambleSystem.GambleOption,
+            val betSize: com.example.jaygame.engine.GambleSystem.BetSize,
+            val result: CompletableDeferred<com.example.jaygame.engine.GambleSystem.GambleResult?>,
+        ) : BattleCommand()
+        data class BuyUnit(val unitDefId: Int, val cost: Int) : BattleCommand()
+        data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
+    }
+
+    /** Drain all pending commands — called by the game loop on its own thread. */
+    fun drainCommands(): List<BattleCommand> {
+        val commands = mutableListOf<BattleCommand>()
+        while (true) {
+            val cmd = commandQueue.poll() ?: break
+            commands.add(cmd)
+        }
+        return commands
+    }
 
     /** 활성 시너지 데이터 (BattleEngine → Compose) */
     private val _activeFamilySynergies = MutableStateFlow<Map<UnitFamily, Int>>(emptyMap())
@@ -467,17 +507,19 @@ object BattleBridge {
 
     @JvmStatic
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
-        val now = System.currentTimeMillis()
-        val cutoff = now - 800L
-        while (damageBuffer.isNotEmpty()) {
-            val first = damageBuffer.firstOrNull() ?: break
-            if (first.timestamp <= cutoff) damageBuffer.removeFirst() else break
-        }
-        damageBuffer.addLast(DamageEvent(x, y, damage, isCrit))
-        // Only emit a new list at throttled rate (crits always emit immediately)
-        if (isCrit || now - lastDamageEmitTime >= DAMAGE_EMIT_INTERVAL_MS) {
-            lastDamageEmitTime = now
-            _damageEvents.value = damageBuffer.toList()
+        synchronized(damageLock) {
+            val now = System.currentTimeMillis()
+            val cutoff = now - 800L
+            while (damageBuffer.isNotEmpty()) {
+                val first = damageBuffer.firstOrNull() ?: break
+                if (first.timestamp <= cutoff) damageBuffer.removeFirst() else break
+            }
+            damageBuffer.addLast(DamageEvent(x, y, damage, isCrit))
+            // Only emit a new list at throttled rate (crits always emit immediately)
+            if (isCrit || now - lastDamageEmitTime >= DAMAGE_EMIT_INTERVAL_MS) {
+                lastDamageEmitTime = now
+                _damageEvents.value = damageBuffer.toList()
+            }
         }
     }
 
@@ -552,15 +594,17 @@ object BattleBridge {
     val skillEvents: StateFlow<List<SkillEvent>> = _skillEvents.asStateFlow()
 
     fun emitSkillEvent(event: SkillEvent) {
-        val now = System.currentTimeMillis()
-        while (skillBuffer.isNotEmpty()) {
-            val first = skillBuffer.firstOrNull() ?: break
-            if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
-                skillBuffer.removeFirst()
-            } else break
+        synchronized(skillLock) {
+            val now = System.currentTimeMillis()
+            while (skillBuffer.isNotEmpty()) {
+                val first = skillBuffer.firstOrNull() ?: break
+                if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
+                    skillBuffer.removeFirst()
+                } else break
+            }
+            skillBuffer.addLast(event)
+            _skillEvents.value = skillBuffer.toList()
         }
-        skillBuffer.addLast(event)
-        _skillEvents.value = skillBuffer.toList()
     }
 
     /** 골드 획득 이벤트 (C6) */
@@ -571,16 +615,18 @@ object BattleBridge {
     private var lastGoldEmitTime = 0L
 
     fun onGoldPickup(x: Float, y: Float, amount: Int) {
-        val now = System.currentTimeMillis()
-        val cutoff = now - 1500L
-        while (goldPickupBuffer.isNotEmpty()) {
-            val first = goldPickupBuffer.firstOrNull() ?: break
-            if (first.timestamp <= cutoff) goldPickupBuffer.removeFirst() else break
-        }
-        goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
-        if (now - lastGoldEmitTime >= 50L) {
-            lastGoldEmitTime = now
-            _goldPickupEvents.value = goldPickupBuffer.toList()
+        synchronized(goldLock) {
+            val now = System.currentTimeMillis()
+            val cutoff = now - 1500L
+            while (goldPickupBuffer.isNotEmpty()) {
+                val first = goldPickupBuffer.firstOrNull() ?: break
+                if (first.timestamp <= cutoff) goldPickupBuffer.removeFirst() else break
+            }
+            goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
+            if (now - lastGoldEmitTime >= 50L) {
+                lastGoldEmitTime = now
+                _goldPickupEvents.value = goldPickupBuffer.toList()
+            }
         }
     }
 
@@ -589,28 +635,32 @@ object BattleBridge {
     val levelUpEvents: StateFlow<List<LevelUpEvent>> = _levelUpEvents.asStateFlow()
 
     fun onUnitLevelUp(x: Float, y: Float) {
-        val cutoff = System.currentTimeMillis() - 1500L
-        while (levelUpBuffer.isNotEmpty()) {
-            val first = levelUpBuffer.firstOrNull() ?: break
-            if (first.timestamp <= cutoff) levelUpBuffer.removeFirst() else break
+        synchronized(levelUpLock) {
+            val cutoff = System.currentTimeMillis() - 1500L
+            while (levelUpBuffer.isNotEmpty()) {
+                val first = levelUpBuffer.firstOrNull() ?: break
+                if (first.timestamp <= cutoff) levelUpBuffer.removeFirst() else break
+            }
+            levelUpBuffer.addLast(LevelUpEvent(x, y))
+            _levelUpEvents.value = levelUpBuffer.toList()
         }
-        levelUpBuffer.addLast(LevelUpEvent(x, y))
-        _levelUpEvents.value = levelUpBuffer.toList()
     }
 
     fun clearExpiredSkillEvents() {
-        val now = System.currentTimeMillis()
-        var removed = false
-        while (skillBuffer.isNotEmpty()) {
-            val first = skillBuffer.firstOrNull() ?: break
-            if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
-                skillBuffer.removeFirst()
-                removed = true
-            } else {
-                break
+        synchronized(skillLock) {
+            val now = System.currentTimeMillis()
+            var removed = false
+            while (skillBuffer.isNotEmpty()) {
+                val first = skillBuffer.firstOrNull() ?: break
+                if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
+                    skillBuffer.removeFirst()
+                    removed = true
+                } else {
+                    break
+                }
             }
+            if (removed) _skillEvents.value = skillBuffer.toList()
         }
-        if (removed) _skillEvents.value = skillBuffer.toList()
     }
 
     /** 유닛 소환 천장(Pity) 카운터 */
@@ -695,19 +745,27 @@ object BattleBridge {
         _projectiles.value = ProjectileData()
         unitFrameCounter = 0L
         _unitPositions.value = UnitPositionData()
-        damageBuffer.clear()
-        _damageEvents.value = emptyList()
+        synchronized(damageLock) {
+            damageBuffer.clear()
+            _damageEvents.value = emptyList()
+        }
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
         _unitPopup.value = null
         _mergeEffect.value = null
         _summonResult.value = null
-        skillBuffer.clear()
-        _skillEvents.value = emptyList()
-        goldPickupBuffer.clear()
-        _goldPickupEvents.value = emptyList()
-        levelUpBuffer.clear()
-        _levelUpEvents.value = emptyList()
+        synchronized(skillLock) {
+            skillBuffer.clear()
+            _skillEvents.value = emptyList()
+        }
+        synchronized(goldLock) {
+            goldPickupBuffer.clear()
+            _goldPickupEvents.value = emptyList()
+        }
+        synchronized(levelUpLock) {
+            levelUpBuffer.clear()
+            _levelUpEvents.value = emptyList()
+        }
         _bossModifier.value = null
         _unitPullPity.value = 0
         zoneFrameCounter = 0L
@@ -717,44 +775,48 @@ object BattleBridge {
         // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _debugMode.value = false
+        commandQueue.clear()
     }
 
     // Kotlin engine reference (replaces C++ JNI)
     var engine: com.example.jaygame.engine.BattleEngine? = null
 
+    // ── Request methods: enqueue commands for game-loop-thread processing ──
+
     fun requestSummon() {
-        val eng = engine ?: return
-        eng.requestSummonBlueprint()
+        commandQueue.add(BattleCommand.Summon)
     }
 
     fun requestClickTile(tileIndex: Int) {
-        engine?.requestClickTile(tileIndex)
+        commandQueue.add(BattleCommand.ClickTile(tileIndex))
     }
 
     fun requestMerge(tileIndex: Int) {
         dismissPopup()
-        engine?.requestMerge(tileIndex)
+        commandQueue.add(BattleCommand.Merge(tileIndex))
     }
 
     fun requestSell(tileIndex: Int) {
         dismissPopup()
-        engine?.requestSell(tileIndex)
+        commandQueue.add(BattleCommand.Sell(tileIndex))
     }
 
     fun requestBulkSell(grade: Int): Int {
-        return engine?.requestBulkSell(grade) ?: 0
+        val deferred = CompletableDeferred<Int>()
+        commandQueue.add(BattleCommand.BulkSell(grade, deferred))
+        return runBlocking { withTimeoutOrNull(100L) { deferred.await() } ?: 0 }
     }
 
     fun requestUpgrade(tileIndex: Int) {
-        engine?.requestUpgrade(tileIndex)
+        commandQueue.add(BattleCommand.Upgrade(tileIndex))
     }
 
     fun requestSwap(fromTile: Int, toTile: Int) {
-        engine?.requestSwap(fromTile, toTile)
+        commandQueue.add(BattleCommand.Swap(fromTile, toTile))
     }
 
     fun requestRelocate(tileIndex: Int, normX: Float, normY: Float) {
-        engine?.requestRelocate(tileIndex, normX, normY)
+        commandQueue.add(BattleCommand.Relocate(tileIndex, normX, normY))
     }
 
     /** In-battle upgrade costs: level 1->2 through 6->7 */
@@ -775,13 +837,15 @@ object BattleBridge {
         option: com.example.jaygame.engine.GambleSystem.GambleOption,
         betSize: com.example.jaygame.engine.GambleSystem.BetSize = com.example.jaygame.engine.GambleSystem.BetSize.SMALL,
     ): com.example.jaygame.engine.GambleSystem.GambleResult? {
-        return engine?.requestGamble(option, betSize)
+        val deferred = CompletableDeferred<com.example.jaygame.engine.GambleSystem.GambleResult?>()
+        commandQueue.add(BattleCommand.Gamble(option, betSize, deferred))
+        return runBlocking { withTimeoutOrNull(100L) { deferred.await() } }
     }
 
     // ── Buy Unit ────────────────────────────────────────────
 
     fun requestBuyUnit(unitDefId: Int, cost: Int) {
-        engine?.requestBuyUnit(unitDefId, cost.toFloat())
+        commandQueue.add(BattleCommand.BuyUnit(unitDefId, cost))
     }
 
     // ── Battle Upgrades ─────────────────────────────────────
@@ -801,7 +865,7 @@ object BattleBridge {
         levels[upgradeType]++
         _battleUpgradeLevels.value = levels
 
-        engine?.applyBattleUpgrade(upgradeType, levels[upgradeType], cost.toFloat())
+        commandQueue.add(BattleCommand.BattleUpgrade(upgradeType, levels[upgradeType], cost.toFloat()))
     }
 
 }

@@ -90,10 +90,15 @@ fun SkillEffectOverlay() {
 
     if (skillEvents.isEmpty()) return
 
+    // Snapshot the list to avoid ConcurrentModificationException
+    val eventsSnapshot = skillEvents
+
     Canvas(modifier = Modifier.fillMaxSize()) {
         val now = System.currentTimeMillis()
-        for (event in skillEvents) {
+        for (i in eventsSnapshot.indices) {
+            val event = eventsSnapshot.getOrNull(i) ?: continue
             val elapsed = (now - event.startTime) / 1000f
+            if (event.duration <= 0f) continue
             val progress = (elapsed / event.duration).coerceIn(0f, 1f)
             renderSkillEvent(event, progress)
         }

@@ -7,7 +7,7 @@ class AssassinDashBehavior : UnitBehavior {
     private var attackCooldown: Float = 0f
 
     override fun update(unit: GameUnit, dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
-        attackCooldown -= dt
+        attackCooldown -= dt * unit.spdMultiplier
 
         when (unit.state) {
             UnitState.IDLE -> {

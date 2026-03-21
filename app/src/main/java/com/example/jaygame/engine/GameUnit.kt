@@ -22,6 +22,8 @@ class GameUnit {
     var abilityType = 0
     var abilityValue = 0f
     var isAttacking = false
+    /** Combined speed multiplier (upgrade + synergy) — set by BattleEngine each frame */
+    var spdMultiplier = 1f
     val buffs = BuffContainer()
 
     // ── Unique ability fields (M4) ──

@@ -264,6 +264,23 @@ class BattleEngine(
                 val speed = BattleBridge.battleSpeed.value
                 accumulator += frameDt * speed
 
+                // Process UI commands safely on the game thread
+                for (cmd in BattleBridge.drainCommands()) {
+                    when (cmd) {
+                        is BattleBridge.BattleCommand.Summon -> requestSummonBlueprint()
+                        is BattleBridge.BattleCommand.ClickTile -> requestClickTile(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.Merge -> requestMerge(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.Sell -> requestSell(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(requestBulkSell(cmd.grade))
+                        is BattleBridge.BattleCommand.Upgrade -> requestUpgrade(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.Swap -> requestSwap(cmd.from, cmd.to)
+                        is BattleBridge.BattleCommand.Relocate -> requestRelocate(cmd.tileIndex, cmd.x, cmd.y)
+                        is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
+                        is BattleBridge.BattleCommand.BuyUnit -> requestBuyUnit(cmd.unitDefId, cmd.cost.toFloat())
+                        is BattleBridge.BattleCommand.BattleUpgrade -> applyBattleUpgrade(cmd.upgradeType, cmd.level, cmd.cost)
+                    }
+                }
+
                 // Cap iterations per frame to avoid spiral-of-death at high speed
                 val maxSteps = (speed * 2).toInt().coerceIn(1, 16)
                 var steps = 0
@@ -569,6 +586,9 @@ class BattleEngine(
             // NEW: Behavior-based update path — units with a behavior delegate to it
             if (unit.behavior != null) {
                 val roleBonus = getRoleBonus(unit)
+                val synergy = AbilitySystem.activeSynergy
+                // Push speed multiplier to unit so behaviors can use it for cooldown scaling
+                unit.spdMultiplier = upgradeSpdMult * synergy.spdMultiplier
                 // Apply role synergy range multiplier to enemy detection
                 unit.behavior?.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
@@ -829,6 +849,7 @@ class BattleEngine(
 
         val unit = units.acquire() ?: return
         unit.initFromBlueprint(selected)
+        unit.range *= upgradeRangeMult  // Apply range upgrade
         unit.tileIndex = tileIndex
         unit.position = Grid.FIELD_CENTER.copy()
         unit.homePosition = Grid.FIELD_CENTER.copy()
@@ -848,9 +869,7 @@ class BattleEngine(
     private val roleSynergyCacheMut = HashMap<UnitRole, RoleSynergySystem.RoleSynergyBonus>(5)
     private val roleCountsScratch = HashMap<UnitRole, Int>(5)
 
-    // Dedicated scratch list for refreshSynergies — separate from activeUnitsScratch
-    // to avoid ConcurrentModificationException when UI thread triggers refreshSynergies
-    // while game loop is using activeUnitsScratch.
+    // Dedicated scratch list for refreshSynergies — avoid per-call allocation
     private val synergyScratch = ArrayList<GameUnit>(MAX_UNITS)
 
     /** Recalculate field-based synergies from currently alive units.
@@ -914,6 +933,7 @@ class BattleEngine(
         val bp = blueprintRegistry.findById(result.resultBlueprintId) ?: return
         val unit = units.acquire() ?: return
         unit.initFromBlueprint(bp)
+        unit.range *= upgradeRangeMult  // Apply range upgrade
         unit.tileIndex = tileIndex
         unit.position = Grid.FIELD_CENTER.copy()
         unit.homePosition = Grid.FIELD_CENTER.copy()
@@ -1017,6 +1037,7 @@ class BattleEngine(
 
         if (bp != null) {
             unit.initFromBlueprint(bp)
+            unit.range *= upgradeRangeMult  // Apply range upgrade
             unit.tileIndex = tileIndex
             unit.position = Grid.FIELD_CENTER.copy()
             unit.homePosition = Grid.FIELD_CENTER.copy()
