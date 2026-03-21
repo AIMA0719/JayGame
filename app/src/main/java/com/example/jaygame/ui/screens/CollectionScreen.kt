@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -461,7 +462,7 @@ private fun CollectionBlueprintCard(
         glowColor = gradeGlowColor(blueprint.grade),
         onClick = onClick,
         modifier = Modifier
-            .height(120.dp)
+            .height(130.dp)
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
         Column(
