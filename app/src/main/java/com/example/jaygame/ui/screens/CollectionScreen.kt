@@ -462,7 +462,7 @@ private fun CollectionBlueprintCard(
         glowColor = gradeGlowColor(blueprint.grade),
         onClick = onClick,
         modifier = Modifier
-            .height(130.dp)
+            .heightIn(min = 145.dp)
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
         Column(
