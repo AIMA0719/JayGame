@@ -563,6 +563,7 @@ private fun TierCard(
 
     val cardModifier = Modifier
         .width(100.dp)
+        .height(140.dp)
         .then(
             if (isCurrent) {
                 Modifier.border(2.dp, NeonCyan, RoundedCornerShape(12.dp))

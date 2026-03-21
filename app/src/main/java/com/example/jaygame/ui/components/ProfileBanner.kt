@@ -49,6 +49,7 @@ import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.SubText
 import com.example.jaygame.ui.theme.TrophyAmber
+import com.example.jaygame.data.ALL_PROFILES
 import java.text.NumberFormat
 
 // ── Pre-allocated shimmer colors ──
@@ -70,8 +71,12 @@ fun ProfileBanner(
     gold: Int,
     diamonds: Int,
     totalXP: Int,
+    selectedProfileId: Int = 0,
     modifier: Modifier = Modifier,
 ) {
+    val titleName = remember(selectedProfileId) {
+        ALL_PROFILES.find { it.id == selectedProfileId }?.name
+    }
     val rank = getRankInfo(trophies)
     val fmt = remember { NumberFormat.getIntegerInstance() }
     val xpForCurrentLevel = totalXP % 100
@@ -158,6 +163,15 @@ fun ProfileBanner(
                     fontWeight = FontWeight.Bold,
                     color = LightText,
                 )
+                if (titleName != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = titleName,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold,
+                    )
+                }
                 Spacer(Modifier.weight(1f))
                 Icon(
                     painter = painterResource(R.drawable.ic_trophy),

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -401,6 +402,7 @@ private fun HeroCollectionTab(
                     .padding(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 80.dp),
             ) {
                 items(filteredBlueprints, key = { it.id }) { bp ->
                     val progress = data.units[bp.id]
@@ -459,6 +461,7 @@ private fun CollectionBlueprintCard(
         glowColor = gradeGlowColor(blueprint.grade),
         onClick = onClick,
         modifier = Modifier
+            .height(120.dp)
             .then(if (!owned) Modifier.alpha(0.5f) else Modifier),
     ) {
         Column(

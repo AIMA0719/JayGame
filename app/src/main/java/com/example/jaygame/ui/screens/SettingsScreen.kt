@@ -222,14 +222,7 @@ private fun SettingsMain(
                     onClick = { onPageSelected(SettingsPage.GAMEPLAY) },
                 )
             }
-            GameCard(modifier = Modifier.fillMaxWidth()) {
-                SettingsCategoryRow(
-                    iconRes = R.drawable.ic_settings_gameplay,
-                    title = "강화",
-                    iconTint = NeonGreen,
-                    onClick = { onPageSelected(SettingsPage.UPGRADE) },
-                )
-            }
+            // 강화 탭 숨김 처리
             GameCard(modifier = Modifier.fillMaxWidth()) {
                 SettingsCategoryRow(
                     iconRes = R.drawable.ic_settings_reward,

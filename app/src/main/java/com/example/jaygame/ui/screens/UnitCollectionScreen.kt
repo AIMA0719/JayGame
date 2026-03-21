@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -370,6 +371,7 @@ fun UnitCollectionScreen(
                             .padding(horizontal = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp),
                     ) {
                         items(filteredBlueprints, key = { it.id }) { bp ->
                             CodexBlueprintCard(
@@ -474,6 +476,7 @@ private fun CodexBlueprintCard(
 
     Column(
         modifier = Modifier
+            .height(110.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(codexGradeBgColor(blueprint.grade))
             .border(

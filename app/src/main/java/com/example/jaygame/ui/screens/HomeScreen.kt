@@ -194,6 +194,7 @@ fun HomeScreen(
                 gold = data.gold,
                 diamonds = data.diamonds,
                 totalXP = data.totalXP,
+                selectedProfileId = data.selectedProfileId,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
 
