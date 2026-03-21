@@ -745,18 +745,6 @@ private fun BattleMenuDialog(
                     }
                 }
 
-                // ── Debug toggle (debug builds only) ──
-                if (BuildConfig.DEBUG) {
-                    val isDebugOn by BattleBridge.debugMode.collectAsState()
-                    NeonButton(
-                        text = if (isDebugOn) "디버그 OFF" else "디버그 ON",
-                        onClick = { BattleBridge.toggleDebugMode() },
-                        modifier = Modifier.fillMaxWidth().height(40.dp),
-                        accentColor = if (isDebugOn) NeonGreen else SubText,
-                        accentColorDark = if (isDebugOn) NeonGreen.copy(alpha = 0.7f) else DimText,
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // ── Quit button ──

@@ -82,9 +82,9 @@ enum class BattleUpgradeType(
         label = "SP 회복",
         icon = "\uD83D\uDC8E",
         description = "초당 SP 회복량 증가",
-        effectPerLevel = "+1/초",
+        effectPerLevel = "+0.7/초",
         maxLevel = 4,
-        costs = listOf(80, 160, 280, 420),
+        costs = listOf(120, 250, 420, 650),
         color = Color(0xFFCE93D8),
     ),
 }

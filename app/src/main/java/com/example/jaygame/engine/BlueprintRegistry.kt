@@ -33,7 +33,7 @@ class BlueprintRegistry {
     // Pre-computed caches — rebuilt after loadFromJson
     private var summonableCache: List<UnitBlueprint> = emptyList()
     private var summonableByGradeCache: Map<UnitGrade, List<UnitBlueprint>> = emptyMap()
-    private var normalByGradeCache: Map<UnitGrade, List<UnitBlueprint>> = emptyMap()
+    private var mergeableByGradeCache: Map<UnitGrade, List<UnitBlueprint>> = emptyMap()
 
     fun loadFromJson(jsonString: String) {
         val arr = JSONArray(jsonString)
@@ -44,8 +44,8 @@ class BlueprintRegistry {
         // Build caches
         summonableCache = blueprints.values.filter { it.isSummonable }
         summonableByGradeCache = summonableCache.groupBy { it.grade }
-        normalByGradeCache = blueprints.values
-            .filter { it.unitCategory == UnitCategory.NORMAL }
+        mergeableByGradeCache = blueprints.values
+            .filter { it.unitCategory == UnitCategory.NORMAL || it.unitCategory == UnitCategory.HIDDEN }
             .groupBy { it.grade }
     }
 
@@ -62,8 +62,9 @@ class BlueprintRegistry {
     fun findByGradeAndSummonable(grade: UnitGrade): List<UnitBlueprint> =
         summonableByGradeCache[grade] ?: emptyList()
 
-    fun findNormalByGrade(grade: UnitGrade): List<UnitBlueprint> =
-        normalByGradeCache[grade] ?: emptyList()
+    /** NORMAL + HIDDEN 유닛을 등급별로 반환 (합성 결과 풀) */
+    fun findMergeableByGrade(grade: UnitGrade): List<UnitBlueprint> =
+        mergeableByGradeCache[grade] ?: emptyList()
 
     fun all(): List<UnitBlueprint> = blueprints.values.toList()
 

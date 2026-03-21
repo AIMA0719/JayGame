@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -57,7 +58,11 @@ import androidx.compose.ui.unit.sp
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.audio.SoundEvent
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.engine.AttackRange
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.BossModifier
+import com.example.jaygame.engine.DamageType
+import com.example.jaygame.ui.components.roleColor
 import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -353,7 +358,7 @@ private fun UnitListDialog(
     activeUnits: List<com.example.jaygame.bridge.GridTileState>,
     onDismiss: () -> Unit,
 ) {
-    val registry = remember { com.example.jaygame.engine.BlueprintRegistry.instance }
+    val registry = remember { BlueprintRegistry.instance }
 
     // Group by blueprintId, count duplicates
     val unitGroups = remember(activeUnits) {
@@ -365,6 +370,9 @@ private fun UnitListDialog(
                 it.value.first().grade
             }.thenBy { it.key })
     }
+
+    // State for detail dialog
+    var selectedBlueprintId by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -408,6 +416,7 @@ private fun UnitListDialog(
                             .clip(RoundedCornerShape(10.dp))
                             .background(gradeColor.copy(alpha = 0.1f))
                             .border(1.dp, gradeColor.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .clickable { selectedBlueprintId = bpId }
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -447,19 +456,26 @@ private fun UnitListDialog(
                             if (bp != null) {
                                 val families = bp.families.joinToString("/") { it.label }
                                 Text(
-                                    text = "$families | ATK ${bp.stats.baseATK.toInt()} | SPD ${String.format(java.util.Locale.US, "%.1f", bp.stats.baseSpeed)} | RNG ${bp.stats.range.toInt()}",
+                                    text = "$families | 공격력 ${bp.stats.baseATK.toInt()} | 공속 ${String.format(java.util.Locale.US, "%.1f", bp.stats.baseSpeed)} | 사거리 ${bp.stats.range.toInt()}",
                                     color = Color.White.copy(alpha = 0.4f),
                                     fontSize = 9.sp,
                                 )
                                 if (bp.stats.hp > 0f) {
                                     Text(
-                                        text = "HP ${bp.stats.hp.toInt()} | DEF ${bp.stats.defense.toInt()} | MRES ${bp.stats.magicResist.toInt()}",
+                                        text = "체력 ${bp.stats.hp.toInt()} | 방어력 ${bp.stats.defense.toInt()} | 마법저항 ${bp.stats.magicResist.toInt()}",
                                         color = Color.White.copy(alpha = 0.4f),
                                         fontSize = 9.sp,
                                     )
                                 }
                             }
                         }
+
+                        // Arrow hint
+                        Text(
+                            text = "\u276F",
+                            color = Color.White.copy(alpha = 0.3f),
+                            fontSize = 14.sp,
+                        )
                     }
                 }
 
@@ -496,6 +512,300 @@ private fun UnitListDialog(
                 )
             }
         }
+    }
+
+    // Blueprint detail dialog
+    selectedBlueprintId?.let { bpId ->
+        BlueprintDetailDialog(
+            blueprintId = bpId,
+            onDismiss = { selectedBlueprintId = null },
+        )
+    }
+}
+
+// ── Blueprint Detail Dialog — full spec view from unit list ──
+
+@Composable
+private fun BlueprintDetailDialog(
+    blueprintId: String,
+    onDismiss: () -> Unit,
+) {
+    val bp = remember(blueprintId) {
+        BlueprintRegistry.instance.findById(blueprintId)
+    } ?: return
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1A1008))
+                .border(2.dp, bp.grade.color.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // Header: icon + name + grade + families
+            if (bp.iconRes != 0) {
+                Image(
+                    painter = painterResource(id = bp.iconRes),
+                    contentDescription = bp.name,
+                    modifier = Modifier.size(56.dp),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Text(
+                text = bp.name,
+                color = bp.grade.color,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+
+            // Grade + families
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = bp.grade.label,
+                    color = bp.grade.color,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (bp.families.isNotEmpty()) {
+                    Text(
+                        text = bp.families.joinToString("/") { it.label },
+                        color = bp.families.first().color,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Role / AttackRange / DamageType badges
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                BadgePill(bp.role.label, roleColor(bp.role))
+                BadgePill(
+                    bp.attackRange.label,
+                    if (bp.attackRange == AttackRange.MELEE) Color(0xFF64B5F6) else Color(0xFF81C784),
+                )
+                BadgePill(
+                    if (bp.damageType == DamageType.PHYSICAL) "\uBB3C\uB9AC" else "\uB9C8\uBC95",
+                    if (bp.damageType == DamageType.PHYSICAL) Color(0xFFEF5350) else Color(0xFF7E57C2),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Stats grid — 2 rows of 3
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                DetailStatItem("\uACF5\uACA9\uB825", "${bp.stats.baseATK.toInt()}", Color(0xFFEF5350))
+                DetailStatItem("\uACF5\uC18D", String.format(java.util.Locale.US, "%.1f", bp.stats.baseSpeed), Color(0xFF26C6DA))
+                DetailStatItem("\uC0AC\uAC70\uB9AC", "${bp.stats.range.toInt()}", GoldBright)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                DetailStatItem("\uCCB4\uB825", "${bp.stats.hp.toInt()}", Color(0xFF4CAF50))
+                DetailStatItem("\uBC29\uC5B4\uB825", "${bp.stats.defense.toInt()}", Color(0xFF90A4AE))
+                DetailStatItem("\uB9C8\uBC95\uC800\uD56D", "${bp.stats.magicResist.toInt()}", Color(0xFF7E57C2))
+            }
+
+            // Extra stats
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                DetailStatItem("\uC774\uB3D9\uC18D\uB3C4", String.format(java.util.Locale.US, "%.0f", bp.stats.moveSpeed), Color(0xFF80CBC4))
+                DetailStatItem("\uBE14\uB85D", "${bp.stats.blockCount}", Color(0xFFFFAB91))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Description
+            if (bp.description.isNotEmpty()) {
+                Text(
+                    text = bp.description,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Ability
+            if (bp.ability != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF2A1A0C))
+                        .border(1.dp, Color(0xFF8B6040).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .padding(10.dp),
+                ) {
+                    Text(
+                        text = "\u2694 ${bp.ability.name}",
+                        color = GoldBright,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    // Ability details row
+                    val triggerLabel = when (bp.ability.type) {
+                        com.example.jaygame.engine.AbilityTrigger.PASSIVE -> "\uD328\uC2DC\uBE0C"
+                        com.example.jaygame.engine.AbilityTrigger.ACTIVE -> "\uC561\uD2F0\uBE0C"
+                        com.example.jaygame.engine.AbilityTrigger.AURA -> "\uC624\uB77C"
+                    }
+                    val dmgLabel = if (bp.ability.damageType == DamageType.PHYSICAL) "\uBB3C\uB9AC" else "\uB9C8\uBC95"
+                    val detailParts = mutableListOf(triggerLabel, dmgLabel)
+                    if (bp.ability.cooldown > 0f) detailParts.add("\uCFE8\uD0C0\uC784 ${String.format(java.util.Locale.US, "%.1f", bp.ability.cooldown)}\uCD08")
+                    if (bp.ability.value > 0f) detailParts.add("\uC704\uB825 ${String.format(java.util.Locale.US, "%.0f%%", bp.ability.value * 100f)}")
+                    if (bp.ability.range > 0f) detailParts.add("\uBC94\uC704 ${bp.ability.range.toInt()}")
+                    Text(
+                        text = detailParts.joinToString(" | "),
+                        color = Color(0xFF26C6DA),
+                        fontSize = 9.sp,
+                    )
+                    Text(
+                        text = bp.ability.description,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            // Unique ability
+            if (bp.uniqueAbility != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(bp.grade.color.copy(alpha = 0.1f))
+                        .border(1.dp, bp.grade.color.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .padding(10.dp),
+                ) {
+                    Text(
+                        text = "\u2726 ${bp.uniqueAbility.name}",
+                        color = bp.grade.color,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "${bp.uniqueAbility.requiredGrade.label} \uB4F1\uAE09 \uC774\uC0C1 \uD574\uAE08",
+                        color = bp.uniqueAbility.requiredGrade.color.copy(alpha = 0.7f),
+                        fontSize = 9.sp,
+                    )
+                    bp.uniqueAbility.passive?.let { passive ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "[\uD328\uC2DC\uBE0C] ${passive.name}",
+                            color = Color(0xFF81C784),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        val passiveDetails = mutableListOf<String>()
+                        if (passive.value > 0f) passiveDetails.add("\uC704\uB825 ${String.format(java.util.Locale.US, "%.0f%%", passive.value * 100f)}")
+                        if (passive.range > 0f) passiveDetails.add("\uBC94\uC704 ${passive.range.toInt()}")
+                        if (passiveDetails.isNotEmpty()) {
+                            Text(
+                                text = passiveDetails.joinToString(" | "),
+                                color = Color(0xFF81C784).copy(alpha = 0.7f),
+                                fontSize = 9.sp,
+                            )
+                        }
+                        Text(
+                            text = passive.description,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                    bp.uniqueAbility.active?.let { active ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "[\uC561\uD2F0\uBE0C] ${active.name}",
+                            color = Color(0xFF26C6DA),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        val activeDetails = mutableListOf<String>()
+                        if (active.cooldown > 0f) activeDetails.add("\uCFE8\uD0C0\uC784 ${String.format(java.util.Locale.US, "%.1f", active.cooldown)}\uCD08")
+                        if (active.value > 0f) activeDetails.add("\uC704\uB825 ${String.format(java.util.Locale.US, "%.0f%%", active.value * 100f)}")
+                        if (active.range > 0f) activeDetails.add("\uBC94\uC704 ${active.range.toInt()}")
+                        val dmgLabel = if (active.damageType == DamageType.PHYSICAL) "\uBB3C\uB9AC" else "\uB9C8\uBC95"
+                        activeDetails.add(0, dmgLabel)
+                        Text(
+                            text = activeDetails.joinToString(" | "),
+                            color = Color(0xFF26C6DA).copy(alpha = 0.7f),
+                            fontSize = 9.sp,
+                        )
+                        Text(
+                            text = active.description,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Back button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF3E2510))
+                    .border(1.dp, Color(0xFF8B6040), RoundedCornerShape(10.dp))
+                    .clickable(onClick = onDismiss)
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "\uB3CC\uC544\uAC00\uAE30",  // 돌아가기
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgePill(text: String, color: Color) {
+    Text(
+        text = text,
+        color = color,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.15f))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
+}
+
+@Composable
+private fun DetailStatItem(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 9.sp)
+        Text(value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }
 

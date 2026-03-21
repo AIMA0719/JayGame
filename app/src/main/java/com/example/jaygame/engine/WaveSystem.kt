@@ -42,7 +42,7 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         // Exponential scaling for survival (waves beyond 40)
         val survivalScale = if (w > 39) 1f + (w - 39) * 0.15f else 1f
 
-        val baseHP = (50f + capped * 30f + (capped * capped * 0.5f)) * survivalScale
+        val baseHP = (65f + capped * 39f + (capped * capped * 0.65f)) * survivalScale
         val baseSpeed = (60f + (capped * 1.5f).coerceAtMost(40f)) *
             (if (w > 39) 1f + (w - 39) * 0.02f else 1f).coerceAtMost(1.5f)
         val baseArmor = ((capped * 2f).coerceAtMost(60f) + if (w > 39) (w - 39) * 3f else 0f)

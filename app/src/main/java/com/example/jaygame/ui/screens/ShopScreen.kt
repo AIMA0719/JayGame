@@ -164,19 +164,6 @@ fun ShopScreen(repository: GameRepository) {
                         true
                     } else false
                 }),
-            ShopItem("\uD83D\uDD27 개발자 모드", "재화 MAX + 스태미나 무한 + 도감 올 해금", CurrencyType.FREE, "FREE",
-                onPurchase = { d, repo ->
-                    val allUnlocked = d.units.mapValues { (_, u) -> u.copy(owned = true, cards = 999) }
-                    repo.save(d.copy(
-                        gold = 9_999_999,
-                        diamonds = 9_999_999,
-                        stamina = 9_999,
-                        maxStamina = 9_999,
-                        units = allUnlocked,
-                        unlockedStages = (0 until STAGES.size).toList(),
-                    ))
-                    true
-                }),
         )
     }
 

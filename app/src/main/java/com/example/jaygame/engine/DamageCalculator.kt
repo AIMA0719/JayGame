@@ -96,12 +96,12 @@ object DamageCalculator {
     /** 등급(Grade) 기반 데미지 보정 — 레퍼런스: 랜덤디펜스 계열 (최고 등급 ~1.5x) */
     private val GRADE_MULTIPLIERS = floatArrayOf(
         1.0f,   // Common
-        1.05f,  // Rare       (+5%)
-        1.10f,  // Hero       (+10%)
-        1.18f,  // Legend     (+18%)
-        1.28f,  // Ancient    (+28%)
-        1.38f,  // Mythic     (+38%)
-        1.50f,  // Immortal   (+50%)
+        1.12f,  // Rare       (+12%)
+        1.30f,  // Hero       (+30%)
+        1.55f,  // Legend     (+55%)
+        1.85f,  // Ancient    (+85%)
+        2.20f,  // Mythic     (+120%)
+        2.70f,  // Immortal   (+170%)
     )
 
     fun gradeMultiplier(grade: Int): Float =

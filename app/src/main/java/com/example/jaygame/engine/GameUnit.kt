@@ -58,6 +58,7 @@ class GameUnit {
     fun initFromBlueprint(bp: UnitBlueprint) {
         blueprintId = bp.id
         families = bp.families
+        family = bp.families.firstOrNull()?.ordinal ?: 0
         grade = bp.grade.ordinal
         role = bp.role
         attackRange = bp.attackRange

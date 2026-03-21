@@ -28,6 +28,7 @@ import com.example.jaygame.ui.screens.AchievementsScreen
 import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.DungeonScreen
+import com.example.jaygame.data.STAGES
 import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
@@ -219,10 +220,15 @@ fun NavGraph(
                             cheatActivated = true
                             shopTapTimes.clear()
                             val current = repository.gameData.value
+                            val allUnlocked = current.units.mapValues { (_, u) -> u.copy(owned = true, cards = 999) }
                             repository.save(
                                 current.copy(
-                                    diamonds = 9_999_999,
                                     gold = 9_999_999,
+                                    diamonds = 9_999_999,
+                                    stamina = 9_999,
+                                    maxStamina = 9_999,
+                                    units = allUnlocked,
+                                    unlockedStages = (0 until STAGES.size).toList(),
                                 ),
                             )
                             Toast.makeText(context, "★ DEV MODE ★", Toast.LENGTH_SHORT).show()

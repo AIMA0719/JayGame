@@ -20,6 +20,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -88,7 +91,7 @@ fun RelicScreen(
     showTopBar: Boolean = true,
 ) {
     var selectedRelicId by remember { mutableIntStateOf(-1) }
-    val selectedRelic = remember(selectedRelicId) {
+    val selectedRelic = remember(selectedRelicId, gameData.relics) {
         if (selectedRelicId >= 0) gameData.relics.getOrNull(selectedRelicId) else null
     }
     val selectedDef = remember(selectedRelicId) {
@@ -154,62 +157,44 @@ fun RelicScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         // ── Main content ──
-        if (selectedRelic != null && selectedDef != null) {
-            // Detail panel visible — show grid + detail
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(ALL_RELICS) { def ->
-                    val progress = gameData.relics.getOrNull(def.id)
-                    RelicGridItem(
-                        def = def,
-                        progress = progress,
-                        isSelected = selectedRelicId == def.id,
-                        onClick = {
-                            selectedRelicId = if (selectedRelicId == def.id) -1 else def.id
-                        },
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(4.dp)) }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            items(ALL_RELICS, key = { it.id }) { def ->
+                val progress = gameData.relics.getOrNull(def.id)
+                RelicGridItem(
+                    def = def,
+                    progress = progress,
+                    isSelected = selectedRelicId == def.id,
+                    onClick = {
+                        selectedRelicId = if (selectedRelicId == def.id) -1 else def.id
+                    },
+                )
             }
+            item { Spacer(modifier = Modifier.height(if (selectedRelic != null) 4.dp else 16.dp)) }
+        }
 
-            // Detail panel at bottom
-            RelicDetailPanel(
-                gameData = gameData,
-                relicId = selectedRelicId,
-                progress = selectedRelic,
-                onUpgrade = onUpgrade,
-                onEquip = onEquip,
-                onUnequip = onUnequip,
-                onClose = { selectedRelicId = -1 },
-            )
-        } else {
-            // Full grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(ALL_RELICS) { def ->
-                    val progress = gameData.relics.getOrNull(def.id)
-                    RelicGridItem(
-                        def = def,
-                        progress = progress,
-                        isSelected = false,
-                        onClick = {
-                            selectedRelicId = def.id
-                        },
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+        // Detail panel at bottom
+        AnimatedVisibility(
+            visible = selectedRelic != null && selectedDef != null,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            if (selectedRelic != null && selectedDef != null) {
+                RelicDetailPanel(
+                    gameData = gameData,
+                    relicId = selectedRelicId,
+                    progress = selectedRelic,
+                    onUpgrade = onUpgrade,
+                    onEquip = onEquip,
+                    onUnequip = onUnequip,
+                    onClose = { selectedRelicId = -1 },
+                )
             }
         }
     }

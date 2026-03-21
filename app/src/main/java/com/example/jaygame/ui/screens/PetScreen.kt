@@ -17,7 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -209,58 +213,44 @@ private fun PetCollectionTab(
         Spacer(modifier = Modifier.height(8.dp))
 
         // ── Pet grid + optional detail panel ──
-        if (selectedProgress != null && selectedDef != null) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(ALL_PETS) { def ->
-                    val progress = gameData.pets.getOrNull(def.id)
-                    PetGridItem(
-                        def = def,
-                        progress = progress,
-                        isSelected = selectedPetId == def.id,
-                        onClick = {
-                            selectedPetId = if (selectedPetId == def.id) -1 else def.id
-                        },
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(4.dp)) }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            items(ALL_PETS, key = { it.id }) { def ->
+                val progress = gameData.pets.getOrNull(def.id)
+                PetGridItem(
+                    def = def,
+                    progress = progress,
+                    isSelected = selectedPetId == def.id,
+                    onClick = {
+                        selectedPetId = if (selectedPetId == def.id) -1 else def.id
+                    },
+                )
             }
+            item { Spacer(modifier = Modifier.height(if (selectedProgress != null) 4.dp else 16.dp)) }
+        }
 
-            PetDetailPanel(
-                gameData = gameData,
-                petId = selectedPetId,
-                progress = selectedProgress,
-                def = selectedDef,
-                onUpgrade = onUpgrade,
-                onEquip = onEquip,
-                onUnequip = onUnequip,
-                onClose = { selectedPetId = -1 },
-            )
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(ALL_PETS) { def ->
-                    val progress = gameData.pets.getOrNull(def.id)
-                    PetGridItem(
-                        def = def,
-                        progress = progress,
-                        isSelected = false,
-                        onClick = { selectedPetId = def.id },
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+        AnimatedVisibility(
+            visible = selectedProgress != null && selectedDef != null,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            if (selectedProgress != null && selectedDef != null) {
+                PetDetailPanel(
+                    gameData = gameData,
+                    petId = selectedPetId,
+                    progress = selectedProgress,
+                    def = selectedDef,
+                    onUpgrade = onUpgrade,
+                    onEquip = onEquip,
+                    onUnequip = onUnequip,
+                    onClose = { selectedPetId = -1 },
+                )
             }
         }
     }
@@ -698,7 +688,7 @@ private fun PetPullTab(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                items(pullResults) { def ->
+                itemsIndexed(pullResults, key = { index, def -> "${def.id}_$index" }) { _, def ->
                     val gc = petGradeColor(def.grade)
                     Box(
                         modifier = Modifier
@@ -760,6 +750,7 @@ private fun PetPullTab(
         ) {
             Text(text = "확률 안내", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SubText)
             Spacer(modifier = Modifier.height(6.dp))
+            val totalWeight = remember { PetGrade.entries.sumOf { it.pullWeight }.toFloat() }
             PetGrade.entries.forEach { grade ->
                 val gc = petGradeColor(grade)
                 Row(
@@ -767,7 +758,6 @@ private fun PetPullTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(text = grade.label, fontSize = 11.sp, color = gc)
-                    val totalWeight = PetGrade.entries.sumOf { it.pullWeight }.toFloat()
                     val pct = grade.pullWeight / totalWeight * 100f
                     Text(text = "%.1f%%".format(pct), fontSize = 11.sp, color = gc)
                 }

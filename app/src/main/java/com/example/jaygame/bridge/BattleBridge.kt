@@ -79,6 +79,8 @@ data class ProjectileData(
     val dstXs: FloatArray = FloatArray(0),
     val dstYs: FloatArray = FloatArray(0),
     val types: IntArray = IntArray(0),  // 0=arrow, 1=fire, 2=ice, 3=poison, 4=lightning
+    val families: IntArray = IntArray(0),  // UnitFamily ordinal (0-5)
+    val grades: IntArray = IntArray(0),    // UnitGrade ordinal (0-6)
     val count: Int = 0,
     val frameId: Long = 0L,
 ) {
@@ -425,8 +427,14 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun updateProjectiles(srcXs: FloatArray, srcYs: FloatArray, dstXs: FloatArray, dstYs: FloatArray, types: IntArray, count: Int) {
-        _projectiles.value = ProjectileData(srcXs, srcYs, dstXs, dstYs, types, count, ++projFrameCounter)
+    fun updateProjectiles(
+        srcXs: FloatArray, srcYs: FloatArray,
+        dstXs: FloatArray, dstYs: FloatArray,
+        types: IntArray, count: Int,
+        families: IntArray = IntArray(0),
+        grades: IntArray = IntArray(0),
+    ) {
+        _projectiles.value = ProjectileData(srcXs, srcYs, dstXs, dstYs, types, families, grades, count, ++projFrameCounter)
     }
 
     @JvmStatic

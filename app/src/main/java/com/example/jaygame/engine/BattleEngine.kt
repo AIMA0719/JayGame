@@ -34,7 +34,7 @@ class BattleEngine(
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
         const val SP_REGEN_PER_SEC = 2f
-        const val BASE_SUMMON_COST = 35
+        const val BASE_SUMMON_COST = 40
         const val WAVE_DELAY = 3f
     }
 
@@ -162,6 +162,8 @@ class BattleEngine(
     private val projDstXBuf = FloatArray(MAX_PROJECTILES)
     private val projDstYBuf = FloatArray(MAX_PROJECTILES)
     private val projTypeBuf = IntArray(MAX_PROJECTILES)
+    private val projFamilyBuf = IntArray(MAX_PROJECTILES)
+    private val projGradeBuf = IntArray(MAX_PROJECTILES)
 
     private val gridIdBuf = IntArray(Grid.TOTAL)
     private val gridGradeBuf = IntArray(Grid.TOTAL)
@@ -926,7 +928,7 @@ class BattleEngine(
 
     fun requestSell(tileIndex: Int) {
         val unit = grid.removeUnit(tileIndex) ?: return
-        sp += 30f + unit.grade * 20f
+        sp += 30f + unit.grade * 30f
         units.release(unit)
         invalidateMergeCache()
         refreshSynergies()
@@ -938,7 +940,7 @@ class BattleEngine(
             val unit = grid.getUnit(i) ?: continue
             if (unit.grade == grade) {
                 grid.removeUnit(i)
-                sp += 30f + unit.grade * 20f
+                sp += 30f + unit.grade * 30f
                 units.release(unit)
                 count++
             }
@@ -1067,7 +1069,7 @@ class BattleEngine(
             1 -> upgradeSpdMult = 1f + level * 0.08f
             2 -> upgradeCritRate = level * 0.05f
             3 -> upgradeRangeMult = 1f + level * 0.1f
-            4 -> upgradeSpRegen = level * 1f
+            4 -> upgradeSpRegen = level * 0.7f
         }
     }
 
@@ -1153,10 +1155,12 @@ class BattleEngine(
                 projDstXBuf[pi] = p.position.x / W
                 projDstYBuf[pi] = p.position.y / H
                 projTypeBuf[pi] = p.type
+                projFamilyBuf[pi] = p.family
+                projGradeBuf[pi] = p.grade
                 pi++
             }
         }
-        BattleBridge.updateProjectiles(projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf, projTypeBuf, pi)
+        BattleBridge.updateProjectiles(projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf, projTypeBuf, pi, projFamilyBuf, projGradeBuf)
 
         // Grid state — reuse pre-allocated buffers
         if (gridPushTimer >= 0.1f) {
@@ -1191,7 +1195,7 @@ class BattleEngine(
         val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
             dungeonDef?.difficultyMultiplier ?: 1f
         } else {
-            1f + difficulty * 0.25f // 초보1.0, 숙련자1.25, 고인물1.5, 썩은물1.75, 챌린저2.0
+            1f + difficulty * 0.25f
         }
         val dungeonRewardMult = if (isDungeonMode) dungeonDef?.rewardMultiplier ?: 1f else 1f
         val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5

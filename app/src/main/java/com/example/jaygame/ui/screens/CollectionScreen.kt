@@ -30,13 +30,17 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -131,7 +135,14 @@ fun CollectionScreen(
     onPetUnequip: ((Int) -> Unit)? = null,
 ) {
     val data by repository.gameData.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val selectedTab by remember { derivedStateOf { pagerState.currentPage } }
+    val coroutineScope = rememberCoroutineScope()
+
+    // ── Cached tab counts ──
+    val unitCount = remember(data.units) { data.units.count { (_, u) -> u.owned } }
+    val relicCount = remember(data.relics) { data.relics.count { it.owned } }
+    val petCount = remember(data.pets) { data.pets.count { it.owned } }
 
     Column(
         modifier = Modifier
@@ -154,9 +165,8 @@ fun CollectionScreen(
         ) {
             Tab(
                 selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                 text = {
-                    val unitCount = data.units.count { (_, u) -> u.owned }
                     Text(
                         text = "영웅 ($unitCount)",
                         fontSize = 14.sp,
@@ -166,9 +176,8 @@ fun CollectionScreen(
             )
             Tab(
                 selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } },
                 text = {
-                    val relicCount = data.relics.count { it.owned }
                     Text(
                         text = "유물 ($relicCount)",
                         fontSize = 14.sp,
@@ -178,9 +187,8 @@ fun CollectionScreen(
             )
             Tab(
                 selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
+                onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } },
                 text = {
-                    val petCount = data.pets.count { it.owned }
                     Text(
                         text = "펫 ($petCount)",
                         fontSize = 14.sp,
@@ -190,24 +198,30 @@ fun CollectionScreen(
             )
         }
 
-        when (selectedTab) {
-            0 -> HeroCollectionTab(repository = repository, data = data)
-            1 -> RelicScreen(
-                gameData = data,
-                onUpgrade = onRelicUpgrade ?: {},
-                onEquip = onRelicEquip ?: {},
-                onUnequip = onRelicUnequip ?: {},
-                showTopBar = false,
-            )
-            2 -> PetScreen(
-                gameData = data,
-                onPull = onPetPull ?: {},
-                onPull10 = onPetPull10 ?: {},
-                onUpgrade = onPetUpgrade ?: {},
-                onEquip = onPetEquip ?: {},
-                onUnequip = onPetUnequip ?: {},
-                showTopBar = false,
-            )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1,
+        ) { page ->
+            when (page) {
+                0 -> HeroCollectionTab(repository = repository, data = data, ownedCount = unitCount)
+                1 -> RelicScreen(
+                    gameData = data,
+                    onUpgrade = onRelicUpgrade ?: {},
+                    onEquip = onRelicEquip ?: {},
+                    onUnequip = onRelicUnequip ?: {},
+                    showTopBar = false,
+                )
+                2 -> PetScreen(
+                    gameData = data,
+                    onPull = onPetPull ?: {},
+                    onPull10 = onPetPull10 ?: {},
+                    onUpgrade = onPetUpgrade ?: {},
+                    onEquip = onPetEquip ?: {},
+                    onUnequip = onPetUnequip ?: {},
+                    showTopBar = false,
+                )
+            }
         }
     }
 }
@@ -216,6 +230,7 @@ fun CollectionScreen(
 private fun HeroCollectionTab(
     repository: GameRepository,
     data: com.example.jaygame.data.GameData,
+    ownedCount: Int,
 ) {
     var selectedBlueprint by remember { mutableStateOf<UnitBlueprint?>(null) }
 
@@ -252,7 +267,6 @@ private fun HeroCollectionTab(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Description banner
-            val ownedCount = data.units.count { (_, u) -> u.owned }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

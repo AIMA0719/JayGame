@@ -47,8 +47,8 @@ fun SynergyPanel(
     roleSynergies: Map<UnitRole, Int>,
     modifier: Modifier = Modifier,
 ) {
-    val activeRoles: Map<UnitRole, Int> = remember(roleSynergies) { roleSynergies.filter { it.value >= 2 } }
-    val activeFamilies: Map<UnitFamily, Int> = remember(familySynergies) { familySynergies.filter { it.value >= 2 } }
+    val activeRoles: Map<UnitRole, Int> = remember(roleSynergies) { roleSynergies.filter { it.value >= 3 } }
+    val activeFamilies: Map<UnitFamily, Int> = remember(familySynergies) { familySynergies.filter { it.value >= 3 } }
 
     if (activeRoles.isEmpty() && activeFamilies.isEmpty()) return
 
@@ -63,7 +63,7 @@ fun SynergyPanel(
             .clickable { showDetailDialog = true }
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        // Role synergies (2+ only)
+        // Role synergies (3+ only)
         activeRoles.forEach { (role, count) ->
             SynergyChip(
                 label = role.label,
@@ -71,7 +71,7 @@ fun SynergyPanel(
                 color = roleColor(role),
             )
         }
-        // Family synergies (2+ only)
+        // Family synergies (3+ only)
         activeFamilies.forEach { (family, count) ->
             SynergyChip(
                 label = family.label,
@@ -228,7 +228,7 @@ private fun SynergyDetailRow(
 }
 
 private fun describeFamilySynergy(family: UnitFamily, count: Int): String {
-    val isFull = count >= 3
+    val isFull = count >= 4
     return when (family) {
         UnitFamily.FIRE -> if (isFull) "공격력 +8%, DoT 지속시간 +50%" else "공격력 +4%"
         UnitFamily.FROST -> if (isFull) "공격속도 +6%, 둔화 효과 +30%" else "공격속도 +3%"

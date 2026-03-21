@@ -3,10 +3,10 @@ package com.example.jaygame.engine
 import com.example.jaygame.data.UnitFamily
 
 /**
- * 필드 시너지 — 같은 가족(Family) 유닛이 필드에 2개 이상이면 해당 가족에 보너스.
+ * 필드 시너지 — 같은 가족(Family) 유닛이 필드에 3개 이상이면 해당 가족에 보너스.
  *
- * 2개: 기본 시너지 (약한 보너스)
- * 3개+: 풀 시너지 (강한 보너스 + 특수 효과)
+ * 3개: 기본 시너지 (약한 보너스)
+ * 4개+: 풀 시너지 (강한 보너스 + 특수 효과)
  *
  * 듀얼 패밀리 지원: 히든 유닛 등 families가 2개인 유닛은 양쪽 모두 카운트.
  * SPECIAL 유닛은 시너지 카운트에서 제외.
@@ -77,36 +77,36 @@ object SynergySystem {
      * GameUnit 리스트 기반 활성 시너지 요약 (UI 표시용)
      */
     fun getActiveSynergies(units: List<GameUnit>): Map<UnitFamily, Int> {
-        return countFamilies(units).filter { it.value >= 2 }
+        return countFamilies(units).filter { it.value >= 3 }
     }
 
     private fun getSynergyBonusByCount(familyOrdinal: Int, count: Int): SynergyBonus {
-        if (count < 2) return SynergyBonus()
-        val isFull = count >= 3
+        if (count < 3) return SynergyBonus()
+        val isFull = count >= 4
         return when (familyOrdinal) {
             0 -> SynergyBonus(
-                atkMultiplier = if (isFull) 1.08f else 1.04f,
+                atkMultiplier = if (isFull) 1.15f else 1.08f,
                 specialEffect = if (isFull) SpecialEffect.FIRE_BURN_EXTEND else SpecialEffect.NONE,
             )
             1 -> SynergyBonus(
-                spdMultiplier = if (isFull) 1.06f else 1.03f,
+                spdMultiplier = if (isFull) 1.12f else 1.06f,
                 specialEffect = if (isFull) SpecialEffect.FROST_SLOW_BOOST else SpecialEffect.NONE,
             )
             2 -> SynergyBonus(
-                atkMultiplier = if (isFull) 1.07f else 1.04f,
+                atkMultiplier = if (isFull) 1.14f else 1.08f,
                 specialEffect = if (isFull) SpecialEffect.POISON_SPREAD else SpecialEffect.NONE,
             )
             3 -> SynergyBonus(
-                spdMultiplier = if (isFull) 1.08f else 1.04f,
+                spdMultiplier = if (isFull) 1.15f else 1.08f,
                 specialEffect = if (isFull) SpecialEffect.LIGHTNING_CHAIN_EXTRA else SpecialEffect.NONE,
             )
             4 -> SynergyBonus(
-                rangeMultiplier = if (isFull) 1.06f else 1.03f,
+                rangeMultiplier = if (isFull) 1.12f else 1.06f,
                 specialEffect = if (isFull) SpecialEffect.SUPPORT_HEAL_BOOST else SpecialEffect.NONE,
             )
             5 -> SynergyBonus(
-                atkMultiplier = if (isFull) 1.05f else 1.03f,
-                rangeMultiplier = if (isFull) 1.05f else 1.02f,
+                atkMultiplier = if (isFull) 1.10f else 1.06f,
+                rangeMultiplier = if (isFull) 1.10f else 1.05f,
                 specialEffect = if (isFull) SpecialEffect.WIND_KNOCKBACK_EXTRA else SpecialEffect.NONE,
             )
             else -> SynergyBonus()

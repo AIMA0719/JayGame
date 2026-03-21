@@ -57,7 +57,6 @@ class Grid {
         return (0 until TOTAL).filter { i ->
             val u = cells[i]
             u != null && u.grade == grade &&
-                    u.unitCategory != UnitCategory.HIDDEN &&
                     u.unitCategory != UnitCategory.SPECIAL
         }
     }

@@ -27,7 +27,7 @@ object MergeSystem {
         blueprintRegistry: BlueprintRegistry,
     ): BlueprintMergeResult? {
         val unit = grid.getUnit(tileIndex) ?: return null
-        if (unit.unitCategory == UnitCategory.HIDDEN || unit.unitCategory == UnitCategory.SPECIAL) return null
+        if (unit.unitCategory == UnitCategory.SPECIAL) return null
 
         val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: return null
         val nextGrade = currentGrade.nextGrade() ?: return null // 최고 등급이면 합성 불가
@@ -43,7 +43,7 @@ object MergeSystem {
         }
 
         // 다음 등급 블루프린트 중 랜덤 선택
-        val nextGradeBps = blueprintRegistry.findNormalByGrade(nextGrade)
+        val nextGradeBps = blueprintRegistry.findMergeableByGrade(nextGrade)
         if (nextGradeBps.isEmpty()) return null
 
         var resultBp = nextGradeBps.random()
@@ -53,7 +53,7 @@ object MergeSystem {
         if (isLucky) {
             val luckyGrade = nextGrade.nextGrade()
             if (luckyGrade != null) {
-                val luckyBps = blueprintRegistry.findNormalByGrade(luckyGrade)
+                val luckyBps = blueprintRegistry.findMergeableByGrade(luckyGrade)
                 if (luckyBps.isNotEmpty()) {
                     resultBp = luckyBps.random()
                 }
@@ -77,7 +77,7 @@ object MergeSystem {
         for (i in 0 until Grid.TOTAL) {
             val unit = grid.getUnit(i) ?: continue
             if (unit.grade in checked) continue
-            if (unit.unitCategory == UnitCategory.HIDDEN || unit.unitCategory == UnitCategory.SPECIAL) continue
+            if (unit.unitCategory == UnitCategory.SPECIAL) continue
             checked.add(unit.grade)
 
             val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: continue
