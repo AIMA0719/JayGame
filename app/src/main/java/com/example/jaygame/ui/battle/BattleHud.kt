@@ -87,6 +87,12 @@ private val BlueSky = Color(0xFF4A90D9)
 private val BlueSkyDark = Color(0xFF2C5F99)
 private val OrangeBright = Color(0xFFFF8C00)
 private val OrangeDark = Color(0xFFCC6600)
+private val BossRed = Color(0xFFFF4444)
+private val BossOrange = Color(0xFFFF6644)
+private val BossWaveBg = Brush.verticalGradient(listOf(Color(0xFF5C1818), Color(0xFF3D0C0C)))
+private val BossMainBg = Brush.verticalGradient(listOf(Color(0xFF3D1515), Color(0xFF2E0C0C)))
+private val NormalWaveBg = Brush.verticalGradient(listOf(Color(0xFF5C3A1E), Color(0xFF3D2510)))
+private val NormalMainBg = Brush.verticalGradient(listOf(Color(0xFF4A3018), Color(0xFF2E1C0C)))
 
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
 
@@ -94,6 +100,19 @@ private val OrangeDark = Color(0xFFCC6600)
 fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
     val battleSpeed by BattleBridge.battleSpeed.collectAsState()
+    val isBoss = battle.isBossRound
+
+    // Boss pulse animation for HUD accent
+    val bossPulse = if (isBoss) {
+        val transition = rememberInfiniteTransition(label = "bossHudPulse")
+        val pulse by transition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+            label = "bossHudPulseAlpha",
+        )
+        pulse
+    } else 0f
 
     val totalSeconds = battle.elapsedTime.toInt()
     val minutes = totalSeconds / 60
@@ -109,21 +128,19 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // ── WAVE badge (sits on top of main box) ──
+            val waveBadgeBorder = if (isBoss) BossRed.copy(alpha = bossPulse) else Color(0xFFAA7744)
+            val waveBadgeBg = if (isBoss) BossWaveBg else NormalWaveBg
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF5C3A1E), Color(0xFF3D2510))
-                        )
-                    )
-                    .border(1.5.dp, Color(0xFFAA7744), RoundedCornerShape(10.dp))
+                    .background(waveBadgeBg)
+                    .border(1.5.dp, waveBadgeBorder, RoundedCornerShape(10.dp))
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "WAVE ${battle.currentWave}",
-                    color = GoldBright,
+                    text = if (isBoss) "\uD83D\uDC80 WAVE ${battle.currentWave}" else "WAVE ${battle.currentWave}",
+                    color = if (isBoss) BossOrange else GoldBright,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
@@ -132,16 +149,14 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             Spacer(modifier = Modifier.height((-4).dp))
 
             // ── Main box: timer + difficulty ──
+            val mainBoxBorder = if (isBoss) BossRed.copy(alpha = bossPulse * 0.8f) else Color(0xFF8B6040)
+            val mainBoxBg = if (isBoss) BossMainBg else NormalMainBg
             Box(
                 modifier = Modifier
                     .width(160.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF4A3018), Color(0xFF2E1C0C))
-                        )
-                    )
-                    .border(1.5.dp, Color(0xFF8B6040), RoundedCornerShape(16.dp))
+                    .background(mainBoxBg)
+                    .border(1.5.dp, mainBoxBorder, RoundedCornerShape(16.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -221,22 +236,27 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(4.dp))
 
             // ── Enemy count bar (skull + count) ──
+            val enemyBarBorder = if (isBoss) BossRed.copy(alpha = bossPulse * 0.5f) else Color.White.copy(alpha = 0.15f)
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.Black.copy(alpha = 0.7f))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                    .border(1.dp, enemyBarBorder, RoundedCornerShape(12.dp))
                     .padding(horizontal = 14.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = "\uD83D\uDC80",
+                    text = if (isBoss) "\u26A0\uFE0F" else "\uD83D\uDC80",
                     fontSize = 14.sp,
                 )
                 Text(
                     text = "${battle.enemyCount} / ${battle.maxEnemyCount}",
-                    color = if (battle.enemyCount > 80) NeonRed else Color.White.copy(alpha = 0.9f),
+                    color = when {
+                        battle.enemyCount > 80 -> NeonRed
+                        isBoss -> BossOrange
+                        else -> Color.White.copy(alpha = 0.9f)
+                    },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                 )
