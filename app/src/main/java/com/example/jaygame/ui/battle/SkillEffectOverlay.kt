@@ -10,10 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.SkillEvent
 import com.example.jaygame.bridge.SkillVfxType
@@ -561,73 +563,100 @@ private fun DrawScope.renderSupernova(event: SkillEvent, progress: Float) {
     val cy = event.y * size.height
 
     if (progress < 0.3f) {
-        // Charge-up: shrinking + pulsing bright center with pull-in particles
         val chargeProg = progress / 0.3f
         val coreRadius = size.minDimension * 0.25f * (1f - chargeProg * 0.85f)
         val pulseR = coreRadius * (1f + sin(chargeProg * 30f) * 0.15f)
 
-        // Pull-in particles converging toward center
-        for (i in 0 until 10) {
-            val angle = (i / 10f) * 6.283f
-            val dist = size.minDimension * 0.3f * (1f - chargeProg)
-            val px = cx + cos(angle) * dist
-            val py = cy + sin(angle) * dist
-            drawCircle(
-                color = FireYellow.copy(alpha = 0.3f + chargeProg * 0.4f),
-                radius = 2f + chargeProg * 2f,
-                center = Offset(px, py),
-            )
+        // Spiral pull-in streams (3 arms)
+        for (arm in 0 until 3) {
+            val armBase = arm * 2.094f // 120 degrees apart
+            for (j in 0 until 8) {
+                val t = j / 8f
+                val spiralAngle = armBase + t * 4f + chargeProg * 6f
+                val dist = size.minDimension * (0.35f - t * 0.3f) * (1f - chargeProg * 0.7f)
+                val px = cx + cos(spiralAngle) * dist
+                val py = cy + sin(spiralAngle) * dist
+                val pAlpha = (0.2f + chargeProg * 0.5f) * (1f - t * 0.5f)
+                drawCircle(FireYellow.copy(alpha = pAlpha), 2f + t * 3f, Offset(px, py))
+            }
         }
 
-        // Core glow
+        // Rotating magic circle
+        rotate(chargeProg * 360f, Offset(cx, cy)) {
+            val symbolR = coreRadius * 2f
+            // Hexagram
+            for (i in 0 until 6) {
+                val a1 = i * 1.047f
+                val a2 = (i + 2) * 1.047f
+                drawLine(
+                    FireOrange.copy(alpha = chargeProg * 0.5f),
+                    Offset(cx + cos(a1) * symbolR, cy + sin(a1) * symbolR),
+                    Offset(cx + cos(a2) * symbolR, cy + sin(a2) * symbolR),
+                    strokeWidth = 2f,
+                )
+            }
+            drawCircle(FireOrange.copy(alpha = chargeProg * 0.3f), symbolR, Offset(cx, cy), style = Stroke(1.5f))
+        }
+
+        // Core glow (additive blend)
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(
-                    White.copy(alpha = 0.6f + chargeProg * 0.3f),
-                    FireYellow.copy(alpha = 0.4f),
-                    Color.Transparent,
-                ),
+                listOf(White.copy(alpha = 0.8f + chargeProg * 0.2f), FireYellow.copy(alpha = 0.4f), Color.Transparent),
+                center = Offset(cx, cy), radius = pulseR * 2f,
             ),
-            radius = pulseR * 1.5f,
-            center = Offset(cx, cy),
+            radius = pulseR * 2f, center = Offset(cx, cy), blendMode = BlendMode.Plus,
         )
-        drawCircle(
-            color = White.copy(alpha = 0.7f + chargeProg * 0.2f),
-            radius = pulseR,
-            center = Offset(cx, cy),
-        )
+        drawCircle(White.copy(alpha = 0.8f + chargeProg * 0.2f), pulseR, Offset(cx, cy))
     } else {
-        // Explosion: expanding rings of fire + white flash
         val explodeProg = (progress - 0.3f) / 0.7f
         val radius = size.maxDimension * explodeProg * 1.2f
         val alpha = (1f - explodeProg).coerceIn(0f, 0.9f)
 
-        // Outer fire ring
+        // Multiple fire rings at different speeds
+        for (ring in 0 until 4) {
+            val rProg = (explodeProg - ring * 0.05f).coerceIn(0f, 1f)
+            val rRadius = size.maxDimension * rProg * (1.0f + ring * 0.1f)
+            val rAlpha = (1f - rProg) * alpha * (0.5f - ring * 0.08f)
+            val rColor = when (ring) { 0 -> FireWhiteHot; 1 -> FireYellow; 2 -> FireOrange; else -> FireDark }
+            drawCircle(rColor.copy(alpha = rAlpha), rRadius, Offset(cx, cy),
+                style = Stroke(width = (10f - ring * 2f) * (1f - rProg)))
+        }
+
+        // Radial fire rays (additive)
+        val rayCount = 16
+        for (i in 0 until rayCount) {
+            val rayAngle = (i.toFloat() / rayCount) * 6.283f + explodeProg * 2f
+            val rayLen = radius * (0.6f + sin(i * 2.7f) * 0.2f)
+            val rayAlpha = alpha * 0.3f * (1f - explodeProg)
+            drawLine(
+                FireYellow.copy(alpha = rayAlpha), Offset(cx, cy),
+                Offset(cx + cos(rayAngle) * rayLen, cy + sin(rayAngle) * rayLen),
+                strokeWidth = 3f * (1f - explodeProg), cap = StrokeCap.Round,
+                blendMode = BlendMode.Plus,
+            )
+        }
+
+        // Inner white-hot core (fading)
+        val coreR = radius * 0.3f * (1f - explodeProg)
         drawCircle(
-            color = FireDark.copy(alpha = alpha * 0.3f),
-            radius = radius,
-            center = Offset(cx, cy),
-            style = Stroke(width = 8f * (1f - explodeProg)),
+            brush = Brush.radialGradient(
+                listOf(White.copy(alpha = alpha * 0.7f), FireYellow.copy(alpha = alpha * 0.3f), Color.Transparent),
+            ),
+            radius = coreR, center = Offset(cx, cy), blendMode = BlendMode.Plus,
         )
 
-        // Middle orange ring
-        drawCircle(
-            color = FireOrange.copy(alpha = alpha * 0.4f),
-            radius = radius * 0.75f,
-            center = Offset(cx, cy),
-            style = Stroke(width = 5f * (1f - explodeProg)),
-        )
-
-        // Inner white core
-        drawCircle(
-            color = White.copy(alpha = alpha * 0.5f),
-            radius = radius * 0.4f,
-            center = Offset(cx, cy),
-        )
+        // Flying ember particles
+        for (i in 0 until 20) {
+            val eAngle = (i / 20f) * 6.283f + sin(i * 1.3f)
+            val eDist = radius * (0.3f + sin(i * 2.1f + explodeProg * 5f) * 0.15f)
+            val eAlpha = (1f - explodeProg) * alpha * 0.5f
+            drawCircle(FireEmber.copy(alpha = eAlpha), 2f + sin(i * 3.7f) * 1.5f,
+                Offset(cx + cos(eAngle) * eDist, cy + sin(eAngle) * eDist), blendMode = BlendMode.Plus)
+        }
 
         // Full-screen flash
-        if (explodeProg < 0.2f) {
-            val flashAlpha = (0.2f - explodeProg) / 0.2f * 0.6f
+        if (explodeProg < 0.15f) {
+            val flashAlpha = (0.15f - explodeProg) / 0.15f * 0.7f
             drawRect(White.copy(alpha = flashAlpha), size = size)
         }
     }
@@ -887,68 +916,108 @@ private fun DrawScope.renderEternalWinter(event: SkillEvent, progress: Float) {
 
 /** Time stop — dramatic clock/gear overlay with desaturation */
 private fun DrawScope.renderTimeStop(event: SkillEvent, progress: Float) {
-    val alpha = if (progress < 0.1f) progress / 0.1f * 0.35f
-               else if (progress > 0.9f) (1f - progress) / 0.1f * 0.35f
-               else 0.35f
+    val alpha = if (progress < 0.1f) progress / 0.1f * 0.4f
+               else if (progress > 0.9f) (1f - progress) / 0.1f * 0.4f
+               else 0.4f
 
-    // Semi-transparent dark blue overlay
+    // Dark blue overlay with vignette
+    drawRect(Color(0xFF0D1B2A).copy(alpha = alpha * 0.8f), size = size)
     drawRect(
-        color = Color(0xFF1A2844).copy(alpha = alpha),
-        size = size,
+        brush = Brush.radialGradient(
+            listOf(Color.Transparent, Color(0xFF1A2844).copy(alpha = alpha * 0.3f)),
+            center = Offset(size.width / 2f, size.height / 2f),
+            radius = size.minDimension * 0.4f,
+        ), size = size,
     )
 
     val cx = size.width / 2f
     val cy = size.height / 2f
-    val gearR = size.minDimension * 0.15f
+    val gearR = size.minDimension * 0.18f
 
-    // Outer gear teeth
+    // Outer rotating gear ring with teeth
+    rotate(progress * 120f, Offset(cx, cy)) {
+        for (i in 0 until 16) {
+            val angle = (i / 16f) * 6.283f
+            val innerR = gearR * 0.82f
+            drawLine(
+                FrostLight.copy(alpha = alpha * 1.5f),
+                Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
+                Offset(cx + cos(angle) * gearR, cy + sin(angle) * gearR),
+                strokeWidth = 2.5f, cap = StrokeCap.Round,
+            )
+        }
+        drawCircle(FrostBase.copy(alpha = alpha * 1.2f), gearR * 0.85f, Offset(cx, cy), style = Stroke(2f))
+        drawCircle(FrostBase.copy(alpha = alpha * 0.6f), gearR, Offset(cx, cy), style = Stroke(1f))
+    }
+
+    // Inner gear (counter-rotating)
+    val innerGearR = gearR * 0.55f
+    rotate(-progress * 200f, Offset(cx, cy)) {
+        for (i in 0 until 8) {
+            val angle = (i / 8f) * 6.283f
+            drawLine(
+                FrostCrystal.copy(alpha = alpha * 1.3f),
+                Offset(cx + cos(angle) * innerGearR * 0.7f, cy + sin(angle) * innerGearR * 0.7f),
+                Offset(cx + cos(angle) * innerGearR, cy + sin(angle) * innerGearR),
+                strokeWidth = 2f, cap = StrokeCap.Round,
+            )
+        }
+        drawCircle(FrostCrystal.copy(alpha = alpha), innerGearR * 0.72f, Offset(cx, cy), style = Stroke(1.5f))
+    }
+
+    // Roman numeral markers (12 positions)
     for (i in 0 until 12) {
-        val angle = (i / 12f) * 6.283f + progress * 4f
-        val innerR = gearR * 0.7f
+        val angle = (i / 12f) * 6.283f - PI.toFloat() / 2f
+        val markerR = gearR * 1.2f
+        val markerLen = if (i % 3 == 0) 8f else 4f
         drawLine(
-            color = FrostLight.copy(alpha = alpha * 2f),
-            start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
-            end = Offset(cx + cos(angle) * gearR, cy + sin(angle) * gearR),
-            strokeWidth = 3f, cap = StrokeCap.Round,
+            White.copy(alpha = alpha * 1.5f),
+            Offset(cx + cos(angle) * (markerR - markerLen), cy + sin(angle) * (markerR - markerLen)),
+            Offset(cx + cos(angle) * markerR, cy + sin(angle) * markerR),
+            strokeWidth = if (i % 3 == 0) 2.5f else 1.5f,
         )
     }
 
-    // Gear ring
+    // Clock hands (slowing down)
+    val slowFactor = (1f - progress * 0.9f).coerceAtLeast(0.05f)
+    val hourAngle = progress * 12f * slowFactor - PI.toFloat() / 2f
+    val minuteAngle = progress * 60f * slowFactor - PI.toFloat() / 2f
+    drawLine(White.copy(alpha = alpha * 2f), Offset(cx, cy),
+        Offset(cx + cos(hourAngle) * gearR * 0.4f, cy + sin(hourAngle) * gearR * 0.4f),
+        strokeWidth = 3f, cap = StrokeCap.Round)
+    drawLine(FrostLight.copy(alpha = alpha * 1.8f), Offset(cx, cy),
+        Offset(cx + cos(minuteAngle) * gearR * 0.65f, cy + sin(minuteAngle) * gearR * 0.65f),
+        strokeWidth = 2f, cap = StrokeCap.Round)
+    drawCircle(White.copy(alpha = alpha * 2f), 4f, Offset(cx, cy))
+
+    // Glowing center (additive)
     drawCircle(
-        color = FrostBase.copy(alpha = alpha * 1.5f),
-        radius = gearR * 0.75f,
-        center = Offset(cx, cy),
-        style = Stroke(width = 2f),
+        brush = Brush.radialGradient(
+            listOf(FrostCrystal.copy(alpha = alpha * 0.5f), Color.Transparent),
+        ),
+        radius = gearR * 0.4f, center = Offset(cx, cy), blendMode = BlendMode.Plus,
     )
 
-    // Clock hands
-    val hourAngle = progress * 12f
-    val minuteAngle = progress * 60f
-    drawLine(
-        color = White.copy(alpha = alpha * 2.5f),
-        start = Offset(cx, cy),
-        end = Offset(cx + cos(hourAngle) * gearR * 0.4f, cy + sin(hourAngle) * gearR * 0.4f),
-        strokeWidth = 3f, cap = StrokeCap.Round,
-    )
-    drawLine(
-        color = White.copy(alpha = alpha * 2f),
-        start = Offset(cx, cy),
-        end = Offset(cx + cos(minuteAngle) * gearR * 0.6f, cy + sin(minuteAngle) * gearR * 0.6f),
-        strokeWidth = 2f, cap = StrokeCap.Round,
-    )
+    // Frozen crystal particles (larger, faceted look - diamond shapes)
+    for (i in 0 until 15) {
+        val px = size.width * ((i * 0.131f + 0.05f + sin(i * 2.7f) * 0.03f) % 1f)
+        val py = size.height * ((i * 0.237f + 0.1f + cos(i * 1.9f) * 0.03f) % 1f)
+        val crystalSize = 3f + sin(i * 4.1f) * 1.5f
+        val crystalAlpha = alpha * (1f + sin(progress * 5f + i * 1.3f) * 0.3f)
+        // Diamond shape via rotate
+        rotate(45f + i * 30f, Offset(px, py)) {
+            drawRect(FrostCrystal.copy(alpha = crystalAlpha), Offset(px - crystalSize, py - crystalSize),
+                Size(crystalSize * 2, crystalSize * 2))
+        }
+    }
 
-    // Center dot
-    drawCircle(White.copy(alpha = alpha * 2f), radius = 3f, center = Offset(cx, cy))
-
-    // Frozen particles (scattered, still)
-    for (i in 0 until 10) {
-        val px = size.width * ((i * 0.131f + 0.05f) % 1f)
-        val py = size.height * ((i * 0.237f + 0.1f) % 1f)
-        drawCircle(
-            color = FrostCrystal.copy(alpha = alpha * 1.2f),
-            radius = 2f,
-            center = Offset(px, py),
-        )
+    // Radial frost cracks from center (subtle)
+    for (i in 0 until 6) {
+        val crackAngle = i * 1.047f + 0.3f
+        val crackLen = gearR * 1.5f * alpha
+        drawLine(FrostDeep.copy(alpha = alpha * 0.4f), Offset(cx, cy),
+            Offset(cx + cos(crackAngle) * crackLen, cy + sin(crackAngle) * crackLen),
+            strokeWidth = 1f, cap = StrokeCap.Round)
     }
 }
 
@@ -1171,61 +1240,77 @@ private fun DrawScope.renderUniversalDecay(event: SkillEvent, progress: Float) {
     val cx = event.x * size.width
     val cy = event.y * size.height
     val maxR = event.radius * size.minDimension
-    val alpha = (1f - progress * 0.4f).coerceIn(0f, 0.8f)
+    val alpha = (1f - progress * 0.3f).coerceIn(0f, 0.85f)
 
-    // Decay rings expanding outward (3 concentric waves)
-    for (wave in 0 until 3) {
-        val waveProgress = (progress - wave * 0.15f).coerceIn(0f, 1f)
-        val waveR = maxR * waveProgress
-        val waveAlpha = (1f - waveProgress) * alpha * 0.4f
-
-        drawCircle(
-            color = PoisonMiasma.copy(alpha = waveAlpha),
-            radius = waveR,
-            center = Offset(cx, cy),
-            style = Stroke(width = 3f * (1f - waveProgress)),
-        )
-    }
-
-    // Central rot zone
-    drawCircle(
+    // Screen vignette (oppressive dark edges - always on)
+    val vigAlpha = alpha * 0.15f
+    drawRect(
         brush = Brush.radialGradient(
-            colors = listOf(
-                PoisonDark.copy(alpha = alpha * 0.5f),
-                PoisonMiasma.copy(alpha = alpha * 0.2f),
-                Color.Transparent,
-            ),
-        ),
-        radius = maxR * 0.4f,
-        center = Offset(cx, cy),
+            listOf(Color.Transparent, PoisonMiasma.copy(alpha = vigAlpha)),
+            center = Offset(cx, cy), radius = size.maxDimension * 0.5f,
+        ), size = size,
     )
 
-    // Decay particles (floating outward and dissolving)
-    for (i in 0 until 12) {
-        val angle = (i / 12f) * 6.283f
-        val pDist = maxR * progress * (0.3f + sin(i * 1.7f) * 0.2f)
-        val px = cx + cos(angle + progress * 0.5f) * pDist
-        val py = cy + sin(angle + progress * 0.5f) * pDist
-        val pAlpha = (1f - progress) * alpha * 0.5f
+    // Pulsing toxic ground (additive glow)
+    val pulseScale = 1f + sin(progress * 20f) * 0.05f
+    drawCircle(
+        brush = Brush.radialGradient(
+            listOf(PoisonNeon.copy(alpha = alpha * 0.15f), PoisonDark.copy(alpha = alpha * 0.08f), Color.Transparent),
+            center = Offset(cx, cy), radius = maxR * pulseScale,
+        ),
+        radius = maxR * pulseScale, center = Offset(cx, cy), blendMode = BlendMode.Plus,
+    )
 
-        drawCircle(
-            color = PoisonBase.copy(alpha = pAlpha),
-            radius = 2.5f * (1f - progress * 0.5f),
-            center = Offset(px, py),
-        )
+    // Rotating biohazard symbol
+    rotate(progress * 60f, Offset(cx, cy)) {
+        val symbolR = maxR * 0.25f
+        for (i in 0 until 3) {
+            val angle = i * 2.094f
+            val ax = cx + cos(angle) * symbolR * 0.5f
+            val ay = cy + sin(angle) * symbolR * 0.5f
+            drawArc(
+                PoisonNeon.copy(alpha = alpha * 0.4f),
+                startAngle = Math.toDegrees(angle.toDouble()).toFloat() - 50f,
+                sweepAngle = 100f, useCenter = false,
+                topLeft = Offset(ax - symbolR * 0.6f, ay - symbolR * 0.6f),
+                size = Size(symbolR * 1.2f, symbolR * 1.2f),
+                style = Stroke(width = 3f),
+            )
+        }
+        drawCircle(PoisonNeon.copy(alpha = alpha * 0.3f), symbolR * 0.15f, Offset(cx, cy))
+        drawCircle(PoisonNeon.copy(alpha = alpha * 0.2f), symbolR * 0.9f, Offset(cx, cy), style = Stroke(1.5f))
     }
 
-    // Screen vignette (dark edges)
-    if (progress < 0.5f) {
-        val vigAlpha = progress * 0.1f
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color.Transparent, PoisonMiasma.copy(alpha = vigAlpha)),
-                center = Offset(cx, cy),
-                radius = size.maxDimension * 0.6f,
-            ),
-            size = size,
-        )
+    // Decay waves (5 concentric, staggered)
+    for (wave in 0 until 5) {
+        val waveProgress = (progress * 1.5f - wave * 0.12f).coerceIn(0f, 1f)
+        val waveR = maxR * waveProgress
+        val waveAlpha = (1f - waveProgress) * alpha * 0.35f
+        drawCircle(PoisonMiasma.copy(alpha = waveAlpha), waveR, Offset(cx, cy),
+            style = Stroke(width = 3f * (1f - waveProgress)))
+    }
+
+    // Toxic bubble particles (rising and popping)
+    for (i in 0 until 16) {
+        val bubblePhase = (progress * 2f + i * 0.17f) % 1f
+        val angle = (i / 16f) * 6.283f + sin(i * 1.7f)
+        val dist = maxR * (0.15f + bubblePhase * 0.7f)
+        val px = cx + cos(angle + progress * 0.5f) * dist
+        val py = cy + sin(angle + progress * 0.5f) * dist - bubblePhase * 20f
+        val bAlpha = sin(bubblePhase * PI.toFloat()) * alpha * 0.5f
+        val bSize = (3f + sin(i * 3.1f) * 2f) * (1f - bubblePhase * 0.3f)
+        drawCircle(PoisonAcid.copy(alpha = bAlpha), bSize, Offset(px, py), blendMode = BlendMode.Plus)
+        drawCircle(PoisonBase.copy(alpha = bAlpha * 0.5f), bSize * 1.5f, Offset(px, py))
+    }
+
+    // Dripping acid streaks from above
+    for (i in 0 until 6) {
+        val sx = cx + (i - 2.5f) * maxR * 0.3f
+        val dripPhase = (progress * 3f + i * 0.3f) % 1f
+        val sy = -10f + dripPhase * size.height * 0.4f
+        val dripAlpha = (1f - dripPhase) * alpha * 0.25f
+        drawLine(PoisonNeon.copy(alpha = dripAlpha), Offset(sx, sy), Offset(sx, sy + 15f),
+            strokeWidth = 2f, cap = StrokeCap.Round, blendMode = BlendMode.Plus)
     }
 }
 
@@ -1520,66 +1605,91 @@ private fun DrawScope.renderDivinePunishment(event: SkillEvent, progress: Float)
     val cy = event.y * size.height
     val maxR = event.radius * size.minDimension
 
-    val pillarAlpha = if (progress < 0.15f) progress / 0.15f
+    val pillarAlpha = if (progress < 0.12f) progress / 0.12f
                       else if (progress > 0.6f) (1f - progress) / 0.4f
                       else 1f
 
-    // Massive light pillar from sky to ground
-    val pillarWidth = maxR * 0.4f * pillarAlpha
-    drawLine(
-        brush = Brush.linearGradient(
-            colors = listOf(
-                LightBright.copy(alpha = pillarAlpha * 0.1f),
-                LightBase.copy(alpha = pillarAlpha * 0.3f),
-                White.copy(alpha = pillarAlpha * 0.5f),
-            ),
-        ),
-        start = Offset(cx, 0f),
-        end = Offset(cx, cy),
-        strokeWidth = pillarWidth * 3f,
-    )
-    drawLine(
-        color = LightBase.copy(alpha = pillarAlpha * 0.7f),
-        start = Offset(cx, 0f),
-        end = Offset(cx, cy),
-        strokeWidth = pillarWidth,
-    )
-    drawLine(
-        color = White.copy(alpha = pillarAlpha * 0.8f),
-        start = Offset(cx, 0f),
-        end = Offset(cx, cy),
-        strokeWidth = pillarWidth * 0.3f,
-    )
-
-    // Ground impact expanding circle
-    val groundR = maxR * progress.coerceAtMost(0.5f) * 2f
-    drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(
-                White.copy(alpha = pillarAlpha * 0.4f),
-                LightBase.copy(alpha = pillarAlpha * 0.2f),
-                Color.Transparent,
-            ),
-        ),
-        radius = groundR,
-        center = Offset(cx, cy),
-    )
-
-    // Sacred symbol at base (cross pattern)
-    val crossLen = maxR * 0.3f * pillarAlpha
-    for (i in 0 until 4) {
-        val angle = i * PI.toFloat() / 2f
-        drawLine(
-            color = LightBase.copy(alpha = pillarAlpha * 0.5f),
-            start = Offset(cx, cy),
-            end = Offset(cx + cos(angle) * crossLen, cy + sin(angle) * crossLen),
-            strokeWidth = 3f, cap = StrokeCap.Round,
-        )
+    // Screen flash at start
+    if (progress < 0.08f) {
+        val flashA = (0.08f - progress) / 0.08f * 0.5f
+        drawRect(White.copy(alpha = flashA), size = size)
     }
 
-    // Screen flash
-    if (progress < 0.1f) {
-        drawRect(White.copy(alpha = (0.1f - progress) / 0.1f * 0.35f), size = size)
+    // Massive multi-layer light pillar
+    val pillarW = maxR * 0.4f * pillarAlpha
+    // Outer glow (widest, faintest)
+    drawLine(
+        brush = Brush.linearGradient(
+            listOf(LightBright.copy(alpha = pillarAlpha * 0.05f), LightBase.copy(alpha = pillarAlpha * 0.15f), White.copy(alpha = pillarAlpha * 0.3f)),
+        ),
+        Offset(cx, 0f), Offset(cx, cy), strokeWidth = pillarW * 4f, blendMode = BlendMode.Plus,
+    )
+    // Core pillar
+    drawLine(LightBase.copy(alpha = pillarAlpha * 0.6f), Offset(cx, 0f), Offset(cx, cy), strokeWidth = pillarW)
+    drawLine(White.copy(alpha = pillarAlpha * 0.8f), Offset(cx, 0f), Offset(cx, cy), strokeWidth = pillarW * 0.25f)
+
+    // Zigzag lightning bolts along the pillar (2 bolts)
+    for (bolt in 0 until 2) {
+        val boltOffset = (bolt - 0.5f) * pillarW * 0.6f
+        val segments = 12
+        val segH = cy / segments
+        for (s in 0 until segments) {
+            val y1 = s * segH
+            val y2 = (s + 1) * segH
+            val jitter1 = sin((s + bolt * 5) * 3.7f + progress * 30f) * pillarW * 0.4f
+            val jitter2 = sin((s + 1 + bolt * 5) * 3.7f + progress * 30f) * pillarW * 0.4f
+            drawLine(
+                LightBright.copy(alpha = pillarAlpha * 0.5f),
+                Offset(cx + boltOffset + jitter1, y1),
+                Offset(cx + boltOffset + jitter2, y2),
+                strokeWidth = 2f, blendMode = BlendMode.Plus,
+            )
+        }
+    }
+
+    // Ground impact - expanding shockwave rings
+    for (ring in 0 until 3) {
+        val ringProg = (progress - ring * 0.06f).coerceIn(0f, 0.5f) * 2f
+        val ringR = maxR * ringProg * (1f + ring * 0.2f)
+        val ringAlpha = (1f - ringProg) * pillarAlpha * 0.4f
+        drawCircle(LightBase.copy(alpha = ringAlpha), ringR, Offset(cx, cy), style = Stroke(3f * (1f - ringProg)))
+    }
+
+    // Ground glow (additive)
+    drawCircle(
+        brush = Brush.radialGradient(
+            listOf(White.copy(alpha = pillarAlpha * 0.4f), LightBase.copy(alpha = pillarAlpha * 0.15f), Color.Transparent),
+        ),
+        radius = maxR * 0.5f, center = Offset(cx, cy), blendMode = BlendMode.Plus,
+    )
+
+    // Rotating sacred rune circle at base
+    rotate(progress * 90f, Offset(cx, cy)) {
+        val runeR = maxR * 0.35f * pillarAlpha
+        // Outer rune circle
+        drawCircle(LightBase.copy(alpha = pillarAlpha * 0.4f), runeR, Offset(cx, cy), style = Stroke(2f))
+        // Inner rune circle
+        drawCircle(LightBase.copy(alpha = pillarAlpha * 0.3f), runeR * 0.7f, Offset(cx, cy), style = Stroke(1.5f))
+        // Star of David pattern
+        for (i in 0 until 6) {
+            val a1 = i * 1.047f
+            val a2 = (i + 2) * 1.047f
+            drawLine(
+                LightBase.copy(alpha = pillarAlpha * 0.35f),
+                Offset(cx + cos(a1) * runeR, cy + sin(a1) * runeR),
+                Offset(cx + cos(a2) * runeR, cy + sin(a2) * runeR),
+                strokeWidth = 1.5f,
+            )
+        }
+    }
+
+    // Electric spark particles at impact
+    for (i in 0 until 10) {
+        val sparkAngle = (i / 10f) * 6.283f + progress * 8f
+        val sparkDist = maxR * (0.2f + sin(progress * 15f + i * 2.3f) * 0.15f)
+        val sparkAlpha = pillarAlpha * 0.5f * (0.5f + sin(progress * 20f + i * 3.1f) * 0.5f)
+        drawCircle(LightBright.copy(alpha = sparkAlpha), 2.5f,
+            Offset(cx + cos(sparkAngle) * sparkDist, cy + sin(sparkAngle) * sparkDist), blendMode = BlendMode.Plus)
     }
 }
 
@@ -1822,66 +1932,92 @@ private fun DrawScope.renderGenesisLight(event: SkillEvent, progress: Float) {
     val cy = event.y * size.height
     val maxR = event.radius * size.minDimension
 
-    val pillarAlpha = if (progress < 0.2f) progress / 0.2f
+    val pillarAlpha = if (progress < 0.15f) progress / 0.15f
                       else if (progress > 0.7f) (1f - progress) / 0.3f
                       else 1f
 
-    // Ascending light pillar (going upward from ground)
-    val pillarHeight = size.height * pillarAlpha
-    val pillarWidth = maxR * 0.3f * pillarAlpha
+    // Holy flash at peak
+    if (progress in 0.12f..0.22f) {
+        val flashA = (1f - abs(progress - 0.17f) / 0.05f).coerceIn(0f, 1f) * 0.3f
+        drawRect(SupportHoly.copy(alpha = flashA), size = size)
+    }
 
-    drawLine(
-        brush = Brush.linearGradient(
-            colors = listOf(
-                SupportGold.copy(alpha = pillarAlpha * 0.5f),
-                SupportHoly.copy(alpha = pillarAlpha * 0.3f),
-                Color.Transparent,
+    // Multiple ascending pillars (trinity - 3 pillars)
+    for (pillar in 0 until 3) {
+        val px = cx + (pillar - 1) * maxR * 0.4f
+        val pillarH = size.height * pillarAlpha * (0.8f + pillar * 0.1f)
+        val pW = maxR * 0.2f * pillarAlpha
+
+        drawLine(
+            brush = Brush.linearGradient(
+                listOf(SupportGold.copy(alpha = pillarAlpha * 0.4f), SupportHoly.copy(alpha = pillarAlpha * 0.2f), Color.Transparent),
             ),
-        ),
-        start = Offset(cx, cy),
-        end = Offset(cx, cy - pillarHeight),
-        strokeWidth = pillarWidth * 3f,
-    )
-    drawLine(
-        color = SupportGold.copy(alpha = pillarAlpha * 0.6f),
-        start = Offset(cx, cy),
-        end = Offset(cx, cy - pillarHeight * 0.8f),
-        strokeWidth = pillarWidth,
-    )
-    drawLine(
-        color = White.copy(alpha = pillarAlpha * 0.7f),
-        start = Offset(cx, cy),
-        end = Offset(cx, cy - pillarHeight * 0.6f),
-        strokeWidth = pillarWidth * 0.3f,
-    )
-
-    // Radiance rings expanding from base
-    for (ring in 0 until 3) {
-        val ringPhase = (progress * 2f + ring * 0.25f) % 1f
-        val ringR = maxR * ringPhase * 0.8f
-        val ringAlpha = (1f - ringPhase) * pillarAlpha * 0.3f
-        drawCircle(
-            color = SupportGold.copy(alpha = ringAlpha),
-            radius = ringR,
-            center = Offset(cx, cy),
-            style = Stroke(width = 2f),
+            Offset(px, cy), Offset(px, cy - pillarH), strokeWidth = pW * 3f, blendMode = BlendMode.Plus,
         )
+        drawLine(SupportGold.copy(alpha = pillarAlpha * 0.5f), Offset(px, cy), Offset(px, cy - pillarH * 0.8f), strokeWidth = pW)
+        drawLine(White.copy(alpha = pillarAlpha * 0.6f), Offset(px, cy), Offset(px, cy - pillarH * 0.5f), strokeWidth = pW * 0.3f)
     }
 
-    // Ascending sparkle particles
-    for (i in 0 until 8) {
-        val sparkPhase = (progress * 3f + i * 0.2f) % 1f
-        val sparkX = cx + sin(i * 2.3f + progress * 3f) * pillarWidth
-        val sparkY = cy - sparkPhase * pillarHeight * 0.7f
+    // Rotating halo/aureole at base
+    rotate(progress * 45f, Offset(cx, cy)) {
+        val haloR = maxR * 0.5f * pillarAlpha
+        // Double ring
+        drawCircle(SupportGold.copy(alpha = pillarAlpha * 0.4f), haloR, Offset(cx, cy), style = Stroke(2.5f))
+        drawCircle(SupportWhiteGold.copy(alpha = pillarAlpha * 0.3f), haloR * 0.8f, Offset(cx, cy), style = Stroke(1.5f))
+        // Cross pattern with extended rays
+        for (i in 0 until 8) {
+            val angle = i * 0.785f // 45 degrees
+            val rayLen = if (i % 2 == 0) haloR * 1.2f else haloR * 0.9f
+            val rayWidth = if (i % 2 == 0) 2.5f else 1.5f
+            drawLine(
+                SupportGold.copy(alpha = pillarAlpha * 0.35f),
+                Offset(cx + cos(angle) * haloR * 0.3f, cy + sin(angle) * haloR * 0.3f),
+                Offset(cx + cos(angle) * rayLen, cy + sin(angle) * rayLen),
+                strokeWidth = rayWidth, cap = StrokeCap.Round,
+            )
+        }
+    }
+
+    // Counter-rotating inner mandala
+    rotate(-progress * 60f, Offset(cx, cy)) {
+        val manR = maxR * 0.3f * pillarAlpha
+        for (i in 0 until 6) {
+            val a = i * 1.047f
+            drawLine(
+                SupportHoly.copy(alpha = pillarAlpha * 0.25f),
+                Offset(cx + cos(a) * manR * 0.2f, cy + sin(a) * manR * 0.2f),
+                Offset(cx + cos(a) * manR, cy + sin(a) * manR),
+                strokeWidth = 1.5f,
+            )
+        }
+    }
+
+    // Expanding radiance rings
+    for (ring in 0 until 4) {
+        val ringPhase = (progress * 2.5f + ring * 0.2f) % 1f
+        val ringR = maxR * ringPhase * 0.9f
+        val ringAlpha = (1f - ringPhase) * pillarAlpha * 0.25f
+        drawCircle(SupportGold.copy(alpha = ringAlpha), ringR, Offset(cx, cy), style = Stroke(2f))
+    }
+
+    // Ascending sparkle/feather particles
+    for (i in 0 until 14) {
+        val sparkPhase = (progress * 3f + i * 0.14f) % 1f
+        val driftX = sin(i * 2.3f + progress * 4f) * maxR * 0.4f
+        val sparkX = cx + driftX
+        val sparkY = cy - sparkPhase * size.height * 0.6f
         val sparkAlpha = sin(sparkPhase * PI.toFloat()) * pillarAlpha * 0.5f
-        drawCircle(SupportWhiteGold.copy(alpha = sparkAlpha), 2f, Offset(sparkX, sparkY))
+        val sparkSize = 2f + sin(i * 1.7f) * 1.5f
+        drawCircle(SupportWhiteGold.copy(alpha = sparkAlpha), sparkSize, Offset(sparkX, sparkY), blendMode = BlendMode.Plus)
     }
 
-    // Holy flash
-    if (progress in 0.15f..0.25f) {
-        val flashAlpha = (1f - abs(progress - 0.2f) / 0.05f) * 0.2f
-        drawRect(SupportHoly.copy(alpha = flashAlpha), size = size)
-    }
+    // Base glow (additive)
+    drawCircle(
+        brush = Brush.radialGradient(
+            listOf(SupportHoly.copy(alpha = pillarAlpha * 0.3f), SupportGold.copy(alpha = pillarAlpha * 0.1f), Color.Transparent),
+        ),
+        radius = maxR * 0.4f, center = Offset(cx, cy), blendMode = BlendMode.Plus,
+    )
 }
 
 
@@ -2143,63 +2279,86 @@ private fun DrawScope.renderBreathOfAll(event: SkillEvent, progress: Float) {
     val cx = event.x * size.width
     val cy = event.y * size.height
     val maxR = event.radius * size.minDimension
-    val alpha = (1f - progress).coerceIn(0f, 0.8f)
+    val alpha = (1f - progress * 0.7f).coerceIn(0f, 0.85f)
 
-    // Multiple expanding push waves
-    for (wave in 0 until 3) {
-        val waveDelay = wave * 0.12f
-        val waveProg = (progress - waveDelay).coerceIn(0f, 1f)
-        val waveR = maxR * waveProg * 1.2f
-        val waveAlpha = (1f - waveProg) * alpha * 0.4f
-
-        drawCircle(
-            color = WindTeal.copy(alpha = waveAlpha),
-            radius = waveR,
-            center = Offset(cx, cy),
-            style = Stroke(width = 4f * (1f - waveProg)),
-        )
-    }
-
-    // Central burst
-    if (progress < 0.3f) {
-        val burstAlpha = (0.3f - progress) / 0.3f * alpha
+    // Central vortex burst (additive glow)
+    if (progress < 0.35f) {
+        val burstProg = progress / 0.35f
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(
-                    WindLight.copy(alpha = burstAlpha * 0.5f),
-                    WindTeal.copy(alpha = burstAlpha * 0.2f),
-                    Color.Transparent,
-                ),
+                listOf(White.copy(alpha = (1f - burstProg) * alpha * 0.5f),
+                    WindCyan.copy(alpha = (1f - burstProg) * alpha * 0.3f), Color.Transparent),
             ),
-            radius = maxR * 0.3f,
-            center = Offset(cx, cy),
+            radius = maxR * 0.4f * (1f + burstProg), center = Offset(cx, cy), blendMode = BlendMode.Plus,
         )
     }
 
-    // Wind streaks radiating outward
-    for (i in 0 until 12) {
-        val streakAngle = (i / 12f) * 6.283f
-        val streakStart = maxR * progress * 0.3f
-        val streakEnd = maxR * progress * 0.8f
-        val streakAlpha = alpha * 0.3f
+    // Expanding shockwave rings (5 staggered)
+    for (wave in 0 until 5) {
+        val waveDelay = wave * 0.08f
+        val waveProg = (progress - waveDelay).coerceIn(0f, 1f)
+        val waveR = maxR * waveProg * 1.3f
+        val waveAlpha = (1f - waveProg) * alpha * 0.4f
+        val waveWidth = (5f - wave * 0.8f) * (1f - waveProg)
+        drawCircle(WindTeal.copy(alpha = waveAlpha), waveR, Offset(cx, cy), style = Stroke(waveWidth))
+    }
 
+    // Rotating spiral wind streams (3 arms)
+    for (arm in 0 until 3) {
+        val armBase = arm * 2.094f + progress * 8f
+        for (seg in 0 until 12) {
+            val t = seg / 12f
+            val spiralAngle = armBase + t * 3f
+            val dist = maxR * (0.1f + t * 0.9f) * (progress * 1.5f).coerceAtMost(1f)
+            val x1 = cx + cos(spiralAngle) * dist
+            val y1 = cy + sin(spiralAngle) * dist
+            val nextT = (seg + 1) / 12f
+            val nextAngle = armBase + nextT * 3f
+            val nextDist = maxR * (0.1f + nextT * 0.9f) * (progress * 1.5f).coerceAtMost(1f)
+            val x2 = cx + cos(nextAngle) * nextDist
+            val y2 = cy + sin(nextAngle) * nextDist
+            val segAlpha = alpha * 0.4f * (1f - t * 0.5f)
+            drawLine(WindCyan.copy(alpha = segAlpha), Offset(x1, y1), Offset(x2, y2),
+                strokeWidth = 2.5f * (1f - t * 0.5f), cap = StrokeCap.Round, blendMode = BlendMode.Plus)
+        }
+    }
+
+    // Wind blade streaks radiating outward (curved)
+    for (i in 0 until 16) {
+        val bladeAngle = (i / 16f) * 6.283f + progress * 3f
+        val startDist = maxR * progress * 0.2f
+        val endDist = maxR * progress * (0.7f + sin(i * 2.3f) * 0.15f)
+        val curve = sin(i * 1.7f + progress * 5f) * 0.15f
+        val sA = bladeAngle + curve
+        val eA = bladeAngle - curve
+        val streakAlpha = (1f - progress) * alpha * 0.3f
         drawLine(
-            color = WindCyan.copy(alpha = streakAlpha),
-            start = Offset(cx + cos(streakAngle) * streakStart, cy + sin(streakAngle) * streakStart),
-            end = Offset(cx + cos(streakAngle) * streakEnd, cy + sin(streakAngle) * streakEnd),
+            WindLight.copy(alpha = streakAlpha),
+            Offset(cx + cos(sA) * startDist, cy + sin(sA) * startDist),
+            Offset(cx + cos(eA) * endDist, cy + sin(eA) * endDist),
             strokeWidth = 2f, cap = StrokeCap.Round,
         )
     }
 
-    // Scatter debris
-    for (i in 0 until 8) {
-        val debrisAngle = (i / 8f) * 6.283f + sin(i * 1.7f)
-        val debrisDist = maxR * progress * (0.5f + sin(i * 2.3f) * 0.2f)
-        val debrisAlpha = (1f - progress) * alpha * 0.4f
-        drawCircle(
-            color = WindTeal.copy(alpha = debrisAlpha),
-            radius = 2f + sin(i * 3.1f) * 1f,
-            center = Offset(cx + cos(debrisAngle) * debrisDist, cy + sin(debrisAngle) * debrisDist),
-        )
+    // Debris particles (leaves/dust caught in wind)
+    for (i in 0 until 14) {
+        val debrisPhase = (progress * 2f + i * 0.15f) % 1f
+        val debrisAngle = (i / 14f) * 6.283f + progress * 6f + sin(i * 1.7f)
+        val debrisDist = maxR * debrisPhase * (0.5f + sin(i * 2.3f) * 0.3f)
+        val px = cx + cos(debrisAngle) * debrisDist
+        val py = cy + sin(debrisAngle) * debrisDist
+        val dAlpha = sin(debrisPhase * PI.toFloat()) * alpha * 0.5f
+        val dSize = 2f + sin(i * 3.1f) * 1.5f
+        // Elongated debris via small rotation
+        rotate(debrisAngle * 57.3f, Offset(px, py)) {
+            drawRect(WindTeal.copy(alpha = dAlpha), Offset(px - dSize, py - dSize * 0.3f),
+                Size(dSize * 2f, dSize * 0.6f))
+        }
+    }
+
+    // Screen edge wind effect (subtle tint)
+    if (progress < 0.4f) {
+        val edgeAlpha = (0.4f - progress) / 0.4f * alpha * 0.08f
+        drawRect(WindDark.copy(alpha = edgeAlpha), size = size)
     }
 }

@@ -16,6 +16,7 @@ import com.example.jaygame.engine.math.GameRect
 import com.example.jaygame.engine.math.Vec2
 import kotlinx.coroutines.*
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.sqrt
 
 class BattleEngine(
@@ -649,6 +650,8 @@ class BattleEngine(
                         val nx = target.position.x / W
                         val ny = target.position.y / H
                         BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
+                        val angle = atan2(target.position.y - unit.position.y, target.position.x - unit.position.x)
+                        BattleBridge.onMeleeHit(nx, ny, unit.family.coerceIn(0, 5), boostedCrit, angle)
                     } else {
                         // Projectile — melee slash uses fast projectile, ranged uses normal
                         val isSlash = unit.attackRange == AttackRange.MELEE
@@ -698,6 +701,11 @@ class BattleEngine(
                 val nx = target.position.x / W
                 val ny = target.position.y / H
                 BattleBridge.onDamageDealt(nx, ny, proj.damage.toInt(), proj.isCrit)
+                // Melee slash projectile hit effect
+                if (proj.speed >= 800f) {
+                    val angle = atan2(target.position.y - proj.sourcePos.y, target.position.x - proj.sourcePos.x)
+                    BattleBridge.onMeleeHit(nx, ny, proj.family.coerceIn(0, 5), proj.isCrit, angle)
+                }
             }
             if (!proj.alive) deadProjectiles.add(proj)
         }
@@ -722,6 +730,8 @@ class BattleEngine(
             val zys = FloatArray(zCount)
             val zradii = FloatArray(zCount)
             val zfamilies = IntArray(zCount)
+            val zprogresses = FloatArray(zCount)
+            val zgrades = IntArray(zCount)
             var zi = 0
             zones.forEach { zone ->
                 if (zone.alive && zi < zCount) {
@@ -729,12 +739,14 @@ class BattleEngine(
                     zys[zi] = zone.position.y / H
                     zradii[zi] = zone.radius / W
                     zfamilies[zi] = zone.family
+                    zprogresses[zi] = if (zone.maxDuration > 0f) zone.duration / zone.maxDuration else 1f
+                    zgrades[zi] = zone.sourceGrade
                     zi++
                 }
             }
-            BattleBridge.updateZoneData(zxs, zys, zradii, zfamilies, zi)
+            BattleBridge.updateZoneData(zxs, zys, zradii, zfamilies, zprogresses, zgrades, zi)
         } else {
-            BattleBridge.updateZoneData(FloatArray(0), FloatArray(0), FloatArray(0), IntArray(0), 0)
+            BattleBridge.updateZoneData(FloatArray(0), FloatArray(0), FloatArray(0), IntArray(0), FloatArray(0), IntArray(0), 0)
         }
     }
 

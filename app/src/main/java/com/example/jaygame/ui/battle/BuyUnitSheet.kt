@@ -53,8 +53,8 @@ import com.example.jaygame.ui.theme.*
 
 /** Price table for buyable units */
 private val BUY_PRICES = mapOf(
-    UnitGrade.MYTHIC to 300,
-    UnitGrade.IMMORTAL to 800,
+    UnitGrade.MYTHIC to 3000,
+    UnitGrade.IMMORTAL to 10000,
 )
 
 /** Get buyable units (MYTHIC and above) */

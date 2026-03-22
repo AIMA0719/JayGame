@@ -238,6 +238,7 @@ object BattleBridge {
     // Lock objects for thread-safe buffer access (game thread writes, UI thread reads)
     private val skillLock = Any()
     private val damageLock = Any()
+    private val meleeHitLock = Any()
     private val goldLock = Any()
     private val levelUpLock = Any()
 
@@ -542,13 +543,15 @@ object BattleBridge {
 
     @JvmStatic
     fun onMeleeHit(x: Float, y: Float, family: Int, isCrit: Boolean, angle: Float) {
-        val now = System.currentTimeMillis()
-        val cutoff = now - 400L
-        while (meleeHitBuffer.isNotEmpty()) {
-            if ((meleeHitBuffer.firstOrNull()?.timestamp ?: now) <= cutoff) meleeHitBuffer.removeFirst() else break
+        synchronized(meleeHitLock) {
+            val now = System.currentTimeMillis()
+            val cutoff = now - 400L
+            while (meleeHitBuffer.isNotEmpty()) {
+                if ((meleeHitBuffer.firstOrNull()?.timestamp ?: now) <= cutoff) meleeHitBuffer.removeFirst() else break
+            }
+            meleeHitBuffer.addLast(MeleeHitEvent(x, y, family, isCrit, angle))
+            _meleeHitEvents.value = meleeHitBuffer.toList()
         }
-        meleeHitBuffer.addLast(MeleeHitEvent(x, y, family, isCrit, angle))
-        _meleeHitEvents.value = meleeHitBuffer.toList()
     }
 
     @JvmStatic
@@ -734,6 +737,8 @@ object BattleBridge {
         val ys: FloatArray = FloatArray(0),
         val radii: FloatArray = FloatArray(0), // normalized
         val families: IntArray = IntArray(0),
+        val progresses: FloatArray = FloatArray(0), // duration/maxDuration (1.0 → 0.0)
+        val grades: IntArray = IntArray(0),
         val count: Int = 0,
         val frameId: Long = 0L,
     ) {
@@ -749,8 +754,11 @@ object BattleBridge {
     private val _zoneData = MutableStateFlow(ZoneData())
     val zoneData: StateFlow<ZoneData> = _zoneData.asStateFlow()
 
-    fun updateZoneData(xs: FloatArray, ys: FloatArray, radii: FloatArray, families: IntArray, count: Int) {
-        _zoneData.value = ZoneData(xs, ys, radii, families, count, ++zoneFrameCounter)
+    fun updateZoneData(
+        xs: FloatArray, ys: FloatArray, radii: FloatArray,
+        families: IntArray, progresses: FloatArray, grades: IntArray, count: Int,
+    ) {
+        _zoneData.value = ZoneData(xs, ys, radii, families, progresses, grades, count, ++zoneFrameCounter)
     }
 
     /** 튜토리얼 모드 (첫 전투) */
@@ -790,8 +798,10 @@ object BattleBridge {
             damageBuffer.clear()
             _damageEvents.value = emptyList()
         }
-        meleeHitBuffer.clear()
-        _meleeHitEvents.value = emptyList()
+        synchronized(meleeHitLock) {
+            meleeHitBuffer.clear()
+            _meleeHitEvents.value = emptyList()
+        }
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
         _unitPopup.value = null

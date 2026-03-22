@@ -4,7 +4,7 @@ package com.example.jaygame.engine
 import com.example.jaygame.engine.UnitGrade.Companion.nextGrade
 
 object MergeSystem {
-    private const val MERGE_COUNT = 3
+    private const val MERGE_COUNT = 4
     private const val LUCKY_CHANCE = 0.05f
 
     /** 유물 행운 합성 보너스 (0.0~1.0 추가 확률) */
@@ -17,7 +17,7 @@ object MergeSystem {
     )
 
     /**
-     * Grade+Role merge: 같은 등급 & 같은 역할 3개 → 다음 등급 랜덤 유닛.
+     * 같은 등급 4개 → 다음 등급 랜덤 유닛.
      */
     fun tryMergeBlueprint(
         grid: Grid,
@@ -30,7 +30,7 @@ object MergeSystem {
         val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: return null
         val nextGrade = currentGrade.nextGrade() ?: return null
 
-        val candidates = grid.findMergeCandidates(unit.grade, unit.role)
+        val candidates = grid.findMergeCandidatesByGrade(unit.grade)
         if (candidates.size < MERGE_COUNT) return null
 
         val consumed = if (tileIndex in candidates) {
@@ -61,7 +61,7 @@ object MergeSystem {
     }
 
     /**
-     * Grade+Role findMergeableTiles: 같은 등급 & 같은 역할 유닛이 3개 이상이고
+     * 같은 등급 유닛이 4개 이상이고
      * 다음 등급이 존재하는 그룹의 타일 인덱스를 반환.
      */
     fun findMergeableTilesByBlueprint(
@@ -69,20 +69,18 @@ object MergeSystem {
         blueprintRegistry: BlueprintRegistry,
     ): Set<Int> {
         val mergeable = mutableSetOf<Int>()
-        data class GradeRole(val grade: Int, val role: UnitRole)
-        val checked = mutableSetOf<GradeRole>()
+        val checked = mutableSetOf<Int>()
 
         for (i in 0 until Grid.TOTAL) {
             val unit = grid.getUnit(i) ?: continue
-            val key = GradeRole(unit.grade, unit.role)
-            if (key in checked) continue
+            if (unit.grade in checked) continue
             if (unit.unitCategory == UnitCategory.SPECIAL) continue
-            checked.add(key)
+            checked.add(unit.grade)
 
             val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: continue
             if (currentGrade.nextGrade() == null) continue
 
-            val candidates = grid.findMergeCandidates(unit.grade, unit.role)
+            val candidates = grid.findMergeCandidatesByGrade(unit.grade)
             if (candidates.size >= MERGE_COUNT) {
                 mergeable.addAll(candidates)
             }

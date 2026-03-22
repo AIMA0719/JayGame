@@ -117,6 +117,9 @@ object UniqueAbilitySystem {
         val nx = unit.position.x / W
         val ny = unit.position.y / H
 
+        // Dual-family: also emit secondary family VFX
+        emitSecondaryFamilyPassive(unit, nx, ny)
+
         when (vfx) {
             // N1: Fire Hero — Lingering Flame: leave fire zone on attack position
             SkillVfxType.LINGERING_FLAME -> {
@@ -213,8 +216,10 @@ object UniqueAbilitySystem {
         val vfx = resolveVfxTypeEnum(unit.family, unit.grade) ?: return
         val nx = unit.position.x / W
         val ny = unit.position.y / H
-        // Grade-based scaling: Hero=1.0, Legend=1.3, Ancient=1.7, Mythic=2.2, Immortal=3.0
         val gradeScale = DamageCalculator.gradeMultiplier(unit.grade)
+
+        // Dual-family: also emit secondary family VFX on active skill
+        emitSecondaryFamilyActive(unit, enemies)
 
         // Find best target position (densest enemies or strongest)
         val targetEnemy = enemies.filter { it.alive }.maxByOrNull { it.maxHp } ?: return
@@ -568,6 +573,58 @@ object UniqueAbilitySystem {
      */
     private fun resolveVfxType(family: Int, grade: Int): Int {
         return resolveVfxTypeEnum(family, grade)?.ordinal ?: -1
+    }
+
+    /**
+     * Dual-family passive: emit the secondary family's hero-grade VFX as a visual hint.
+     * Only fires if the unit has 2+ families and the secondary family resolves to a VFX.
+     */
+    private fun emitSecondaryFamilyPassive(unit: GameUnit, nx: Float, ny: Float) {
+        if (unit.families.size < 2) return
+        val secondaryFamily = unit.families[1].ordinal
+        if (secondaryFamily == unit.family) return
+        val secondaryVfx = resolveVfxTypeEnum(secondaryFamily, unit.grade) ?: return
+        // Emit a smaller, shorter version of the secondary family effect
+        unit.passiveCounter.let { counter ->
+            if (counter % 6 == 3) { // offset from primary so they alternate
+                emitVfx(secondaryVfx, nx, ny, 0.06f, unit, 0.4f)
+            }
+        }
+    }
+
+    /**
+     * Dual-family active: emit the secondary family's VFX simultaneously with the primary.
+     * Uses slightly smaller radius and shorter duration than the primary.
+     */
+    private fun emitSecondaryFamilyActive(unit: GameUnit, enemies: List<Enemy>) {
+        if (unit.families.size < 2) return
+        val secondaryFamily = unit.families[1].ordinal
+        if (secondaryFamily == unit.family) return
+        val secondaryVfx = resolveVfxTypeEnum(secondaryFamily, unit.grade) ?: return
+        val nx = unit.position.x / W
+        val ny = unit.position.y / H
+
+        // Find target position (same logic as primary)
+        val targetEnemy = enemies.filter { it.alive }.maxByOrNull { e ->
+            enemies.count { o -> o.alive && o.position.distanceSqTo(e.position) < 10000f }
+        } ?: return
+        val tx = targetEnemy.position.x / W
+        val ty = targetEnemy.position.y / H
+
+        // Emit secondary VFX at 80% size of what the primary would use, half duration
+        val baseRadius = when {
+            unit.grade >= 6 -> 0.35f
+            unit.grade >= 5 -> 0.20f
+            unit.grade >= 4 -> 0.12f
+            else -> 0.08f
+        }
+        val baseDuration = when {
+            unit.grade >= 6 -> 2.5f
+            unit.grade >= 5 -> 2f
+            unit.grade >= 4 -> 1.5f
+            else -> 1f
+        }
+        emitVfx(secondaryVfx, tx, ty, baseRadius, unit, baseDuration)
     }
 
     private fun resolveVfxTypeEnum(family: Int, grade: Int): SkillVfxType? {

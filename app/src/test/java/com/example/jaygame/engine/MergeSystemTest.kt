@@ -108,22 +108,23 @@ class MergeSystemTest {
     }
 
     @Test
-    fun `3 same grade units can merge to next grade`() {
+    fun `4 same grade units can merge to next grade`() {
         placeUnit(0, "fire_archer_01")   // COMMON
         placeUnit(1, "frost_mage_01")    // COMMON
         placeUnit(2, "fire_archer_01")   // COMMON
+        placeUnit(3, "frost_mage_01")    // COMMON
 
         val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
         assertNotNull(result)
-        // Result should be a RARE unit (fire_archer_02 is the only RARE NORMAL)
         assertEquals("fire_archer_02", result!!.resultBlueprintId)
-        assertEquals(3, result.consumedTiles.size)
+        assertEquals(4, result.consumedTiles.size)
     }
 
     @Test
-    fun `2 same grade units cannot merge`() {
+    fun `3 same grade units cannot merge`() {
         placeUnit(0, "fire_archer_01")  // COMMON
         placeUnit(1, "frost_mage_01")   // COMMON
+        placeUnit(2, "fire_archer_01")  // COMMON
 
         val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
         assertNull(result)
@@ -131,63 +132,44 @@ class MergeSystemTest {
 
     @Test
     fun `hidden units can be merged like normal units`() {
-        placeUnit(0, "hidden_unit_01")  // HIDDEN COMMON MELEE_DPS
+        placeUnit(0, "hidden_unit_01")  // HIDDEN COMMON
         placeUnit(1, "hidden_unit_01")
         placeUnit(2, "hidden_unit_01")
+        placeUnit(3, "fire_archer_01")  // COMMON (4th same grade)
 
         val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
         assertNotNull(result)
     }
 
     @Test
-    fun `different roles same grade cannot merge`() {
-        placeUnit(0, "fire_archer_01")   // COMMON RANGED_DPS
-        placeUnit(1, "fire_archer_01")   // COMMON RANGED_DPS
-        placeUnit(2, "hidden_unit_01")   // COMMON MELEE_DPS
-
-        val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
-        assertNull(result)
-    }
-
-    @Test
-    fun `findMergeableTiles returns tiles of mergeable same-grade-role groups`() {
-        placeUnit(0, "fire_archer_01")   // COMMON RANGED_DPS
-        placeUnit(1, "frost_mage_01")    // COMMON RANGED_DPS
-        placeUnit(2, "fire_archer_01")   // COMMON RANGED_DPS
+    fun `findMergeableTiles returns tiles when 4 or more same grade`() {
+        placeUnit(0, "fire_archer_01")   // COMMON
+        placeUnit(1, "frost_mage_01")    // COMMON
+        placeUnit(2, "fire_archer_01")   // COMMON
+        placeUnit(3, "frost_mage_01")    // COMMON
 
         val mergeable = MergeSystem.findMergeableTilesByBlueprint(grid, registry)
-        assertEquals(setOf(0, 1, 2), mergeable)
+        assertEquals(setOf(0, 1, 2, 3), mergeable)
     }
 
     @Test
-    fun `findMergeableTiles excludes mixed role groups`() {
-        placeUnit(0, "fire_archer_01")   // COMMON RANGED_DPS
-        placeUnit(1, "fire_archer_01")   // COMMON RANGED_DPS
-        placeUnit(2, "hidden_unit_01")   // COMMON MELEE_DPS
+    fun `findMergeableTiles empty when only 3 same grade`() {
+        placeUnit(0, "fire_archer_01")
+        placeUnit(1, "frost_mage_01")
+        placeUnit(2, "fire_archer_01")
 
         val mergeable = MergeSystem.findMergeableTilesByBlueprint(grid, registry)
         assertTrue(mergeable.isEmpty())
     }
 
     @Test
-    fun `findMergeableTiles includes hidden units with same role`() {
-        placeUnit(0, "hidden_unit_01")  // COMMON MELEE_DPS
-        placeUnit(1, "hidden_unit_01")
-        placeUnit(2, "hidden_unit_01")
-
-        val mergeable = MergeSystem.findMergeableTilesByBlueprint(grid, registry)
-        assertEquals(setOf(0, 1, 2), mergeable)
-    }
-
-    @Test
     fun `max grade units cannot merge further`() {
-        // RARE is the highest grade with a next (HERO), but no HERO NORMAL units exist
         placeUnit(0, "fire_archer_02")  // RARE
         placeUnit(1, "fire_archer_02")
         placeUnit(2, "fire_archer_02")
+        placeUnit(3, "fire_archer_02")
 
         val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
-        // No HERO NORMAL blueprints → merge fails
         assertNull(result)
     }
 
@@ -196,11 +178,12 @@ class MergeSystemTest {
         placeUnit(0, "fire_archer_01")
         placeUnit(1, "frost_mage_01")
         placeUnit(2, "fire_archer_01")
-        placeUnit(3, "frost_mage_01")  // 4th COMMON
+        placeUnit(3, "frost_mage_01")
+        placeUnit(4, "fire_archer_01")  // 5th COMMON
 
         val result = MergeSystem.tryMergeBlueprint(grid, 2, registry)
         assertNotNull(result)
         assertTrue(2 in result!!.consumedTiles)
-        assertEquals(3, result.consumedTiles.size)
+        assertEquals(4, result.consumedTiles.size)
     }
 }

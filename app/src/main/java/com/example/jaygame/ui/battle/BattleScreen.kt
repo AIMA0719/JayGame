@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -48,6 +49,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -402,27 +405,94 @@ private fun ZoneGroundOverlay() {
     val zones by BattleBridge.zoneData.collectAsState()
     if (zones.count == 0) return
 
+    val infiniteTransition = rememberInfiniteTransition(label = "zoneFx")
+    val tick by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.2832f, // 2π
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "zoneTick",
+    )
+
     Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
         val w = size.width
         val h = size.height
+        val tickDeg = tick * 57.2958f // radians to degrees, cached once
         for (i in 0 until zones.count) {
             val cx = zones.xs[i] * w
             val cy = zones.ys[i] * h
             val radius = zones.radii[i] * w
             val color = zoneColor(zones.families[i])
+            val progress = if (i < zones.progresses.size) zones.progresses[i] else 1f
 
-            // Ground glow
+            val fadeAlpha = if (progress < 0.2f) progress / 0.2f else 1f
+
+            // Pulsing inner glow
+            val pulseScale = 1f + kotlin.math.sin(tick * 2f) * 0.04f
             drawCircle(
-                color = color.copy(alpha = 0.15f),
-                radius = radius,
+                color = color.copy(alpha = 0.12f * fadeAlpha),
+                radius = radius * pulseScale,
                 center = Offset(cx, cy),
             )
-            // Border ring
+
+            // Secondary pulse layer (offset phase)
             drawCircle(
-                color = color.copy(alpha = 0.3f),
-                radius = radius,
+                color = color.copy(alpha = 0.07f * fadeAlpha),
+                radius = radius * (0.85f + kotlin.math.sin(tick * 2f + 2f) * 0.05f),
                 center = Offset(cx, cy),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f),
+            )
+
+            // Animated border ring — dashed effect via rotating arc segments
+            val borderAlpha = 0.4f * fadeAlpha
+            val segmentSweep = 37f // (360 - 8*8) / 8
+            for (s in 0 until 8) {
+                drawArc(
+                    color = color.copy(alpha = borderAlpha),
+                    startAngle = s * 45f + tickDeg * 0.3f,
+                    sweepAngle = segmentSweep,
+                    useCenter = false,
+                    topLeft = Offset(cx - radius, cy - radius),
+                    size = Size(radius * 2, radius * 2),
+                    style = Stroke(width = 2.5f),
+                )
+            }
+
+            // Inner ring (rotating opposite direction)
+            val innerRadius = radius * 0.7f
+            for (s in 0 until 6) {
+                drawArc(
+                    color = color.copy(alpha = 0.2f * fadeAlpha),
+                    startAngle = s * 60f - tickDeg * 0.5f,
+                    sweepAngle = 40f,
+                    useCenter = false,
+                    topLeft = Offset(cx - innerRadius, cy - innerRadius),
+                    size = Size(innerRadius * 2, innerRadius * 2),
+                    style = Stroke(width = 1.5f),
+                )
+            }
+
+            // Floating particles orbiting the zone edge
+            for (p in 0 until 6) {
+                val angle = tick + p * 1.0472f // 2π/6
+                val orbitRadius = radius * (0.9f + kotlin.math.sin(tick * 3f + p * 1.5f) * 0.08f)
+                val px = cx + kotlin.math.cos(angle) * orbitRadius
+                val py = cy + kotlin.math.sin(angle) * orbitRadius
+                val pAlpha = (0.5f + kotlin.math.sin(tick * 4f + p * 2f) * 0.3f) * fadeAlpha
+                drawCircle(
+                    color = color.copy(alpha = pAlpha.toFloat()),
+                    radius = 3f,
+                    center = Offset(px.toFloat(), py.toFloat()),
+                )
+            }
+
+            // Center symbol glow
+            val centerAlpha = (0.3f + kotlin.math.sin(tick * 1.5f) * 0.15f) * fadeAlpha
+            drawCircle(
+                color = color.copy(alpha = centerAlpha),
+                radius = 6f,
+                center = Offset(cx, cy),
             )
         }
     }
@@ -451,7 +521,7 @@ private fun TutorialHintOverlay() {
     // Determine which hint to show based on game state
     val hintText = when {
         battle.currentWave == 0 && unitCount == 0 -> "하단의 소환 버튼을 탭하여 유닛을 배치하세요!"
-        unitCount in 1..2 -> "유닛을 더 소환하세요. 같은 유닛 3개를 합성할 수 있습니다!"
+        unitCount in 1..3 -> "유닛을 더 소환하세요. 같은 등급 4개를 합성할 수 있습니다!"
         battle.currentWave == 0 && unitCount >= 3 -> "적이 곧 나타납니다. 유닛이 자동으로 공격합니다."
         battle.currentWave in 1..2 && battle.sp > 80 -> "SP가 충분합니다! 유닛을 더 소환하세요."
         showBossHint -> "보스 웨이브! 제한 시간 내에 처치하세요!"

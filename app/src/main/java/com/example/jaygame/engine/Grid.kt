@@ -54,10 +54,10 @@ class Grid {
         return -1
     }
 
-    fun findMergeCandidates(grade: Int, role: UnitRole): List<Int> {
+    fun findMergeCandidatesByGrade(grade: Int): List<Int> {
         return (0 until TOTAL).filter { i ->
             val u = cells[i]
-            u != null && u.grade == grade && u.role == role &&
+            u != null && u.grade == grade &&
                     u.unitCategory != UnitCategory.SPECIAL
         }
     }
