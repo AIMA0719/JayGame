@@ -7,8 +7,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -101,33 +99,29 @@ fun SkillEffectOverlay(
 
     val eventsSnapshot = skillEvents
 
-    // Full-screen Canvas (not inside the clipped field Box).
-    // We use Modifier.layout to set the Canvas's intrinsic size to the field size
-    // while placing it at the field's offset — so DrawScope.size == fieldSize.
-    // graphicsLayer(clip = false) ensures drawing can extend beyond those bounds.
-    Canvas(
-        modifier = Modifier
-            .layout { measurable, _ ->
-                val w = fieldSize.width.toInt()
-                val h = fieldSize.height.toInt()
-                val constraints = androidx.compose.ui.unit.Constraints.fixed(w, h)
-                val placeable = measurable.measure(constraints)
-                layout(w, h) {
-                    placeable.place(fieldOffset.x.toInt(), fieldOffset.y.toInt())
-                }
-            }
-            .graphicsLayer(clip = false)
-    ) {
+    // Full-screen Canvas — never clipped. Translate origin to field position,
+    // wrap DrawScope so render functions see fieldSize instead of screen size.
+    Canvas(modifier = Modifier.fillMaxSize()) {
         val now = System.currentTimeMillis()
+        drawContext.transform.translate(fieldOffset.x, fieldOffset.y)
+        val fieldScope = FieldSizeDrawScope(this, fieldSize)
         for (i in eventsSnapshot.indices) {
             val event = eventsSnapshot.getOrNull(i) ?: continue
             val elapsed = (now - event.startTime) / 1000f
             if (event.duration <= 0f) continue
             val progress = (elapsed / event.duration).coerceIn(0f, 1f)
-            renderSkillEvent(event, progress)
+            fieldScope.renderSkillEvent(event, progress)
         }
+        drawContext.transform.translate(-fieldOffset.x, -fieldOffset.y)
     }
 }
+
+/** DrawScope wrapper — returns [fieldSize] from [size] so render functions
+ *  use field-relative coordinates while drawing on a full-screen canvas. */
+private class FieldSizeDrawScope(
+    private val delegate: DrawScope,
+    override val size: Size,
+) : DrawScope by delegate
 
 private fun DrawScope.renderSkillEvent(event: SkillEvent, progress: Float) {
     when (event.type) {
