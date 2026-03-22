@@ -594,9 +594,15 @@ class BattleEngine(
                 unit.behavior?.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
                 }
-                // Clamp position within field bounds (behaviors move units directly)
-                unit.position.x = unit.position.x.coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
-                unit.position.y = unit.position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
+                // Clamp position — tanks in MOVING/BLOCKING can go to the enemy path area
+                val isTankChasing = unit.state == UnitState.MOVING || unit.state == UnitState.BLOCKING
+                if (isTankChasing) {
+                    unit.position.x = unit.position.x.coerceIn(pathLeft, pathRight)
+                    unit.position.y = unit.position.y.coerceIn(pathTop, pathBottom)
+                } else {
+                    unit.position.x = unit.position.x.coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
+                    unit.position.y = unit.position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
+                }
                 // For behavior-based units, use behavior's canAttack() (interface default = true)
                 val canFire = unit.behavior?.canAttack() == true
                 if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
@@ -904,6 +910,8 @@ class BattleEngine(
     private fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
         val unit = units.acquire() ?: return null
         unit.initFromBlueprint(bp)
+        unit.position = Grid.FIELD_CENTER.copy()
+        unit.homePosition = Grid.FIELD_CENTER.copy()
         unit.range *= upgradeRangeMult
         unit.behavior = BehaviorFactory.create(bp.behaviorId) ?: run { units.release(unit); return null }
         UniqueAbilitySystem.initUnit(unit)
