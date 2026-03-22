@@ -108,9 +108,12 @@ fun HomeScreen(
 
     // Pre-load all stage background bitmaps
     val stageBitmaps = remember {
-        STAGES.associate { s ->
-            s.id to BitmapFactory.decodeStream(context.assets.open(s.bgAsset)).asImageBitmap()
-        }
+        STAGES.mapNotNull { s ->
+            try {
+                val bmp = context.assets.open(s.bgAsset).use { BitmapFactory.decodeStream(it) }
+                if (bmp != null) s.id to bmp.asImageBitmap() else null
+            } catch (_: Exception) { null }
+        }.toMap()
     }
 
     Box(

@@ -382,7 +382,6 @@ private fun SeasonPassContent(repository: GameRepository) {
                         }
                         val updatedData = currentData.copy(
                             units = addRandomCardsToUnits(currentData.units, cardReward),
-                        ).copy(
                             gold = currentData.gold + goldReward,
                             diamonds = currentData.diamonds + diamondReward,
                             seasonClaimedTier = ct,
@@ -438,19 +437,21 @@ private fun SeasonPassContent(repository: GameRepository) {
                     isLocked = isLocked,
                     onClaim = {
                         val currentData = repository.gameData.value
-                        val updatedData = currentData.copy(
-                            units = addRandomCardsToUnits(currentData.units, reward.cards),
-                        ).copy(
-                            gold = currentData.gold + reward.gold,
-                            diamonds = currentData.diamonds + reward.diamonds,
-                            seasonClaimedTier = reward.tier,
-                        )
-                        repository.save(updatedData)
-                        Toast.makeText(
-                            context,
-                            "티어 ${reward.tier} 보상 수령!",
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        // Only allow claiming the next unclaimed tier to prevent skipping
+                        if (reward.tier == currentData.seasonClaimedTier + 1) {
+                            val updatedData = currentData.copy(
+                                units = addRandomCardsToUnits(currentData.units, reward.cards),
+                                gold = currentData.gold + reward.gold,
+                                diamonds = currentData.diamonds + reward.diamonds,
+                                seasonClaimedTier = reward.tier,
+                            )
+                            repository.save(updatedData)
+                            Toast.makeText(
+                                context,
+                                "티어 ${reward.tier} 보상 수령!",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
                     },
                 )
             }

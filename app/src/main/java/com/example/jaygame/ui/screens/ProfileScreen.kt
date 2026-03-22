@@ -8,6 +8,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,11 +74,13 @@ fun ProfileScreen(
 
     // Compute which profiles are newly unlocked based on current GameData
     val nowUnlocked = ALL_PROFILES.filter { it.condition(data) }.map { it.id }.toSet()
-    val allUnlocked = data.unlockedProfiles + nowUnlocked
+    val allUnlocked = remember(data.unlockedProfiles, nowUnlocked) { data.unlockedProfiles + nowUnlocked }
 
     // Auto-save if new profiles were unlocked
-    if (nowUnlocked.any { it !in data.unlockedProfiles }) {
-        repository.save(data.copy(unlockedProfiles = allUnlocked))
+    LaunchedEffect(allUnlocked.size) {
+        if (nowUnlocked.any { it !in data.unlockedProfiles }) {
+            repository.save(data.copy(unlockedProfiles = allUnlocked))
+        }
     }
 
     Column(

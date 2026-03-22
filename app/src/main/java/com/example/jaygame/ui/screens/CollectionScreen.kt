@@ -426,7 +426,7 @@ private fun HeroCollectionTab(
                 gold = data.gold,
                 onUpgrade = {
                     if (progress != null && progress.level < 7) {
-                        val cost = UPGRADE_COSTS[progress.level - 1]
+                        val cost = UPGRADE_COSTS.getOrNull(progress.level - 1) ?: return@CollectionBlueprintDetailDialog
                         val newUnits = data.units.toMutableMap()
                         val cur = newUnits[bp.id] ?: return@CollectionBlueprintDetailDialog
                         newUnits[bp.id] = cur.copy(
@@ -556,9 +556,9 @@ private fun CollectionBlueprintDetailDialog(
     onDismiss: () -> Unit,
 ) {
     val owned = progress?.owned == true
-    val level = progress?.level ?: 1
+    val level = (progress?.level ?: 1).coerceIn(1, LEVEL_MULTIPLIER.size)
     val calculatedATK = (blueprint.stats.baseATK * LEVEL_MULTIPLIER[level - 1]).toInt()
-    val upgradeCost = if (level < 7) UPGRADE_COSTS[level - 1] else null
+    val upgradeCost = if (level < 7) UPGRADE_COSTS.getOrNull(level - 1) else null
     val canUpgrade = owned && level < 7
             && upgradeCost != null
             && (progress?.cards ?: 0) >= upgradeCost.first

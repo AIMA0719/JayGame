@@ -229,13 +229,14 @@ fun AchievementsScreen(
                     isCompleted = isCompleted,
                     isClaimed = isClaimed,
                     onClaim = {
-                        if (isCompleted && !isClaimed) {
+                        val current = repository.gameData.value
+                        if (isCompleted && achievement.id !in current.claimedAchievements) {
                             // Achievement claim also grants season XP (10 per achievement)
-                            repository.save(data.copy(
-                                gold = data.gold + achievement.goldReward,
-                                diamonds = data.diamonds + achievement.diamondReward,
-                                claimedAchievements = data.claimedAchievements + achievement.id,
-                                seasonXP = data.seasonXP + 10,
+                            repository.save(current.copy(
+                                gold = current.gold + achievement.goldReward,
+                                diamonds = current.diamonds + achievement.diamondReward,
+                                claimedAchievements = current.claimedAchievements + achievement.id,
+                                seasonXP = current.seasonXP + 10,
                             ))
                         }
                     },
