@@ -9,7 +9,7 @@ class RelicManager(private var gameData: GameData) {
     /** 유물 획득 */
     fun acquireRelic(relicId: Int, grade: RelicGrade): GameData {
         val relics = gameData.relics.toMutableList()
-        val existing = relics[relicId]
+        val existing = relics.getOrNull(relicId) ?: return gameData
         if (existing.owned) {
             if (grade.ordinal > existing.grade) {
                 relics[relicId] = existing.copy(grade = grade.ordinal, level = 1)
@@ -29,9 +29,9 @@ class RelicManager(private var gameData: GameData) {
 
     /** 유물 강화 */
     fun upgradeRelic(relicId: Int): GameData? {
-        val relic = gameData.relics[relicId]
+        val relic = gameData.relics.getOrNull(relicId) ?: return null
         if (!relic.owned) return null
-        val gradeDef = RelicGrade.entries[relic.grade]
+        val gradeDef = RelicGrade.entries.getOrNull(relic.grade) ?: return null
         if (relic.level >= gradeDef.maxLevel) return null
         val cost = relicUpgradeCost(relic.level)
         if (gameData.gold < cost) return null
@@ -42,7 +42,7 @@ class RelicManager(private var gameData: GameData) {
 
     /** 장착 */
     fun equipRelic(relicId: Int): GameData? {
-        val relic = gameData.relics[relicId]
+        val relic = gameData.relics.getOrNull(relicId) ?: return null
         if (!relic.owned) return null
         if (gameData.equippedRelics.contains(relicId)) return null
         if (gameData.equippedRelics.size >= gameData.equippedSlotCount) return null
@@ -56,9 +56,9 @@ class RelicManager(private var gameData: GameData) {
 
     /** 장착 유물 효과 (lv * effectPerLevel, capped) */
     fun getEquippedEffect(relicId: Int): Float {
-        val relic = gameData.relics[relicId]
+        val relic = gameData.relics.getOrNull(relicId) ?: return 0f
         if (!relic.owned || !gameData.equippedRelics.contains(relicId)) return 0f
-        val def = ALL_RELICS[relicId]
+        val def = ALL_RELICS.getOrNull(relicId) ?: return 0f
         return (relic.level * def.effectPerLevel).coerceAtMost(def.maxEffectCap)
     }
 
@@ -67,7 +67,7 @@ class RelicManager(private var gameData: GameData) {
     fun totalAtkSpeedPercent(): Float = getEquippedEffect(4) / 100f
     fun totalCritChanceBonus(): Float = getEquippedEffect(5) / 100f
     fun totalCritDamageBonus(): Float {
-        val relic = gameData.relics[5]
+        val relic = gameData.relics.getOrNull(5) ?: return 0f
         if (!relic.owned || !gameData.equippedRelics.contains(5)) return 0f
         return (relic.level * 10f).coerceAtMost(200f) / 100f
     }
@@ -102,6 +102,7 @@ class RelicManager(private var gameData: GameData) {
     private fun rollGrade(minGrade: RelicGrade): RelicGrade {
         val eligible = RelicGrade.entries.filter { it.ordinal >= minGrade.ordinal }
         val totalWeight = eligible.sumOf { it.dropWeight }
+        if (totalWeight <= 0) return eligible.last()
         var roll = (0 until totalWeight).random()
         for (g in eligible) {
             roll -= g.dropWeight

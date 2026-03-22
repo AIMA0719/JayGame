@@ -41,6 +41,7 @@ class Grid {
     }
 
     fun removeUnit(index: Int): GameUnit? {
+        if (index !in 0 until TOTAL) return null
         val unit = cells[index] ?: return null
         cells[index] = null
         return unit
@@ -53,10 +54,10 @@ class Grid {
         return -1
     }
 
-    fun findMergeCandidatesByGrade(grade: Int): List<Int> {
+    fun findMergeCandidates(grade: Int, role: UnitRole): List<Int> {
         return (0 until TOTAL).filter { i ->
             val u = cells[i]
-            u != null && u.grade == grade &&
+            u != null && u.grade == grade && u.role == role &&
                     u.unitCategory != UnitCategory.SPECIAL
         }
     }

@@ -75,10 +75,10 @@ object UniqueAbilitySystem {
     }
 
     // Reference to engine zone pool — set by BattleEngine
-    var zonePool: ObjectPool<ZoneEffect>? = null
+    @Volatile var zonePool: ObjectPool<ZoneEffect>? = null
 
     /** 유물 쿨다운 감소 (0.0~1.0) */
-    var cooldownReduction: Float = 0f
+    @Volatile var cooldownReduction: Float = 0f
 
     /**
      * Update unique abilities for all active units.

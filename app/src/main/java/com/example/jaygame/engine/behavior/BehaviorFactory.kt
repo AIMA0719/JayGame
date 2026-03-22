@@ -9,10 +9,8 @@ object BehaviorFactory {
         registry[behaviorId] = factory
     }
 
-    fun create(behaviorId: String): UnitBehavior {
-        val factory = registry[behaviorId]
-            ?: throw IllegalArgumentException("Unknown behaviorId: $behaviorId")
-        return factory()
+    fun create(behaviorId: String): UnitBehavior? {
+        return registry[behaviorId]?.invoke()
     }
 
     fun isRegistered(behaviorId: String): Boolean = behaviorId in registry

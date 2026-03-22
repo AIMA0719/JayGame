@@ -14,7 +14,9 @@ class DungeonManager(private var gameData: GameData) {
     private fun resetDailyIfNeeded(): GameData {
         val today = todayString()
         return if (gameData.lastDungeonResetDate != today) {
-            gameData.copy(dungeonDailyCount = 0, lastDungeonResetDate = today)
+            val refreshed = gameData.copy(dungeonDailyCount = 0, lastDungeonResetDate = today)
+            gameData = refreshed
+            refreshed
         } else {
             gameData
         }

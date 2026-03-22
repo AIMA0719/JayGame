@@ -18,14 +18,14 @@ class ForgeEffect : FieldEffectController {
     }
 
     override fun update(dt: Float, field: BattleFieldAccess) {
+        // Clean up dead/recycled units first so recycled pool objects can be re-buffed
+        buffedUnits.removeAll { !it.alive }
         field.getUnits()
             .filter { it.alive && it !in buffedUnits && it.position.distanceTo(centerPosition) <= EFFECT_RANGE }
             .forEach { ally ->
                 ally.buffs.addBuff(BuffType.AtkUp, ATK_BONUS, BUFF_DURATION)
                 buffedUnits.add(ally)
             }
-        // Clean up dead units from tracking set
-        buffedUnits.removeAll { !it.alive }
     }
 
     override fun onRemove() {

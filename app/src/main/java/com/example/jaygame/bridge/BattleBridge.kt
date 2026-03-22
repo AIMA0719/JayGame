@@ -301,6 +301,10 @@ object BattleBridge {
         _autoSummon.value = autoSummonOn
     }
 
+    fun toggleAutoSummon() {
+        _autoSummon.value = !_autoSummon.value
+    }
+
     private val _state = MutableStateFlow(BattleState())
     val state: StateFlow<BattleState> = _state.asStateFlow()
 
@@ -860,6 +864,7 @@ object BattleBridge {
     fun requestBattleUpgrade(upgradeType: Int, cost: Int) {
         val currentSp = _state.value.sp
         if (currentSp < cost) return
+        if (upgradeType !in _battleUpgradeLevels.value.indices) return
 
         val levels = _battleUpgradeLevels.value.copyOf()
         levels[upgradeType]++

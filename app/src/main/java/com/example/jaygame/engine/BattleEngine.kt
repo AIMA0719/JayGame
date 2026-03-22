@@ -355,10 +355,11 @@ class BattleEngine(
                     if (petSystem.canPhoenixRevive()) {
                         // Pet ID 8 (봉황): one-time revive — clear excess enemies and continue
                         petSystem.usePhoenixRevive()
-                        var released = 0
-                        val excessList = mutableListOf<Enemy>()
-                        enemies.forEach { if (it.alive) excessList.add(it) }
-                        excessList.forEach { enemies.release(it); released++ }
+                        val safeCount = DEFEAT_ENEMY_COUNT / 2
+                        val aliveList = mutableListOf<Enemy>()
+                        enemies.forEach { if (it.alive) aliveList.add(it) }
+                        val toRemove = (aliveList.size - safeCount).coerceAtLeast(0)
+                        aliveList.shuffled().take(toRemove).forEach { it.alive = false; enemies.release(it) }
                         BattleBridge.onPhoenixRevive()
                     } else {
                         state = State.Defeat
@@ -847,14 +848,7 @@ class BattleEngine(
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
 
-        val unit = units.acquire() ?: return
-        unit.initFromBlueprint(selected)
-        unit.range *= upgradeRangeMult  // Apply range upgrade
-        unit.tileIndex = tileIndex
-        unit.position = Grid.FIELD_CENTER.copy()
-        unit.homePosition = Grid.FIELD_CENTER.copy()
-        unit.behavior = BehaviorFactory.create(selected.behaviorId)
-        UniqueAbilitySystem.initUnit(unit)
+        val unit = spawnFromBlueprint(selected) ?: return
         grid.placeUnit(tileIndex, unit)
         invalidateMergeCache()
         refreshSynergies()
@@ -901,9 +895,19 @@ class BattleEngine(
             val count = roleCountsScratch[role] ?: 0
             roleSynergyCacheMut[role] = RoleSynergySystem.getBonusByCount(role, count)
         }
-        roleSynergyCache = roleSynergyCacheMut
+        roleSynergyCache = HashMap(roleSynergyCacheMut)
 
         BattleBridge.updateRoleSynergies(roleCountsScratch)
+    }
+
+    /** Acquire a unit from pool, init from blueprint. Does NOT place on grid. Returns null on failure. */
+    private fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
+        val unit = units.acquire() ?: return null
+        unit.initFromBlueprint(bp)
+        unit.range *= upgradeRangeMult
+        unit.behavior = BehaviorFactory.create(bp.behaviorId) ?: run { units.release(unit); return null }
+        UniqueAbilitySystem.initUnit(unit)
+        return unit
     }
 
     /** Get role synergy bonus for a unit. SPECIAL category units get no bonus. */
@@ -924,21 +928,14 @@ class BattleEngine(
 
     fun requestMerge(tileIndex: Int) {
         val existingUnit = grid.getUnit(tileIndex) ?: return
-        if (existingUnit.unitCategory == UnitCategory.HIDDEN || existingUnit.unitCategory == UnitCategory.SPECIAL) return
+        if (existingUnit.unitCategory == UnitCategory.SPECIAL) return
         val result = MergeSystem.tryMergeBlueprint(grid, tileIndex, blueprintRegistry) ?: return
         result.consumedTiles.forEach { i ->
             val u = grid.removeUnit(i)
             if (u != null) units.release(u)
         }
         val bp = blueprintRegistry.findById(result.resultBlueprintId) ?: return
-        val unit = units.acquire() ?: return
-        unit.initFromBlueprint(bp)
-        unit.range *= upgradeRangeMult  // Apply range upgrade
-        unit.tileIndex = tileIndex
-        unit.position = Grid.FIELD_CENTER.copy()
-        unit.homePosition = Grid.FIELD_CENTER.copy()
-        unit.behavior = BehaviorFactory.create(bp.behaviorId)
-        UniqueAbilitySystem.initUnit(unit)
+        val unit = spawnFromBlueprint(bp) ?: return
         grid.placeUnit(tileIndex, unit)
         invalidateMergeCache()
         refreshSynergies()
@@ -1026,7 +1023,6 @@ class BattleEngine(
         if (sp < cost || units.activeCount >= maxUnitSlots) return
         val tileIndex = grid.findEmpty()
         if (tileIndex < 0) return
-        val unit = units.acquire() ?: return
 
         // Try blueprint-based init first (preferred path)
         val def = UNIT_DEFS.find { it.id == unitDefId }
@@ -1035,16 +1031,12 @@ class BattleEngine(
         val gradeEnum = UnitGrade.entries.getOrElse(gradeOrdinal) { UnitGrade.COMMON }
         val bp = blueprintRegistry.all().find { it.grade == gradeEnum && familyEnum in it.families }
 
+        val unit: GameUnit
         if (bp != null) {
-            unit.initFromBlueprint(bp)
-            unit.range *= upgradeRangeMult  // Apply range upgrade
-            unit.tileIndex = tileIndex
-            unit.position = Grid.FIELD_CENTER.copy()
-            unit.homePosition = Grid.FIELD_CENTER.copy()
-            unit.behavior = BehaviorFactory.create(bp.behaviorId)
-            UniqueAbilitySystem.initUnit(unit)
+            unit = spawnFromBlueprint(bp) ?: return
         } else if (def != null) {
             // Fallback: legacy init with proper field assignments
+            unit = units.acquire() ?: return
             val family = unitFamilyOf(unitDefId)
             val abilityInfo = abilityForFamily(family)
             unit.init(
@@ -1059,7 +1051,6 @@ class BattleEngine(
             unit.role = inferRole(familyEnum)
             UniqueAbilitySystem.initUnit(unit)
         } else {
-            units.release(unit)
             return
         }
 

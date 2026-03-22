@@ -162,6 +162,7 @@ class ComposeActivity : ComponentActivity() {
 
     override fun onDestroy() {
         BgmManager.stop()
+        SfxManager.release()
         super.onDestroy()
     }
 

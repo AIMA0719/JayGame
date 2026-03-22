@@ -20,7 +20,7 @@ class GameRepository(context: Context) {
 
     fun save(data: GameData) {
         val json = serialize(data)
-        prefs.edit().putString("save_data", json).commit()
+        prefs.edit().putString("save_data", json).apply()
         _gameData.value = data
     }
 

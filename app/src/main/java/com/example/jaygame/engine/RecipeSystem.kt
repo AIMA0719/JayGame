@@ -41,11 +41,16 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
     private val discoveredIds = mutableSetOf<String>()
 
     fun loadRecipes(jsonString: String) {
+        recipes.clear()
         val arr = JSONArray(jsonString)
         for (i in 0 until arr.length()) {
-            val recipe = parseRecipe(arr.getJSONObject(i))
-            if (recipe.ingredients.isNotEmpty()) {
-                recipes.add(recipe)
+            try {
+                val recipe = parseRecipe(arr.getJSONObject(i))
+                if (recipe.ingredients.isNotEmpty()) {
+                    recipes.add(recipe)
+                }
+            } catch (_: IllegalArgumentException) {
+                // Skip recipes with invalid enum values in JSON
             }
         }
     }

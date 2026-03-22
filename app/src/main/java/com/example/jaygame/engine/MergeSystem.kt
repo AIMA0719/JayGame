@@ -8,7 +8,7 @@ object MergeSystem {
     private const val LUCKY_CHANCE = 0.05f
 
     /** 유물 행운 합성 보너스 (0.0~1.0 추가 확률) */
-    var luckyMergeBonus: Float = 0f
+    @Volatile var luckyMergeBonus: Float = 0f
 
     data class BlueprintMergeResult(
         val resultBlueprintId: String,
@@ -17,9 +17,7 @@ object MergeSystem {
     )
 
     /**
-     * Grade-based merge: 같은 등급 3개 → 다음 등급 랜덤 유닛.
-     * tileIndex의 유닛 등급과 같은 등급 유닛 3개를 소모하고,
-     * 다음 등급 블루프린트 중 랜덤으로 하나를 결과로 반환.
+     * Grade+Role merge: 같은 등급 & 같은 역할 3개 → 다음 등급 랜덤 유닛.
      */
     fun tryMergeBlueprint(
         grid: Grid,
@@ -30,12 +28,11 @@ object MergeSystem {
         if (unit.unitCategory == UnitCategory.SPECIAL) return null
 
         val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: return null
-        val nextGrade = currentGrade.nextGrade() ?: return null // 최고 등급이면 합성 불가
+        val nextGrade = currentGrade.nextGrade() ?: return null
 
-        val candidates = grid.findMergeCandidatesByGrade(unit.grade)
+        val candidates = grid.findMergeCandidates(unit.grade, unit.role)
         if (candidates.size < MERGE_COUNT) return null
 
-        // tileIndex를 우선 포함, 나머지 채움
         val consumed = if (tileIndex in candidates) {
             listOf(tileIndex) + candidates.filter { it != tileIndex }.take(MERGE_COUNT - 1)
         } else {
@@ -64,7 +61,7 @@ object MergeSystem {
     }
 
     /**
-     * Grade-based findMergeableTiles: 같은 등급 유닛이 3개 이상이고
+     * Grade+Role findMergeableTiles: 같은 등급 & 같은 역할 유닛이 3개 이상이고
      * 다음 등급이 존재하는 그룹의 타일 인덱스를 반환.
      */
     fun findMergeableTilesByBlueprint(
@@ -72,18 +69,20 @@ object MergeSystem {
         blueprintRegistry: BlueprintRegistry,
     ): Set<Int> {
         val mergeable = mutableSetOf<Int>()
-        val checked = mutableSetOf<Int>()
+        data class GradeRole(val grade: Int, val role: UnitRole)
+        val checked = mutableSetOf<GradeRole>()
 
         for (i in 0 until Grid.TOTAL) {
             val unit = grid.getUnit(i) ?: continue
-            if (unit.grade in checked) continue
+            val key = GradeRole(unit.grade, unit.role)
+            if (key in checked) continue
             if (unit.unitCategory == UnitCategory.SPECIAL) continue
-            checked.add(unit.grade)
+            checked.add(key)
 
             val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: continue
-            if (currentGrade.nextGrade() == null) continue // 최고 등급은 합성 불가
+            if (currentGrade.nextGrade() == null) continue
 
-            val candidates = grid.findMergeCandidatesByGrade(unit.grade)
+            val candidates = grid.findMergeCandidates(unit.grade, unit.role)
             if (candidates.size >= MERGE_COUNT) {
                 mergeable.addAll(candidates)
             }

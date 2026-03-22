@@ -30,7 +30,7 @@ class PetBattleSystem {
 
         for (petId in gameData.equippedPets) {
             val def = ALL_PETS.find { it.id == petId } ?: continue
-            val progress = gameData.pets.getOrNull(petId) ?: continue
+            val progress = gameData.pets.find { it.petId == petId } ?: continue
             if (!progress.owned) continue
             activePets.add(ActivePet(def = def, level = progress.level))
             if (petId == 8) phoenixReviveAvailable = true

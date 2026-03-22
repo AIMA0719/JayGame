@@ -28,6 +28,7 @@ import com.example.jaygame.ui.theme.JayGameTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 // A4: Smooth fade transition when returning to home
 
@@ -182,7 +183,7 @@ class MainActivity : ComponentActivity() {
                             val singleTypeWin = engine?.let { eng ->
                                 val families = mutableSetOf<Int>()
                                 eng.units.forEach { u -> if (u.alive) families.add(u.family) }
-                                families.size == 1 && families.first() >= 0
+                                families.size == 1 && families.firstOrNull()?.let { it >= 0 } == true
                             } ?: false
 
                             // Apply relic drop if present (boosted chance in RELIC_HUNT dungeon handled by engine)
@@ -257,6 +258,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         engine?.stop()
         BattleBridge.engine = null
+        engineScope.cancel()
         super.onDestroy()
     }
 
