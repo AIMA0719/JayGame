@@ -7,6 +7,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -76,8 +78,15 @@ private val White = Color.White
  * Each SkillVfxType has its own unique Canvas rendering.
  * 운빨존많겜-style flashy, dramatic effects.
  */
+/**
+ * @param fieldOffset top-left of the battle field in root coordinates (px)
+ * @param fieldSize   pixel size of the battle field
+ */
 @Composable
-fun SkillEffectOverlay() {
+fun SkillEffectOverlay(
+    fieldOffset: Offset = Offset.Zero,
+    fieldSize: Size = Size.Zero,
+) {
     val skillEvents by BattleBridge.skillEvents.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -88,12 +97,27 @@ fun SkillEffectOverlay() {
         }
     }
 
-    if (skillEvents.isEmpty()) return
+    if (skillEvents.isEmpty() || fieldSize == Size.Zero) return
 
-    // Snapshot the list to avoid ConcurrentModificationException
     val eventsSnapshot = skillEvents
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    // Full-screen Canvas (not inside the clipped field Box).
+    // We use Modifier.layout to set the Canvas's intrinsic size to the field size
+    // while placing it at the field's offset — so DrawScope.size == fieldSize.
+    // graphicsLayer(clip = false) ensures drawing can extend beyond those bounds.
+    Canvas(
+        modifier = Modifier
+            .layout { measurable, _ ->
+                val w = fieldSize.width.toInt()
+                val h = fieldSize.height.toInt()
+                val constraints = androidx.compose.ui.unit.Constraints.fixed(w, h)
+                val placeable = measurable.measure(constraints)
+                layout(w, h) {
+                    placeable.place(fieldOffset.x.toInt(), fieldOffset.y.toInt())
+                }
+            }
+            .graphicsLayer(clip = false)
+    ) {
         val now = System.currentTimeMillis()
         for (i in eventsSnapshot.indices) {
             val event = eventsSnapshot.getOrNull(i) ?: continue

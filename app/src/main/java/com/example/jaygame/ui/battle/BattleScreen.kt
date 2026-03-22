@@ -43,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -175,13 +177,23 @@ fun BattleScreen(
         }
 
         // Layer 1: Game area — square (720x720), 25dp margin each side
+        // Track field position for the unclipped skill VFX overlay
+        var fieldOffset by remember { mutableStateOf(Offset.Zero) }
+        var fieldSizePx by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
         Box(
             modifier = Modifier
                 .padding(horizontal = 25.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .align(Alignment.Center)
-                .clipToBounds(),
+                .clipToBounds()
+                .onGloballyPositioned { coords ->
+                    val pos = coords.positionInRoot()
+                    fieldOffset = Offset(pos.x, pos.y)
+                    fieldSizePx = androidx.compose.ui.geometry.Size(
+                        coords.size.width.toFloat(), coords.size.height.toFloat()
+                    )
+                },
         ) {
             MonsterPathOverlay()
             ZoneGroundOverlay()
@@ -190,7 +202,6 @@ fun BattleScreen(
             ProjectileOverlay()
             DamageNumberOverlay()
             BattleParticleOverlay()
-            SkillEffectOverlay()
             WaveAnnouncementOverlay()
             DebugOverlay()
 
@@ -240,6 +251,9 @@ fun BattleScreen(
                 }
             }
         }
+
+        // Skill VFX — sibling of the clipped field so effects can extend beyond the field boundary
+        SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
 
         // Layer 2: HUD overlays
         Column(
@@ -743,6 +757,28 @@ private fun BattleMenuDialog(
                             )
                         }
                     }
+                }
+
+                // ── Auto summon & merge toggle ──
+                val autoSummon by BattleBridge.autoSummon.collectAsState()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("자동 소환 & 조합", fontSize = 13.sp, color = LightText, fontWeight = FontWeight.Bold)
+                        Text("SP 충분 시 자동 소환 + 조합", fontSize = 10.sp, color = SubText)
+                    }
+                    NeonButton(
+                        text = if (autoSummon) "ON" else "OFF",
+                        onClick = { BattleBridge.toggleAutoSummon() },
+                        accentColor = if (autoSummon) NeonGreen else NeonRed,
+                        accentColorDark = if (autoSummon) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                        modifier = Modifier
+                            .width(72.dp)
+                            .height(34.dp),
+                        fontSize = 13.sp,
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
