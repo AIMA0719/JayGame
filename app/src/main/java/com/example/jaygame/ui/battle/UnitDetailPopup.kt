@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.data.UnitGrade
+import com.example.jaygame.engine.AbilityTrigger
 import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.DamageType
@@ -126,6 +127,9 @@ fun UnitDetailPopup() {
             ) {
             // Unit header: icon + name + grade badge
             val displayGrade = UnitGrade.entries.getOrNull(data.grade)
+            val blueprint = remember(data.blueprintId) {
+                if (data.blueprintId.isNotEmpty()) BlueprintRegistry.instance.findById(data.blueprintId) else null
+            }
             if (unitDef != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
@@ -158,10 +162,7 @@ fun UnitDetailPopup() {
                     }
                 }
             } else {
-                // Blueprint unit — look up name from BlueprintRegistry
-                val blueprint = remember(data.blueprintId) {
-                    BlueprintRegistry.instance.findById(data.blueprintId)
-                }
+                // Blueprint unit
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = blueprint?.name ?: data.blueprintId,
@@ -310,38 +311,156 @@ fun UnitDetailPopup() {
                         )
                     }
                 }
-            } else if (data.blueprintId.isNotEmpty()) {
+            } else if (blueprint != null) {
                 // Blueprint unit stats
-                val bp = remember(data.blueprintId) {
-                    BlueprintRegistry.instance.findById(data.blueprintId)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    StatItem("공격력", "${blueprint.stats.baseATK.toInt()}", NeonRed)
+                    StatItem("공속", "%.1f".format(blueprint.stats.baseSpeed), NeonCyan)
+                    StatItem("사거리", "${blueprint.stats.range.toInt()}", Gold)
                 }
-                if (bp != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        StatItem("공격력", "${bp.stats.baseATK.toInt()}", NeonRed)
-                        StatItem("공속", "%.1f".format(bp.stats.baseSpeed), NeonCyan)
-                        StatItem("사거리", "${bp.stats.range.toInt()}", Gold)
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        StatItem("체력", "${bp.stats.hp.toInt()}", Color(0xFF4CAF50))
-                        StatItem("방어력", "${bp.stats.defense.toInt()}", Color(0xFF90A4AE))
-                        StatItem("마법저항", "${bp.stats.magicResist.toInt()}", Color(0xFF7E57C2))
-                    }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    StatItem("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF4CAF50))
+                    StatItem("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFF90A4AE))
+                    StatItem("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFF7E57C2))
+                }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = bp.description,
-                        color = SubText,
-                        fontSize = 11.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                Text(
+                    text = blueprint.description,
+                    color = SubText,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                // Base ability
+                if (blueprint.ability != null) {
+                    val (triggerColor, triggerLabel) = when (blueprint.ability.type) {
+                        AbilityTrigger.PASSIVE -> Color(0xFF4CAF50) to "패시브"
+                        AbilityTrigger.ACTIVE -> Color(0xFFFF9800) to "액티브"
+                        AbilityTrigger.AURA -> Color(0xFF7E57C2) to "오라"
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                NeonCyan.copy(alpha = 0.08f),
+                                RoundedCornerShape(6.dp),
+                            )
+                            .padding(8.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = blueprint.ability.name,
+                                color = NeonCyan,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(3.dp),
+                                color = triggerColor.copy(alpha = 0.8f),
+                            ) {
+                                Text(
+                                    text = triggerLabel,
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                )
+                            }
+                        }
+                        if (blueprint.ability.cooldown > 0f) {
+                            Text(
+                                text = "쿨타임: ${"%.1f".format(blueprint.ability.cooldown)}초",
+                                color = NeonCyan.copy(alpha = 0.7f),
+                                fontSize = 9.sp,
+                            )
+                        }
+                        Text(
+                            text = blueprint.ability.description,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+
+                // Unique ability
+                if (blueprint.uniqueAbility != null) {
+                    val gradeColor = displayGrade?.color ?: Gold
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                gradeColor.copy(alpha = 0.1f),
+                                RoundedCornerShape(6.dp),
+                            )
+                            .padding(8.dp),
+                    ) {
+                        Text(
+                            text = "\u2726 ${blueprint.uniqueAbility.name}",
+                            color = gradeColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "해금: ${blueprint.uniqueAbility.requiredGrade.label}+",
+                            color = gradeColor.copy(alpha = 0.7f),
+                            fontSize = 9.sp,
+                        )
+                        if (blueprint.uniqueAbility.passive != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "[패시브] ${blueprint.uniqueAbility.passive.name}",
+                                color = Color(0xFF4CAF50),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = blueprint.uniqueAbility.passive.description,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp,
+                                modifier = Modifier.padding(top = 1.dp),
+                            )
+                        }
+                        if (blueprint.uniqueAbility.active != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "[액티브] ${blueprint.uniqueAbility.active.name}",
+                                    color = Color(0xFFFF9800),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                if (blueprint.uniqueAbility.active.cooldown > 0f) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "${"%.1f".format(blueprint.uniqueAbility.active.cooldown)}초",
+                                        color = NeonCyan.copy(alpha = 0.7f),
+                                        fontSize = 9.sp,
+                                    )
+                                }
+                            }
+                            Text(
+                                text = blueprint.uniqueAbility.active.description,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp,
+                                modifier = Modifier.padding(top = 1.dp),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -399,5 +518,3 @@ private fun StatItem(label: String, value: String, color: Color) {
         Text(value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }
-
-// getRoleColor replaced by roleColor from UnitUiUtils
