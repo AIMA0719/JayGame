@@ -1,6 +1,7 @@
 package com.example.jaygame.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -8,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +65,7 @@ import com.example.jaygame.ui.theme.SubText
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.navigationBarsPadding
 
-private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, UPGRADE, DATA, PROFILE, PRIVACY, LICENSES }
+private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, UPGRADE, DATA, PROFILE, FAQ, PRIVACY, LICENSES }
 
 @Composable
 fun SettingsScreen(
@@ -171,6 +173,9 @@ fun SettingsScreen(
                     repository = repository,
                     onBack = { currentPage = SettingsPage.MAIN },
                 )
+                SettingsPage.FAQ -> SettingsFaq(
+                    onBack = { currentPage = SettingsPage.MAIN },
+                )
                 SettingsPage.PRIVACY -> SettingsPrivacy(
                     onBack = { currentPage = SettingsPage.MAIN },
                 )
@@ -245,6 +250,14 @@ private fun SettingsMain(
                     title = "프로필 칭호",
                     iconTint = Gold,
                     onClick = { onPageSelected(SettingsPage.PROFILE) },
+                )
+            }
+            GameCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsCategoryRow(
+                    iconRes = R.drawable.ic_settings_gameplay,
+                    title = "게임 도움말",
+                    iconTint = NeonCyan,
+                    onClick = { onPageSelected(SettingsPage.FAQ) },
                 )
             }
             GameCard(modifier = Modifier.fillMaxWidth()) {
@@ -860,5 +873,330 @@ private fun LicenseItem(name: String, license: String, copyright: String) {
         Text(name, fontSize = 13.sp, color = LightText, fontWeight = FontWeight.Medium)
         Text(copyright, fontSize = 11.sp, color = SubText)
         Text(license, fontSize = 11.sp, color = DimText)
+    }
+}
+
+// ── FAQ / Game Guide Sub-page ──
+
+@Composable
+private fun SettingsFaq(onBack: () -> Unit) {
+    var expandedSection by remember { mutableStateOf(-1) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        SubPageHeader(title = "게임 도움말", onBack = onBack)
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // ── 전투 기본 ──
+            FaqSection(
+                index = 0,
+                expanded = expandedSection == 0,
+                onToggle = { expandedSection = if (expandedSection == 0) -1 else 0 },
+                icon = "\u2694\uFE0F",
+                title = "전투는 어떻게 진행되나요?",
+            ) {
+                FaqBullet("유닛을 소환(SP 소모)하여 밀려오는 적을 처치합니다")
+                FaqBullet("적이 필드에 100마리 이상 쌓이면 패배합니다")
+                FaqBullet("10웨이브마다 보스가 등장하며, 시간 내 처치하지 못하면 패배합니다")
+                FaqBullet("SP는 초당 2씩 자동 회복되며, 웨이브 클리어 시 추가 SP를 얻습니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("난이도")
+                FaqKeyValue("초보", "적 1.0배 · 유닛 50칸")
+                FaqKeyValue("숙련자", "적 1.5배 · 유닛 40칸")
+                FaqKeyValue("고인물", "적 2.2배 · 유닛 30칸")
+                FaqKeyValue("썩은물", "적 3.0배 · 유닛 24칸")
+                FaqKeyValue("챌린저", "적 4.0배 · 유닛 20칸")
+            }
+
+            // ── 소환 & 등급 ──
+            FaqSection(
+                index = 1,
+                expanded = expandedSection == 1,
+                onToggle = { expandedSection = if (expandedSection == 1) -1 else 1 },
+                icon = "\u2728",
+                title = "유닛 소환은 어떻게 되나요?",
+            ) {
+                FaqBullet("전투 중 SP 40을 소모하여 유닛을 소환합니다")
+                FaqBullet("유물 '소환사의 오브'로 비용을 최대 50%까지 줄일 수 있습니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("소환 확률")
+                FaqKeyValue("일반", "60%")
+                FaqKeyValue("희귀", "25%")
+                FaqKeyValue("영웅", "12%")
+                FaqKeyValue("전설", "3%")
+                FaqBullet("고대·신화·불멸 등급은 합성으로만 획득 가능합니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("천장 시스템")
+                FaqBullet("30회 소환 시 영웅 확률 2배 (24%)")
+                FaqBullet("100회 소환 시 전설 확정")
+            }
+
+            // ── 합성 ──
+            FaqSection(
+                index = 2,
+                expanded = expandedSection == 2,
+                onToggle = { expandedSection = if (expandedSection == 2) -1 else 2 },
+                icon = "\uD83D\uDD2E",
+                title = "합성은 어떻게 하나요?",
+            ) {
+                FaqBullet("같은 등급 + 같은 역할의 유닛 4개를 모으면 합성할 수 있습니다")
+                FaqBullet("합성 결과: 다음 등급의 랜덤 유닛 1개")
+                FaqBullet("불멸(최고) 등급은 더 이상 합성할 수 없습니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("행운 합성")
+                FaqBullet("5% 확률로 한 등급을 건너뜁니다 (예: 일반 → 영웅)")
+                FaqBullet("유물 '합성의 돌'로 최대 +15% 추가 확률")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("히든 조합")
+                FaqBullet("특정 유닛 조합으로 숨겨진 유닛을 만들 수 있습니다")
+                FaqBullet("발견한 조합은 도감에 기록됩니다")
+            }
+
+            // ── 시너지 ──
+            FaqSection(
+                index = 3,
+                expanded = expandedSection == 3,
+                onToggle = { expandedSection = if (expandedSection == 3) -1 else 3 },
+                icon = "\uD83D\uDD25",
+                title = "패밀리 시너지란?",
+            ) {
+                FaqBullet("같은 패밀리 유닛을 3개 이상 배치하면 시너지가 발동됩니다")
+                FaqBullet("4개 이상이면 강화 시너지 + 특수 효과가 추가됩니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("패밀리별 보너스")
+                FaqKeyValue("화염", "공격력 +8/15% · DoT 지속↑")
+                FaqKeyValue("냉기", "공속 +6/12% · 둔화 +30%")
+                FaqKeyValue("독", "공격력 +8/14% · 사망 시 독 전파")
+                FaqKeyValue("번개", "공속 +8/15% · 체인 +1")
+                FaqKeyValue("보조", "사거리 +6/12% · 힐/버프 +25%")
+                FaqKeyValue("바람", "공격력 +6/10% · 넉백 +40%")
+            }
+
+            // ── 유물 ──
+            FaqSection(
+                index = 4,
+                expanded = expandedSection == 4,
+                onToggle = { expandedSection = if (expandedSection == 4) -1 else 4 },
+                icon = "\uD83D\uDC8E",
+                title = "유물은 어떻게 얻나요?",
+            ) {
+                FaqBullet("전투 승리 시 10% 확률로 랜덤 유물을 획득합니다")
+                FaqBullet("던전 '유물 사냥'에서는 50% 확률로 드롭됩니다")
+                FaqBullet("중복 유물은 더 높은 등급이면 승급, 같거나 낮으면 골드로 변환됩니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("유물 등급 · 최대 레벨")
+                FaqKeyValue("일반", "Lv.5")
+                FaqKeyValue("희귀", "Lv.7")
+                FaqKeyValue("영웅", "Lv.10")
+                FaqKeyValue("전설", "Lv.15")
+                FaqKeyValue("신화", "Lv.20")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("장착 슬롯 (트로피)")
+                FaqKeyValue("~499", "1칸")
+                FaqKeyValue("500+", "2칸")
+                FaqKeyValue("1,500+", "3칸")
+                FaqKeyValue("3,000+", "4칸")
+            }
+
+            // ── 도감 ──
+            FaqSection(
+                index = 5,
+                expanded = expandedSection == 5,
+                onToggle = { expandedSection = if (expandedSection == 5) -1 else 5 },
+                icon = "\uD83D\uDCD6",
+                title = "도감은 무엇인가요?",
+            ) {
+                FaqBullet("보유한 유닛의 카드와 레벨을 확인할 수 있습니다")
+                FaqBullet("카드를 모아 유닛을 영구 강화(레벨업)할 수 있습니다")
+                FaqBullet("레벨이 오르면 기본 공격력에 배율이 적용됩니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("레벨별 공격력 배율")
+                FaqKeyValue("Lv.1", "×1.0")
+                FaqKeyValue("Lv.2", "×1.5")
+                FaqKeyValue("Lv.3", "×2.2")
+                FaqKeyValue("Lv.4", "×3.2")
+                FaqKeyValue("Lv.5", "×4.5")
+                FaqKeyValue("Lv.6", "×6.0")
+                FaqKeyValue("Lv.7", "×8.0")
+            }
+
+            // ── 펫 ──
+            FaqSection(
+                index = 6,
+                expanded = expandedSection == 6,
+                onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
+                icon = "\uD83D\uDC3E",
+                title = "펫은 어떻게 얻나요?",
+            ) {
+                FaqBullet("상점에서 다이아 50개(1회) 또는 400개(10회)로 뽑기합니다")
+                FaqBullet("10회 뽑기는 20% 할인됩니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("펫 등급 · 확률")
+                FaqKeyValue("희귀", "60%")
+                FaqKeyValue("영웅", "25%")
+                FaqKeyValue("전설", "12%")
+                FaqKeyValue("신화", "3%")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("천장")
+                FaqBullet("50회 뽑기 시 전설 이상 확정")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("장착 슬롯")
+                FaqKeyValue("~1,999 트로피", "1칸")
+                FaqKeyValue("2,000+ 트로피", "2칸")
+                FaqBullet("펫 카드를 모아 레벨업하면 스킬이 강화됩니다")
+            }
+
+            // ── 던전 ──
+            FaqSection(
+                index = 7,
+                expanded = expandedSection == 7,
+                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
+                icon = "\uD83C\uDFF0",
+                title = "던전은 어떻게 들어가나요?",
+            ) {
+                FaqBullet("하루 최대 3회 입장 가능 (매일 자정 초기화)")
+                FaqBullet("각 던전마다 트로피 조건과 스태미나 비용이 있습니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("던전 종류")
+                FaqKeyValue("골드 러시", "골드 3배 보상 · 트로피 0+")
+                FaqKeyValue("유물 사냥", "유물 50% 드롭 · 트로피 500+")
+                FaqKeyValue("펫 탐험", "펫 카드 보상 · 트로피 1,000+")
+                FaqKeyValue("보스 러시", "보상 2배 · 트로피 1,500+")
+                FaqKeyValue("서바이벌", "무한 웨이브 · 트로피 2,000+")
+            }
+
+            // ── 스태미나 ──
+            FaqSection(
+                index = 8,
+                expanded = expandedSection == 8,
+                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
+                icon = "\u26A1",
+                title = "스태미나는 어떻게 충전되나요?",
+            ) {
+                FaqBullet("최대 스태미나: 100")
+                FaqBullet("5분마다 1씩 자동 회복됩니다")
+                FaqBullet("완전 충전까지 약 8시간 20분 소요")
+                FaqBullet("상점에서 다이아 30개로 50 스태미나를 충전할 수 있습니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("스테이지별 소모량")
+                FaqKeyValue("초원·정글", "5")
+                FaqKeyValue("사막·설산", "6")
+                FaqKeyValue("화산", "7")
+                FaqKeyValue("심연", "8")
+            }
+
+            // ── 오프라인 보상 ──
+            FaqSection(
+                index = 9,
+                expanded = expandedSection == 9,
+                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
+                icon = "\uD83C\uDF19",
+                title = "오프라인 보상이 있나요?",
+            ) {
+                FaqBullet("10분 이상 접속하지 않으면 오프라인 보상을 받습니다")
+                FaqBullet("최대 24시간까지 누적됩니다")
+                FaqBullet("시간당 골드: 50 × (1 + 플레이어 레벨 × 2%)")
+                FaqBullet("시간당 시즌 XP: 10")
+            }
+
+            // ── 시즌패스 & 랭크 ──
+            FaqSection(
+                index = 10,
+                expanded = expandedSection == 10,
+                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
+                icon = "\uD83C\uDFC6",
+                title = "시즌패스와 랭크는?",
+            ) {
+                FaqSubTitle("시즌패스")
+                FaqBullet("전투와 업적으로 시즌 XP를 얻습니다")
+                FaqBullet("100 XP마다 1티어씩 올라가며 보상을 수령합니다")
+                FaqBullet("매월 초기화됩니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("랭크 (트로피)")
+                FaqKeyValue("브론즈", "0+")
+                FaqKeyValue("실버", "1,000+")
+                FaqKeyValue("골드", "2,000+")
+                FaqKeyValue("다이아몬드", "3,000+")
+                FaqKeyValue("마스터", "4,000+")
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun FaqSection(
+    index: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    icon: String,
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    GameCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(icon, fontSize = 18.sp)
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    color = Gold,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = if (expanded) "▲" else "▼",
+                    fontSize = 12.sp,
+                    color = DimText,
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    content = content,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FaqBullet(text: String) {
+    Row(modifier = Modifier.padding(start = 4.dp)) {
+        Text("•", fontSize = 12.sp, color = SubText)
+        Spacer(Modifier.width(6.dp))
+        Text(text, fontSize = 12.sp, color = LightText, lineHeight = 17.sp)
+    }
+}
+
+@Composable
+private fun FaqSubTitle(text: String) {
+    Text(
+        text = text,
+        fontSize = 12.sp,
+        color = NeonCyan,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 2.dp),
+    )
+}
+
+@Composable
+private fun FaqKeyValue(key: String, value: String) {
+    Row(modifier = Modifier.padding(start = 8.dp)) {
+        Text(key, fontSize = 12.sp, color = LightText, modifier = Modifier.width(90.dp))
+        Text(value, fontSize = 12.sp, color = SubText)
     }
 }
