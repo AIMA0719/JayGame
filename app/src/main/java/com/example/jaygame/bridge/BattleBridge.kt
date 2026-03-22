@@ -103,6 +103,15 @@ data class DamageEvent(
     val timestamp: Long = System.currentTimeMillis(),
 )
 
+data class MeleeHitEvent(
+    val x: Float,       // normalized 0-1
+    val y: Float,       // normalized 0-1
+    val family: Int,     // 0-5 (FIRE..WIND)
+    val isCrit: Boolean,
+    val angle: Float,    // attack direction in radians
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
 data class UnitPositionData(
     val xs: FloatArray = FloatArray(0),
     val ys: FloatArray = FloatArray(0),
@@ -221,6 +230,7 @@ object BattleBridge {
 
     // Pre-allocated event buffers to avoid per-event list allocations
     private val damageBuffer = ArrayDeque<DamageEvent>(32)
+    private val meleeHitBuffer = ArrayDeque<MeleeHitEvent>(16)
     private val skillBuffer = ArrayDeque<SkillEvent>(16)
     private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
     private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
@@ -327,6 +337,9 @@ object BattleBridge {
     /** 데미지 이벤트 (C++ → Compose) */
     private val _damageEvents = MutableStateFlow<List<DamageEvent>>(emptyList())
     val damageEvents: StateFlow<List<DamageEvent>> = _damageEvents.asStateFlow()
+
+    private val _meleeHitEvents = MutableStateFlow<List<MeleeHitEvent>>(emptyList())
+    val meleeHitEvents: StateFlow<List<MeleeHitEvent>> = _meleeHitEvents.asStateFlow()
 
     /** 유닛 슬롯 상태 (최대 100) */
     const val GRID_TOTAL = 100
@@ -528,6 +541,17 @@ object BattleBridge {
     }
 
     @JvmStatic
+    fun onMeleeHit(x: Float, y: Float, family: Int, isCrit: Boolean, angle: Float) {
+        val now = System.currentTimeMillis()
+        val cutoff = now - 400L
+        while (meleeHitBuffer.isNotEmpty()) {
+            if ((meleeHitBuffer.firstOrNull()?.timestamp ?: now) <= cutoff) meleeHitBuffer.removeFirst() else break
+        }
+        meleeHitBuffer.addLast(MeleeHitEvent(x, y, family, isCrit, angle))
+        _meleeHitEvents.value = meleeHitBuffer.toList()
+    }
+
+    @JvmStatic
     fun updateGridState(
         unitIds: IntArray, grades: IntArray, families: IntArray,
         canMerge: BooleanArray, levels: IntArray,
@@ -597,17 +621,30 @@ object BattleBridge {
     private val _skillEvents = MutableStateFlow<List<SkillEvent>>(emptyList())
     val skillEvents: StateFlow<List<SkillEvent>> = _skillEvents.asStateFlow()
 
+    private var lastSkillEmitTime = 0L
+    private const val MAX_SKILL_EVENTS = 15
+    private const val SKILL_EMIT_THROTTLE_MS = 33L // ~30 FPS for VFX updates
+
     fun emitSkillEvent(event: SkillEvent) {
         synchronized(skillLock) {
             val now = System.currentTimeMillis()
+            // Purge expired
             while (skillBuffer.isNotEmpty()) {
                 val first = skillBuffer.firstOrNull() ?: break
                 if ((now - first.startTime) >= (first.duration * 1000f).toLong()) {
                     skillBuffer.removeFirst()
                 } else break
             }
+            // Drop oldest if at capacity
+            while (skillBuffer.size >= MAX_SKILL_EVENTS) {
+                skillBuffer.removeFirst()
+            }
             skillBuffer.addLast(event)
-            _skillEvents.value = skillBuffer.toList()
+            // Throttle StateFlow emission to avoid excessive recomposition
+            if (now - lastSkillEmitTime >= SKILL_EMIT_THROTTLE_MS) {
+                lastSkillEmitTime = now
+                _skillEvents.value = skillBuffer.toList()
+            }
         }
     }
 
@@ -753,6 +790,8 @@ object BattleBridge {
             damageBuffer.clear()
             _damageEvents.value = emptyList()
         }
+        meleeHitBuffer.clear()
+        _meleeHitEvents.value = emptyList()
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
         _unitPopup.value = null

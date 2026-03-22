@@ -315,10 +315,10 @@ private fun DrawScope.renderFirestormMeteor(event: SkillEvent, progress: Float) 
         )
 
         // Impact debris particles
-        for (i in 0 until 10) {
+        for (i in 0 until 6) {
             val angle = (i / 10f) * 6.283f
-            val debrisR = shockR * (0.3f + sin(i * 2.7f) * 0.3f)
-            val debrisAlpha = alpha * (0.5f + sin(i * 1.3f) * 0.2f)
+            val debrisR = shockR * (0.3f + sin(i * 4.5f) * 0.3f)
+            val debrisAlpha = alpha * (0.5f + sin(i * 2.2f) * 0.2f)
             drawCircle(
                 color = FireEmber.copy(alpha = debrisAlpha),
                 radius = 3f * (1f - impactProg),
@@ -567,8 +567,8 @@ private fun DrawScope.renderSupernova(event: SkillEvent, progress: Float) {
         val pulseR = coreRadius * (1f + sin(chargeProg * 30f) * 0.15f)
 
         // Pull-in particles converging toward center
-        for (i in 0 until 16) {
-            val angle = (i / 16f) * 6.283f
+        for (i in 0 until 10) {
+            val angle = (i / 10f) * 6.283f
             val dist = size.minDimension * 0.3f * (1f - chargeProg)
             val px = cx + cos(angle) * dist
             val py = cy + sin(angle) * dist
@@ -777,7 +777,7 @@ private fun DrawScope.renderIceAgeBlizzard(event: SkillEvent, progress: Float) {
     )
 
     // Blowing snow particles (moving right to left)
-    for (i in 0 until 20) {
+    for (i in 0 until 12) {
         val phase = (progress * 4f + i * 0.15f) % 1f
         val startX = cx + maxR * 0.8f
         val endX = cx - maxR * 0.8f
@@ -1129,9 +1129,9 @@ private fun DrawScope.renderNidhoggBreath(event: SkillEvent, progress: Float) {
     val coneReach = maxR * (0.5f + progress * 0.5f).coerceAtMost(1f)
 
     // Cone fill (layered particles)
-    for (i in 0 until 20) {
-        val spreadAngle = coneDir + (i / 20f - 0.5f) * coneSpread * 2f
-        val dist = coneReach * (0.2f + (i % 5) * 0.2f)
+    for (i in 0 until 12) {
+        val spreadAngle = coneDir + (i / 12f - 0.5f) * coneSpread * 2f
+        val dist = coneReach * (0.2f + (i % 4) * 0.25f)
         val px = cx + cos(spreadAngle) * dist
         val py = cy + sin(spreadAngle) * dist
         val pPhase = (progress * 4f + i * 0.1f) % 1f
