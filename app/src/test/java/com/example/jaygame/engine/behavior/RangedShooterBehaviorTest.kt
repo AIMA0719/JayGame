@@ -48,18 +48,22 @@ class RangedShooterBehaviorTest {
     }
 
     @Test
-    fun `update returns to IDLE when target out of detection range`() {
+    fun `update chases target when out of attack range`() {
         val behavior = RangedShooterBehavior()
         val unit = createTestUnit()
         unit.range = 100f
-        val enemy = createTestEnemy(Vec2(200f, 0f))  // Beyond 100 * 1.5 = 150
+        unit.moveSpeed = 100f
+        val enemy = createTestEnemy(Vec2(200f, 0f))  // Beyond attack range
         unit.currentTarget = enemy
         unit.state = UnitState.ATTACKING
 
+        val prevX = unit.position.x
         behavior.update(unit, 0.016f) { _, _ -> null }
 
-        assertEquals(UnitState.IDLE, unit.state)
-        assertNull(unit.currentTarget)
+        // Stays ATTACKING and chases (moves toward enemy)
+        assertEquals(UnitState.ATTACKING, unit.state)
+        assertTrue(unit.position.x > prevX)
+        assertFalse(unit.isAttacking)
     }
 
     @Test

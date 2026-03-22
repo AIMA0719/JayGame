@@ -130,33 +130,53 @@ class MergeSystemTest {
     }
 
     @Test
-    fun `hidden units cannot be merged`() {
-        placeUnit(0, "hidden_unit_01")  // HIDDEN COMMON
+    fun `hidden units can be merged like normal units`() {
+        placeUnit(0, "hidden_unit_01")  // HIDDEN COMMON MELEE_DPS
         placeUnit(1, "hidden_unit_01")
         placeUnit(2, "hidden_unit_01")
+
+        val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
+        assertNotNull(result)
+    }
+
+    @Test
+    fun `different roles same grade cannot merge`() {
+        placeUnit(0, "fire_archer_01")   // COMMON RANGED_DPS
+        placeUnit(1, "fire_archer_01")   // COMMON RANGED_DPS
+        placeUnit(2, "hidden_unit_01")   // COMMON MELEE_DPS
 
         val result = MergeSystem.tryMergeBlueprint(grid, 0, registry)
         assertNull(result)
     }
 
     @Test
-    fun `findMergeableTiles returns tiles of mergeable same-grade groups`() {
-        placeUnit(0, "fire_archer_01")   // COMMON
-        placeUnit(1, "frost_mage_01")    // COMMON
-        placeUnit(2, "fire_archer_01")   // COMMON
+    fun `findMergeableTiles returns tiles of mergeable same-grade-role groups`() {
+        placeUnit(0, "fire_archer_01")   // COMMON RANGED_DPS
+        placeUnit(1, "frost_mage_01")    // COMMON RANGED_DPS
+        placeUnit(2, "fire_archer_01")   // COMMON RANGED_DPS
 
         val mergeable = MergeSystem.findMergeableTilesByBlueprint(grid, registry)
         assertEquals(setOf(0, 1, 2), mergeable)
     }
 
     @Test
-    fun `findMergeableTiles excludes hidden units`() {
-        placeUnit(0, "hidden_unit_01")
+    fun `findMergeableTiles excludes mixed role groups`() {
+        placeUnit(0, "fire_archer_01")   // COMMON RANGED_DPS
+        placeUnit(1, "fire_archer_01")   // COMMON RANGED_DPS
+        placeUnit(2, "hidden_unit_01")   // COMMON MELEE_DPS
+
+        val mergeable = MergeSystem.findMergeableTilesByBlueprint(grid, registry)
+        assertTrue(mergeable.isEmpty())
+    }
+
+    @Test
+    fun `findMergeableTiles includes hidden units with same role`() {
+        placeUnit(0, "hidden_unit_01")  // COMMON MELEE_DPS
         placeUnit(1, "hidden_unit_01")
         placeUnit(2, "hidden_unit_01")
 
         val mergeable = MergeSystem.findMergeableTilesByBlueprint(grid, registry)
-        assertTrue(mergeable.isEmpty())
+        assertEquals(setOf(0, 1, 2), mergeable)
     }
 
     @Test

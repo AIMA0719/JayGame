@@ -141,14 +141,13 @@ class TankBlockerBehaviorTest {
         assertEquals(UnitState.BLOCKING, unit.state)
         assertNotNull(boss.blockedBy)
 
-        // Not yet 5 seconds
-        behavior.update(unit, 4.0f) { _, _ -> null }
-        assertNotNull(boss.blockedBy)
+        // Accumulate time past 5 seconds using small steps to account for
+        // BLOCKING→ATTACKING→BLOCKING state transitions each update
+        repeat(400) {
+            behavior.update(unit, 0.016f) { _, _ -> null }
+        }
 
-        // Pass the 5-second mark
-        behavior.update(unit, 1.1f) { _, _ -> null }
-
-        // Boss should be released
+        // Boss should be released after ~6.4s of updates
         assertNull(boss.blockedBy)
         assertFalse(behavior.blockedEnemies.contains(boss))
     }

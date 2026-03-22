@@ -18,9 +18,9 @@ class BehaviorFactoryTest {
         assertSame(mockBehavior, result)
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `create throws for unknown behaviorId`() {
-        BehaviorFactory.create("nonexistent")
+    @Test
+    fun `create returns null for unknown behaviorId`() {
+        assertNull(BehaviorFactory.create("nonexistent"))
     }
 
     @Test
