@@ -825,28 +825,6 @@ private fun BattleMenuDialog(
                     }
                 }
 
-                // ── Auto summon & merge toggle ──
-                val autoSummon by BattleBridge.autoSummon.collectAsState()
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("자동 소환 & 조합", fontSize = 13.sp, color = LightText, fontWeight = FontWeight.Bold)
-                        Text("SP 충분 시 자동 소환 + 조합", fontSize = 10.sp, color = SubText)
-                    }
-                    NeonButton(
-                        text = if (autoSummon) "ON" else "OFF",
-                        onClick = { BattleBridge.toggleAutoSummon() },
-                        accentColor = if (autoSummon) NeonGreen else NeonRed,
-                        accentColorDark = if (autoSummon) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
-                        modifier = Modifier
-                            .width(72.dp)
-                            .height(34.dp),
-                        fontSize = 13.sp,
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // ── Quit button ──
@@ -922,9 +900,12 @@ private fun GoldCoinOverlay() {
     prevCount.value = currentCount
 
     LaunchedEffect(Unit) {
+        var lastFrameNanos = 0L
         while (true) {
-            androidx.compose.runtime.withFrameNanos { _ ->
-                val dt = 1f / 60f
+            androidx.compose.runtime.withFrameNanos { nanos ->
+                val dt = if (lastFrameNanos == 0L) 1f / 60f
+                         else ((nanos - lastFrameNanos) / 1_000_000_000f).coerceAtMost(0.05f)
+                lastFrameNanos = nanos
                 val iter = particles.iterator()
                 while (iter.hasNext()) {
                     val p = iter.next()
@@ -977,6 +958,14 @@ private val StarWhiteCore = Color(0xFFFFFFEE)
 // D4: Pre-computed star burst angles (12 stars)
 private val StarAngles = FloatArray(12) { i -> (i.toFloat() / 12f) * 2f * kotlin.math.PI.toFloat() }
 private val StarSpeedVariations = floatArrayOf(1.0f, 0.8f, 1.2f, 0.9f, 1.1f, 0.75f, 1.15f, 0.85f, 1.05f, 0.95f, 1.25f, 0.7f)
+
+// Pre-allocated Paint for LV UP text (avoids per-frame allocation)
+private val lvUpPaint = android.graphics.Paint().apply {
+    textSize = 24f
+    textAlign = android.graphics.Paint.Align.CENTER
+    isFakeBoldText = true
+    setShadowLayer(4f, 0f, 0f, android.graphics.Color.BLACK)
+}
 
 @Composable
 private fun LevelUpOverlay() {
@@ -1114,20 +1103,15 @@ private fun LevelUpOverlay() {
             }.coerceIn(0f, 1f)
             val textY = cy - 30f - progress * 20f
             // Use native text paint
+            lvUpPaint.color = android.graphics.Color.argb(
+                (textAlpha * 255).toInt(),
+                0xFF, 0xD7, 0x00,
+            )
             drawContext.canvas.nativeCanvas.drawText(
                 "LV UP!",
                 cx,
                 textY,
-                android.graphics.Paint().apply {
-                    color = android.graphics.Color.argb(
-                        (textAlpha * 255).toInt(),
-                        0xFF, 0xD7, 0x00,
-                    )
-                    textSize = 24f
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    isFakeBoldText = true
-                    setShadowLayer(4f, 0f, 0f, android.graphics.Color.BLACK)
-                },
+                lvUpPaint,
             )
         }
     }

@@ -2,6 +2,7 @@ package com.example.jaygame.bridge
 
 import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.engine.AttackRange
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.BossModifier
 import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitCategory
@@ -298,17 +299,9 @@ object BattleBridge {
     private val _healthBarMode = MutableStateFlow(0) // 0=항상, 1=피격 시만, 2=숨김
     val healthBarMode: StateFlow<Int> = _healthBarMode.asStateFlow()
 
-    private val _autoSummon = MutableStateFlow(false)
-    val autoSummon: StateFlow<Boolean> = _autoSummon.asStateFlow()
-
-    fun applyGameplaySettings(showDamage: Boolean, hpBarMode: Int, autoSummonOn: Boolean) {
+    fun applyGameplaySettings(showDamage: Boolean, hpBarMode: Int) {
         _showDamageNumbers.value = showDamage
         _healthBarMode.value = hpBarMode
-        _autoSummon.value = autoSummonOn
-    }
-
-    fun toggleAutoSummon() {
-        _autoSummon.value = !_autoSummon.value
     }
 
     private val _state = MutableStateFlow(BattleState())
@@ -440,6 +433,21 @@ object BattleBridge {
     @JvmStatic
     fun setDeck(units: IntArray) {
         _state.value = _state.value.copy(deckUnits = units)
+    }
+
+    private val _deckBlueprints = MutableStateFlow<List<String>>(emptyList())
+    val deckBlueprints: StateFlow<List<String>> = _deckBlueprints.asStateFlow()
+
+    fun setDeckBlueprints(ids: List<String>) {
+        _deckBlueprints.value = ids
+        // 시너지 표시를 위해 family ordinal 배열도 업데이트
+        if (BlueprintRegistry.isReady) {
+            val registry = BlueprintRegistry.instance
+            val familyOrdinals = ids.mapNotNull { id ->
+                registry.findById(id)?.families?.firstOrNull()?.ordinal
+            }.toIntArray()
+            setDeck(familyOrdinals)
+        }
     }
 
     /**
@@ -822,7 +830,7 @@ object BattleBridge {
         _zoneData.value = ZoneData()
         _activeFamilySynergies.value = emptyMap()
         _activeRoleSynergies.value = emptyMap()
-        // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
+        // Note: stageId, difficulty, battleSpeed, dungeonId, deckBlueprints are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _debugMode.value = false
         commandQueue.clear()

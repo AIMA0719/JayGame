@@ -517,29 +517,6 @@ private fun SettingsGameplay(
             }
         }
 
-        // ── 자동 소환 ──
-        GameCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("자동 소환 & 조합", fontSize = 14.sp, color = LightText)
-                    Text("코인 충분 시 자동 소환 + 조합", fontSize = 11.sp, color = SubText)
-                }
-                NeonButton(
-                    text = if (data.autoSummon) "ON" else "OFF",
-                    onClick = { onUpdate(data.copy(autoSummon = !data.autoSummon)) },
-                    accentColor = if (data.autoSummon) NeonGreen else NeonRed,
-                    accentColorDark = if (data.autoSummon) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
-                    modifier = Modifier
-                        .width(72.dp)
-                        .height(34.dp),
-                    fontSize = 13.sp,
-                )
-            }
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

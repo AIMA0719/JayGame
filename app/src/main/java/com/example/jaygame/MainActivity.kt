@@ -38,12 +38,14 @@ class MainActivity : ComponentActivity() {
         RecipeSystem.initialize(applicationContext)
         val repository = (application as JayGameApplication).repository
 
-        // Preserve stageId/difficulty/speed set by ComposeActivity, then reset battle state
+        // Preserve stageId/difficulty/speed/deck set by ComposeActivity, then reset battle state
         val stageId = BattleBridge.stageId.value
         val difficulty = BattleBridge.difficulty.value
+        val deckIds = BattleBridge.deckBlueprints.value
         BattleBridge.reset()
         BattleBridge.setStageId(stageId)
         BattleBridge.setDifficulty(difficulty)
+        BattleBridge.setDeckBlueprints(deckIds)
         SfxManager.init(this)
 
         // Create and start Kotlin battle engine
@@ -57,9 +59,10 @@ class MainActivity : ComponentActivity() {
         BattleBridge.applyGameplaySettings(
             showDamage = data.showDamageNumbers,
             hpBarMode = data.healthBarMode,
-            autoSummonOn = data.autoSummon,
         )
-        BattleBridge.updateUnitPullPity(data.unitPullPity)
+        // 덱 모드에서는 등급 롤을 하지 않으므로 천장 0으로 시작
+        val effectivePity = if (deckIds.isNotEmpty()) 0 else data.unitPullPity
+        BattleBridge.updateUnitPullPity(effectivePity)
         BattleBridge.setTutorialMode(!data.tutorialCompleted)
 
         val maxWaves = dungeonDef?.waveCount ?: stage.maxWaves
@@ -72,7 +75,8 @@ class MainActivity : ComponentActivity() {
             difficulty = effectiveDifficulty,
             maxWaves = maxWaves,
             gameData = data,
-            initialPity = data.unitPullPity,
+            initialPity = effectivePity,
+            deckBlueprintIds = deckIds,
         ).also {
             if (dungeonDef != null) {
                 it.isDungeonMode = true

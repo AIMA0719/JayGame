@@ -98,7 +98,6 @@ class GameRepository(context: Context) {
             settings.put("defaultBattleSpeed", data.defaultBattleSpeed.toDouble())
             settings.put("showDamageNumbers", if (data.showDamageNumbers) 1 else 0)
             settings.put("healthBarMode", data.healthBarMode)
-            settings.put("autoSummon", if (data.autoSummon) 1 else 0)
             root.put("settings", settings)
 
             // dailyLogin
@@ -216,6 +215,18 @@ class GameRepository(context: Context) {
             // 행운석
             root.put("luckyStones", data.luckyStones)
 
+            // 덱 시스템
+            val decksObj = JSONObject()
+            val presetsArr = JSONArray()
+            for (deck in data.deckPresets) {
+                val deckArr = JSONArray()
+                for (id in deck) deckArr.put(id)
+                presetsArr.put(deckArr)
+            }
+            decksObj.put("presets", presetsArr)
+            decksObj.put("activeIndex", data.activeDeckIndex)
+            root.put("decks", decksObj)
+
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
             val checksum = fnv1aHash(payload)
@@ -312,8 +323,6 @@ class GameRepository(context: Context) {
             val defaultBattleSpeed = settings?.optDouble("defaultBattleSpeed", 1.0)?.toFloat() ?: 1f
             val showDamageNumbers = (settings?.optInt("showDamageNumbers", 1) ?: 1) != 0
             val healthBarMode = settings?.optInt("healthBarMode", 0) ?: 0
-            val autoSummon = (settings?.optInt("autoSummon", 0) ?: 0) != 0
-
             // dailyLogin
             val dailyLogin = root.optJSONObject("dailyLogin")
             val lastLoginDate = dailyLogin?.optString("lastLoginDate", "") ?: ""
@@ -447,6 +456,25 @@ class GameRepository(context: Context) {
             // 행운석
             val luckyStones = root.optInt("luckyStones", 0)
 
+            // 덱 시스템 (하위 호환 — 없으면 빈 프리셋)
+            val decksObj = root.optJSONObject("decks")
+            val deckPresetsRaw = if (decksObj != null) {
+                val presetsArr = decksObj.optJSONArray("presets")
+                if (presetsArr != null) {
+                    List(presetsArr.length().coerceAtMost(DeckManager.MAX_PRESETS)) { i ->
+                        val deckArr = presetsArr.optJSONArray(i)
+                        if (deckArr != null) {
+                            List(deckArr.length().coerceAtMost(DeckManager.DECK_SIZE)) { j -> deckArr.optString(j, "") }
+                                .filter { it.isNotEmpty() }
+                        } else emptyList()
+                    }
+                } else List(DeckManager.MAX_PRESETS) { emptyList() }
+            } else List(DeckManager.MAX_PRESETS) { emptyList<String>() }
+            val deckPresets = deckPresetsRaw.toMutableList().apply {
+                while (size < DeckManager.MAX_PRESETS) add(emptyList())
+            }.toList()
+            val activeDeckIndex = (decksObj?.optInt("activeIndex", 0) ?: 0).coerceIn(0, DeckManager.MAX_PRESETS - 1)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -469,7 +497,6 @@ class GameRepository(context: Context) {
                 defaultBattleSpeed = defaultBattleSpeed,
                 showDamageNumbers = showDamageNumbers,
                 healthBarMode = healthBarMode,
-                autoSummon = autoSummon,
                 lastLoginDate = lastLoginDate,
                 loginStreak = loginStreak,
                 lastClaimedDay = lastClaimedDay,
@@ -502,6 +529,8 @@ class GameRepository(context: Context) {
                 lastOnlineTime = lastOnlineTime,
                 tutorialCompleted = tutorialCompleted,
                 luckyStones = luckyStones,
+                deckPresets = deckPresets,
+                activeDeckIndex = activeDeckIndex,
             )
         }
     }

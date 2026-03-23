@@ -25,6 +25,7 @@ class BattleEngine(
     private val maxWaves: Int,
     gameData: GameData? = null,
     initialPity: Int = 0,
+    private val deckBlueprintIds: List<String> = emptyList(),
 ) {
     companion object {
         const val W = 720f
@@ -39,6 +40,7 @@ class BattleEngine(
         const val BASE_SUMMON_COST = 10          // 기본 소환 비용 (코인)
         const val SUMMON_COST_INCREMENT = 2      // 소환마다 비용 증가
         const val MAX_SUMMON_COST = 60           // 최대 소환 비용
+        const val MAX_ZONE_RENDER = 32
         const val WAVE_DELAY = 3f
     }
 
@@ -72,6 +74,14 @@ class BattleEngine(
 
     // 행운석 — 신화 레시피 합성에 소모
     var luckyStones: Int = gameData?.luckyStones ?: 0; private set
+
+    private val resolvedDeck: List<UnitBlueprint> = if (deckBlueprintIds.isNotEmpty() && BlueprintRegistry.isReady) {
+        deckBlueprintIds.mapNotNull { BlueprintRegistry.instance.findById(it) }.also { resolved ->
+            if (resolved.size != deckBlueprintIds.size) {
+                Log.w("BattleEngine", "Deck has invalid IDs: ${deckBlueprintIds.size} requested, ${resolved.size} resolved")
+            }
+        }
+    } else emptyList()
 
     val enemies = ObjectPool(MAX_ENEMIES, { Enemy() }) { it.reset() }
     val units = ObjectPool(MAX_UNITS, { GameUnit() }) { it.reset() }
@@ -131,6 +141,15 @@ class BattleEngine(
     private val deadEnemies = ArrayList<Enemy>(64)
     private val deadProjectiles = ArrayList<Projectile>(32)
     private val deadZones = ArrayList<ZoneEffect>(8)
+
+    // Pre-allocated zone data arrays (avoid per-frame allocation)
+    private var _zoneDataCount = 0
+    private val zoneXs = FloatArray(MAX_ZONE_RENDER)
+    private val zoneYs = FloatArray(MAX_ZONE_RENDER)
+    private val zoneRadii = FloatArray(MAX_ZONE_RENDER)
+    private val zoneFamilies = IntArray(MAX_ZONE_RENDER)
+    private val zoneProgresses = FloatArray(MAX_ZONE_RENDER)
+    private val zoneGrades = IntArray(MAX_ZONE_RENDER)
     private val splitQueue = ArrayList<Enemy>(16)
 
     // PERF-01: Pre-allocated buffers for pushStateToCompose
@@ -306,21 +325,6 @@ class BattleEngine(
     private fun update(dt: Float) {
         elapsedTime += dt
         // 코인 시스템: 자동 회복 없음 — 적 처치/웨이브 클리어로만 획득
-
-        // Auto-summon & auto-merge
-        if (BattleBridge.autoSummon.value && state == State.Playing) {
-            // Auto-merge: check for full stacks (3 units in a slot)
-            for (slot in 0 until Grid.SLOT_COUNT) {
-                if (grid.getStackCount(slot) >= Grid.MAX_STACK) {
-                    tryAutoMergeSlot(slot)
-                }
-            }
-            // Auto-summon: summon when coins are enough
-            // requestSummonBlueprint internally checks for stackable/empty slots
-            if (sp >= summonCost) {
-                requestSummonBlueprint()
-            }
-        }
 
         when (state) {
             State.WaveDelay -> {
@@ -719,30 +723,29 @@ class BattleEngine(
         }
         deadZones.forEach { zones.release(it) }
 
-        // Push zone data to UI
+        // Push zone data to UI (reuse pre-allocated arrays)
         val zCount = zones.activeCount
+        var zi = 0
         if (zCount > 0) {
-            val zxs = FloatArray(zCount)
-            val zys = FloatArray(zCount)
-            val zradii = FloatArray(zCount)
-            val zfamilies = IntArray(zCount)
-            val zprogresses = FloatArray(zCount)
-            val zgrades = IntArray(zCount)
-            var zi = 0
             zones.forEach { zone ->
-                if (zone.alive && zi < zCount) {
-                    zxs[zi] = zone.position.x / W
-                    zys[zi] = zone.position.y / H
-                    zradii[zi] = zone.radius / W
-                    zfamilies[zi] = zone.family
-                    zprogresses[zi] = if (zone.maxDuration > 0f) zone.duration / zone.maxDuration else 1f
-                    zgrades[zi] = zone.sourceGrade
+                if (zone.alive && zi < MAX_ZONE_RENDER) {
+                    zoneXs[zi] = zone.position.x / W
+                    zoneYs[zi] = zone.position.y / H
+                    zoneRadii[zi] = zone.radius / W
+                    zoneFamilies[zi] = zone.family
+                    zoneProgresses[zi] = if (zone.maxDuration > 0f) zone.duration / zone.maxDuration else 1f
+                    zoneGrades[zi] = zone.sourceGrade
                     zi++
                 }
             }
-            BattleBridge.updateZoneData(zxs, zys, zradii, zfamilies, zprogresses, zgrades, zi)
-        } else {
-            BattleBridge.updateZoneData(FloatArray(0), FloatArray(0), FloatArray(0), IntArray(0), FloatArray(0), IntArray(0), 0)
+        }
+        // StateFlow는 immutable snapshot 필요 — copyOf로 새 배열 생성 (count=0이면 skip)
+        if (zi > 0 || _zoneDataCount > 0) {
+            BattleBridge.updateZoneData(
+                zoneXs.copyOf(zi), zoneYs.copyOf(zi), zoneRadii.copyOf(zi),
+                zoneFamilies.copyOf(zi), zoneProgresses.copyOf(zi), zoneGrades.copyOf(zi), zi,
+            )
+            _zoneDataCount = zi
         }
     }
 
@@ -832,31 +835,34 @@ class BattleEngine(
     // ── Player Actions ──
 
     fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
-        // Check slot availability: stackable slot OR empty slot
         if (sp < summonCost) return
 
-        val grade = if (gradeOverride != null) {
-            gradeOverride
+        val selected: UnitBlueprint
+
+        if (resolvedDeck.isNotEmpty() && gradeOverride == null) {
+            selected = resolvedDeck.random()
         } else {
-            val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
-            currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
-            BattleBridge.updateUnitPullPity(currentPity)
-            UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
+            // ── Fallback: 기존 등급 롤 (gradeOverride 또는 덱 미설정) ──
+            val grade = if (gradeOverride != null) {
+                gradeOverride
+            } else {
+                val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
+                currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
+                BattleBridge.updateUnitPullPity(currentPity)
+                UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
+            }
+            val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
+            if (candidates.isEmpty()) return
+            val totalWeight = candidates.sumOf { it.summonWeight }
+            if (totalWeight <= 0) return
+            var roll = (Math.random() * totalWeight).toInt()
+            var sel: UnitBlueprint? = null
+            for (bp in candidates) {
+                roll -= bp.summonWeight
+                if (roll <= 0) { sel = bp; break }
+            }
+            selected = sel ?: return
         }
-
-        val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
-        if (candidates.isEmpty()) return
-
-        // Weight-based selection
-        val totalWeight = candidates.sumOf { it.summonWeight }
-        if (totalWeight <= 0) return
-        var roll = (Math.random() * totalWeight).toInt()
-        var selected: UnitBlueprint? = null
-        for (bp in candidates) {
-            roll -= bp.summonWeight
-            if (roll <= 0) { selected = bp; break }
-        }
-        selected ?: return
 
         // Try stacking first (same blueprintId), then find empty slot
         var targetSlot = grid.findStackableSlot(selected.id)
@@ -866,7 +872,6 @@ class BattleEngine(
         }
 
         sp -= summonCost
-        // 소환 비용 점진 증가
         summonCount++
         summonCost = (BASE_SUMMON_COST + summonCount * SUMMON_COST_INCREMENT).coerceAtMost(MAX_SUMMON_COST)
 
@@ -1124,7 +1129,7 @@ class BattleEngine(
 
         // Try blueprint-based init first (preferred path)
         val def = UNIT_DEFS.find { it.id == unitDefId }
-        val familyEnum = def?.family ?: com.example.jaygame.data.UnitFamily.entries[unitFamilyOf(unitDefId)]
+        val familyEnum = def?.family ?: com.example.jaygame.data.UnitFamily.entries.getOrElse(unitFamilyOf(unitDefId)) { com.example.jaygame.data.UnitFamily.FIRE }
         val gradeOrdinal = unitGradeOf(unitDefId)
         val gradeEnum = UnitGrade.entries.getOrElse(gradeOrdinal) { UnitGrade.COMMON }
         val bp = blueprintRegistry.all().find { it.grade == gradeEnum && familyEnum in it.families }

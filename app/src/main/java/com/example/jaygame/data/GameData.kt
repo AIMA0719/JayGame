@@ -59,7 +59,6 @@ data class GameData(
     val defaultBattleSpeed: Float = 1f,   // 1, 2, 4, 8
     val showDamageNumbers: Boolean = true,
     val healthBarMode: Int = 0,           // 0=항상, 1=피격 시만, 2=숨김
-    val autoSummon: Boolean = false,
     // 가스
     val gas: Int = 0,
     // 패밀리 영구 업그레이드
@@ -90,7 +89,10 @@ data class GameData(
     val tutorialCompleted: Boolean = false,
     // 행운석 (신화 레시피 합성 재화)
     val luckyStones: Int = 0,
+    val deckPresets: List<List<String>> = List(DeckManager.MAX_PRESETS) { emptyList() },
+    val activeDeckIndex: Int = 0,
 ) {
+    val activeDeck: List<String> get() = deckPresets.getOrElse(activeDeckIndex) { emptyList() }
     val equippedPetSlotCount: Int get() = if (trophies >= 2000) 2 else 1
     val equippedSlotCount: Int get() = when {
         trophies >= 3000 -> 4
