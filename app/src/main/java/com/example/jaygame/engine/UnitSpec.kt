@@ -35,7 +35,7 @@ enum class AbilityType {
     BUFF,
     SHIELD,
     EXECUTE,
-    // 고유 능력 타입 (영웅 등급 이상)
+    // 고유 능력 타입 (고대 등급 이상)
     LINGERING_FIRE,
     FIRESTORM,
     VOLCANIC_ERUPTION,

@@ -1,7 +1,8 @@
 package com.example.jaygame.ui.battle
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableIntStateOf
@@ -79,12 +80,8 @@ private val PedestalParticleAlpha = 0.4f
 private val VignetteColor = Color.Black.copy(alpha = 0.4f)
 
 // E7: Grade 4+ aura ring colors (pre-allocated)
-private val AncientAuraRed = Color(0xFFFF3333)       // grade 4 (Ancient)
-private val MythicAuraGold = Color(0xFFFFD700)        // grade 5 (Mythic)
-private val ImmortalAuraPink = Color(0xFFFF66CC)      // grade 6 (Immortal)
-private val AncientAuraStroke = Stroke(width = 2.5f)
+private val MythicAuraGold = Color(0xFFFFD700)        // grade 4 (Mythic)
 private val MythicAuraStroke = Stroke(width = 3f)
-private val ImmortalAuraStroke = Stroke(width = 3.5f)
 
 // Grid cell glow
 private val CellHighlight = Color.White.copy(alpha = 0.03f)
@@ -102,11 +99,7 @@ private val PlatformHeroGlow = Color(0xFFAB47BC).copy(alpha = 0.35f)
 private val PlatformHeroParticle = Color(0xFFCE93D8)
 private val PlatformLegendColor = Color(0xFFFF8F00)
 private val PlatformLegendFlame = Color(0xFFFFD54F)
-private val PlatformAncientColor = Color(0xFFEF4444)
-private val PlatformAncientRing = Color(0xFFFF6B35)
 private val PlatformMythicGold = Color(0xFFFBBF24)
-private val PlatformImmortalWhite = Color.White
-private val PlatformImmortalPink = Color(0xFFF0ABFC)
 
 // Rainbow shimmer colors for Mythic platform
 private val RainbowShimmer = arrayOf(
@@ -121,13 +114,13 @@ private data class UnitDissolutionEffect(
     val startTime: Float,
 )
 
-// Grid area in 720x720 space — must match Grid.kt (480x480 centered)
+// Grid area in 720x1280 space — must match Grid.kt (480x300, bottom portion)
 private const val CPP_GRID_W = 480f
-private const val CPP_GRID_H = 480f
-private const val GRID_NORM_X = 120f / 720f      // 0.16667 (Grid.ORIGIN_X / 720)
-private const val GRID_NORM_Y = 107.5f / 720f    // 0.14931 (Grid.ORIGIN_Y / 720)
-private const val GRID_NORM_W = CPP_GRID_W / 720f   // 0.66667
-private const val GRID_NORM_H = CPP_GRID_H / 720f   // 0.66667
+private const val CPP_GRID_H = 300f
+private const val GRID_NORM_X = 120f / 720f       // Grid.ORIGIN_X / W
+private const val GRID_NORM_Y = 430f / 1280f      // Grid.ORIGIN_Y / H
+private const val GRID_NORM_W = CPP_GRID_W / 720f // Grid width / W
+private const val GRID_NORM_H = CPP_GRID_H / 1280f // Grid height / H (NEW: /1280)
 
 
 /**
@@ -302,74 +295,76 @@ fun BattleField() {
         }
     }
 
-    // Drag state for unit relocation (immediate drag, no long-press)
+    // Gesture state: 탭 = 상세팝업, 롱프레스+드래그 = 유닛 이동
     var dragFromTile by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var isDragging by remember { mutableStateOf(false) }
-    var dragTotalDistance by remember { mutableFloatStateOf(0f) }
+
+    /** 터치 좌표에서 가장 가까운 유닛의 tileIndex 반환 (-1 = 없음) */
+    fun findClosestUnit(offset: Offset, w: Float, h: Float): Int {
+        val normX = offset.x / w
+        val normY = offset.y / h
+        val data = BattleBridge.unitPositions.value
+        var closestIdx = -1
+        var closestDistSq = Float.MAX_VALUE
+        val threshold = 0.06f
+        for (i in 0 until data.count) {
+            val dx = normX - data.xs[i]
+            val dy = normY - data.ys[i]
+            val distSq = dx * dx + dy * dy
+            if (distSq < threshold * threshold && distSq < closestDistSq) {
+                closestDistSq = distSq
+                closestIdx = i
+            }
+        }
+        return if (closestIdx >= 0) data.tileIndices[closestIdx] else -1
+    }
 
     Canvas(
         modifier = Modifier
             .fillMaxSize()
+            // 탭 제스처: 짧은 터치 → 유닛 상세 팝업
             .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { startOffset ->
-                        val w = size.width.toFloat()
-                        val h = size.height.toFloat()
-                        val tapNormX = startOffset.x / w
-                        val tapNormY = startOffset.y / h
-
-                        val data = BattleBridge.unitPositions.value
-                        var closestIdx = -1
-                        var closestDistSq = Float.MAX_VALUE
-                        val threshold = 0.05f
-
-                        for (i in 0 until data.count) {
-                            val dx = tapNormX - data.xs[i]
-                            val dy = tapNormY - data.ys[i]
-                            val distSq = dx * dx + dy * dy
-                            if (distSq < threshold * threshold && distSq < closestDistSq) {
-                                closestDistSq = distSq
-                                closestIdx = i
-                            }
+                detectTapGestures(
+                    onTap = { offset ->
+                        val tile = findClosestUnit(offset, size.width.toFloat(), size.height.toFloat())
+                        if (tile >= 0) {
+                            BattleBridge.requestClickTile(tile)
                         }
-
-                        if (closestIdx >= 0) {
-                            dragFromTile = data.tileIndices[closestIdx]
+                    }
+                )
+            }
+            // 롱프레스 + 드래그: 유닛 이동/슬롯 중첩
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { startOffset ->
+                        val tile = findClosestUnit(startOffset, size.width.toFloat(), size.height.toFloat())
+                        if (tile >= 0) {
+                            dragFromTile = tile
                             isDragging = true
                             dragOffset = startOffset
-                            dragTotalDistance = 0f
                         }
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         dragOffset += dragAmount
-                        dragTotalDistance += dragAmount.getDistance()
                     },
                     onDragEnd = {
                         if (isDragging && dragFromTile >= 0) {
                             val w = size.width.toFloat()
                             val h = size.height.toFloat()
-                            if (dragTotalDistance < 15f) {
-                                // Short drag = tap → show unit popup
-                                BattleBridge.requestClickTile(dragFromTile)
-                            } else {
-                                // Real drag → relocate unit
-                                val normX = dragOffset.x / w
-                                val normY = dragOffset.y / h
-                                BattleBridge.requestRelocate(dragFromTile, normX, normY)
-                            }
+                            val normX = dragOffset.x / w
+                            val normY = dragOffset.y / h
+                            BattleBridge.requestRelocate(dragFromTile, normX, normY)
                         }
                         isDragging = false
                         dragFromTile = -1
                         dragOffset = Offset.Zero
-                        dragTotalDistance = 0f
                     },
                     onDragCancel = {
                         isDragging = false
                         dragFromTile = -1
                         dragOffset = Offset.Zero
-                        dragTotalDistance = 0f
                     },
                 )
             }
@@ -391,8 +386,10 @@ fun BattleField() {
         val moArr = microOffsets.value
         val useMicro = moArr.size == data.count * 2
 
-        // Unit size based on field height (no grid cells)
-        val unitSize = gridH * 0.12f
+        // Unit size: 셀 크기의 ~70% (3×6 그리드 슬롯에 fit)
+        val cellW = gridW / 6f
+        val cellH = gridH / 3f
+        val unitSize = minOf(cellW, cellH) * 0.7f
         val pedestalRx = unitSize * 0.45f
         val pedestalRy = pedestalRx * 0.4f
         val gridState = BattleBridge.gridState.value
@@ -473,18 +470,10 @@ fun BattleField() {
             val screenX = screenXBase + attackOffsetX
             val screenY = screenYBase + attackOffsetY
 
-            // ── E7: Grade 4+ aura ring ──
+            // ── E7: Grade 4 (Mythic) aura ring ──
             if (grade >= 4) {
-                val auraColor = when (grade) {
-                    4 -> AncientAuraRed
-                    5 -> MythicAuraGold
-                    else -> ImmortalAuraPink // grade 6+
-                }
-                val auraStroke = when (grade) {
-                    4 -> AncientAuraStroke
-                    5 -> MythicAuraStroke
-                    else -> ImmortalAuraStroke
-                }
+                val auraColor = MythicAuraGold
+                val auraStroke = MythicAuraStroke
                 val auraPulseAlpha = (0.35f + sin(t * 3f + unitDefId * 0.4f) * 0.2f).coerceIn(0.15f, 0.55f)
                 val auraRadius = unitSize * (0.55f + sin(t * 2f + unitDefId * 0.3f) * 0.05f)
 
@@ -501,15 +490,6 @@ fun BattleField() {
                     center = Offset(screenX, screenY - unitSize * 0.2f),
                     style = auraStroke,
                 )
-                // Inner bright core for grade 6 (holographic shimmer)
-                if (grade >= 6) {
-                    val shimmerAlpha = (0.2f + sin(t * 5f + unitDefId * 0.6f) * 0.15f).coerceIn(0.05f, 0.35f)
-                    drawCircle(
-                        color = Color.White.copy(alpha = shimmerAlpha),
-                        radius = auraRadius * 0.7f,
-                        center = Offset(screenX, screenY - unitSize * 0.2f),
-                    )
-                }
             }
 
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
@@ -708,28 +688,25 @@ fun BattleField() {
                             center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
                         )
                     }
-                    5 -> { // Wind: swirl gust
-                        val gustAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.45f)
+                    5 -> { // Wind: crystal flash (frost 스타일 + 바람 색상)
+                        val windAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.5f)
+                        val windR = unitSize * 0.5f
                         drawCircle(
-                            color = WindAttackFlash.copy(alpha = gustAlpha * 0.3f),
-                            radius = unitSize * 0.5f,
+                            color = WindAttackFlash.copy(alpha = windAlpha * 0.4f),
+                            radius = windR,
                             center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
                         )
-                        // Wind streak arcs
-                        for (sp in 0 until 3) {
-                            val spAngle = sp * 2.094f + attackPhase * 2f
-                            val spR = unitSize * 0.35f
-                            drawLine(
-                                color = WindLeafBright.copy(alpha = gustAlpha * 0.4f),
-                                start = Offset(
-                                    screenX + cos(spAngle) * spR * 0.5f,
-                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spR * 0.3f,
+                        // Sparkle points
+                        for (sp in 0 until 4) {
+                            val spAngle = sp * (PI.toFloat() / 2f) + attackPhase * 0.5f
+                            val spR = windR * 0.7f
+                            drawCircle(
+                                color = WindLeafBright.copy(alpha = windAlpha * 0.5f),
+                                radius = 1.5f,
+                                center = Offset(
+                                    screenX + cos(spAngle) * spR,
+                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spR,
                                 ),
-                                end = Offset(
-                                    screenX + cos(spAngle + 0.5f) * spR,
-                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle + 0.5f) * spR * 0.5f,
-                                ),
-                                strokeWidth = 1.5f,
                             )
                         }
                     }
@@ -815,17 +792,18 @@ fun BattleField() {
                             center = Offset(screenX, screenY - unitSize * 0.35f),
                         )
                     }
-                    5 -> { // Wind: orbiting leaf particles
-                        val leafCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
-                        for (l in 0 until leafCount) {
-                            val leafAngle = t * 2.5f + l * (6.283f / leafCount) + unitDefId * 0.2f
-                            val leafR = unitSize * 0.25f
-                            val leafX = screenX + cos(leafAngle) * leafR
-                            val leafY = screenY - unitSize * 0.3f + sin(leafAngle) * leafR * 0.4f
+                    5 -> { // Wind: gentle breeze drift (frost 스타일 + 바람 색상)
+                        val breezeCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
+                        for (s in 0 until breezeCount) {
+                            val breezePhase = (t * 0.5f + s * 0.6f + unitDefId * 0.13f) % 1f
+                            val drift = sin(t * 1.2f + s * 1.7f) * unitSize * 0.15f
+                            val breezeX = screenX + drift
+                            val breezeY = screenY - unitSize * 0.5f + breezePhase * unitSize * 0.3f
+                            val breezeAlpha = sin(breezePhase * PI.toFloat()) * 0.35f
                             drawCircle(
-                                color = WindLeafIdle03,
+                                color = WindLeafColor.copy(alpha = breezeAlpha),
                                 radius = 1.5f,
-                                center = Offset(leafX, leafY),
+                                center = Offset(breezeX, breezeY),
                             )
                         }
                     }
@@ -840,37 +818,17 @@ fun BattleField() {
                 val spriteSize = unitSize * 0.85f * finalScale
                 val spriteY = screenY - spriteSize - pedestalRy * 0.3f + bounceOffset
 
-                // G2: Wind family spin via canvas rotation
-                if (isAttacking && family == 5 && attackRotation != 0f) {
-                    drawContext.canvas.save()
-                    drawContext.canvas.translate(screenX, spriteY + spriteSize / 2f)
-                    drawContext.canvas.rotate(attackRotation * (180f / PI.toFloat()))
-                    drawContext.canvas.translate(-screenX, -(spriteY + spriteSize / 2f))
-                    drawImage(
-                        image = bitmap,
-                        dstOffset = androidx.compose.ui.unit.IntOffset(
-                            (screenX - spriteSize / 2).toInt(),
-                            spriteY.toInt(),
-                        ),
-                        dstSize = androidx.compose.ui.unit.IntSize(
-                            spriteSize.toInt(),
-                            spriteSize.toInt(),
-                        ),
-                    )
-                    drawContext.canvas.restore()
-                } else {
-                    drawImage(
-                        image = bitmap,
-                        dstOffset = androidx.compose.ui.unit.IntOffset(
-                            (screenX - spriteSize / 2).toInt(),
-                            spriteY.toInt(),
-                        ),
-                        dstSize = androidx.compose.ui.unit.IntSize(
-                            spriteSize.toInt(),
-                            spriteSize.toInt(),
-                        ),
-                    )
-                }
+                drawImage(
+                    image = bitmap,
+                    dstOffset = androidx.compose.ui.unit.IntOffset(
+                        (screenX - spriteSize / 2).toInt(),
+                        spriteY.toInt(),
+                    ),
+                    dstSize = androidx.compose.ui.unit.IntSize(
+                        spriteSize.toInt(),
+                        spriteSize.toInt(),
+                    ),
+                )
             }
 
             // ── Level badge: Stars instead of number ──
@@ -1159,35 +1117,6 @@ private fun DrawScope.drawGradePlatform(
             )
         }
         4 -> {
-            // Ancient: red fire ring — PERF: layered ovals
-            val pulseScale = 1f + sin(t * 3f + unitDefId * 0.4f) * 0.08f
-            val ringAlpha = 0.35f + sin(t * 5f + unitDefId * 0.3f) * 0.15f
-            val rx = pedestalRx * 1.1f * pulseScale
-            val ry = pedestalRy * 1.1f * pulseScale
-            drawOval(
-                color = PlatformAncientColor.copy(alpha = ringAlpha * 0.5f),
-                topLeft = Offset(screenX - rx, screenY - ry * 0.4f),
-                size = Size(rx * 2f, ry * 2f),
-            )
-            drawOval(
-                color = PlatformAncientRing.copy(alpha = ringAlpha * 0.7f),
-                topLeft = Offset(screenX - rx * 0.7f, screenY - ry * 0.2f),
-                size = Size(rx * 1.4f, ry * 1.4f),
-            )
-            drawOval(
-                color = PlatformAncientColor.copy(alpha = ringAlpha + 0.1f),
-                topLeft = Offset(screenX - rx * 0.9f, screenY - ry * 0.3f),
-                size = Size(rx * 1.8f, ry * 1.6f),
-                style = Stroke(width = 2f),
-            )
-            drawOval(
-                color = PlatformAncientRing.copy(alpha = ringAlpha * 0.6f),
-                topLeft = Offset(screenX - rx * 0.7f, screenY - ry * 0.15f),
-                size = Size(rx * 1.4f, ry * 1.2f),
-                style = Stroke(width = 1f),
-            )
-        }
-        5 -> {
             // Mythic: golden holographic ring with rainbow shimmer
             val shimmerPhase = t * 2f + unitDefId * 0.5f
             val shimmerIdx = ((shimmerPhase % (2f * PI.toFloat())) / (2f * PI.toFloat()) * RainbowShimmer.size).toInt().coerceIn(0, RainbowShimmer.size - 1)
@@ -1222,50 +1151,6 @@ private fun DrawScope.drawGradePlatform(
                 topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.2f),
                 size = Size(pedestalRx * 1.8f, pedestalRy * 1.6f),
                 style = Stroke(width = 1.5f),
-            )
-        }
-        6 -> {
-            // Immortal: divine white+pink radiant glow with rays
-            val divineAlpha = 0.3f + sin(t * 2f + unitDefId * 0.3f) * 0.1f
-            val pulseScale = 1f + sin(t * 1.5f) * 0.05f
-            val rx = pedestalRx * 1.4f * pulseScale
-            val ry = pedestalRy * 1.4f * pulseScale
-            // PERF: layered ovals instead of gradient
-            drawOval(
-                color = PlatformImmortalPink.copy(alpha = divineAlpha * 0.3f),
-                topLeft = Offset(screenX - rx, screenY - ry * 0.5f),
-                size = Size(rx * 2f, ry * 2f),
-            )
-            drawOval(
-                color = PlatformImmortalWhite.copy(alpha = divineAlpha * 0.4f),
-                topLeft = Offset(screenX - rx * 0.7f, screenY - ry * 0.3f),
-                size = Size(rx * 1.4f, ry * 1.4f),
-            )
-            // Radiant rays
-            for (r in 0 until 8) {
-                val angle = (r.toFloat() / 8f) * 2f * PI.toFloat() + t * 0.5f
-                val rayLen = pedestalRx * (0.8f + sin(t * 3f + r * 1.1f) * 0.2f)
-                val rayAlpha = divineAlpha * (0.6f + sin(t * 4f + r * 0.8f) * 0.3f)
-                val endX = screenX + cos(angle) * rayLen
-                val endY = screenY + sin(angle) * rayLen * 0.5f
-                drawLine(
-                    color = PlatformImmortalWhite.copy(alpha = rayAlpha),
-                    start = Offset(screenX, screenY),
-                    end = Offset(endX, endY),
-                    strokeWidth = 1.5f,
-                )
-            }
-            drawOval(
-                color = PlatformImmortalPink.copy(alpha = divineAlpha + 0.15f),
-                topLeft = Offset(screenX - pedestalRx * 1.0f, screenY - pedestalRy * 0.3f),
-                size = Size(pedestalRx * 2.0f, pedestalRy * 1.8f),
-                style = Stroke(width = 2f),
-            )
-            drawOval(
-                color = PlatformImmortalWhite.copy(alpha = divineAlpha * 0.7f),
-                topLeft = Offset(screenX - pedestalRx * 0.8f, screenY - pedestalRy * 0.15f),
-                size = Size(pedestalRx * 1.6f, pedestalRy * 1.4f),
-                style = Stroke(width = 1f),
             )
         }
     }

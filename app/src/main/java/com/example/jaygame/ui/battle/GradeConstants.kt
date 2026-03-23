@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.engine.UnitGrade
 
-/** Grade colors indexed by grade ordinal (0=Common … 6=Immortal). */
+/** Grade colors indexed by grade ordinal (0=Common … 4=Mythic). */
 val GradeColorsByIndex: Array<Color> = UnitGrade.entries.map { it.color }.toTypedArray()
 
 /** Grade display names indexed by grade ordinal. */

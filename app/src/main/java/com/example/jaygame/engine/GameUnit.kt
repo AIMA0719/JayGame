@@ -48,8 +48,20 @@ class GameUnit {
     var fieldController: FieldEffectController? = null
     var state: UnitState = UnitState.IDLE
 
-    private var wanderTarget = Vec2()
-    private var wanderTimer = 0f
+    // ── 배틀 중 개별 강화 필드 (운빨존많겜 스타일) ──
+    /** 개별 유닛 강화 레벨 (0 ~ MAX_UPGRADE_LEVEL) */
+    var upgradeLevel: Int = 0
+    /** 강화 ATK 보너스 배율 — (1f + upgradeBonusATK)로 사용 */
+    var upgradeBonusATK: Float = 0f
+    /** 강화 공격속도 보너스 배율 — (1f + upgradeBonusSpd)로 사용 */
+    var upgradeBonusSpd: Float = 0f
+
+    // ── 마나/궁극기 필드 ──
+    var mana: Float = 0f                // 현재 마나 (0~maxMana)
+    var maxMana: Float = 100f           // 최대 마나
+    var manaPerHit: Float = 0f          // 공격 시 마나 획득량
+    var hasUltimate: Boolean = false    // 궁극기 보유 여부
+
     var moveSpeed = 75f
     private var chaseTarget: Enemy? = null
 
@@ -104,8 +116,6 @@ class GameUnit {
         this.buffs.clear()
         this.uniqueAbilityCooldown = 0f
         this.passiveCounter = 0
-        this.wanderTarget = homePos.copy()
-        this.wanderTimer = 0f
         this.moveSpeed = when (family) {
             0 -> 110f
             1 -> 55f
@@ -124,50 +134,20 @@ class GameUnit {
         val spdMult = buffs.getSpdMultiplier()
         attackCooldown -= dt * spdMult
 
-        // Detect enemies across entire map, then chase into attack range
-        val detectRange = BattleEngine.W
-        val enemy = findEnemy(position, detectRange)
+        // 셀 고정: 유닛은 homePosition에 고정, 사거리 내 적 탐지 시 제자리 공격
+        position.x = homePosition.x
+        position.y = homePosition.y
 
+        val enemy = findEnemy(position, range)
         if (enemy != null) {
             chaseTarget = enemy
-            val dir = enemy.position - position
-            val dist = dir.length
-
-            if (dist > range) {
-                val norm = dir.normalized()
-                position.x += norm.x * moveSpeed * dt
-                position.y += norm.y * moveSpeed * dt
-                isAttacking = false
-            } else {
-                isAttacking = true
-                currentTarget = enemy
-            }
+            isAttacking = true
+            currentTarget = enemy
         } else {
             chaseTarget = null
             isAttacking = false
             currentTarget = null
-            wanderTimer -= dt
-            if (wanderTimer <= 0f) {
-                val angle = Math.random().toFloat() * 6.283f
-                val dist = 20f + Math.random().toFloat() * 30f
-                wanderTarget = Vec2(
-                    homePosition.x + cos(angle) * dist,
-                    homePosition.y + sin(angle) * dist,
-                )
-                wanderTimer = 1f + Math.random().toFloat() * 2f
-            }
-            val dir = wanderTarget - position
-            if (dir.lengthSq > 4f) {
-                val norm = dir.normalized()
-                val wanderSpeed = moveSpeed * 0.3f
-                position.x += norm.x * wanderSpeed * dt
-                position.y += norm.y * wanderSpeed * dt
-            }
         }
-
-        // Clamp position within field boundaries (prevent units from entering monster path)
-        position.x = position.x.coerceIn(Grid.FIELD_MIN_X, Grid.FIELD_MAX_X)
-        position.y = position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
     }
 
     companion object {
@@ -180,9 +160,16 @@ class GameUnit {
         attackCooldown = 1f / atkSpeed
     }
 
+    /** 공격 성공 시 마나 축적 (전설/신화 궁극기용) */
+    fun chargeMana() {
+        if (hasUltimate && manaPerHit > 0f) {
+            mana = (mana + manaPerHit).coerceAtMost(maxMana)
+        }
+    }
+
     fun effectiveATK(): Float {
         val levelMult = LEVEL_MULTIPLIERS.getOrElse(level - 1) { 1f }
-        return baseATK * levelMult * buffs.getAtkMultiplier()
+        return baseATK * levelMult * buffs.getAtkMultiplier() * (1f + upgradeBonusATK)
     }
 
     fun reset() {
@@ -204,6 +191,9 @@ class GameUnit {
         magicResist = 0f
         moveSpeed = 75f
         blockCount = 0
+        upgradeLevel = 0
+        upgradeBonusATK = 0f
+        upgradeBonusSpd = 0f
 
         // Existing reset logic
         alive = false
@@ -214,5 +204,11 @@ class GameUnit {
         uniqueAbilityCooldown = 0f
         uniqueAbilityMaxCd = 0f
         passiveCounter = 0
+
+        // Reset mana fields
+        mana = 0f
+        maxMana = 100f
+        manaPerHit = 0f
+        hasUltimate = false
     }
 }

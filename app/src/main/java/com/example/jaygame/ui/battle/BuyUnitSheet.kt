@@ -37,51 +37,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.UNIT_DEFS
-import com.example.jaygame.data.UnitDef
-import com.example.jaygame.data.UnitGrade
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.UnitBlueprint
-import com.example.jaygame.engine.UnitRole
+import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.blueprintIconRes
 import com.example.jaygame.ui.theme.*
 
-/** Price table for buyable units */
-private val BUY_PRICES = mapOf(
-    UnitGrade.MYTHIC to 3000,
-    UnitGrade.IMMORTAL to 10000,
-)
+private const val MYTHIC_BUY_PRICE = 3000
 
-/** Get buyable units (MYTHIC and above) */
-private val BUYABLE_UNITS: List<UnitDef> = UNIT_DEFS.filter {
-    it.grade == UnitGrade.MYTHIC || it.grade == UnitGrade.IMMORTAL
-}
-
-/** Derive role from family for legacy UnitDef (until fully migrated to BlueprintRegistry) */
-private fun inferRoleFromFamily(def: UnitDef): UnitRole {
-    val bp = findMatchingBlueprint(def)
-    if (bp != null) return bp.role
-    return when (def.family) {
-        com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
-        com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
-        com.example.jaygame.data.UnitFamily.FIRE -> UnitRole.RANGED_DPS
-        com.example.jaygame.data.UnitFamily.FROST -> UnitRole.RANGED_DPS
-        com.example.jaygame.data.UnitFamily.POISON -> UnitRole.RANGED_DPS
-        com.example.jaygame.data.UnitFamily.LIGHTNING -> UnitRole.RANGED_DPS
-    }
-}
-
-/** Find the blueprint that matches a legacy UnitDef by grade + family */
-private fun findMatchingBlueprint(def: UnitDef): UnitBlueprint? {
-    if (!BlueprintRegistry.isReady) return null
-    val registry = BlueprintRegistry.instance
-    val gradeEnum = com.example.jaygame.engine.UnitGrade.entries.getOrNull(def.grade.ordinal) ?: return null
-    return registry.all().find { it.grade == gradeEnum && def.family in it.families }
+private fun getBuyableBlueprints(): List<UnitBlueprint> {
+    if (!BlueprintRegistry.isReady) return emptyList()
+    return BlueprintRegistry.instance.all().filter { it.grade == UnitGrade.MYTHIC }
 }
 
 @Composable
@@ -92,8 +61,8 @@ fun BuyUnitSheet(
     val gridState by BattleBridge.gridState.collectAsState()
     val gridFull = gridState.all { it.unitDefId >= 0 || it.blueprintId.isNotEmpty() }
 
-    var confirmUnit by remember { mutableStateOf<UnitDef?>(null) }
-    var selectedRole by remember { mutableStateOf<UnitRole?>(null) }
+    var confirmUnit by remember { mutableStateOf<UnitBlueprint?>(null) }
+    val buyableUnits = remember { getBuyableBlueprints() }
 
     Box(
         modifier = Modifier
@@ -114,12 +83,10 @@ fun BuyUnitSheet(
     ) {
         if (confirmUnit != null) {
             // ── Purchase confirmation dialog ──
-            val unit = confirmUnit ?: return@Box
-            val price = BUY_PRICES[unit.grade] ?: 300
+            val bp = confirmUnit ?: return@Box
+            val price = MYTHIC_BUY_PRICE
             val canAfford = battle.sp >= price && !gridFull
-            val matchedBp = remember(unit.id) { findMatchingBlueprint(unit) }
-            val displayName = matchedBp?.name ?: unit.name
-            val displayIcon = if (matchedBp != null) blueprintIconRes(matchedBp) else unit.iconRes
+            val displayIcon = blueprintIconRes(bp)
 
             GameCard(
                 modifier = Modifier
@@ -128,7 +95,7 @@ fun BuyUnitSheet(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() },
                     ) {},
-                borderColor = unit.grade.color.copy(alpha = 0.5f),
+                borderColor = bp.grade.color.copy(alpha = 0.5f),
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -143,19 +110,19 @@ fun BuyUnitSheet(
                     Spacer(modifier = Modifier.height(12.dp))
                     Image(
                         painter = painterResource(id = displayIcon),
-                        contentDescription = displayName,
+                        contentDescription = bp.name,
                         modifier = Modifier.size(56.dp),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = displayName,
-                        color = unit.grade.color,
+                        text = bp.name,
+                        color = bp.grade.color,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = unit.grade.label,
-                        color = unit.grade.color.copy(alpha = 0.8f),
+                        text = bp.grade.label,
+                        color = bp.grade.color.copy(alpha = 0.8f),
                         fontSize = 12.sp,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -188,7 +155,7 @@ fun BuyUnitSheet(
                             text = "구매",
                             onClick = {
                                 if (canAfford) {
-                                    BattleBridge.requestBuyUnit(unit.id, price)
+                                    BattleBridge.requestBuyBlueprint(bp.id, price)
                                     confirmUnit = null
                                     onDismiss()
                                 }
@@ -247,33 +214,6 @@ fun BuyUnitSheet(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Role filter tabs (Task 18: activated with family-based role inference)
-                    ScrollableTabRow(
-                        selectedTabIndex = if (selectedRole == null) 0 else UnitRole.entries.indexOf(selectedRole) + 1,
-                        modifier = Modifier.fillMaxWidth(),
-                        containerColor = Color.Transparent,
-                        contentColor = Gold,
-                    ) {
-                        Tab(selected = selectedRole == null, onClick = { selectedRole = null }) {
-                            Text("전체", modifier = Modifier.padding(8.dp), color = if (selectedRole == null) Gold else SubText)
-                        }
-                        UnitRole.entries.forEach { role ->
-                            Tab(selected = selectedRole == role, onClick = { selectedRole = role }) {
-                                Text(role.label, modifier = Modifier.padding(8.dp), color = if (selectedRole == role) Gold else SubText)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    val filteredUnits = remember(selectedRole) {
-                        if (selectedRole == null) {
-                            BUYABLE_UNITS
-                        } else {
-                            BUYABLE_UNITS.filter { inferRoleFromFamily(it) == selectedRole }
-                        }
-                    }
-
                     // Unit grid
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
@@ -281,18 +221,18 @@ fun BuyUnitSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(filteredUnits) { unit ->
-                            BuyUnitCard(
-                                unit = unit,
-                                price = BUY_PRICES[unit.grade] ?: 300,
-                                canAfford = battle.sp >= (BUY_PRICES[unit.grade] ?: 300),
-                                onClick = { confirmUnit = unit },
+                        items(buyableUnits) { bp ->
+                            BuyBlueprintCard(
+                                bp = bp,
+                                price = MYTHIC_BUY_PRICE,
+                                canAfford = battle.sp >= MYTHIC_BUY_PRICE,
+                                onClick = { confirmUnit = bp },
                             )
                         }
-                        if (filteredUnits.isEmpty()) {
+                        if (buyableUnits.isEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Text(
-                                    "해당 역할의 유닛이 없습니다.",
+                                    "구매 가능한 유닛이 없습니다.",
                                     color = Color.Gray,
                                     modifier = Modifier.padding(16.dp).fillMaxWidth(),
                                     textAlign = TextAlign.Center,
@@ -309,15 +249,13 @@ fun BuyUnitSheet(
 }
 
 @Composable
-private fun BuyUnitCard(
-    unit: UnitDef,
+private fun BuyBlueprintCard(
+    bp: UnitBlueprint,
     price: Int,
     canAfford: Boolean,
     onClick: () -> Unit,
 ) {
-    val matchedBp = remember(unit.id) { findMatchingBlueprint(unit) }
-    val displayName = matchedBp?.name ?: unit.name
-    val displayIcon = if (matchedBp != null) blueprintIconRes(matchedBp) else unit.iconRes
+    val displayIcon = remember(bp.id) { blueprintIconRes(bp) }
 
     Box(
         modifier = Modifier
@@ -325,7 +263,7 @@ private fun BuyUnitCard(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        unit.grade.color.copy(alpha = 0.15f),
+                        bp.grade.color.copy(alpha = 0.15f),
                         Color(0xFF1A1025).copy(alpha = 0.8f),
                     )
                 )
@@ -339,20 +277,20 @@ private fun BuyUnitCard(
         ) {
             Image(
                 painter = painterResource(id = displayIcon),
-                contentDescription = displayName,
+                contentDescription = bp.name,
                 modifier = Modifier.size(40.dp),
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = displayName,
-                color = unit.grade.color,
+                text = bp.name,
+                color = bp.grade.color,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = unit.grade.label,
-                color = unit.grade.color.copy(alpha = 0.7f),
+                text = bp.grade.label,
+                color = bp.grade.color.copy(alpha = 0.7f),
                 fontSize = 9.sp,
             )
             Spacer(modifier = Modifier.height(4.dp))

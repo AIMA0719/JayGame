@@ -110,14 +110,14 @@ private val StrokeW1 = Stroke(width = 1f)
 private val StrokeW1_5 = Stroke(width = 1.5f)
 private val StrokeW2 = Stroke(width = 2f)
 
-// Prismatic (Support grade 6) — pre-allocated lists
+// Prismatic (Support grade 4) — pre-allocated lists
 private val PrismColors = listOf(
     Color(0xFFFF0000), Color(0xFFFF7700), Color(0xFFFFFF00),
     Color(0xFF00FF00), Color(0xFF0077FF), Color(0xFF0000FF), Color(0xFF8800FF)
 )
 private val PrismColors50 = PrismColors.map { it.copy(alpha = 0.5f) }
 
-// Rainbow shimmer (Support grade 4)
+// Rainbow shimmer (Support grade 3)
 private val RainbowColors40 = listOf(
     Color(0xFFFF6B6B).copy(alpha = 0.4f), Color(0xFFFFD93D).copy(alpha = 0.4f),
     Color(0xFF6BCB77).copy(alpha = 0.4f), Color(0xFF4D96FF).copy(alpha = 0.4f),
@@ -354,7 +354,7 @@ private fun DrawScope.drawFireProjectile(
             // Spark embers around head
             drawOrbit(curX, curY, 2 + grade, baseSize * 1.2f, FireBright, 0.6f, 2f, time, 8f, angle)
         }
-        grade <= 4 -> {
+        grade == 3 -> {
             val pulse = 1f + sin(time * 10f + seed) * 0.1f
             val headW = baseSize * 2.2f * pulse
             val headH = baseSize * 1.1f * pulse
@@ -362,26 +362,10 @@ private fun DrawScope.drawFireProjectile(
             drawDiamond(curX, curY, headW * 1.3f, headH * 1.3f, angle, FireInferno, 0.5f, path)
             // Main fireball head
             drawDiamond(curX, curY, headW, headH, angle, FireDark, 1.0f, path)
-            drawStar(curX, curY, 4 + grade - 3, baseSize * 0.8f, baseSize * 0.4f,
+            drawStar(curX, curY, 4, baseSize * 0.8f, baseSize * 0.4f,
                 time * 6f + seed, FireBright, 0.8f, path)
             drawDiamond(curX, curY, headW * 0.3f, headH * 0.3f, angle, FireWhiteHot, 0.6f, path)
-            drawOrbit(curX, curY, 4 + grade, baseSize * 1.5f, FireGlow, 0.7f, 2.5f, time, 5f)
-        }
-        grade == 5 -> {
-            val pulse = 1f + sin(time * 8f + seed) * 0.08f
-            val headW = baseSize * 2.6f * pulse
-            val headH = baseSize * 1.2f * pulse
-            drawDiamond(curX, curY, headW * 1.4f, headH * 1.4f, angle, FireInferno, 0.4f, path)
-            drawDiamond(curX, curY, headW, headH, angle, FireDark, 1.0f, path)
-            drawStar(curX, curY, 6, baseSize * 0.9f, baseSize * 0.45f,
-                time * 5f, FireBright, 0.85f, path)
-            drawDiamond(curX, curY, headW * 0.35f, headH * 0.35f, angle, FireWhiteHot, 0.7f, path)
-            // Triple orbital rings (with LOD)
-            for (ring in 0 until 3) {
-                val ringAngle = time * (4f + ring) + ring * 2.1f
-                val ringR = baseSize * (1.4f + ring * 0.3f)
-                drawOrbit(curX, curY, 5, ringR, FireGlow, 0.5f, 2f, time, 4f + ring, ringAngle)
-            }
+            drawOrbit(curX, curY, 7, baseSize * 1.5f, FireGlow, 0.7f, 2.5f, time, 5f)
         }
         else -> {
             val pulse = 1f + sin(time * 6f + seed) * 0.06f
@@ -457,7 +441,7 @@ private fun DrawScope.drawFrostProjectile(
             // Small orbiting sparkles
             drawOrbit(curX, curY, 2 + grade, baseSize * 1.5f, White, 0.6f, 1.5f, time, 8f)
         }
-        grade <= 4 -> {
+        grade == 3 -> {
             val spin = angle + time * 8f
             // Main crystal shard
             drawDiamond(curX, curY, baseSize * 1.6f, baseSize * 2.8f, spin, FrostBase, 0.85f, path)
@@ -474,33 +458,6 @@ private fun DrawScope.drawFrostProjectile(
                     curX + cos(sa) * sr, curY + sin(sa) * sr,
                     4f, 7f, sa * 2f, FrostCrystal, 0.6f, path
                 )
-            }
-        }
-        grade == 5 -> {
-            val spin = time * 6f
-            drawCircle(FrostGlow20, radius = baseSize * 2f, center = Offset(curX, curY), style = StrokeW2)
-            // Large crystal shard
-            drawDiamond(curX, curY, baseSize * 1.8f, baseSize * 3.0f, spin, FrostBase, 0.8f, path)
-            drawDiamond(curX, curY, baseSize * 1.2f, baseSize * 2.2f, -spin * 1.3f, FrostBright, 0.7f, path)
-            drawCircle(FrostBright, alpha = 0.8f, radius = baseSize * 0.35f, center = Offset(curX, curY))
-            // Snowflake arms (with LOD)
-            for (arm in 0 until 6) {
-                if (ParticleLOD.shouldSkipParticle(arm)) continue
-                val a = arm * (PI.toFloat() / 3f) + spin
-                val len = baseSize * 1.8f
-                drawLine(FrostCrystal50, start = Offset(curX, curY),
-                    end = Offset(curX + cos(a) * len, curY + sin(a) * len),
-                    strokeWidth = 1.5f, cap = StrokeCap.Round)
-                // Branch tips
-                val midX = curX + cos(a) * len * 0.6f
-                val midY = curY + sin(a) * len * 0.6f
-                val bLen = len * 0.4f
-                for (b in -1..1 step 2) {
-                    val ba = a + b * 0.5f
-                    drawLine(FrostCrystal30, start = Offset(midX, midY),
-                        end = Offset(midX + cos(ba) * bLen, midY + sin(ba) * bLen),
-                        strokeWidth = 1f, cap = StrokeCap.Round)
-                }
             }
         }
         else -> {
@@ -588,7 +545,7 @@ private fun DrawScope.drawPoisonProjectile(
                     center = Offset(bx - 0.5f, by - 0.5f))
             }
         }
-        grade <= 4 -> {
+        grade == 3 -> {
             val wobX = sin(time * 6f + seed) * baseSize * 0.1f
             val wobY = cos(time * 8f + seed * 1.3f) * baseSize * 0.1f
             val cx = curX + wobX; val cy = curY + wobY
@@ -607,32 +564,6 @@ private fun DrawScope.drawPoisonProjectile(
                 val ox = cx + cos(sa) * sr; val oy = cy + sin(sa) * sr
                 drawCircle(PoisonBase, alpha = 0.7f, radius = sporeSize, center = Offset(ox, oy))
                 drawCircle(PoisonNeon, alpha = 0.3f, radius = sporeSize * 0.5f, center = Offset(ox, oy))
-            }
-        }
-        grade == 5 -> {
-            val wobX = sin(time * 5f + seed) * baseSize * 0.08f
-            val wobY = cos(time * 7f + seed * 1.3f) * baseSize * 0.08f
-            val cx = curX + wobX; val cy = curY + wobY
-            val pulse = 1f + sin(time * 6f + seed) * 0.08f
-            drawCircle(PoisonDark, alpha = 0.6f, radius = baseSize * 1.5f * pulse, center = Offset(cx, cy))
-            drawCircle(PoisonBase, radius = baseSize * 1.1f * pulse, center = Offset(cx, cy))
-            drawStar(cx, cy, 5, baseSize * 0.9f, baseSize * 0.4f,
-                time * 3f, PoisonNeon, 0.7f, path)
-            drawCircle(PoisonAcid60, radius = baseSize * 0.3f, center = Offset(cx, cy))
-            // Miasma tendrils (with LOD)
-            for (t in 0 until 5) {
-                if (ParticleLOD.shouldSkipParticle(t)) continue
-                val ta = t * (2f * PI.toFloat() / 5f) + time * 1.5f + seed
-                val tLen = baseSize * (1.8f + sin(time * 4f + t * 1.7f) * 0.4f)
-                val midX = cx + cos(ta) * tLen * 0.5f
-                val midY = cy + sin(ta) * tLen * 0.5f
-                val endX = cx + cos(ta + sin(time * 3f + t) * 0.3f) * tLen
-                val endY = cy + sin(ta + sin(time * 3f + t) * 0.3f) * tLen
-                drawLine(PoisonBase40, start = Offset(cx, cy), end = Offset(midX, midY),
-                    strokeWidth = 3f, cap = StrokeCap.Round)
-                drawLine(PoisonNeon25, start = Offset(midX, midY), end = Offset(endX, endY),
-                    strokeWidth = 2f, cap = StrokeCap.Round)
-                drawCircle(PoisonNeon, alpha = 0.4f, radius = 2f, center = Offset(endX, endY))
             }
         }
         else -> {
@@ -713,7 +644,7 @@ private fun DrawScope.drawLightningProjectile(
             drawCircle(LightWhite, alpha = 0.7f + flicker * 0.2f, radius = flashR * 0.5f, center = Offset(curX, curY))
             drawCircle(White, alpha = 0.85f, radius = flashR * 0.2f, center = Offset(curX, curY))
         }
-        grade == 4 || grade == 5 -> {
+        grade == 4 -> {
             // Thicker main bolt from src to cur
             val boltWidth = 3f + grade * 0.5f
             val jitter = 12f + grade * 2f
@@ -754,7 +685,7 @@ private fun DrawScope.drawLightningProjectile(
             }
         }
         else -> {
-            // Grade 6: Massive bolt chain + multiple forks + pulsing electric aura
+            // Fallback: Massive bolt chain + multiple forks + pulsing electric aura
             val boltWidth = 4f + grade * 0.5f
             val jitter = 15f
             // Main massive bolt
@@ -840,7 +771,7 @@ private fun DrawScope.drawSupportProjectile(
             drawCircle(SupportGold30, radius = haloR, center = Offset(curX, curY), style = StrokeW1_5)
             drawOrbit(curX, curY, 2 + grade, baseSize * 1.3f, SupportHoly, 0.5f, 1.5f, time, 7f, seed.toFloat())
         }
-        grade <= 4 -> {
+        grade == 3 -> {
             val pulse = 1f + sin(time * 8f + seed) * 0.1f
             // Warm golden glow
             drawCircle(SupportGold, alpha = 0.5f, radius = baseSize * 1.2f * pulse, center = Offset(curX, curY))
@@ -868,42 +799,12 @@ private fun DrawScope.drawSupportProjectile(
             // Halo ring
             val haloR = baseSize * 1.7f + sin(time * 5f) * 2f
             drawCircle(SupportGold30, radius = haloR, center = Offset(curX, curY), style = StrokeW1_5)
-            if (grade == 4) {
-                // Rainbow shimmer (pre-allocated list)
-                for (ci in RainbowColors40.indices) {
-                    val ra = ci * (2f * PI.toFloat() / 5f) + time * 3f
-                    drawCircle(RainbowColors40[ci], radius = 2f, center = Offset(
-                        curX + cos(ra) * baseSize * 1.6f, curY + sin(ra) * baseSize * 1.6f
-                    ))
-                }
-            }
-        }
-        grade == 5 -> {
-            val pulse = 1f + sin(time * 6f + seed) * 0.08f
-            drawCircle(SupportGold, alpha = 0.6f, radius = baseSize * 1.5f * pulse, center = Offset(curX, curY))
-            drawCircle(SupportHoly, alpha = 0.85f, radius = baseSize * 1f * pulse, center = Offset(curX, curY))
-            // Cross + star combination
-            val crossAngle = time * 3f + seed
-            val crossLen = baseSize * 1.6f
-            for (arm in 0 until 4) {
-                val a = crossAngle + arm * (PI.toFloat() / 2f)
-                drawLine(SupportGold80, start = Offset(curX, curY),
-                    end = Offset(curX + cos(a) * crossLen, curY + sin(a) * crossLen),
-                    strokeWidth = 4f, cap = StrokeCap.Round)
-            }
-            drawStar(curX, curY, 8, baseSize * 1.3f, baseSize * 0.65f, -time * 2f, SupportGold, 0.5f, path)
-            drawCircle(White, alpha = 0.8f, radius = baseSize * 0.35f, center = Offset(curX, curY))
-            // Halo ring
-            val haloR = baseSize * 2f + sin(time * 4f) * 3f
-            drawCircle(SupportGold30, radius = haloR, center = Offset(curX, curY), style = StrokeW2)
-            // Radiating light rays (with LOD)
-            for (ray in 0 until 12) {
-                if (ParticleLOD.shouldSkipParticle(ray)) continue
-                val ra = ray * (PI.toFloat() / 6f) + time * 1.5f
-                val rayLen = baseSize * (1.6f + sin(time * 5f + ray * 0.7f) * 0.3f)
-                drawLine(SupportGold40, start = Offset(curX, curY),
-                    end = Offset(curX + cos(ra) * rayLen, curY + sin(ra) * rayLen),
-                    strokeWidth = 1.5f, cap = StrokeCap.Round)
+            // Rainbow shimmer (pre-allocated list)
+            for (ci in RainbowColors40.indices) {
+                val ra = ci * (2f * PI.toFloat() / 5f) + time * 3f
+                drawCircle(RainbowColors40[ci], radius = 2f, center = Offset(
+                    curX + cos(ra) * baseSize * 1.6f, curY + sin(ra) * baseSize * 1.6f
+                ))
             }
         }
         else -> {
@@ -997,7 +898,7 @@ private fun DrawScope.drawWindProjectile(
             drawCircle(WindCyan, alpha = 0.6f, radius = baseSize * 0.2f, center = Offset(curX, curY))
             drawOrbit(curX, curY, 2 + grade, baseSize * 1.3f, WindLight, 0.4f, 1.5f, time, 12f, spin)
         }
-        grade <= 4 -> {
+        grade == 3 -> {
             val spin = angle + time * 10f
             // Dual-layer aggressive spinning blades
             drawCrescent(curX, curY, baseSize * 1.6f, baseSize * 0.7f, spin, WindTeal, 0.8f, path)
@@ -1014,20 +915,6 @@ private fun DrawScope.drawWindProjectile(
                 drawCircle(WindCyan, alpha = 0.4f * (1f - t * 0.5f), radius = 1.5f + (1f - t) * 1.5f,
                     center = Offset(curX + cos(spiralAngle) * spiralR, curY + sin(spiralAngle) * spiralR))
             }
-        }
-        grade == 5 -> {
-            val spin = time * 8f
-            // Tornado rings — fast spinning (with LOD)
-            for (ring in 0 until 3) {
-                if (ParticleLOD.shouldSkipParticle(ring)) continue
-                val ringR = baseSize * (0.8f + ring * 0.6f)
-                val ringAlpha = 0.45f - ring * 0.1f
-                val ringAngle = spin * (1f + ring * 0.4f) + ring * 0.5f
-                drawCrescent(curX, curY, ringR, ringR * 0.35f, ringAngle, WindTeal, ringAlpha, path)
-                drawCrescent(curX, curY, ringR, ringR * 0.35f, ringAngle + PI.toFloat(), WindCyan, ringAlpha * 0.7f, path)
-            }
-            drawCircle(WindLight, alpha = 0.6f, radius = baseSize * 0.4f, center = Offset(curX, curY))
-            drawCircle(White, alpha = 0.5f, radius = baseSize * 0.2f, center = Offset(curX, curY))
         }
         else -> {
             val spin = time * 6f

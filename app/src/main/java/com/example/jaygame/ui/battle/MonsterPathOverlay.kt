@@ -45,12 +45,6 @@ private val StoneColor1 = Color.White.copy(alpha = 0.1f)
 private val StoneColor2 = Color.Black.copy(alpha = 0.12f)
 private val StoneColor3 = Color.White.copy(alpha = 0.06f)
 
-// Cliff/elevation colors
-private val CliffDark = Color(0xFF1A0F08)
-private val CliffMid = Color(0xFF2A1A0E)
-private val CliffHighlight = Color.White.copy(alpha = 0.12f)
-private val CliffEdgeStroke = Stroke(width = 1f)
-private val GroundShadow = Color.Black.copy(alpha = 0.35f)
 
 // Path tile colors
 private val TileBright = Color.White.copy(alpha = 0.06f)
@@ -58,24 +52,20 @@ private val TileDim = Color.Black.copy(alpha = 0.06f)
 private val TileBorder = Color.Black.copy(alpha = 0.08f)
 
 // Ground surface detail
-private val GroundHighlight = Color.White.copy(alpha = 0.08f)
-private val GroundInnerShadow = Color.Black.copy(alpha = 0.15f)
 private val GroundEdgeLight = Color.White.copy(alpha = 0.15f)
 private val GroundEdgeDark = Color.Black.copy(alpha = 0.2f)
 
-// Coordinates in 720x720 space — matching Grid.kt (480x480, cliff-compensated)
-private const val GRID_LEFT = 120f
-private const val GRID_TOP = 107.5f
-private const val GRID_RIGHT = 600f
-private const val GRID_BOTTOM = 587.5f
-private const val PATH_MARGIN = 80f
-private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN     // 40
-private const val PATH_TOP = GRID_TOP - PATH_MARGIN       // 27.5
-private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN   // 680
-private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN + 25f // 692.5 (cliff 25px 보상)
-
-// Cliff depth in pixels (720x720 space)
-private const val CLIFF_DEPTH = 25f
+// Coordinates in 720x1280 space — matching Grid.kt (480x300, grid centered)
+private const val GRID_LEFT = 120f       // Grid.ORIGIN_X
+private const val GRID_TOP = 430f        // Grid.ORIGIN_Y
+private const val GRID_RIGHT = 600f      // GRID_LEFT + 480
+private const val GRID_BOTTOM = 730f     // GRID_TOP + 300
+private const val PATH_MARGIN_SIDE = 70f  // 좌우 마진
+private const val PATH_MARGIN_TB = 70f    // 상하 마진 (동일)
+private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN_SIDE       // 50
+private const val PATH_TOP = GRID_TOP - PATH_MARGIN_TB           // 280
+private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN_SIDE     // 670
+private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN_TB     // 720
 
 /**
  * Draws the battlefield: monster path (stone tiles) + unit ground (elevated cliff platform).
@@ -95,23 +85,6 @@ fun MonsterPathOverlay() {
     val fieldTop = remember(stageId) { stage.fieldColors.first() }
     val fieldMid = remember(stageId) { stage.fieldColors.getOrElse(1) { stage.fieldColors.first() } }
     val fieldBot = remember(stageId) { stage.fieldColors.last() }
-    val cliffColor = remember(stageId) {
-        Color(
-            red = (fieldBot.red * 0.5f).coerceIn(0f, 1f),
-            green = (fieldBot.green * 0.5f).coerceIn(0f, 1f),
-            blue = (fieldBot.blue * 0.5f).coerceIn(0f, 1f),
-            alpha = 1f,
-        )
-    }
-    val cliffDarker = remember(stageId) {
-        Color(
-            red = (fieldBot.red * 0.3f).coerceIn(0f, 1f),
-            green = (fieldBot.green * 0.3f).coerceIn(0f, 1f),
-            blue = (fieldBot.blue * 0.3f).coerceIn(0f, 1f),
-            alpha = 1f,
-        )
-    }
-
     // Animated dash for path flow
     val infiniteTransition = rememberInfiniteTransition(label = "pathFlow")
     val dashOffset by infiniteTransition.animateFloat(
@@ -128,20 +101,21 @@ fun MonsterPathOverlay() {
         val w = size.width
         val h = size.height
 
-        // Convert 720x720 → screen coords
-        val pL = (PATH_LEFT / 720f) * w
-        val pT = (PATH_TOP / 720f) * h
-        val pR = (PATH_RIGHT / 720f) * w
-        val pB = (PATH_BOTTOM / 720f) * h
-        val gL = (GRID_LEFT / 720f) * w
-        val gT = (GRID_TOP / 720f) * h
-        val gR = (GRID_RIGHT / 720f) * w
-        val gB = (GRID_BOTTOM / 720f) * h
+        // Convert 720x1280 → screen coords
+        val scaleX = w / 720f
+        val scaleY = h / 1280f
+        val pL = PATH_LEFT * scaleX
+        val pT = PATH_TOP * scaleY
+        val pR = PATH_RIGHT * scaleX
+        val pB = PATH_BOTTOM * scaleY
+        val gL = GRID_LEFT * scaleX
+        val gT = GRID_TOP * scaleY
+        val gR = GRID_RIGHT * scaleX
+        val gB = GRID_BOTTOM * scaleY
         val pW = pR - pL
         val pH = pB - pT
         val gW = gR - gL
         val gH = gB - gT
-        val cliffH = (CLIFF_DEPTH / 720f) * h
         val cornerR = 12f
 
         // ═══════════════════════════════════════════
@@ -169,64 +143,10 @@ fun MonsterPathOverlay() {
         )
 
         // ═══════════════════════════════════════════
-        // 2. ELEVATED GROUND (cliff platform)
+        // 2. SPAWN GROUND (flat with subtle bottom shadow for depth)
         // ═══════════════════════════════════════════
 
-        // 2a. Drop shadow under platform
-        drawRoundRect(
-            color = GroundShadow,
-            topLeft = Offset(gL - 4f, gB + 2f),
-            size = Size(gW + 8f, cliffH + 8f),
-            cornerRadius = CornerRadius(cornerR + 4f),
-        )
-
-        // 2b. Cliff side (bottom face) — trapezoid for depth
-        val cliffPath = Path().apply {
-            moveTo(gL + 4f, gB)           // left of bottom edge
-            lineTo(gR - 4f, gB)           // right of bottom edge
-            lineTo(gR + 2f, gB + cliffH)  // slightly wider at bottom
-            lineTo(gL - 2f, gB + cliffH)
-            close()
-        }
-        drawPath(cliffPath, cliffColor)
-
-        // Cliff vertical stripes (stone texture)
-        val stripeCount = 16
-        for (s in 0 until stripeCount) {
-            val frac = (s + 0.5f) / stripeCount
-            val sx = gL + gW * frac
-            val topY = gB + 2f
-            val botY = gB + cliffH - 2f
-            val stripeAlpha = if (s % 2 == 0) 0.08f else 0.04f
-            drawLine(
-                color = Color.Black.copy(alpha = stripeAlpha),
-                start = Offset(sx, topY),
-                end = Offset(sx, botY),
-                strokeWidth = 1f,
-            )
-        }
-
-        // Cliff bottom edge (darkest)
-        drawLine(
-            color = cliffDarker,
-            start = Offset(gL - 2f, gB + cliffH),
-            end = Offset(gR + 2f, gB + cliffH),
-            strokeWidth = 2f,
-            cap = StrokeCap.Round,
-        )
-
-        // 2c. Right cliff side (thinner)
-        val rightCliffW = cliffH * 0.4f
-        val rightCliffPath = Path().apply {
-            moveTo(gR, gT + 8f)
-            lineTo(gR + rightCliffW, gT + 8f + rightCliffW * 0.5f)
-            lineTo(gR + rightCliffW, gB + cliffH - 4f)
-            lineTo(gR, gB)
-            close()
-        }
-        drawPath(rightCliffPath, cliffDarker)
-
-        // 2d. Ground top surface
+        // Main ground surface
         drawRoundRect(
             brush = Brush.verticalGradient(
                 colors = listOf(fieldTop, fieldMid, fieldBot),
@@ -236,36 +156,24 @@ fun MonsterPathOverlay() {
             cornerRadius = CornerRadius(cornerR),
         )
 
-        // Ground surface highlight (top edge - light hits from above)
+        // Bottom shadow strip for subtle 3D depth (like reference image)
+        val shadowH = gH * 0.06f  // ~6% of ground height
+        drawRoundRect(
+            color = Color.Black.copy(alpha = 0.25f),
+            topLeft = Offset(gL, gB - shadowH),
+            size = Size(gW, shadowH + cornerR),
+            cornerRadius = CornerRadius(cornerR),
+        )
+
+        // Top edge highlight
         drawRoundRect(
             color = GroundEdgeLight,
             topLeft = Offset(gL, gT),
             size = Size(gW, 2f),
             cornerRadius = CornerRadius(cornerR),
         )
-        // Left edge highlight
-        drawLine(
-            color = GroundHighlight,
-            start = Offset(gL + 1f, gT + cornerR),
-            end = Offset(gL + 1f, gB - cornerR),
-            strokeWidth = 1f,
-        )
 
-        // Ground inner shadow (bottom + right edges)
-        drawLine(
-            color = GroundInnerShadow,
-            start = Offset(gL + cornerR, gB - 1f),
-            end = Offset(gR - cornerR, gB - 1f),
-            strokeWidth = 2f,
-        )
-        drawLine(
-            color = GroundInnerShadow,
-            start = Offset(gR - 1f, gT + cornerR),
-            end = Offset(gR - 1f, gB - cornerR),
-            strokeWidth = 2f,
-        )
-
-        // Ground border
+        // Border
         drawRoundRect(
             color = GroundEdgeDark,
             topLeft = Offset(gL, gT),

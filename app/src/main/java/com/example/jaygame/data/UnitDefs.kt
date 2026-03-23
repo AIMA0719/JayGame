@@ -23,9 +23,7 @@ enum class UnitGrade(val label: String, val color: Color, val weight: Int) {
     RARE("희귀", Color(0xFF42A5F5), 25),
     HERO("영웅", Color(0xFFAB47BC), 12),
     LEGEND("전설", Color(0xFFFF8F00), 3),
-    ANCIENT("고대", Color(0xFFEF4444), 0),
     MYTHIC("신화", Color(0xFFFBBF24), 0),
-    IMMORTAL("불멸", Color(0xFFF0ABFC), 0),
 }
 
 enum class UnitFamily(val label: String, val color: Color) {
@@ -40,7 +38,7 @@ enum class UnitFamily(val label: String, val color: Color) {
 val NUM_FAMILIES = UnitFamily.entries.size
 
 /**
- * 고유 능력 정보 (영웅 등급 이상)
+ * 고유 능력 정보 (고대 등급 이상)
  */
 data class UniqueAbility(
     val name: String,
@@ -101,7 +99,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "액티브", cooldown = 12,
             description = "적이 가장 밀집한 지점에 운석을 소환. ATK 300% 범위 피해. 피격된 적은 4초간 '소각' 상태: 받는 피해 20% 증가."
         ), mergeResultId = 20),
-    UnitDef(id = 20, name = "화산왕", grade = UnitGrade.ANCIENT, family = UnitFamily.FIRE,
+    UnitDef(id = 20, name = "화산왕", grade = UnitGrade.MYTHIC, family = UnitFamily.FIRE,
         baseATK = 350, baseSpeed = 1.3f, range = 200f, iconRes = iconFor(20),
         abilityName = "화산 분출", description = "대지를 불태우는 군주.",
         uniqueAbility = UniqueAbility(
@@ -117,7 +115,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 25,
             description = "[패시브] 제거 시 ATK 500% 폭발 후 10초 뒤 부활 (전투당 1회).\n[액티브] 25초 쿨 — 6초간 비행하며 경로 전체 융단폭격 (ATK 150% 범위). 비행 중 슬롯 비움."
         ), mergeResultId = 30),
-    UnitDef(id = 30, name = "태양신 라", grade = UnitGrade.IMMORTAL, family = UnitFamily.FIRE,
+    UnitDef(id = 30, name = "태양신 라", grade = UnitGrade.MYTHIC, family = UnitFamily.FIRE,
         baseATK = 800, baseSpeed = 1.5f, range = 250f, iconRes = iconFor(20),
         abilityName = "초신성", description = "태양의 화신. 모든 것을 소각한다.",
         uniqueAbility = UniqueAbility(
@@ -149,7 +147,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 15,
             description = "[패시브] 빙결 상태 적 사망 시 2체에 1.5초 빙결 전파 (최대 3회 연쇄).\n[액티브] 15초 쿨 — 전체 적 3초 빙결. 해동 시 현재 HP 15% 파쇄 피해. 보스: 1.5초."
         ), mergeResultId = 21),
-    UnitDef(id = 21, name = "빙하제왕", grade = UnitGrade.ANCIENT, family = UnitFamily.FROST,
+    UnitDef(id = 21, name = "빙하제왕", grade = UnitGrade.MYTHIC, family = UnitFamily.FROST,
         baseATK = 280, baseSpeed = 1.1f, range = 200f, iconRes = iconFor(21),
         abilityName = "빙하시대", description = "영구동토의 군주.",
         uniqueAbility = UniqueAbility(
@@ -165,7 +163,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 30,
             description = "[패시브] 10초마다 최전방 적 3초 무조건 빙결. 유키의 빙결 대상은 받는 피해 2배.\n[액티브] 30초 쿨 — 전체 4초 빙결 + 아군 쿨타임 5초 감소. 해동 시 최대HP 20% 파쇄 + 영구 30% 둔화. 보스: 2초."
         ), mergeResultId = 31),
-    UnitDef(id = 31, name = "크로노스", grade = UnitGrade.IMMORTAL, family = UnitFamily.FROST,
+    UnitDef(id = 31, name = "크로노스", grade = UnitGrade.MYTHIC, family = UnitFamily.FROST,
         baseATK = 700, baseSpeed = 1.2f, range = 250f, iconRes = iconFor(21),
         abilityName = "시간정지", description = "시간의 지배자. 만물을 정지시킨다.",
         uniqueAbility = UniqueAbility(
@@ -197,7 +195,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 14,
             description = "[패시브] 독 대상 방어력 초당 5% 감소 (최대 50%). 최대 중첩 시 모든 피해가 관통 피해.\n[액티브] 14초 쿨 — 전방 부채꼴 산성 분사: ATK 250% + 즉시 부식 최대 중첩 + 6초간 40% 둔화."
         ), mergeResultId = 22),
-    UnitDef(id = 22, name = "헤카테", grade = UnitGrade.ANCIENT, family = UnitFamily.POISON,
+    UnitDef(id = 22, name = "헤카테", grade = UnitGrade.MYTHIC, family = UnitFamily.POISON,
         baseATK = 220, baseSpeed = 1.2f, range = 180f, iconRes = iconFor(22),
         abilityName = "죽음의 표식", description = "독의 여신.",
         uniqueAbility = UniqueAbility(
@@ -213,7 +211,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 25,
             description = "[패시브] 독 계열 전체 DoT +30%. 독 사망 적 독시체 5초 잔류.\n[액티브] 25초 쿨 — 전방 40% 맹독 브레스 6초: ATK 400% + 부식/표식/둔화 전부 적용. HP 20% 이하 즉사. 사망 시 독 포자 2개 생성."
         ), mergeResultId = 32),
-    UnitDef(id = 32, name = "아포칼립스", grade = UnitGrade.IMMORTAL, family = UnitFamily.POISON,
+    UnitDef(id = 32, name = "아포칼립스", grade = UnitGrade.MYTHIC, family = UnitFamily.POISON,
         baseATK = 650, baseSpeed = 1.3f, range = 250f, iconRes = iconFor(22),
         abilityName = "만물부식", description = "종말의 독. 세상을 멸망시킨다.",
         uniqueAbility = UniqueAbility(
@@ -245,7 +243,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 14,
             description = "[패시브] 반경 120 전기장: 진입 적 ATK 20 피해 + 2초 20% 둔화. 장내 아군 공속 +15%.\n[액티브] 14초 쿨 — 8체 연쇄번개: ATK 180%, 바운스당 +10% (최종 250%). 전원 1초 스턴."
         ), mergeResultId = 23),
-    UnitDef(id = 23, name = "뇌왕", grade = UnitGrade.ANCIENT, family = UnitFamily.LIGHTNING,
+    UnitDef(id = 23, name = "뇌왕", grade = UnitGrade.MYTHIC, family = UnitFamily.LIGHTNING,
         baseATK = 320, baseSpeed = 1.5f, range = 220f, iconRes = iconFor(23),
         abilityName = "뇌격", description = "번개의 군주.",
         uniqueAbility = UniqueAbility(
@@ -261,7 +259,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 28,
             description = "[패시브] 방어 50% 무시. 4회마다 직선 충격파. 액티브 후 5초간 공속 2배.\n[액티브] 28초 쿨 — 묠니르 투척: 전장 관통 ATK 350%. 복귀 시 200% 추가. 양쪽 피격 시 보너스 300%. 전원 2초 스턴."
         ), mergeResultId = 33),
-    UnitDef(id = 33, name = "제우스", grade = UnitGrade.IMMORTAL, family = UnitFamily.LIGHTNING,
+    UnitDef(id = 33, name = "제우스", grade = UnitGrade.MYTHIC, family = UnitFamily.LIGHTNING,
         baseATK = 750, baseSpeed = 1.7f, range = 250f, iconRes = iconFor(23),
         abilityName = "신벌", description = "올림포스의 왕. 하늘이 갈라진다.",
         uniqueAbility = UniqueAbility(
@@ -293,13 +291,13 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 15,
             description = "[패시브] 아군 킬 시 전체 ATK +5% 3초 (5중첩, 최대 +25%). 10연속 킬 시 전체 공속 +50% 3초.\n[액티브] 15초 쿨 — 전투 찬가 6초: 전체 ATK +35%, 공속 +25%. 최강 유닛 ATK +100%."
         ), mergeResultId = 24),
-    UnitDef(id = 24, name = "세라핌", grade = UnitGrade.ANCIENT, family = UnitFamily.SUPPORT,
+    UnitDef(id = 24, name = "세라핌", grade = UnitGrade.MYTHIC, family = UnitFamily.SUPPORT,
         baseATK = 140, baseSpeed = 0.6f, range = 180f, iconRes = iconFor(24),
         abilityName = "부활의 빛", description = "천사의 가호.",
         uniqueAbility = UniqueAbility(
             name = "천사의 가호 / 부활의 빛 (Resurrection)",
             type = "패시브 + 액티브", cooldown = 25,
-            description = "[패시브] 15초마다 최약 아군에 신성 방패 (ATK 200% 흡수, 8초). 방패 중 디버프 면역.\n[액티브] 25초 쿨 — 성광 8초: 전체 ATK/공속 +30% + 쿨 5초 감소 + 초당 3% HP 재생. 영웅 미만 유닛 1체 8초간 영웅급 스탯."
+            description = "[패시브] 15초마다 최약 아군에 신성 방패 (ATK 200% 흡수, 8초). 방패 중 디버프 면역.\n[액티브] 25초 쿨 — 성광 8초: 전체 ATK/공속 +30% + 쿨 5초 감소 + 초당 3% HP 재생. 고대 미만 유닛 1체 8초간 고대급 스탯."
         ), mergeResultId = 29),
     UnitDef(id = 29, name = "아르카나", grade = UnitGrade.MYTHIC, family = UnitFamily.SUPPORT,
         baseATK = 250, baseSpeed = 0.7f, range = 200f, iconRes = iconFor(24),
@@ -309,7 +307,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 30,
             description = "[패시브] 계열별 버프: 화염 범위+20%, 냉기 빙결+1초, 독 DoT+20%, 번개 연쇄+2, 보조 효과+20%. 아군 액티브 시 자신 쿨 10% 감소.\n[액티브] 30초 쿨 — 조율 10초: 전체 ATK +50%, 쿨 2배속, 디버프 50% 강화, 피해의 2% 회복. 종료 시 10% 총피해 폭발."
         ), mergeResultId = 34),
-    UnitDef(id = 34, name = "가이아", grade = UnitGrade.IMMORTAL, family = UnitFamily.SUPPORT,
+    UnitDef(id = 34, name = "가이아", grade = UnitGrade.MYTHIC, family = UnitFamily.SUPPORT,
         baseATK = 400, baseSpeed = 0.8f, range = 250f, iconRes = iconFor(24),
         abilityName = "창세의 빛", description = "세계의 의지. 존재만으로 모든 것이 강해진다.",
         uniqueAbility = UniqueAbility(
@@ -341,7 +339,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 14,
             description = "[패시브] 범위 내 아군 이속/공속 +15%. 적 투사체 20% 확률 빗나감.\n[액티브] 14초 쿨 — 폭풍의 눈 6초: 범위 내 적 ATK 200% + 지속 넉백 + 아군 회피 +30%."
         ), mergeResultId = 39),
-    UnitDef(id = 39, name = "하늘군주", grade = UnitGrade.ANCIENT, family = UnitFamily.WIND,
+    UnitDef(id = 39, name = "하늘군주", grade = UnitGrade.MYTHIC, family = UnitFamily.WIND,
         baseATK = 270, baseSpeed = 1.5f, range = 220f, iconRes = iconFor(39),
         abilityName = "진공의 지배", description = "하늘을 지배하는 바람의 왕.",
         uniqueAbility = UniqueAbility(
@@ -357,7 +355,7 @@ val UNIT_DEFS: List<UnitDef> = listOf(
             type = "패시브 + 액티브", cooldown = 28,
             description = "[패시브] 회피 30%. 3회 공격마다 분신 공격 (ATK 60%). 액티브 후 5초간 공속 2배.\n[액티브] 28초 쿨 — 차원 절단: 전장 관통 ATK 400%. 적 버프 제거 + 3초 침묵. 분신 3체 5초 소환 (ATK 40%)."
         ), mergeResultId = 41),
-    UnitDef(id = 41, name = "바유", grade = UnitGrade.IMMORTAL, family = UnitFamily.WIND,
+    UnitDef(id = 41, name = "바유", grade = UnitGrade.MYTHIC, family = UnitFamily.WIND,
         baseATK = 720, baseSpeed = 1.8f, range = 250f, iconRes = iconFor(39),
         abilityName = "만물의 숨결", description = "바람의 신. 만물의 숨결을 지배한다.",
         uniqueAbility = UniqueAbility(

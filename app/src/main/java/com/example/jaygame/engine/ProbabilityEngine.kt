@@ -28,7 +28,7 @@ class DefaultProbabilityEngine(
         UnitGrade.RARE to 25,
         UnitGrade.HERO to 12,
         UnitGrade.LEGEND to 3,
-        // ANCIENT, MYTHIC, IMMORTAL은 조합으로만 획득 — 소환 불가
+        // MYTHIC은 레시피로만 획득 — 소환 불가
     )
 
     override fun rollUnit(availableUnits: List<UnitSpec>): UnitSpec {

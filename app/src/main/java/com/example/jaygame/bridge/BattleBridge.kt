@@ -28,7 +28,7 @@ data class BattleState(
     val maxEnemyCount: Int = 100,
     val isBossRound: Boolean = false,
     val waveTimeRemaining: Float = 0f,
-    val maxUnitSlots: Int = 50,
+    val maxUnitSlots: Int = 18,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -83,7 +83,7 @@ data class ProjectileData(
     val dstYs: FloatArray = FloatArray(0),
     val types: IntArray = IntArray(0),  // 0=arrow, 1=fire, 2=ice, 3=poison, 4=lightning
     val families: IntArray = IntArray(0),  // UnitFamily ordinal (0-5)
-    val grades: IntArray = IntArray(0),    // UnitGrade ordinal (0-6)
+    val grades: IntArray = IntArray(0),    // UnitGrade ordinal (0-4)
     val count: Int = 0,
     val frameId: Long = 0L,
 ) {
@@ -158,11 +158,11 @@ data class BattleResultData(
 )
 
 /**
- * 그리드 타일 상태 (6x5 = 30타일)
+ * 그리드 타일 상태 (18 slots, 3×6 grid)
  */
 data class GridTileState(
     @Deprecated("Use blueprintId instead") val unitDefId: Int = -1,    // -1 = empty
-    val grade: Int = -1,        // 0=Common, 1=Uncommon, 2=Rare, 3=Epic, 4=Legend, 5=Hero, 6=Immortal
+    val grade: Int = -1,        // 0=Common, 1=Rare, 2=Hero, 3=Legend, 4=Mythic
     @Deprecated("Use families instead") val family: Int = -1,       // 0=Fire, 1=Frost, 2=Poison, 3=Lightning, 4=Support, 5=Wind
     val canMerge: Boolean = false,
     val level: Int = 0,
@@ -176,24 +176,18 @@ data class GridTileState(
  * 스킬 VFX 타입 — 각 고유 스킬에 대응하는 시각 효과 종류.
  */
 enum class SkillVfxType {
-    // Fire family
+    // Fire family (Hero passive, Legend active, Mythic)
     LINGERING_FLAME, FIRESTORM_METEOR, VOLCANIC_ERUPTION,
-    PHOENIX_CARPET_BOMB, PHOENIX_REVIVE, SUPERNOVA,
-    // Frost family
+    // Frost family (Hero passive, Legend active, Mythic)
     FROST_NOVA, ABSOLUTE_ZERO, ICE_AGE_BLIZZARD,
-    ETERNAL_WINTER, TIME_STOP,
-    // Poison family
+    // Poison family (Hero passive, Legend active, Mythic)
     POISON_CLOUD, ACID_SPRAY, TOXIC_DOMAIN,
-    NIDHOGG_BREATH, UNIVERSAL_DECAY,
-    // Lightning family
+    // Lightning family (Hero passive, Legend active, Mythic)
     LIGHTNING_STRIKE, STATIC_FIELD, THUNDERSTORM,
-    MJOLNIR_THROW, DIVINE_PUNISHMENT,
-    // Support family
+    // Support family (Hero passive, Legend active, Mythic)
     HEAL_PULSE, WAR_SONG_AURA, DIVINE_SHIELD,
-    HARMONY_FIELD, GENESIS_LIGHT,
-    // Wind family
+    // Wind family (Hero passive, Legend active, Mythic)
     CYCLONE_PULL, EYE_OF_STORM, VACUUM_SLASH,
-    DIMENSIONAL_SLASH, BREATH_OF_ALL,
 }
 
 /**
@@ -260,6 +254,7 @@ object BattleBridge {
             val result: CompletableDeferred<com.example.jaygame.engine.GambleSystem.GambleResult?>,
         ) : BattleCommand()
         data class BuyUnit(val unitDefId: Int, val cost: Int) : BattleCommand()
+        data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
     }
 
@@ -342,8 +337,8 @@ object BattleBridge {
     private val _meleeHitEvents = MutableStateFlow<List<MeleeHitEvent>>(emptyList())
     val meleeHitEvents: StateFlow<List<MeleeHitEvent>> = _meleeHitEvents.asStateFlow()
 
-    /** 유닛 슬롯 상태 (최대 100) */
-    const val GRID_TOTAL = 100
+    /** 유닛 슬롯 상태 (18 slots, 3×6 grid) */
+    const val GRID_TOTAL = 18
 
     private val _gridState = MutableStateFlow(List(GRID_TOTAL) { GridTileState() })
     val gridState: StateFlow<List<GridTileState>> = _gridState.asStateFlow()
@@ -392,6 +387,7 @@ object BattleBridge {
         val damageType: DamageType = DamageType.PHYSICAL,
         val hp: Float = 0f,
         val maxHp: Float = 0f,
+        val upgradeLevel: Int = 0,
     )
     private val _unitPopup = MutableStateFlow<UnitPopupData?>(null)
     val unitPopup: StateFlow<UnitPopupData?> = _unitPopup.asStateFlow()
@@ -584,11 +580,12 @@ object BattleBridge {
         blueprintId: String = "", families: List<UnitFamily> = emptyList(),
         role: UnitRole = UnitRole.RANGED_DPS, attackRange: AttackRange = AttackRange.RANGED,
         damageType: DamageType = DamageType.PHYSICAL, hp: Float = 0f, maxHp: Float = 0f,
+        upgradeLevel: Int = 0,
     ) {
         _selectedTile.value = tileIndex
         _unitPopup.value = UnitPopupData(
             tileIndex, unitDefId, grade, family, canMerge, level,
-            blueprintId, families, role, attackRange, damageType, hp, maxHp,
+            blueprintId, families, role, attackRange, damageType, hp, maxHp, upgradeLevel,
         )
     }
 
@@ -872,14 +869,6 @@ object BattleBridge {
         commandQueue.add(BattleCommand.Relocate(tileIndex, normX, normY))
     }
 
-    /** In-battle upgrade costs: level 1->2 through 6->7 */
-    val UPGRADE_COSTS = intArrayOf(30, 60, 100, 150, 220, 300)
-
-    fun getUpgradeCost(currentLevel: Int): Int {
-        val idx = currentLevel - 1
-        return if (idx in UPGRADE_COSTS.indices) UPGRADE_COSTS[idx] else -1
-    }
-
     // ── Gamble ──────────────────────────────────────────────
 
     /**
@@ -899,6 +888,10 @@ object BattleBridge {
 
     fun requestBuyUnit(unitDefId: Int, cost: Int) {
         commandQueue.add(BattleCommand.BuyUnit(unitDefId, cost))
+    }
+
+    fun requestBuyBlueprint(blueprintId: String, cost: Int) {
+        commandQueue.add(BattleCommand.BuyBlueprint(blueprintId, cost))
     }
 
     // ── Battle Upgrades ─────────────────────────────────────

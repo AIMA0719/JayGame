@@ -130,7 +130,7 @@ class RecipeSystemTest {
         "id": "hidden_specific_result",
         "name": "Hidden Specific Result",
         "families": ["WIND"],
-        "grade": "ANCIENT",
+        "grade": "MYTHIC",
         "role": "RANGED_DPS",
         "attackRange": "RANGED",
         "damageType": "PHYSICAL",

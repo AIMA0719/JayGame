@@ -89,7 +89,6 @@ fun BattleScreen(
     var savedSpeed by remember { mutableFloatStateOf(1f) }
     var showBulkSellDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
-    var showUpgradeSheet by remember { mutableStateOf(false) }
     var showGambleDialog by remember { mutableStateOf(false) }
 
     // Boss vignette
@@ -187,7 +186,7 @@ fun BattleScreen(
             modifier = Modifier
                 .padding(horizontal = 25.dp)
                 .fillMaxWidth()
-                .aspectRatio(1f)
+                .aspectRatio(720f / 1280f)
                 .align(Alignment.Center)
                 .clipToBounds()
                 .onGloballyPositioned { coords ->
@@ -213,50 +212,52 @@ fun BattleScreen(
             // C7: Level up effect overlay
             LevelUpOverlay()
 
-            // C3: Skill flash overlay
-            val flashAlpha = skillFlashAlpha.value
-            if (flashAlpha > 0.01f) {
-                val flashColor = when (skillFlashFamily.value) {
-                    0 -> FlashFireColor
-                    1 -> FlashFrostColor
-                    2 -> FlashPoisonColor
-                    3 -> FlashLightningColor
-                    4 -> FlashSupportColor
-                    5 -> FlashWindColor
-                    else -> FlashDefaultColor
-                }
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawRect(
-                        color = flashColor.copy(alpha = flashAlpha),
-                        size = size,
-                    )
-                }
-            }
-
-            // Boss red vignette overlay
-            if (bossVignetteAlpha > 0.01f) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val vigAlpha = bossVignetteAlpha * bossPulse
-                    // Radial vignette: transparent center → red edges
-                    drawRect(
-                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Transparent,
-                                Color.Red.copy(alpha = vigAlpha * 0.5f),
-                                Color.Red.copy(alpha = vigAlpha),
-                            ),
-                            center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2),
-                            radius = size.width * 0.7f,
-                        ),
-                        size = size,
-                    )
-                }
-            }
         }
+
+        // ── 전체 화면 이펙트 (게임 캔버스 밖, 패딩/마진 무시) ──
 
         // Skill VFX — sibling of the clipped field so effects can extend beyond the field boundary
         SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
+
+        // C3: Skill flash overlay (화면 전체)
+        val flashAlpha = skillFlashAlpha.value
+        if (flashAlpha > 0.01f) {
+            val flashColor = when (skillFlashFamily.value) {
+                0 -> FlashFireColor
+                1 -> FlashFrostColor
+                2 -> FlashPoisonColor
+                3 -> FlashLightningColor
+                4 -> FlashSupportColor
+                5 -> FlashWindColor
+                else -> FlashDefaultColor
+            }
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(
+                    color = flashColor.copy(alpha = flashAlpha),
+                    size = size,
+                )
+            }
+        }
+
+        // Boss red vignette overlay (화면 전체)
+        if (bossVignetteAlpha > 0.01f) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val vigAlpha = bossVignetteAlpha * bossPulse
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Transparent,
+                            Color.Red.copy(alpha = vigAlpha * 0.5f),
+                            Color.Red.copy(alpha = vigAlpha),
+                        ),
+                        center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2),
+                        radius = size.maxDimension * 0.7f,
+                    ),
+                    size = size,
+                )
+            }
+        }
 
         // Layer 2: HUD overlays
         Column(
@@ -273,7 +274,6 @@ fun BattleScreen(
             Spacer(modifier = Modifier.weight(1f))
             BattleBottomHud(
                 onBuyClick = { showBuySheet = true },
-                onUpgradeClick = { showUpgradeSheet = true },
                 onBulkSellClick = { showBulkSellDialog = true },
                 onGambleClick = { showGambleDialog = true },
             )
@@ -291,13 +291,6 @@ fun BattleScreen(
                 .padding(top = 48.dp, start = 4.dp),
         )
 
-        // Unit card strip — shows summoned unit summary below synergy panel
-        UnitCardStrip(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .windowInsetsPadding(WindowInsets.displayCutout)
-                .padding(top = 160.dp, start = 4.dp),
-        )
 
         // Layer 3: Popups
         UnitDetailPopup()
@@ -310,9 +303,6 @@ fun BattleScreen(
         }
         if (showBuySheet) {
             BuyUnitSheet(onDismiss = { showBuySheet = false })
-        }
-        if (showUpgradeSheet) {
-            UpgradeSheet(onDismiss = { showUpgradeSheet = false })
         }
         if (showGambleDialog) {
             GambleDialog(onDismiss = { showGambleDialog = false })
@@ -369,7 +359,13 @@ fun BattleScreen(
         if (showQuitDialog) {
             QuitBattleDialog(
                 onConfirm = onGoHome,
-                onDismiss = { showQuitDialog = false },
+                onDismiss = {
+                    showQuitDialog = false
+                    // 포기 취소 시 일시정지 해제 — 메뉴 onDismiss를 거치지 않았으므로 여기서 속도 복원
+                    if (BattleBridge.battleSpeed.value == 0f) {
+                        BattleBridge.setBattleSpeed(savedSpeed)
+                    }
+                },
             )
         }
 

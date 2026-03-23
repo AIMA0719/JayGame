@@ -291,8 +291,9 @@ fun EnemyOverlay() {
             val hpRatio = if (i < sHp.size) sHp[i] else data.hpRatios[i]
             val isBoss = type == 99
 
-            val cellH = h / 5f
-            val spriteSize = if (isBoss) cellH * 0.6f else cellH * 0.4f
+            // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
+            val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
+            val spriteSize = if (isBoss) pathWidth * 0.85f else pathWidth * 0.6f
             val bitmap = if (isBoss) bossBitmap else enemyBitmaps[type % 5]
 
             // ── Walking Wobble ──

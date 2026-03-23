@@ -12,9 +12,13 @@ class ControllerCCBehavior(
 
     override fun update(unit: GameUnit, dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
         attackCooldown -= dt * unit.spdMultiplier
+        // Fixed position — tower defense style
+        unit.position.x = unit.homePosition.x
+        unit.position.y = unit.homePosition.y
+
         when (unit.state) {
             UnitState.IDLE -> {
-                val enemy = findEnemy(unit.position, 720f)
+                val enemy = findEnemy(unit.position, unit.range)
                 if (enemy != null) {
                     unit.currentTarget = enemy
                     unit.state = UnitState.ATTACKING
@@ -28,12 +32,17 @@ class ControllerCCBehavior(
                     unit.state = UnitState.IDLE
                     return
                 }
-                // Chase toward target if out of attack range
+                // Check if target is still in range
                 val distSq = unit.position.distanceSqTo(target.position)
                 if (distSq > unit.range * unit.range) {
                     unit.isAttacking = false
-                    val dir = target.position.minus(unit.position).normalized()
-                    unit.position = unit.position.plus(dir.times(unit.moveSpeed * dt))
+                    val newTarget = findEnemy(unit.position, unit.range)
+                    if (newTarget != null) {
+                        unit.currentTarget = newTarget
+                    } else {
+                        unit.currentTarget = null
+                        unit.state = UnitState.IDLE
+                    }
                 } else {
                     unit.isAttacking = true
                 }

@@ -16,26 +16,13 @@ class TankBlockerBehavior : UnitBehavior {
 
         when (unit.state) {
             UnitState.IDLE -> {
-                // Detect enemies across entire map
-                val enemy = findEnemy(unit.position, 720f)
-                if (enemy != null && blockedEnemies.size < unit.blockCount) {
-                    unit.state = UnitState.MOVING
-                    unit.currentTarget = enemy
-                }
-            }
-            UnitState.MOVING -> {
-                val target = unit.currentTarget
-                if (target == null || !target.alive) {
-                    unit.state = UnitState.IDLE
-                    return
-                }
-                // Move toward enemy
-                val dir = target.position.minus(unit.position).normalized()
-                unit.position = unit.position.plus(dir.times(unit.moveSpeed * dt))
-                // Close enough to block
-                val distSq = unit.position.distanceSqTo(target.position)
-                if (distSq < 30f * 30f) {
-                    blockEnemy(target, unit)
+                // Fixed position — tower defense style
+                unit.position.x = unit.homePosition.x
+                unit.position.y = unit.homePosition.y
+                // Detect enemies within range
+                val enemy = findEnemy(unit.position, unit.range)
+                if (enemy != null && blockedEnemies.size < unit.blockCount && enemy.blockedBy == null) {
+                    blockEnemy(enemy, unit)
                     unit.state = UnitState.BLOCKING
                 }
             }
@@ -104,7 +91,8 @@ class TankBlockerBehavior : UnitBehavior {
                     unit.hp = unit.maxHp
                     unit.alive = true
                     // Return to home position
-                    unit.position = unit.homePosition.copy()
+                    unit.position.x = unit.homePosition.x
+                unit.position.y = unit.homePosition.y
                     unit.state = UnitState.IDLE
                 }
             }

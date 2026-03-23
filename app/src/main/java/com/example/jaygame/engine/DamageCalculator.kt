@@ -91,17 +91,15 @@ object DamageCalculator {
         return timeLimit.coerceAtLeast(30f)
     }
 
-    private val LEVEL_MULTIPLIERS = floatArrayOf(1.0f, 1.5f, 2.2f, 3.2f, 4.5f, 6.0f, 8.0f)
+    private val LEVEL_MULTIPLIERS = floatArrayOf(1.0f, 1.5f, 2.5f, 4.0f, 6.0f)
 
     /** 등급(Grade) 기반 데미지 보정 — 레퍼런스: 랜덤디펜스 계열 (최고 등급 ~1.5x) */
     private val GRADE_MULTIPLIERS = floatArrayOf(
         1.0f,   // Common
         1.05f,  // Rare       (+5%)
         1.10f,  // Hero       (+10%)
-        1.18f,  // Legend     (+18%)
-        1.28f,  // Ancient    (+28%)
-        1.38f,  // Mythic     (+38%)
-        1.50f,  // Immortal   (+50%)
+        1.25f,  // Legend     (+25%)
+        1.50f,  // Mythic     (+50%)
     )
 
     fun gradeMultiplier(grade: Int): Float =

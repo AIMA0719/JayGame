@@ -35,23 +35,23 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
     }
 
     fun getWaveConfig(wave: Int): WaveConfig {
-        // Support infinite scaling for survival mode (wave > 39)
+        // 60-wave standard: base values scale up to 59, late-game (40+) gets extra scaling
         val w = wave
-        val capped = w.coerceAtMost(39) // base values cap at 39, then scale exponentially
+        val capped = w.coerceAtMost(59)
 
-        // Exponential scaling for survival (waves beyond 40)
-        val survivalScale = if (w > 39) 1f + (w - 39) * 0.15f else 1f
+        // Late-game scaling for waves 40+
+        val lateScale = if (w >= 40) 1f + (w - 39) * 0.12f else 1f
 
-        val baseHP = (60f + capped * 36f + (capped * capped * 0.6f)) * survivalScale
-        val baseSpeed = (60f + (capped * 1.5f).coerceAtMost(40f)) *
-            (if (w > 39) 1f + (w - 39) * 0.02f else 1f).coerceAtMost(1.5f)
-        val baseArmor = ((capped * 2f).coerceAtMost(60f) + if (w > 39) (w - 39) * 3f else 0f)
-        val baseMR = ((capped * 1.5f).coerceAtMost(40f) + if (w > 39) (w - 39) * 2f else 0f)
+        val baseHP = (50f + capped * 30f + (capped * capped * 0.5f)) * lateScale
+        val baseSpeed = (60f + (capped * 1.2f).coerceAtMost(50f)) *
+            (if (w >= 40) 1f + (w - 39) * 0.015f else 1f).coerceAtMost(1.4f)
+        val baseArmor = ((capped * 1.8f).coerceAtMost(80f) + if (w >= 40) (w - 39) * 2.5f else 0f)
+        val baseMR = ((capped * 1.3f).coerceAtMost(50f) + if (w >= 40) (w - 39) * 1.5f else 0f)
 
-        // Count scales more aggressively in later waves
-        val baseCount = 8 + (capped * 1.2f).toInt().coerceAtMost(25)
-        val survivalCount = if (w > 39) baseCount + (w - 39) / 3 else baseCount
-        val count = survivalCount.coerceAtMost(40)
+        // Count scales with wave progression
+        val baseCount = 8 + (capped * 1.0f).toInt().coerceAtMost(25)
+        val lateCount = if (w >= 40) baseCount + (w - 39) / 4 else baseCount
+        val count = lateCount.coerceAtMost(40)
 
         val isBoss = forceBoss || (w + 1) % 10 == 0
         val isMiniBoss = !forceBoss && (w + 1) % 5 == 0 && !isBoss
@@ -68,14 +68,14 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         }
 
         val bossMultHP = when {
-            isBoss && w >= 30 -> 15f   // Late-game bosses are tankier
+            isBoss && w >= 40 -> 15f   // Late-game bosses are tankier
             isBoss -> 10f
-            isMiniBoss && w >= 20 -> 7f
+            isMiniBoss && w >= 30 -> 7f
             isMiniBoss -> 5f
             else -> 1f
         }
         val bossMultArmor = when {
-            isBoss && w >= 30 -> 3f
+            isBoss && w >= 40 -> 3f
             isBoss -> 2f
             isMiniBoss -> 1.5f
             else -> 1f
@@ -83,9 +83,9 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
 
         // CC resistance scales with wave progression
         val baseCcResist = when {
-            isBoss -> 0.5f + (w / 100f).coerceAtMost(0.3f)
-            isMiniBoss -> 0.3f + (w / 100f).coerceAtMost(0.2f)
-            w >= 30 -> 0.1f + (w - 30) * 0.01f
+            isBoss -> 0.5f + (w / 120f).coerceAtMost(0.3f)
+            isMiniBoss -> 0.3f + (w / 120f).coerceAtMost(0.2f)
+            w >= 35 -> 0.1f + (w - 35) * 0.008f
             else -> 0f
         }
         val ccResistance = (baseCcResist + difficulty * 0.05f).coerceAtMost(0.9f)
@@ -93,9 +93,9 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         // Elite chance increases in later waves
         val eliteChance = when {
             isBoss || isMiniBoss -> 0f // bosses don't have elite variants
-            w >= 35 -> 0.3f
-            w >= 25 -> 0.2f
-            w >= 15 -> 0.1f
+            w >= 45 -> 0.3f
+            w >= 30 -> 0.2f
+            w >= 20 -> 0.1f
             else -> 0f
         }
 

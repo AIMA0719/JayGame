@@ -213,6 +213,9 @@ class GameRepository(context: Context) {
             // tutorial
             root.put("tutorialCompleted", data.tutorialCompleted)
 
+            // 행운석
+            root.put("luckyStones", data.luckyStones)
+
             // Compute checksum on the JSON without checksum field
             val payload = root.toString()
             val checksum = fnv1aHash(payload)
@@ -441,6 +444,9 @@ class GameRepository(context: Context) {
             // tutorial
             val tutorialCompleted = root.optBoolean("tutorialCompleted", false)
 
+            // 행운석
+            val luckyStones = root.optInt("luckyStones", 0)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -495,6 +501,7 @@ class GameRepository(context: Context) {
                 unlockedProfiles = unlockedProfiles,
                 lastOnlineTime = lastOnlineTime,
                 tutorialCompleted = tutorialCompleted,
+                luckyStones = luckyStones,
             )
         }
     }

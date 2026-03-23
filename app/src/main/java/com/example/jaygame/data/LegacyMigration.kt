@@ -4,9 +4,10 @@ package com.example.jaygame.data
  * Migrates legacy save data from List<UnitProgress> (indexed by Int) to Map<String, UnitProgress>
  * keyed by blueprintId.
  *
- * Legacy UNIT_DEFS had 42 indices (0-41) across 6 families x 7 grades.
+ * Legacy UNIT_DEFS had 42 indices (0-41) across 6 families x 7 grades (구 시스템).
  * New blueprints.json uses string IDs. Only units that exist in blueprints.json are migrated;
- * legacy high-tier units (MYTHIC/IMMORTAL) that have no blueprint counterpart are dropped.
+ * legacy high-tier units that have no blueprint counterpart are dropped.
+ * Note: 등급 체계가 5단계(일반→희귀→고대→전설→신화)로 변경됨.
  *
  * Mapping verified against:
  *   - UnitDefs.kt UNIT_DEFS (legacy index → family + grade)

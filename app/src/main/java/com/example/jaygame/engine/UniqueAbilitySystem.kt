@@ -4,8 +4,6 @@ package com.example.jaygame.engine
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.SkillEvent
 import com.example.jaygame.bridge.SkillVfxType
-import com.example.jaygame.data.UNIT_DEFS_MAP
-
 /**
  * Manages unique ability cooldowns, activation, and VFX emission
  * for hero-grade (2+) units.
@@ -31,6 +29,9 @@ object UniqueAbilitySystem {
         unit.uniqueAbilityMaxCd = 0f
         unit.uniqueAbilityCooldown = 0f
         unit.passiveCounter = 0
+        unit.mana = 0f
+        unit.manaPerHit = 0f
+        unit.hasUltimate = false
 
         // Only Hero (grade 2) and above have unique abilities
         if (unit.grade < 2) return
@@ -38,16 +39,25 @@ object UniqueAbilitySystem {
         val vfxType = resolveVfxType(unit.family, unit.grade)
         if (vfxType < 0) return
 
-        // Try legacy UnitDef for cooldown data first (canonical balance values)
-        val legacyDef = UNIT_DEFS_MAP[unit.unitDefId]
-        val legacyCooldown = legacyDef?.uniqueAbility?.cooldown?.toFloat()
-
-        // Fallback: infer cooldown from family+grade if legacy data not available
-        val cooldown = legacyCooldown ?: inferCooldownFromGrade(unit.family, unit.grade)
-
         unit.uniqueAbilityType = vfxType
-        unit.uniqueAbilityMaxCd = cooldown
-        unit.uniqueAbilityCooldown = cooldown * 0.5f // start half-ready
+
+        // 마나 시스템: 전설(3)/신화(4) = 마나 축적 궁극기, 고대(2) = 패시브
+        when {
+            unit.grade >= 3 -> {
+                // 전설/신화: 마나 기반 궁극기
+                unit.hasUltimate = true
+                unit.manaPerHit = if (unit.grade >= 4) 6f else 9f  // 신화: 느리게 충전, 강한 궁극기
+                unit.maxMana = 100f
+                unit.mana = 0f
+                unit.uniqueAbilityMaxCd = 0f // 쿨다운 대신 마나 사용
+                unit.uniqueAbilityCooldown = 0f
+            }
+            else -> {
+                // 고대: 패시브 (기존 방식 유지)
+                unit.uniqueAbilityMaxCd = 0f
+                unit.uniqueAbilityCooldown = 0f
+            }
+        }
     }
 
     /**
@@ -56,29 +66,8 @@ object UniqueAbilitySystem {
      * Legend+ = active abilities with longer cooldowns for stronger (higher-grade) skills.
      * Values are modeled after legacy UnitDef cooldowns in UNIT_DEFS.
      */
-    // Pre-allocated cooldown tables per family: [Legend, Ancient, Mythic, Immortal]
-    // Values modeled after legacy UnitDef cooldowns in UNIT_DEFS.
-    private val COOLDOWNS = arrayOf(
-        floatArrayOf(12f, 20f, 25f, 45f),   // 0: Fire
-        floatArrayOf(15f, 22f, 30f, 45f),   // 1: Frost
-        floatArrayOf(10f, 15f, 20f, 35f),   // 2: Poison
-        floatArrayOf(14f, 18f, 25f, 40f),   // 3: Lightning
-        floatArrayOf(15f, 20f, 25f, 40f),   // 4: Support
-        floatArrayOf(10f, 15f, 20f, 35f),   // 5: Wind
-    )
-    private val COOLDOWNS_DEFAULT = floatArrayOf(12f, 18f, 25f, 40f)
-
-    private fun inferCooldownFromGrade(family: Int, grade: Int): Float {
-        if (grade <= 2) return 0f // Hero: passive only
-        val table = COOLDOWNS.getOrElse(family) { COOLDOWNS_DEFAULT }
-        return table[(grade - 3).coerceIn(0, table.size - 1)]
-    }
-
     // Reference to engine zone pool — set by BattleEngine
     @Volatile var zonePool: ObjectPool<ZoneEffect>? = null
-
-    /** 유물 쿨다운 감소 (0.0~1.0) */
-    @Volatile var cooldownReduction: Float = 0f
 
     /**
      * Update unique abilities for all active units.
@@ -89,23 +78,19 @@ object UniqueAbilitySystem {
             if (!unit.alive || unit.uniqueAbilityType < 0) continue
             if (unit.grade < 2) continue // only hero+ have unique abilities
 
-            // Tick cooldown
-            if (unit.uniqueAbilityCooldown > 0f) {
-                unit.uniqueAbilityCooldown -= dt
-            }
-
-            // Passive triggers on attack
+            // 고대(2): 패시브 triggers on attack
             if (unit.isAttacking && unit.currentTarget?.alive == true) {
                 handlePassive(unit, dt, enemies)
             }
 
-            // Active ability trigger
-            if (unit.uniqueAbilityMaxCd > 0f && unit.uniqueAbilityCooldown <= 0f) {
-                if (enemies.any { it.alive }) {
+            // 마나 기반 궁극기 발동 (전설/신화)
+            if (unit.hasUltimate && unit.mana >= unit.maxMana) {
+                if (enemies.isNotEmpty()) {
                     activateAbility(unit, enemies)
-                    unit.uniqueAbilityCooldown = unit.uniqueAbilityMaxCd * (1f - cooldownReduction.coerceIn(0f, 0.8f))
+                    unit.mana = 0f  // 마나 리셋
                 }
             }
+
         }
     }
 
@@ -222,7 +207,7 @@ object UniqueAbilitySystem {
         emitSecondaryFamilyActive(unit, enemies)
 
         // Find best target position (densest enemies or strongest)
-        val targetEnemy = enemies.filter { it.alive }.maxByOrNull { it.maxHp } ?: return
+        val targetEnemy = enemies.maxByOrNull { it.maxHp } ?: return
         val tx = targetEnemy.position.x / W
         val ty = targetEnemy.position.y / H
 
@@ -256,26 +241,6 @@ object UniqueAbilitySystem {
                     )
                 }
             }
-            // N4: Phoenix — Carpet Bomb
-            SkillVfxType.PHOENIX_CARPET_BOMB -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 6f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 1.5f)
-                }
-            }
-            // N5-N6: Ra — Supernova
-            SkillVfxType.SUPERNOVA -> {
-                emitVfx(vfx, nx, ny, 0.5f, unit, 3f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 10f)
-                    if (e.alive && e.hp < e.maxHp * 0.3f) e.hp = 0f // execute
-                }
-            }
-
             // ── Frost ──
             // O1: Frost Nova
             SkillVfxType.FROST_NOVA -> {
@@ -313,25 +278,6 @@ object UniqueAbilitySystem {
                     )
                 }
             }
-            // O4: Yuki — Eternal Winter
-            SkillVfxType.ETERNAL_WINTER -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 4f)
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.buffs.addBuff(BuffType.Slow, 0.8f, 4f)
-                    e.takeDamage(e.maxHp * 0.2f)
-                }
-            }
-            // O5: Chronos — Time Stop
-            SkillVfxType.TIME_STOP -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 5f)
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.buffs.addBuff(BuffType.Slow, 0.8f, 5f) // near-frozen
-                    if (e.hp < e.maxHp * 0.25f) e.hp = 0f // execute
-                }
-            }
-
             // ── Poison ──
             // P1: Plague — Poison Cloud
             SkillVfxType.POISON_CLOUD -> {
@@ -377,34 +323,6 @@ object UniqueAbilitySystem {
                     )
                 }
             }
-            // P4: Nidhogg — Poison Breath: massive cone
-            SkillVfxType.NIDHOGG_BREATH -> {
-                emitVfx(vfx, tx, ty, 0.2f, unit, 6f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 4f)
-                    e.buffs.addBuff(BuffType.DoT, atk * 0.3f, 6f)
-                    e.buffs.addBuff(BuffType.Slow, 0.5f, 4f)
-                    if (e.hp < e.maxHp * 0.2f) e.hp = 0f
-                }
-            }
-            // P5: Apocalypse — Universal Decay
-            SkillVfxType.UNIVERSAL_DECAY -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 15f)
-                val zone = zonePool?.acquire()
-                if (zone != null) {
-                    zone.init(
-                        pos = com.example.jaygame.engine.math.Vec2(640f, 360f),
-                        radius = 400f, duration = 15f,
-                        tickInterval = 1f,
-                        tickDamage = unit.effectiveATK() * 0.5f,
-                        slowPercent = 0.3f,
-                        family = 2, grade = unit.grade,
-                    )
-                }
-            }
-
             // ── Lightning ──
             // Q1: Thunder — Lightning Strike
             SkillVfxType.LIGHTNING_STRIKE -> {
@@ -444,28 +362,6 @@ object UniqueAbilitySystem {
                     )
                 }
             }
-            // Q4: Thor — Mjolnir Throw: massive single + AoE
-            SkillVfxType.MJOLNIR_THROW -> {
-                emitVfx(vfx, tx, ty, 0.4f, unit, 2f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 3.5f)
-                    e.buffs.addBuff(BuffType.Slow, 0.8f, 2f)
-                }
-            }
-            // Q5: Zeus — Divine Punishment
-            SkillVfxType.DIVINE_PUNISHMENT -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 3f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 6f)
-                    e.buffs.addBuff(BuffType.Slow, 0.8f, 3f)
-                    if (e.hp < e.maxHp * 0.1f) e.hp = 0f
-                }
-            }
-
             // ── Support ──
             // R1: Oracle — Heal Pulse
             SkillVfxType.HEAL_PULSE -> {
@@ -479,15 +375,6 @@ object UniqueAbilitySystem {
             SkillVfxType.DIVINE_SHIELD -> {
                 emitVfx(vfx, nx, ny, 0.15f, unit, 8f)
             }
-            // R4: Arcana — Harmony Field
-            SkillVfxType.HARMONY_FIELD -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 10f)
-            }
-            // R5: Gaia — Genesis Light
-            SkillVfxType.GENESIS_LIGHT -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 15f)
-            }
-
             // ── Wind ──
             // S1: Cyclone — Pull & damage
             SkillVfxType.CYCLONE_PULL -> {
@@ -529,27 +416,6 @@ object UniqueAbilitySystem {
                     e.buffs.addBuff(BuffType.Slow, 0.3f, 3f) // silence as slow
                 }
             }
-            // S4: Sylph — Dimensional Slash
-            SkillVfxType.DIMENSIONAL_SLASH -> {
-                emitVfx(vfx, tx, ty, 0.3f, unit, 2f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 4f)
-                    e.buffs.addBuff(BuffType.Slow, 0.5f, 3f)
-                }
-            }
-            // S5: Vayu — Breath of All
-            SkillVfxType.BREATH_OF_ALL -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.5f, unit, 10f)
-                val atk = unit.effectiveATK()
-                for (e in enemies) {
-                    if (!e.alive) continue
-                    e.takeDamage(atk * 7f)
-                    e.buffs.addBuff(BuffType.Slow, 0.8f, 3f)
-                }
-            }
-
             else -> {}
         }
     }
@@ -569,7 +435,7 @@ object UniqueAbilitySystem {
 
     /**
      * Map (family, grade) to VfxType ordinal.
-     * Grade 2=Hero, 3=Legend, 4=Ancient, 5=Mythic, 6=Immortal
+     * Grade 2=Hero, 3=Legend, 4=Mythic
      */
     private fun resolveVfxType(family: Int, grade: Int): Int {
         return resolveVfxTypeEnum(family, grade)?.ordinal ?: -1
@@ -605,91 +471,77 @@ object UniqueAbilitySystem {
         val ny = unit.position.y / H
 
         // Find target position (same logic as primary)
-        val targetEnemy = enemies.filter { it.alive }.maxByOrNull { e ->
-            enemies.count { o -> o.alive && o.position.distanceSqTo(e.position) < 10000f }
+        val targetEnemy = enemies.maxByOrNull { e ->
+            enemies.count { o -> o.position.distanceSqTo(e.position) < 10000f }
         } ?: return
         val tx = targetEnemy.position.x / W
         val ty = targetEnemy.position.y / H
 
         // Emit secondary VFX at 80% size of what the primary would use, half duration
         val baseRadius = when {
-            unit.grade >= 6 -> 0.35f
-            unit.grade >= 5 -> 0.20f
-            unit.grade >= 4 -> 0.12f
+            unit.grade >= 4 -> 0.25f   // Mythic
+            unit.grade >= 3 -> 0.12f   // Legend
             else -> 0.08f
         }
         val baseDuration = when {
-            unit.grade >= 6 -> 2.5f
-            unit.grade >= 5 -> 2f
-            unit.grade >= 4 -> 1.5f
+            unit.grade >= 4 -> 2.5f    // Mythic
+            unit.grade >= 3 -> 1.5f    // Legend
             else -> 1f
         }
         emitVfx(secondaryVfx, tx, ty, baseRadius, unit, baseDuration)
     }
 
     private fun resolveVfxTypeEnum(family: Int, grade: Int): SkillVfxType? {
-        val gradeOffset = grade - 2 // 0=Hero, 1=Legend, 2=Ancient, 3=Mythic, 4=Immortal
+        val gradeOffset = grade - 2 // 0=Hero, 1=Legend, 2=Mythic
         if (gradeOffset < 0) return null
 
         return when (family) {
-            0 -> { // Fire: LINGERING_FLAME(0), FIRESTORM_METEOR(1), VOLCANIC_ERUPTION(2), PHOENIX_CARPET_BOMB(3)/PHOENIX_REVIVE(3), SUPERNOVA(4)
+            0 -> { // Fire: LINGERING_FLAME(Hero), FIRESTORM_METEOR(Legend), VOLCANIC_ERUPTION(Mythic)
                 when (gradeOffset) {
                     0 -> SkillVfxType.LINGERING_FLAME
                     1 -> SkillVfxType.FIRESTORM_METEOR
                     2 -> SkillVfxType.VOLCANIC_ERUPTION
-                    3 -> SkillVfxType.PHOENIX_CARPET_BOMB
-                    4 -> SkillVfxType.SUPERNOVA
-                    else -> null
+                    else -> SkillVfxType.LINGERING_FLAME
                 }
             }
-            1 -> { // Frost
+            1 -> { // Frost: FROST_NOVA(Hero), ABSOLUTE_ZERO(Legend), ICE_AGE_BLIZZARD(Mythic)
                 when (gradeOffset) {
                     0 -> SkillVfxType.FROST_NOVA
                     1 -> SkillVfxType.ABSOLUTE_ZERO
                     2 -> SkillVfxType.ICE_AGE_BLIZZARD
-                    3 -> SkillVfxType.ETERNAL_WINTER
-                    4 -> SkillVfxType.TIME_STOP
-                    else -> null
+                    else -> SkillVfxType.FROST_NOVA
                 }
             }
-            2 -> { // Poison
+            2 -> { // Poison: POISON_CLOUD(Hero), ACID_SPRAY(Legend), TOXIC_DOMAIN(Mythic)
                 when (gradeOffset) {
                     0 -> SkillVfxType.POISON_CLOUD
                     1 -> SkillVfxType.ACID_SPRAY
                     2 -> SkillVfxType.TOXIC_DOMAIN
-                    3 -> SkillVfxType.NIDHOGG_BREATH
-                    4 -> SkillVfxType.UNIVERSAL_DECAY
-                    else -> null
+                    else -> SkillVfxType.POISON_CLOUD
                 }
             }
-            3 -> { // Lightning
+            3 -> { // Lightning: LIGHTNING_STRIKE(Hero), STATIC_FIELD(Legend), THUNDERSTORM(Mythic)
                 when (gradeOffset) {
                     0 -> SkillVfxType.LIGHTNING_STRIKE
                     1 -> SkillVfxType.STATIC_FIELD
                     2 -> SkillVfxType.THUNDERSTORM
-                    3 -> SkillVfxType.MJOLNIR_THROW
-                    4 -> SkillVfxType.DIVINE_PUNISHMENT
-                    else -> null
+                    else -> SkillVfxType.LIGHTNING_STRIKE
                 }
             }
-            4 -> { // Support
+            4 -> { // Support: HEAL_PULSE(Hero), WAR_SONG_AURA(Legend), DIVINE_SHIELD(Mythic)
                 when (gradeOffset) {
                     0 -> SkillVfxType.HEAL_PULSE
                     1 -> SkillVfxType.WAR_SONG_AURA
                     2 -> SkillVfxType.DIVINE_SHIELD
-                    3 -> SkillVfxType.HARMONY_FIELD
-                    4 -> SkillVfxType.GENESIS_LIGHT
-                    else -> null
+                    else -> SkillVfxType.HEAL_PULSE
                 }
             }
-            5 -> { // Wind
+            5 -> { // Wind: CYCLONE_PULL(Hero), EYE_OF_STORM(Legend), VACUUM_SLASH(Mythic)
                 when (gradeOffset) {
                     0 -> SkillVfxType.CYCLONE_PULL
                     1 -> SkillVfxType.EYE_OF_STORM
                     2 -> SkillVfxType.VACUUM_SLASH
-                    3 -> SkillVfxType.DIMENSIONAL_SLASH
-                    4 -> SkillVfxType.BREATH_OF_ALL
-                    else -> null
+                    else -> SkillVfxType.CYCLONE_PULL
                 }
             }
             else -> null

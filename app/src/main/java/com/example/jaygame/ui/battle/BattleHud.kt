@@ -834,7 +834,6 @@ private fun DetailStatItem(label: String, value: String, color: Color) {
 @Composable
 fun BattleBottomHud(
     onBuyClick: () -> Unit = {},
-    onUpgradeClick: () -> Unit = {},
     onBulkSellClick: () -> Unit = {},
     onGambleClick: () -> Unit = {},
 ) {
@@ -1011,24 +1010,7 @@ fun BattleBottomHud(
                 )
             }
 
-            // Bottom row: 강화 (sword icon)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Spacer(modifier = Modifier.weight(1f))
-                WarmButton(
-                    topText = "\u2694\uFE0F",
-                    bottomText = "\uAC15\uD654",
-                    enabled = true,
-                    gradientTop = BlueSky, gradientBot = BlueSkyDark,
-                    borderColor = Color(0xFF6AB0FF),
-                    onClick = onUpgradeClick,
-                    modifier = Modifier.weight(1.6f),
-                    buttonHeight = 44.dp,
-                )
-                Spacer(modifier = Modifier.weight(1f))
-            }
+            // 강화 버튼 제거됨 — 개별 유닛 탭 → UnitDetailPopup에서 강화
         }
 
         Spacer(modifier = Modifier.height(4.dp))

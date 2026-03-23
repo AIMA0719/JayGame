@@ -3,7 +3,7 @@ package com.example.jaygame.data
 enum class RelicGrade(val label: String, val colorHex: Long, val maxLevel: Int, val dropWeight: Int) {
     COMMON("일반", 0xFF9E9E9E, 5, 50),
     RARE("희귀", 0xFF42A5F5, 7, 30),
-    HERO("영웅", 0xFFAB47BC, 10, 15),
+    ANCIENT("고대", 0xFFAB47BC, 10, 15),
     LEGEND("전설", 0xFFFFCA28, 15, 4),
     MYTHIC("신화", 0xFFEF5350, 20, 1);
 }
@@ -38,7 +38,7 @@ val ALL_RELICS: List<RelicDef> = listOf(
         description = "크리티컬 확률 +{lv}×2%", effectPerLevel = 2f, maxEffectCap = 30f),
     RelicDef(id = 6, name = "관통의 창", type = RelicType.COMBAT, minGrade = RelicGrade.RARE,
         description = "적 방어력 무시 +{lv}×3%", effectPerLevel = 3f, maxEffectCap = 60f),
-    RelicDef(id = 7, name = "마력의 구슬", type = RelicType.COMBAT, minGrade = RelicGrade.HERO,
+    RelicDef(id = 7, name = "마력의 구슬", type = RelicType.COMBAT, minGrade = RelicGrade.ANCIENT,
         description = "마법 피해 +{lv}×6%", effectPerLevel = 6f),
 
     // ===== 유틸리티 (Utility) =====
@@ -46,7 +46,7 @@ val ALL_RELICS: List<RelicDef> = listOf(
         description = "소환 비용 -{lv}×3%", effectPerLevel = 3f, maxEffectCap = 50f),
     RelicDef(id = 9, name = "합성의 돌", type = RelicType.UTILITY, minGrade = RelicGrade.RARE,
         description = "럭키 합성 확률 +{lv}×1%", effectPerLevel = 1f, maxEffectCap = 15f),
-    RelicDef(id = 10, name = "시간의 모래", type = RelicType.UTILITY, minGrade = RelicGrade.HERO,
+    RelicDef(id = 10, name = "시간의 모래", type = RelicType.UTILITY, minGrade = RelicGrade.ANCIENT,
         description = "쿨다운 감소 +{lv}×2%", effectPerLevel = 2f, maxEffectCap = 40f),
     RelicDef(id = 11, name = "생명의 나무", type = RelicType.UTILITY, minGrade = RelicGrade.LEGEND,
         description = "웨이브 시작 SP +{lv}×5", effectPerLevel = 5f),

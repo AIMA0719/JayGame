@@ -525,7 +525,7 @@ private fun SettingsGameplay(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("자동 소환 & 조합", fontSize = 14.sp, color = LightText)
-                    Text("SP 충분 시 자동 소환 + 조합", fontSize = 11.sp, color = SubText)
+                    Text("코인 충분 시 자동 소환 + 조합", fontSize = 11.sp, color = SubText)
                 }
                 NeonButton(
                     text = if (data.autoSummon) "ON" else "OFF",
@@ -890,17 +890,22 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 icon = "\u2694\uFE0F",
                 title = "전투는 어떻게 진행되나요?",
             ) {
-                FaqBullet("유닛을 소환(SP 소모)하여 밀려오는 적을 처치합니다")
+                FaqBullet("유닛을 소환(코인 소모)하여 밀려오는 적을 처치합니다")
+                FaqBullet("3×6 그리드(18슬롯)에 유닛을 배치합니다")
                 FaqBullet("적이 필드에 100마리 이상 쌓이면 패배합니다")
                 FaqBullet("10웨이브마다 보스가 등장하며, 시간 내 처치하지 못하면 패배합니다")
-                FaqBullet("SP는 초당 2씩 자동 회복되며, 웨이브 클리어 시 추가 SP를 얻습니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("코인 획득")
+                FaqBullet("적 처치: 2코인 / 엘리트 처치: 5코인")
+                FaqBullet("웨이브 클리어: 20 + 웨이브×3 코인")
+                FaqBullet("유닛 판매: 5 + 등급×5 코인")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("난이도")
-                FaqKeyValue("초보", "적 1.0배 · 유닛 50칸")
-                FaqKeyValue("숙련자", "적 1.5배 · 유닛 40칸")
-                FaqKeyValue("고인물", "적 2.2배 · 유닛 30칸")
-                FaqKeyValue("썩은물", "적 3.0배 · 유닛 24칸")
-                FaqKeyValue("챌린저", "적 4.0배 · 유닛 20칸")
+                FaqKeyValue("초보", "적 1.0배")
+                FaqKeyValue("숙련자", "적 1.5배")
+                FaqKeyValue("고인물", "적 2.2배")
+                FaqKeyValue("썩은물", "적 3.0배")
+                FaqKeyValue("챌린저", "적 4.0배")
             }
 
             // ── 소환 & 등급 ──
@@ -911,7 +916,7 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 icon = "\u2728",
                 title = "유닛 소환은 어떻게 되나요?",
             ) {
-                FaqBullet("전투 중 SP 40을 소모하여 유닛을 소환합니다")
+                FaqBullet("코인을 소모하여 유닛을 소환합니다 (시작 10, 소환마다 +2, 최대 60)")
                 FaqBullet("유물 '소환사의 오브'로 비용을 최대 50%까지 줄일 수 있습니다")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("소환 확률")
@@ -919,7 +924,7 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqKeyValue("희귀", "25%")
                 FaqKeyValue("영웅", "12%")
                 FaqKeyValue("전설", "3%")
-                FaqBullet("고대·신화·불멸 등급은 합성으로만 획득 가능합니다")
+                FaqBullet("신화 등급은 레시피 조합으로만 획득 가능합니다")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("천장 시스템")
                 FaqBullet("30회 소환 시 영웅 확률 2배 (24%)")
@@ -934,24 +939,52 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 icon = "\uD83D\uDD2E",
                 title = "합성은 어떻게 하나요?",
             ) {
-                FaqBullet("같은 등급 + 같은 역할의 유닛 4개를 모으면 합성할 수 있습니다")
-                FaqBullet("합성 결과: 다음 등급의 랜덤 유닛 1개")
-                FaqBullet("불멸(최고) 등급은 더 이상 합성할 수 없습니다")
+                FaqBullet("같은 유닛을 드래그하여 한 슬롯에 중첩합니다 (최대 3개)")
+                FaqBullet("3개 중첩 시 자동 합성 → 상위 등급 유닛 1개")
+                FaqBullet("전설이 일반 합성 최상위 (신화는 레시피 전용)")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("행운 합성")
                 FaqBullet("5% 확률로 한 등급을 건너뜁니다 (예: 일반 → 영웅)")
                 FaqBullet("유물 '합성의 돌'로 최대 +15% 추가 확률")
                 Spacer(Modifier.height(4.dp))
-                FaqSubTitle("히든 조합")
-                FaqBullet("특정 유닛 조합으로 숨겨진 유닛을 만들 수 있습니다")
+                FaqSubTitle("신화 레시피")
+                FaqBullet("특정 영웅 유닛 조합으로 신화 유닛을 만들 수 있습니다")
+                FaqBullet("필드에 레시피 재료가 모이면 자동 감지됩니다")
                 FaqBullet("발견한 조합은 도감에 기록됩니다")
             }
 
-            // ── 시너지 ──
+            // ── 유닛 강화 ──
             FaqSection(
                 index = 3,
                 expanded = expandedSection == 3,
                 onToggle = { expandedSection = if (expandedSection == 3) -1 else 3 },
+                icon = "\u2B06\uFE0F",
+                title = "유닛 강화는 어떻게 하나요?",
+            ) {
+                FaqBullet("전투 중 유닛을 탭하면 코인(또는 행운석)으로 강화할 수 있습니다")
+                FaqBullet("강화당 기본 ATK의 50% 증가 (최대 Lv.15)")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("강화 비용 (등급별)")
+                FaqKeyValue("일반", "5코인 기본")
+                FaqKeyValue("희귀", "8코인 기본")
+                FaqKeyValue("영웅", "12코인 기본")
+                FaqKeyValue("전설", "18행운석 기본")
+                FaqKeyValue("신화", "25행운석 기본")
+                FaqBullet("레벨이 오를수록 비용이 30%씩 증가합니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("마일스톤 보너스")
+                FaqKeyValue("Lv.3", "ATK +10%")
+                FaqKeyValue("Lv.6", "ATK +15%")
+                FaqKeyValue("Lv.9", "공격속도 +10%")
+                FaqKeyValue("Lv.12", "ATK +15%")
+                FaqKeyValue("Lv.15", "ATK +10% + 공속 +10%")
+            }
+
+            // ── 시너지 ──
+            FaqSection(
+                index = 4,
+                expanded = expandedSection == 4,
+                onToggle = { expandedSection = if (expandedSection == 4) -1 else 4 },
                 icon = "\uD83D\uDD25",
                 title = "패밀리 시너지란?",
             ) {
@@ -969,9 +1002,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 유물 ──
             FaqSection(
-                index = 4,
-                expanded = expandedSection == 4,
-                onToggle = { expandedSection = if (expandedSection == 4) -1 else 4 },
+                index = 5,
+                expanded = expandedSection == 5,
+                onToggle = { expandedSection = if (expandedSection == 5) -1 else 5 },
                 icon = "\uD83D\uDC8E",
                 title = "유물은 어떻게 얻나요?",
             ) {
@@ -995,9 +1028,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 도감 ──
             FaqSection(
-                index = 5,
-                expanded = expandedSection == 5,
-                onToggle = { expandedSection = if (expandedSection == 5) -1 else 5 },
+                index = 6,
+                expanded = expandedSection == 6,
+                onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
                 icon = "\uD83D\uDCD6",
                 title = "도감은 무엇인가요?",
             ) {
@@ -1017,9 +1050,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 펫 ──
             FaqSection(
-                index = 6,
-                expanded = expandedSection == 6,
-                onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
+                index = 7,
+                expanded = expandedSection == 7,
+                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
                 icon = "\uD83D\uDC3E",
                 title = "펫은 어떻게 얻나요?",
             ) {
@@ -1043,9 +1076,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 던전 ──
             FaqSection(
-                index = 7,
-                expanded = expandedSection == 7,
-                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
+                index = 8,
+                expanded = expandedSection == 8,
+                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
                 icon = "\uD83C\uDFF0",
                 title = "던전은 어떻게 들어가나요?",
             ) {
@@ -1062,9 +1095,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 스태미나 ──
             FaqSection(
-                index = 8,
-                expanded = expandedSection == 8,
-                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
+                index = 9,
+                expanded = expandedSection == 9,
+                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
                 icon = "\u26A1",
                 title = "스태미나는 어떻게 충전되나요?",
             ) {
@@ -1082,9 +1115,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 오프라인 보상 ──
             FaqSection(
-                index = 9,
-                expanded = expandedSection == 9,
-                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
+                index = 10,
+                expanded = expandedSection == 10,
+                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
                 icon = "\uD83C\uDF19",
                 title = "오프라인 보상이 있나요?",
             ) {
@@ -1096,9 +1129,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 시즌패스 & 랭크 ──
             FaqSection(
-                index = 10,
-                expanded = expandedSection == 10,
-                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
+                index = 11,
+                expanded = expandedSection == 11,
+                onToggle = { expandedSection = if (expandedSection == 11) -1 else 11 },
                 icon = "\uD83C\uDFC6",
                 title = "시즌패스와 랭크는?",
             ) {

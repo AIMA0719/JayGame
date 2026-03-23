@@ -30,13 +30,10 @@ private data class GradeRow(
 )
 
 private val gradeRows = listOf(
-    GradeRow(UnitGrade.COMMON, "59%"),
+    GradeRow(UnitGrade.COMMON, "60%"),
     GradeRow(UnitGrade.RARE, "25%"),
     GradeRow(UnitGrade.HERO, "12%"),
     GradeRow(UnitGrade.LEGEND, "3%"),
-    GradeRow(UnitGrade.ANCIENT, "0.8%"),
-    GradeRow(UnitGrade.MYTHIC, "0.15%"),
-    GradeRow(UnitGrade.IMMORTAL, "0.05%"),
 )
 
 @Composable

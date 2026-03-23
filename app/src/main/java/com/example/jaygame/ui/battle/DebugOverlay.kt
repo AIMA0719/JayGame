@@ -19,9 +19,9 @@ private val DebugHomeMarkerColor = Color.Green
 private val DebugPathLineColor = Color.Yellow.copy(alpha = 0.7f)
 private val DebugGridBoundsColor = Color.White.copy(alpha = 0.5f)
 
-// Grid constants from Grid.kt (world coords 720x720)
+// Grid constants from Grid.kt (world coords 720x1280)
 private const val WORLD_W = 720f
-private const val WORLD_H = 720f
+private const val WORLD_H = 1280f
 
 @Composable
 fun DebugOverlay() {

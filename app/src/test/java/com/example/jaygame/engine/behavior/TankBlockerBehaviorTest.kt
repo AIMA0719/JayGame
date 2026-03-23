@@ -18,19 +18,12 @@ class TankBlockerBehaviorTest {
     }
 
     @Test
-    fun `tank moves to enemy and blocks`() {
-        // Place enemy within detection range (range * 2 = 200)
+    fun `tank detects enemy in range and blocks`() {
+        // Place enemy within unit's range (100f)
         val enemy = createTestEnemy(Vec2(25f, 0f))
         unit.blockCount = 1
 
-        // IDLE -> should find enemy and transition to MOVING
-        behavior.update(unit, 0.016f) { _, _ -> enemy }
-        assertEquals(UnitState.MOVING, unit.state)
-        assertSame(enemy, unit.currentTarget)
-
-        // MOVING -> enemy is within 30f, should block and go to BLOCKING
-        // Move unit close to enemy
-        unit.position = Vec2(20f, 0f)
+        // IDLE -> should find enemy in range and transition directly to BLOCKING
         behavior.update(unit, 0.016f) { _, _ -> enemy }
         assertEquals(UnitState.BLOCKING, unit.state)
         assertSame(unit, enemy.blockedBy)
@@ -131,18 +124,13 @@ class TankBlockerBehaviorTest {
 
         unit.blockCount = 2
 
-        // IDLE -> find boss -> MOVING
-        behavior.update(unit, 0.016f) { _, _ -> boss }
-        assertEquals(UnitState.MOVING, unit.state)
-
-        // Move unit close enough to block (within 30f)
-        unit.position = Vec2(4f, 0f)
+        // IDLE -> find boss in range -> directly BLOCKING (fixed position)
         behavior.update(unit, 0.016f) { _, _ -> boss }
         assertEquals(UnitState.BLOCKING, unit.state)
         assertNotNull(boss.blockedBy)
 
         // Accumulate time past 5 seconds using small steps to account for
-        // BLOCKING→ATTACKING→BLOCKING state transitions each update
+        // BLOCKING->ATTACKING->BLOCKING state transitions each update
         repeat(400) {
             behavior.update(unit, 0.016f) { _, _ -> null }
         }

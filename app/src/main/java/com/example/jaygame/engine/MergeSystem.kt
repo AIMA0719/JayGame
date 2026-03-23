@@ -4,85 +4,79 @@ package com.example.jaygame.engine
 import com.example.jaygame.engine.UnitGrade.Companion.nextGrade
 
 object MergeSystem {
-    private const val MERGE_COUNT = 4
     private const val LUCKY_CHANCE = 0.05f
 
-    /** 유물 행운 합성 보너스 (0.0~1.0 추가 확률) */
+    /** 유물 행운 합성 보너스 */
     @Volatile var luckyMergeBonus: Float = 0f
+
+    /** 테스트용 난수 오버라이드 (null이면 Math.random() 사용) */
+    @Volatile var randomOverride: (() -> Double)? = null
+
+    private fun nextRandom(): Double = randomOverride?.invoke() ?: Math.random()
 
     data class BlueprintMergeResult(
         val resultBlueprintId: String,
-        val consumedTiles: List<Int>,
         val isLucky: Boolean,
     )
 
     /**
-     * 같은 등급 4개 → 다음 등급 랜덤 유닛.
+     * 슬롯에 3개 동일 유닛이 쌓였을 때 합성 결과 결정.
+     * 다음 등급의 소환 가능 유닛 풀에서 랜덤 선택.
+     * LEGEND(전설) 유닛은 합성 불가 (MYTHIC은 레시피 전용).
+     *
+     * @param blueprintId 합성할 유닛의 블루프린트 ID
+     * @return 결과 블루프린트 ID + 럭키 여부, 합성 불가 시 null
      */
-    fun tryMergeBlueprint(
-        grid: Grid,
-        tileIndex: Int,
+    fun determineMergeResult(
+        blueprintId: String,
         blueprintRegistry: BlueprintRegistry,
     ): BlueprintMergeResult? {
-        val unit = grid.getUnit(tileIndex) ?: return null
-        if (unit.unitCategory == UnitCategory.SPECIAL) return null
+        val bp = blueprintRegistry.findById(blueprintId) ?: return null
+        val currentGrade = bp.grade
 
-        val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: return null
+        // LEGEND 이상은 일반 합성 불가 (MYTHIC은 레시피 전용)
+        if (currentGrade.ordinal >= UnitGrade.LEGEND.ordinal) return null
+
         val nextGrade = currentGrade.nextGrade() ?: return null
+        // nextGrade가 MYTHIC이면 합성 불가
+        if (nextGrade == UnitGrade.MYTHIC) return null
 
-        val candidates = grid.findMergeCandidatesByGrade(unit.grade)
-        if (candidates.size < MERGE_COUNT) return null
-
-        val consumed = if (tileIndex in candidates) {
-            listOf(tileIndex) + candidates.filter { it != tileIndex }.take(MERGE_COUNT - 1)
-        } else {
-            candidates.take(MERGE_COUNT)
-        }
-
-        // 다음 등급 블루프린트 중 랜덤 선택
-        val nextGradeBps = blueprintRegistry.findMergeableByGrade(nextGrade)
-        if (nextGradeBps.isEmpty()) return null
-
-        var resultBp = nextGradeBps.random()
-
-        // Lucky merge: 2단계 업그레이드
-        val isLucky = Math.random() < (LUCKY_CHANCE + luckyMergeBonus)
-        if (isLucky) {
+        // Lucky merge: 2단계 점프
+        val isLucky = nextRandom() < (LUCKY_CHANCE + luckyMergeBonus)
+        val targetGrade = if (isLucky) {
             val luckyGrade = nextGrade.nextGrade()
-            if (luckyGrade != null) {
-                val luckyBps = blueprintRegistry.findMergeableByGrade(luckyGrade)
-                if (luckyBps.isNotEmpty()) {
-                    resultBp = luckyBps.random()
-                }
-            }
+            // 럭키 등급이 없거나 MYTHIC이면 일반 등급으로 폴백
+            if (luckyGrade != null && luckyGrade != UnitGrade.MYTHIC) luckyGrade else nextGrade
+        } else {
+            nextGrade
         }
 
-        return BlueprintMergeResult(resultBp.id, consumed, isLucky)
+        // 해당 등급의 합성 가능 유닛 풀에서 랜덤 선택
+        val pool = blueprintRegistry.findMergeableByGrade(targetGrade)
+        if (pool.isEmpty()) return null
+
+        val selected = pool[(nextRandom() * pool.size).toInt().coerceIn(0, pool.size - 1)]
+        return BlueprintMergeResult(selected.id, isLucky && targetGrade != nextGrade)
     }
 
     /**
-     * 같은 등급 유닛이 4개 이상이고
-     * 다음 등급이 존재하는 그룹의 타일 인덱스를 반환.
+     * 합성 가능한 슬롯 찾기 (스택이 3인 슬롯).
      */
-    fun findMergeableTilesByBlueprint(
-        grid: Grid,
-        blueprintRegistry: BlueprintRegistry,
-    ): Set<Int> {
+    fun findMergeableSlots(grid: Grid, blueprintRegistry: BlueprintRegistry): Set<Int> {
         val mergeable = mutableSetOf<Int>()
-        val checked = mutableSetOf<Int>()
-
-        for (i in 0 until Grid.TOTAL) {
-            val unit = grid.getUnit(i) ?: continue
-            if (unit.grade in checked) continue
-            if (unit.unitCategory == UnitCategory.SPECIAL) continue
-            checked.add(unit.grade)
-
-            val currentGrade = UnitGrade.entries.getOrNull(unit.grade) ?: continue
-            if (currentGrade.nextGrade() == null) continue
-
-            val candidates = grid.findMergeCandidatesByGrade(unit.grade)
-            if (candidates.size >= MERGE_COUNT) {
-                mergeable.addAll(candidates)
+        for (i in 0 until Grid.SLOT_COUNT) {
+            if (grid.getStackCount(i) >= Grid.MAX_STACK) {
+                val unit = grid.getUnit(i) ?: continue
+                if (unit.unitCategory == UnitCategory.SPECIAL) continue
+                val bp = blueprintRegistry.findById(unit.blueprintId) ?: continue
+                // LEGEND 이상은 일반 합성 불가
+                if (bp.grade.ordinal >= UnitGrade.LEGEND.ordinal) continue
+                val nextGrade = bp.grade.nextGrade() ?: continue
+                if (nextGrade == UnitGrade.MYTHIC) continue
+                // 다음 등급 풀이 존재하는지 확인
+                if (blueprintRegistry.findMergeableByGrade(nextGrade).isNotEmpty()) {
+                    mergeable.add(i)
+                }
             }
         }
         return mergeable

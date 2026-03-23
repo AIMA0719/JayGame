@@ -2,45 +2,24 @@ package com.example.jaygame.engine.behavior
 
 import com.example.jaygame.engine.*
 import com.example.jaygame.engine.math.Vec2
-import kotlin.math.cos
-import kotlin.math.sin
 
 class RangedShooterBehavior(
     private val aoe: Boolean = false  // true for mage-type (area), false for archer-type (single)
 ) : UnitBehavior {
     private var attackCooldown: Float = 0f
-    private var wanderTarget: Vec2 = Vec2()
-    private var wanderTimer: Float = 0f
 
     override fun update(unit: GameUnit, dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
         attackCooldown -= dt * unit.spdMultiplier
+        // Fixed position — tower defense style
+        unit.position.x = unit.homePosition.x
+        unit.position.y = unit.homePosition.y
 
         when (unit.state) {
             UnitState.IDLE -> {
-                // Detect enemies across entire map, chase into attack range
-                val enemy = findEnemy(unit.position, 720f)
+                val enemy = findEnemy(unit.position, unit.range)
                 if (enemy != null) {
                     unit.currentTarget = enemy
                     unit.state = UnitState.ATTACKING
-                } else {
-                    // Wander near home position
-                    wanderTimer -= dt
-                    if (wanderTimer <= 0f) {
-                        val angle = Math.random().toFloat() * 6.283f
-                        val dist = 20f + Math.random().toFloat() * 30f
-                        wanderTarget = Vec2(
-                            unit.homePosition.x + cos(angle) * dist,
-                            unit.homePosition.y + sin(angle) * dist
-                        )
-                        wanderTimer = 1f + Math.random().toFloat() * 2f
-                    }
-                    // Move toward wander target
-                    val dir = wanderTarget - unit.position
-                    if (dir.lengthSq > 4f) {
-                        val norm = dir.normalized()
-                        val wanderSpeed = unit.moveSpeed * 0.3f
-                        unit.position = unit.position + norm * (wanderSpeed * dt)
-                    }
                 }
             }
             UnitState.ATTACKING -> {
@@ -51,12 +30,17 @@ class RangedShooterBehavior(
                     unit.state = UnitState.IDLE
                     return
                 }
-                // Chase toward target if out of attack range
+                // Check if target is still in range
                 val distSq = unit.position.distanceSqTo(target.position)
                 if (distSq > unit.range * unit.range) {
                     unit.isAttacking = false
-                    val dir = target.position.minus(unit.position).normalized()
-                    unit.position = unit.position.plus(dir.times(unit.moveSpeed * dt))
+                    val newTarget = findEnemy(unit.position, unit.range)
+                    if (newTarget != null) {
+                        unit.currentTarget = newTarget
+                    } else {
+                        unit.currentTarget = null
+                        unit.state = UnitState.IDLE
+                    }
                 } else {
                     unit.isAttacking = true
                 }
@@ -92,6 +76,5 @@ class RangedShooterBehavior(
 
     override fun reset() {
         attackCooldown = 0f
-        wanderTimer = 0f
     }
 }

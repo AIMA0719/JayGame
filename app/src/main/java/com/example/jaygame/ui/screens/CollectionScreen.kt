@@ -75,7 +75,7 @@ import com.example.jaygame.ui.components.BEHAVIOR_LABELS
 import com.example.jaygame.ui.components.FAMILY_ICONS
 import com.example.jaygame.ui.components.GameFilterChip
 import com.example.jaygame.ui.components.GradeBgCommon
-import com.example.jaygame.ui.components.GradeBgHero
+import com.example.jaygame.ui.components.GradeBgAncient
 import com.example.jaygame.ui.components.GradeBgRare
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.components.ROLE_LABELS
@@ -113,11 +113,16 @@ private val SheetBg = Color(0xFF1A1520)
 
 // Grade/chip colors, label maps, and family icons imported from UnitUiUtils
 
+// ── Grade background colors for Legend/Mythic (pre-allocated) ──
+private val GradeBgLegend = Color(0xFF4A3000)
+private val GradeBgMythic = Color(0xFF3A2800)
+
 private fun gradeBackgroundColor(grade: UnitGrade): Color = when (grade) {
     UnitGrade.COMMON -> GradeBgCommon
     UnitGrade.RARE -> GradeBgRare
-    UnitGrade.HERO -> GradeBgHero
-    else -> GradeBgCommon
+    UnitGrade.HERO -> GradeBgAncient
+    UnitGrade.LEGEND -> GradeBgLegend
+    UnitGrade.MYTHIC -> GradeBgMythic
 }
 
 
@@ -168,7 +173,7 @@ fun CollectionScreen(
                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } },
                 text = {
                     Text(
-                        text = "영웅 ($unitCount)",
+                        text = "고대 ($unitCount)",
                         fontSize = 14.sp,
                         color = if (selectedTab == 0) Gold else SubText,
                     )
@@ -835,13 +840,13 @@ private fun CollectionBlueprintDetailSheet(
             }
 
             // ── Merge info (inline) ──
-            if (blueprint.mergeResultId != null) {
-                val nextBp = remember(blueprint.mergeResultId) {
-                    BlueprintRegistry.instance.findById(blueprint.mergeResultId)
+            if (blueprint.grade.ordinal < UnitGrade.LEGEND.ordinal) {
+                val nextGradeLabel = remember(blueprint.grade) {
+                    UnitGrade.entries.getOrNull(blueprint.grade.ordinal + 1)?.label
                 }
-                if (nextBp != null) {
+                if (nextGradeLabel != null) {
                     Text(
-                        text = "\u2728 조합: x3 \u2192 ${nextBp.grade.label} ${nextBp.name}",
+                        text = "\u2728 조합: x3 \u2192 랜덤 $nextGradeLabel 유닛",
                         color = Gold,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,

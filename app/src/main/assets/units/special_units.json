@@ -6,7 +6,7 @@
       "FIRE",
       "WIND"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
@@ -14,7 +14,7 @@
       "hp": 400,
       "baseATK": 95,
       "baseSpeed": 1.5,
-      "range": 240,
+      "range": 260,
       "defense": 18,
       "magicResist": 15,
       "moveSpeed": 0,
@@ -31,44 +31,13 @@
     "description": "전장에 배치 시 화염과 바람 계열 전체 ATK +30%. 모든 적에게 초당 최대HP 1% 화염 피해."
   },
   {
-    "id": "special_world_tree",
-    "name": "세계수",
-    "families": [
-      "SUPPORT",
-      "POISON"
-    ],
-    "grade": "IMMORTAL",
-    "role": "SUPPORT",
-    "attackRange": "RANGED",
-    "damageType": "MAGIC",
-    "stats": {
-      "hp": 800,
-      "baseATK": 10,
-      "baseSpeed": 0.5,
-      "range": 260,
-      "defense": 25,
-      "magicResist": 30,
-      "moveSpeed": 0,
-      "blockCount": 0
-    },
-    "behaviorId": "support_aura",
-    "ability": null,
-    "uniqueAbility": null,
-    "mergeResultId": null,
-    "isSummonable": false,
-    "summonWeight": 0,
-    "unitCategory": "SPECIAL",
-    "iconRes": 0,
-    "description": "전장에 배치 시 모든 아군 초당 HP 2% 재생. 독 계열 유닛의 DoT +50%. 15초마다 전체 아군 디버프 해제."
-  },
-  {
     "id": "special_time_keeper",
     "name": "시간의 관리자",
     "families": [
       "FROST",
       "LIGHTNING"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
@@ -99,7 +68,7 @@
       "POISON",
       "FROST"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
@@ -107,7 +76,7 @@
       "hp": 320,
       "baseATK": 85,
       "baseSpeed": 1.3,
-      "range": 240,
+      "range": 260,
       "defense": 10,
       "magicResist": 18,
       "moveSpeed": 0,
@@ -124,43 +93,12 @@
     "description": "전장에 배치 시 모든 적 힐링 효과 -50%. 독 상태 적은 받는 피해 +25%. 빙결 시 독 피해 2배."
   },
   {
-    "id": "special_celestial_judge",
-    "name": "천상의 심판자",
-    "families": [
-      "SUPPORT",
-      "LIGHTNING"
-    ],
-    "grade": "IMMORTAL",
-    "role": "SUPPORT",
-    "attackRange": "RANGED",
-    "damageType": "MAGIC",
-    "stats": {
-      "hp": 380,
-      "baseATK": 30,
-      "baseSpeed": 0.7,
-      "range": 260,
-      "defense": 15,
-      "magicResist": 22,
-      "moveSpeed": 0,
-      "blockCount": 0
-    },
-    "behaviorId": "support_aura",
-    "ability": null,
-    "uniqueAbility": null,
-    "mergeResultId": null,
-    "isSummonable": false,
-    "summonWeight": 0,
-    "unitCategory": "SPECIAL",
-    "iconRes": 0,
-    "description": "전장에 배치 시 아군 전체 치명타 확률 +20%. 20초마다 가장 약한 아군에게 무적 3초. 처치 시 SP +3 회복."
-  },
-  {
     "id": "special_infernal_titan",
     "name": "지옥의 거신",
     "families": [
       "FIRE"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "TANK",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
@@ -168,7 +106,7 @@
       "hp": 1200,
       "baseATK": 35,
       "baseSpeed": 0.5,
-      "range": 50,
+      "range": 100,
       "defense": 40,
       "magicResist": 20,
       "moveSpeed": 60,
@@ -185,37 +123,6 @@
     "description": "전장에 배치 시 블록된 적에게 초당 ATK 50% 화염 피해. 아군 탱커 방어력 +20%. HP 50% 이하 시 자폭: ATK 800% 범위 피해."
   },
   {
-    "id": "special_eternal_wind_sage",
-    "name": "영원의 바람현자",
-    "families": [
-      "WIND",
-      "SUPPORT"
-    ],
-    "grade": "IMMORTAL",
-    "role": "SUPPORT",
-    "attackRange": "RANGED",
-    "damageType": "MAGIC",
-    "stats": {
-      "hp": 300,
-      "baseATK": 25,
-      "baseSpeed": 0.9,
-      "range": 260,
-      "defense": 10,
-      "magicResist": 18,
-      "moveSpeed": 0,
-      "blockCount": 0
-    },
-    "behaviorId": "support_aura",
-    "ability": null,
-    "uniqueAbility": null,
-    "mergeResultId": null,
-    "isSummonable": false,
-    "summonWeight": 0,
-    "unitCategory": "SPECIAL",
-    "iconRes": 0,
-    "description": "전장에 배치 시 아군 전체 공격속도 +15%, 이동속도 +20%. 바람 계열 유닛 회피 +15%. 8초마다 아군 쿨타임 2초 감소."
-  },
-  {
     "id": "special_primordial_chaos",
     "name": "원초의 혼돈",
     "families": [
@@ -225,7 +132,7 @@
       "LIGHTNING",
       "WIND"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
@@ -233,7 +140,7 @@
       "hp": 500,
       "baseATK": 100,
       "baseSpeed": 1,
-      "range": 240,
+      "range": 260,
       "defense": 15,
       "magicResist": 15,
       "moveSpeed": 0,
@@ -256,7 +163,7 @@
       "POISON",
       "WIND"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
@@ -264,7 +171,7 @@
       "hp": 280,
       "baseATK": 110,
       "baseSpeed": 1.6,
-      "range": 70,
+      "range": 140,
       "defense": 8,
       "magicResist": 8,
       "moveSpeed": 160,
@@ -286,7 +193,7 @@
     "families": [
       "FROST"
     ],
-    "grade": "IMMORTAL",
+    "grade": "MYTHIC",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",

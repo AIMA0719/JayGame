@@ -22,21 +22,25 @@ class AssassinDashBehaviorTest {
     }
 
     @Test
-    fun `chases target when out of range`() {
+    fun `stays fixed and retargets when target leaves range`() {
         val behavior = AssassinDashBehavior()
         val unit = createTestUnit()
         unit.state = UnitState.IDLE
         unit.range = 100f
 
-        val enemy = createTestEnemy(Vec2(300f, 0f))
-        // Acquire target
+        val enemy = createTestEnemy(Vec2(50f, 0f))
+        // Acquire target in range
         behavior.update(unit, 0.016f) { _, _ -> enemy }
         assertEquals(UnitState.ATTACKING, unit.state)
 
-        // Chase toward enemy (out of range)
-        val prevX = unit.position.x
-        behavior.update(unit, 0.016f) { _, _ -> enemy }
-        assertTrue(unit.position.x > prevX) // moved closer
+        // Enemy moves out of range — no new target available
+        val outOfRangeEnemy = createTestEnemy(Vec2(300f, 0f))
+        unit.currentTarget = outOfRangeEnemy
+        behavior.update(unit, 0.016f) { _, _ -> null }
+
+        // Unit stays at home position and goes IDLE (no chasing)
+        assertEquals(0f, unit.position.x, 0.01f)
+        assertEquals(UnitState.IDLE, unit.state)
         assertFalse(unit.isAttacking)
     }
 

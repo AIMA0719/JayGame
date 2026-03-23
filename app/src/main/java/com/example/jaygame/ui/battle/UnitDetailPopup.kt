@@ -49,6 +49,7 @@ import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.components.roleColor
 import com.example.jaygame.ui.components.NeonButton
+import com.example.jaygame.engine.UnitUpgradeSystem
 import com.example.jaygame.ui.theme.DarkGold
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
@@ -474,33 +475,103 @@ fun UnitDetailPopup() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Action buttons row
+            // 개별 유닛 강화 정보
+            val unitUpgradeLevel = data.upgradeLevel
+            val usesStones = UnitUpgradeSystem.usesLuckyStones(data.grade)
+            val currencyLabel = if (usesStones) "\uD83D\uDC8E" else "\uD83E\uDE99"  // 행운석 or 코인
+
+            if (unitUpgradeLevel < UnitUpgradeSystem.MAX_UPGRADE_LEVEL) {
+                val upgradeCost = UnitUpgradeSystem.getUpgradeCost(data.grade, unitUpgradeLevel)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "강화 Lv.$unitUpgradeLevel / ${UnitUpgradeSystem.MAX_UPGRADE_LEVEL}",
+                        color = Gold,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    // ATK 보너스 표시
+                    val totalAtkPercent = (unitUpgradeLevel * UnitUpgradeSystem.ATK_PER_LEVEL * 100).toInt()
+                    Text(
+                        text = "ATK +${totalAtkPercent}% (+50%/Lv)",
+                        color = NeonRed.copy(alpha = 0.9f),
+                        fontSize = 10.sp,
+                    )
+                    if (usesStones) {
+                        Text(
+                            text = "\uD83D\uDC8E 행운석 필요 (전설+)",
+                            color = Color(0xFFCE93D8),
+                            fontSize = 10.sp,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    // 마일스톤 안내
+                    val nextMilestone = when {
+                        unitUpgradeLevel < 3 -> "Lv.3: ATK +10%"
+                        unitUpgradeLevel < 6 -> "Lv.6: ATK +15% (고유 강화)"
+                        unitUpgradeLevel < 9 -> "Lv.9: 공격속도 +10%"
+                        unitUpgradeLevel < 12 -> "Lv.12: ATK +15% (고유 강화)"
+                        else -> "Lv.15: ATK+속도 +10%"
+                    }
+                    Text(
+                        text = "다음: $nextMilestone",
+                        color = SubText,
+                        fontSize = 10.sp,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "강화 MAX (Lv.${UnitUpgradeSystem.MAX_UPGRADE_LEVEL})",
+                        color = Gold,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    val totalAtkPercent = (unitUpgradeLevel * UnitUpgradeSystem.ATK_PER_LEVEL * 100 + 50).toInt()
+                    Text(
+                        text = "ATK +${totalAtkPercent}%",
+                        color = NeonRed.copy(alpha = 0.9f),
+                        fontSize = 10.sp,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Merge button
-                if (data.canMerge) {
+                // 개별 강화 button
+                if (unitUpgradeLevel < UnitUpgradeSystem.MAX_UPGRADE_LEVEL) {
+                    val upgradeCost = UnitUpgradeSystem.getUpgradeCost(data.grade, unitUpgradeLevel)
                     NeonButton(
-                        text = "\uD569\uC131 (5% \uC7AD\uD31F!)",  // 합성 (5% 잭팟!)
-                        onClick = { BattleBridge.requestMerge(data.tileIndex) },
+                        text = "강화 $currencyLabel$upgradeCost",
+                        onClick = { BattleBridge.requestUpgrade(data.tileIndex) },
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp),
-                        fontSize = 14.sp,
-                        accentColor = Gold,
-                        accentColorDark = DarkGold,
+                        fontSize = 13.sp,
+                        accentColor = Color(0xFF4CAF50),
+                        accentColorDark = Color(0xFF2E7D32),
                     )
                 }
 
-                // Sell button
+                // 판매 button
                 NeonButton(
-                    text = "\uD310\uB9E4",  // 판매
+                    text = "판매",
                     onClick = { BattleBridge.requestSell(data.tileIndex) },
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp),
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     accentColor = NeonRed,
                     accentColorDark = NeonRed.copy(alpha = 0.5f),
                 )

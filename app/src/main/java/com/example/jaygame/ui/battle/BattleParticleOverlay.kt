@@ -41,9 +41,7 @@ private val GradeParticleColors = arrayOf(
     Color(0xFF42A5F5), // Rare - blue
     Color(0xFFAB47BC), // Hero - purple
     Color(0xFFFF8F00), // Legend - orange
-    Color(0xFFEF4444), // Ancient - red
     Color(0xFFFBBF24), // Mythic - gold
-    Color(0xFFF0ABFC), // Immortal - pink
 )
 
 // Pre-allocated transparent versions for colorEnd (avoid .copy() per spawn)

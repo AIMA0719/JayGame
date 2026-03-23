@@ -9,13 +9,10 @@ import kotlin.random.Random
  * Total = 10000 (basis points for precision).
  */
 private val CARD_GRADE_WEIGHTS = listOf(
-    UnitGrade.COMMON   to 5900,
+    UnitGrade.COMMON   to 6000,
     UnitGrade.RARE     to 2500,
     UnitGrade.HERO     to 1200,
     UnitGrade.LEGEND   to  300,
-    UnitGrade.ANCIENT  to   80,
-    UnitGrade.MYTHIC   to   15,
-    UnitGrade.IMMORTAL to    5,
 )
 
 private val CARD_GRADE_TOTAL = CARD_GRADE_WEIGHTS.sumOf { it.second }

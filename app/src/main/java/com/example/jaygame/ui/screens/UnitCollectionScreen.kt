@@ -88,7 +88,7 @@ import com.example.jaygame.ui.theme.SubText
 // ── Grade-based card background colors (pre-allocated) ──
 private val CodexGradeBgCommon = Color(0xFF424242)
 private val CodexGradeBgRare = Color(0xFF1A237E)
-private val CodexGradeBgHero = Color(0xFF4A148C)
+private val CodexGradeBgAncient = Color(0xFF4A148C)
 private val CodexGradeBorderGold = Color(0xFFFFD700)
 private val CodexGradeBorderRed = Color(0xFFEF4444)
 private val CodexGradeBorderRainbowStart = Color(0xFFFF6B35)
@@ -107,7 +107,7 @@ private val SpecialCardBg = Color(0xFF1A1020)
 private val SpecialCardBorder = Color(0xFF6B3FA0)
 private val SpecialFieldEffectBg = Color(0xFF1A1508)
 private val SpecialFieldEffectBorder = Color(0xFF5C4A1E)
-private val SpecialImmortalGlow = Color(0xFFD4AF37)
+private val SpecialMythicGlow = Color(0xFFD4AF37)
 
 // ── Hidden tab colors (pre-allocated) ──
 private val HiddenCardDiscoveredBg = Color(0xFF1A1A2E)
@@ -161,15 +161,13 @@ internal fun blueprintIconRes(bp: UnitBlueprint): Int =
 private fun codexGradeBgColor(grade: UnitGrade): Brush = when (grade) {
     UnitGrade.COMMON -> Brush.verticalGradient(listOf(CodexGradeBgCommon, Color(0xFF303030)))
     UnitGrade.RARE -> Brush.verticalGradient(listOf(CodexGradeBgRare, Color(0xFF0D1642)))
-    UnitGrade.HERO -> Brush.verticalGradient(listOf(CodexGradeBgHero, Color(0xFF280A42)))
+    UnitGrade.HERO -> Brush.verticalGradient(listOf(CodexGradeBgAncient, Color(0xFF280A42)))
     else -> Brush.verticalGradient(listOf(Color(0xFF1A1A2E), Color(0xFF12121F)))
 }
 
 private fun codexGradeBorderColor(grade: UnitGrade): Color = when (grade) {
     UnitGrade.LEGEND -> CodexGradeBorderGold
-    UnitGrade.ANCIENT -> CodexGradeBorderRed
     UnitGrade.MYTHIC -> CodexGradeBorderRainbowEnd
-    UnitGrade.IMMORTAL -> CodexGradeBorderRainbowStart
     else -> grade.color.copy(alpha = 0.4f)
 }
 
@@ -237,7 +235,7 @@ fun UnitCollectionScreen(
                         .clickable(onClick = onBack),
                 )
                 Text(
-                    text = "\uD83D\uDCD6 영웅 도감",
+                    text = "\uD83D\uDCD6 고대 도감",
                     color = LightText,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -832,11 +830,11 @@ private fun BlueprintDetailDialog(
                 )
 
                 // Merge info
-                if (blueprint.mergeResultId != null) {
-                    val nextBp = remember(blueprint.mergeResultId) {
-                        BlueprintRegistry.instance.findById(blueprint.mergeResultId)
+                if (blueprint.grade.ordinal < UnitGrade.LEGEND.ordinal) {
+                    val nextGradeLabel = remember(blueprint.grade) {
+                        UnitGrade.entries.getOrNull(blueprint.grade.ordinal + 1)?.label
                     }
-                    if (nextBp != null) {
+                    if (nextGradeLabel != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier
@@ -854,7 +852,7 @@ private fun BlueprintDetailDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "x3 \u2192 ${nextBp.grade.label} ${nextBp.name}",
+                                text = "x3 \u2192 랜덤 $nextGradeLabel 유닛",
                                 color = LightText,
                                 fontSize = 12.sp,
                             )
@@ -1066,6 +1064,16 @@ private fun HiddenUnitCard(
                             )
                         }
                     }
+                    // 행운석 비용 표시
+                    if (recipe.luckyStonesCost > 0) {
+                        Text(
+                            text = "행운석 x${recipe.luckyStonesCost}",
+                            color = Color(0xFFFFD700),
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         }
@@ -1116,7 +1124,7 @@ private fun SpecialUnitCard(
             .border(
                 width = 1.5.dp,
                 brush = Brush.verticalGradient(
-                    listOf(SpecialImmortalGlow, SpecialCardBorder)
+                    listOf(SpecialMythicGlow, SpecialCardBorder)
                 ),
                 shape = RoundedCornerShape(12.dp),
             )
@@ -1132,14 +1140,14 @@ private fun SpecialUnitCard(
             Box(
                 modifier = Modifier
                     .background(
-                        SpecialImmortalGlow.copy(alpha = 0.15f),
+                        SpecialMythicGlow.copy(alpha = 0.15f),
                         RoundedCornerShape(4.dp),
                     )
                     .padding(horizontal = 8.dp, vertical = 2.dp),
             ) {
                 Text(
                     text = blueprint.grade.label,
-                    color = SpecialImmortalGlow,
+                    color = SpecialMythicGlow,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 )
