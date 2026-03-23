@@ -8,6 +8,12 @@ interface UnitBehavior {
     fun onTakeDamage(unit: GameUnit, damage: Float, isMagic: Boolean)
     fun canAttack(): Boolean = true
     fun reset()
+
+    companion object {
+        /** atkSpeed → cooldown 변환 (0 이하 방어) */
+        fun cooldownFor(atkSpeed: Float): Float =
+            if (atkSpeed > 0f) 1f / atkSpeed else 1f
+    }
 }
 
 data class AttackResult(

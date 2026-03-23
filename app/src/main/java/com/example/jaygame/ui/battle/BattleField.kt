@@ -280,8 +280,10 @@ fun BattleField() {
                     pGrades[tile] = data.grades[i]
                     pFamilies[tile] = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
                         data.familiesList[i].first().ordinal
-                    } else {
+                    } else if (i < data.unitDefIds.size) {
                         com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+                    } else {
+                        0
                     }
                 }
 

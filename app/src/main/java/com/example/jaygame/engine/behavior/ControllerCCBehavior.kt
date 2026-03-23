@@ -55,7 +55,7 @@ class ControllerCCBehavior(
     fun getCCDuration(): Float = CC_DURATION
 
     override fun onAttack(unit: GameUnit, target: Enemy): AttackResult {
-        attackCooldown = 1f / unit.atkSpeed
+        attackCooldown = UnitBehavior.cooldownFor(unit.atkSpeed)
         return AttackResult(
             damage = unit.baseATK * 0.5f,  // Low damage, CC focused
             isMagic = true,

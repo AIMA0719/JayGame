@@ -8,6 +8,10 @@ package com.example.jaygame.engine
  */
 object DamageCalculator {
 
+    // 속성 상성: FIRE(0)→FROST(1)→WIND(5)→LIGHTNING(3)→POISON(2)→FIRE(0), SUPPORT(4)=중립
+    private val ADVANTAGE_MAP = intArrayOf(1, 5, 0, 2, -1, 3)    // [i] = i가 유리한 대상
+    private val DISADVANTAGE_MAP = intArrayOf(2, 0, 3, 5, -1, 1)  // [i] = i가 불리한 대상
+
     /** 물리 데미지 계산 — 방어력 공식 적용 */
     fun calculatePhysicalDamage(
         baseDamage: Float,
@@ -124,15 +128,13 @@ object DamageCalculator {
      * @param defenderType 적 타입 (0-5, 연관)
      */
     fun familyAdvantageMultiplier(attackerFamily: Int, defenderType: Int): Float {
-        // 보조(4)는 상성 없음
-        if (attackerFamily == 4 || defenderType >= 5) return 1f
+        // 보조(4)는 상성 없음, 범위 밖도 중립
+        if (attackerFamily == 4 || defenderType == 4 || attackerFamily > 5 || defenderType > 5) return 1f
         // 상성 루프: 0(화염)→1(냉기)→5(바람)→3(번개)→2(독)→0(화염)
-        val advantageMap = intArrayOf(1, 5, 0, 2, -1, 3) // family → 유리한 대상
-        val disadvantageMap = intArrayOf(2, 0, 3, 5, -1, 1) // family → 불리한 대상
         val mapped = defenderType % 6
         return when (mapped) {
-            advantageMap.getOrElse(attackerFamily) { -1 } -> 1.2f  // 유리
-            disadvantageMap.getOrElse(attackerFamily) { -1 } -> 0.85f // 불리
+            ADVANTAGE_MAP.getOrElse(attackerFamily) { -1 } -> 1.2f  // 유리
+            DISADVANTAGE_MAP.getOrElse(attackerFamily) { -1 } -> 0.85f // 불리
             else -> 1f
         }
     }

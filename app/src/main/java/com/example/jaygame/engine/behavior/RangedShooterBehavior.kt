@@ -52,7 +52,7 @@ class RangedShooterBehavior(
     override fun canAttack(): Boolean = attackCooldown <= 0f
 
     override fun onAttack(unit: GameUnit, target: Enemy): AttackResult {
-        attackCooldown = 1f / unit.atkSpeed
+        attackCooldown = UnitBehavior.cooldownFor(unit.atkSpeed)
         val isCrit = Math.random() < 0.05  // Base 5% crit
         val damage = unit.baseATK * (if (isCrit) 2f else 1f)
         val isMagic = unit.damageType == DamageType.MAGIC

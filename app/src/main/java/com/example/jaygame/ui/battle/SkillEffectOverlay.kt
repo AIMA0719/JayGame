@@ -91,9 +91,8 @@ fun SkillEffectOverlay(
 
     LaunchedEffect(Unit) {
         while (true) {
-            androidx.compose.runtime.withFrameNanos { _ ->
-                BattleBridge.clearExpiredSkillEvents()
-            }
+            kotlinx.coroutines.delay(500L)
+            BattleBridge.clearExpiredSkillEvents()
         }
     }
 

@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,18 +24,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.R
+import com.example.jaygame.data.DeckManager
 import com.example.jaygame.data.StageDef
+import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.ui.screens.blueprintIconRes
 import com.example.jaygame.ui.theme.*
+
+// Pre-allocated colors for deck preview (avoid per-recomposition allocation)
+private val DeckSlotFilledBg = Color(0xFF1A1A30)
+private val DeckSlotEmptyBg = Color(0xFF151520)
+private val DeckSlotEmptyBorder = Color(0x14FFFFFF) // White alpha 0.08
+private val DeckSlotEmptyPlus = Color(0x26FFFFFF) // White alpha 0.15
+private val DeckEditBg = Color(0x0FFFFFFF) // White alpha 0.06
+private val DeckEditBorder = Color(0x26FFFFFF) // White alpha 0.15
 
 private data class DifficultyInfo(
     val id: Int,
@@ -43,6 +60,8 @@ private data class DifficultyInfo(
     val rewardMult: String,
     val color: Color,
 )
+
+private val DialogBgBrush = Brush.verticalGradient(listOf(Color(0xFF2A1F15), Color(0xFF1A0F0A)))
 
 private val DIFFICULTIES = listOf(
     DifficultyInfo(0, "초보", "입문자를 위한 난이도", "×1.0", "×1.0", NeonGreen),
@@ -59,7 +78,9 @@ fun PreBattleDialog(
     selectedDifficulty: Int,
     staminaCost: Int,
     hasStamina: Boolean,
+    activeDeck: List<String> = emptyList(),
     onDifficultySelected: (Int) -> Unit,
+    onEditDeck: () -> Unit = {},
     onStartBattle: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -75,11 +96,7 @@ fun PreBattleDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF2A1F15), Color(0xFF1A0F0A))
-                    )
-                )
+                .background(DialogBgBrush)
                 .border(1.5.dp, BorderGlow, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -111,7 +128,79 @@ fun PreBattleDialog(
                 StatChip(recordText)
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Deck Preview ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("출전 덱", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = LightText)
+                Spacer(modifier = Modifier.weight(1f))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(DeckEditBg)
+                        .border(1.dp, DeckEditBorder, RoundedCornerShape(6.dp))
+                        .clickable(onClick = onEditDeck)
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    Text("덱 편집", fontSize = 11.sp, color = NeonCyan)
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            val deckBlueprints = remember(activeDeck) {
+                val reg = if (BlueprintRegistry.isReady) BlueprintRegistry.instance else null
+                List(DeckManager.DECK_SIZE) { i ->
+                    activeDeck.getOrNull(i)?.let { id -> reg?.findById(id) }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                for (i in 0 until DeckManager.DECK_SIZE) {
+                    val bp = deckBlueprints[i]
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (bp != null) DeckSlotFilledBg else DeckSlotEmptyBg)
+                            .border(
+                                1.dp,
+                                if (bp != null) bp.grade.color.copy(alpha = 0.5f) else DeckSlotEmptyBorder,
+                                RoundedCornerShape(8.dp),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (bp != null) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Image(
+                                    painter = painterResource(blueprintIconRes(bp)),
+                                    contentDescription = bp.name,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                                Text(
+                                    text = bp.name,
+                                    color = bp.grade.color,
+                                    fontSize = 8.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        } else {
+                            Text("+", color = DeckSlotEmptyPlus, fontSize = 18.sp)
+                        }
+                    }
+                }
+            }
+            if (activeDeck.isEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("덱을 편집해 주세요 (자동 채워짐)", fontSize = 10.sp, color = SubText)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // ── Difficulty Selection ──
             Text(

@@ -77,7 +77,7 @@ class TankBlockerBehavior : UnitBehavior {
             UnitState.ATTACKING -> {
                 // Fire attack at blocked enemy, then return to blocking
                 unit.state = UnitState.BLOCKING
-                attackCooldown = 1f / unit.atkSpeed.coerceAtLeast(0.1f)
+                attackCooldown = UnitBehavior.cooldownFor(unit.atkSpeed)
             }
             UnitState.DEAD -> {
                 // Release ALL blocked enemies immediately (same frame)

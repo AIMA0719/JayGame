@@ -164,7 +164,7 @@ private fun GambleSelectionPhase(
     Spacer(modifier = Modifier.height(4.dp))
 
     GambleSystem.GambleOption.entries.forEach { option ->
-        val colors = OptionColors[option]!!
+        val colors = OptionColors.getValue(option)
         val isSelected = selectedOption == option
         val borderCol = if (isSelected) colors.first else Color.White.copy(alpha = 0.15f)
         val bgBrush = if (isSelected)

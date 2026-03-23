@@ -840,6 +840,8 @@ fun BattleBottomHud(
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
     val unitPullPity by BattleBridge.unitPullPity.collectAsState()
+    val deckBlueprints by BattleBridge.deckBlueprints.collectAsState()
+    val isDeckMode = deckBlueprints.isNotEmpty()
     // Single pass over gridState for unit count, merge, and has-units flags
     var unitCount = 0
     var canMerge = false
@@ -961,6 +963,45 @@ fun BattleBottomHud(
 
         }
 
+        // ── Deck preview (덱 모드일 때만) ──
+        if (isDeckMode) {
+            val resolvedDeck = remember(deckBlueprints) {
+                if (com.example.jaygame.engine.BlueprintRegistry.isReady) {
+                    val reg = com.example.jaygame.engine.BlueprintRegistry.instance
+                    deckBlueprints.mapNotNull { reg.findById(it) }
+                } else emptyList()
+            }
+            if (resolvedDeck.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    resolvedDeck.forEach { bp ->
+                        val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .padding(horizontal = 2.dp)
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(bp.grade.color.copy(alpha = 0.15f))
+                                .border(1.dp, bp.grade.color.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
+                        ) {
+                            Image(
+                                painter = painterResource(id = iconRes),
+                                contentDescription = bp.name,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+
         // ── Action buttons ──
         Column(
             modifier = Modifier
@@ -993,6 +1034,7 @@ fun BattleBottomHud(
                     enabled = canSummon,
                     gridFull = unitCount >= battle.maxUnitSlots,
                     pity = unitPullPity,
+                    isDeckMode = isDeckMode,
                     onClick = {
                         HapticManager.medium(view)
                         SfxManager.play(SoundEvent.Summon)
@@ -1117,6 +1159,7 @@ fun SummonButton(
     enabled: Boolean,
     gridFull: Boolean = false,
     pity: Int = 0,
+    isDeckMode: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     goldIcon: androidx.compose.ui.graphics.ImageBitmap? = null,
@@ -1210,17 +1253,25 @@ fun SummonButton(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            // 천장 카운터
-            Text(
-                text = "천장: $pity/100",
-                color = when {
-                    pity >= 80 -> NeonRed
-                    pity >= 30 -> Color(0xFFFFAA44)
-                    else -> WoodBrownDark.copy(alpha = 0.6f)
-                },
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            if (isDeckMode) {
+                Text(
+                    text = "\uD83C\uDFB4 덱 모드",
+                    color = NeonCyan,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            } else {
+                Text(
+                    text = "천장: $pity/100",
+                    color = when {
+                        pity >= 80 -> NeonRed
+                        pity >= 30 -> Color(0xFFFFAA44)
+                        else -> WoodBrownDark.copy(alpha = 0.6f)
+                    },
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }

@@ -117,6 +117,9 @@ private val HiddenRecipeHintBg = Color(0xFF151520)
 private val HiddenIngredientPillBg = Color(0xFF1E1E30)
 private val HiddenPlusColor = Color(0xFF555577)
 
+// Pre-allocated screen background brush
+private val ScreenBgBrush = Brush.verticalGradient(listOf(Color(0xFF0A0A1A), Color(0xFF1A1028)))
+
 // ── Blueprint ID → icon resource mapping ──
 private val BLUEPRINT_ICON_MAP: Map<String, Int> = mapOf(
     "fire_mdps_01" to R.drawable.ic_unit_0,
@@ -158,18 +161,30 @@ internal fun blueprintIconRes(bp: UnitBlueprint): Int =
     if (bp.iconRes != 0) bp.iconRes
     else BLUEPRINT_ICON_MAP[bp.id] ?: R.drawable.ic_unit_0
 
+// Pre-allocated grade background brushes (avoid per-item creation)
+private val GradeBgBrushCommon = Brush.verticalGradient(listOf(CodexGradeBgCommon, Color(0xFF303030)))
+private val GradeBgBrushRare = Brush.verticalGradient(listOf(CodexGradeBgRare, Color(0xFF0D1642)))
+private val GradeBgBrushHero = Brush.verticalGradient(listOf(CodexGradeBgAncient, Color(0xFF280A42)))
+private val GradeBgBrushDefault = Brush.verticalGradient(listOf(Color(0xFF1A1A2E), Color(0xFF12121F)))
+
 private fun codexGradeBgColor(grade: UnitGrade): Brush = when (grade) {
-    UnitGrade.COMMON -> Brush.verticalGradient(listOf(CodexGradeBgCommon, Color(0xFF303030)))
-    UnitGrade.RARE -> Brush.verticalGradient(listOf(CodexGradeBgRare, Color(0xFF0D1642)))
-    UnitGrade.HERO -> Brush.verticalGradient(listOf(CodexGradeBgAncient, Color(0xFF280A42)))
-    else -> Brush.verticalGradient(listOf(Color(0xFF1A1A2E), Color(0xFF12121F)))
+    UnitGrade.COMMON -> GradeBgBrushCommon
+    UnitGrade.RARE -> GradeBgBrushRare
+    UnitGrade.HERO -> GradeBgBrushHero
+    else -> GradeBgBrushDefault
 }
 
-private fun codexGradeBorderColor(grade: UnitGrade): Color = when (grade) {
-    UnitGrade.LEGEND -> CodexGradeBorderGold
-    UnitGrade.MYTHIC -> CodexGradeBorderRainbowEnd
-    else -> grade.color.copy(alpha = 0.4f)
+// Pre-computed border colors per grade (avoid .copy() per item)
+private val GradeBorderColorMap: Map<UnitGrade, Color> = UnitGrade.entries.associateWith { grade ->
+    when (grade) {
+        UnitGrade.LEGEND -> CodexGradeBorderGold
+        UnitGrade.MYTHIC -> CodexGradeBorderRainbowEnd
+        else -> grade.color.copy(alpha = 0.4f)
+    }
 }
+
+private fun codexGradeBorderColor(grade: UnitGrade): Color =
+    GradeBorderColorMap[grade] ?: grade.color.copy(alpha = 0.4f)
 
 // SortMode imported from UnitUiUtils
 
@@ -212,11 +227,7 @@ fun UnitCollectionScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF0A0A1A), Color(0xFF1A1028))
-                    )
-                ),
+                .background(ScreenBgBrush),
         ) {
             // Top bar
             Row(
@@ -372,7 +383,7 @@ fun UnitCollectionScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 80.dp),
                     ) {
-                        items(filteredBlueprints, key = { it.id }) { bp ->
+                        items(filteredBlueprints, key = { it.id }, contentType = { "blueprint" }) { bp ->
                             CodexBlueprintCard(
                                 blueprint = bp,
                                 onClick = { selectedBlueprint = bp },
@@ -386,8 +397,8 @@ fun UnitCollectionScreen(
                     val hiddenBlueprints = remember {
                         BlueprintRegistry.instance.findByCategory(UnitCategory.HIDDEN)
                     }
-                    val recipes = remember {
-                        RecipeSystem.instance.allRecipes()
+                    val recipeByResult = remember {
+                        RecipeSystem.instance.allRecipes().associateBy { it.resultId }
                     }
                     Column(
                         modifier = Modifier
@@ -405,8 +416,8 @@ fun UnitCollectionScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            items(hiddenBlueprints, key = { it.id }) { bp ->
-                                val recipe = recipes.find { it.resultId == bp.id }
+                            items(hiddenBlueprints, key = { it.id }, contentType = { "hidden" }) { bp ->
+                                val recipe = recipeByResult[bp.id]
                                 val discovered = recipe?.let {
                                     RecipeSystem.instance.isDiscovered(it.id)
                                 } ?: false
@@ -470,8 +481,10 @@ private fun CodexBlueprintCard(
 ) {
     val gradeColor = blueprint.grade.color
     val borderColor = codexGradeBorderColor(blueprint.grade)
+    val dimBorderColor = remember(borderColor) { borderColor.copy(alpha = 0.3f) }
     val iconRes = blueprintIconRes(blueprint)
-    val roleLabel = ROLE_LABELS[blueprint.role] ?: blueprint.role.label
+    val gradeGlowBg = remember(gradeColor) { gradeColor.copy(alpha = 0.15f) }
+    val gradeGlowBorder = remember(gradeColor) { gradeColor.copy(alpha = 0.5f) }
 
     Column(
         modifier = Modifier
@@ -480,7 +493,7 @@ private fun CodexBlueprintCard(
             .background(codexGradeBgColor(blueprint.grade))
             .border(
                 width = if (blueprint.grade.ordinal >= UnitGrade.LEGEND.ordinal) 2.dp else 1.dp,
-                color = if (isOwned) borderColor else borderColor.copy(alpha = 0.3f),
+                color = if (isOwned) borderColor else dimBorderColor,
                 shape = RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onClick)
@@ -506,8 +519,8 @@ private fun CodexBlueprintCard(
                 .size(44.dp)
                 .shadow(4.dp, CircleShape, ambientColor = gradeColor, spotColor = gradeColor)
                 .clip(CircleShape)
-                .background(gradeColor.copy(alpha = 0.15f))
-                .border(1.5.dp, gradeColor.copy(alpha = 0.5f), CircleShape),
+                .background(gradeGlowBg)
+                .border(1.5.dp, gradeGlowBorder, CircleShape),
         ) {
             Image(
                 painter = painterResource(id = iconRes),

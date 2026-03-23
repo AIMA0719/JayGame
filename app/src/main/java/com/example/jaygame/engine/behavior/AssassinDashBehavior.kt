@@ -51,7 +51,7 @@ class AssassinDashBehavior : UnitBehavior {
     override fun canAttack(): Boolean = attackCooldown <= 0f
 
     override fun onAttack(unit: GameUnit, target: Enemy): AttackResult {
-        attackCooldown = 1f / unit.atkSpeed.coerceAtLeast(0.1f)
+        attackCooldown = UnitBehavior.cooldownFor(unit.atkSpeed)
         val isCrit = Math.random() < 0.10
         val damage = unit.baseATK * (if (isCrit) 2.5f else 1f)
         return AttackResult(

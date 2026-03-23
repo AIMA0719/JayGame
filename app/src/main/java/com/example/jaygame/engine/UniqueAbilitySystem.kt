@@ -12,8 +12,8 @@ import com.example.jaygame.bridge.SkillVfxType
  */
 object UniqueAbilitySystem {
 
-    private const val W = 720f
-    private const val H = 720f
+    private const val W = BattleEngine.W
+    private const val H = BattleEngine.H
 
     /**
      * Initialize unique ability fields on a newly placed unit.
@@ -269,7 +269,7 @@ object UniqueAbilitySystem {
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
-                        pos = com.example.jaygame.engine.math.Vec2(640f, 360f),
+                        pos = com.example.jaygame.engine.math.Vec2(360f, 640f),
                         radius = 250f, duration = 8f,
                         tickInterval = 1f,
                         tickDamage = unit.effectiveATK() * 0.8f,
@@ -354,7 +354,7 @@ object UniqueAbilitySystem {
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
-                        pos = com.example.jaygame.engine.math.Vec2(640f, 360f),
+                        pos = com.example.jaygame.engine.math.Vec2(360f, 640f),
                         radius = 200f, duration = 8f,
                         tickInterval = 1f,
                         tickDamage = unit.effectiveATK() * 1.5f,

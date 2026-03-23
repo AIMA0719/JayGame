@@ -16,6 +16,7 @@ class GameViewModelFactory(private val repository: GameRepository) : ViewModelPr
         modelClass.isAssignableFrom(ShopViewModel::class.java) -> ShopViewModel(repository)
         modelClass.isAssignableFrom(CollectionViewModel::class.java) -> CollectionViewModel(repository)
         modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(repository)
+        modelClass.isAssignableFrom(DeckViewModel::class.java) -> DeckViewModel(repository)
         else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
     } as T
 }
