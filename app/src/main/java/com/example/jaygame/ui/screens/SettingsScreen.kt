@@ -28,7 +28,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,14 +42,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.data.GameData
-import com.example.jaygame.data.GameRepository
+import com.example.jaygame.ui.viewmodel.SettingsViewModel
+import org.orbitmvi.orbit.compose.collectAsState
 import com.example.jaygame.navigation.Routes
 import com.example.jaygame.ui.components.DailyLoginDialog
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.components.NeonProgressBar
-import com.example.jaygame.ui.components.canClaim
-import com.example.jaygame.ui.components.claimReward
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.DimText
@@ -63,40 +61,34 @@ import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.layout.navigationBarsPadding
 
 private enum class SettingsPage { MAIN, AUDIO, GAMEPLAY, UPGRADE, DATA, PROFILE, FAQ, PRIVACY, LICENSES }
 
 @Composable
 fun SettingsScreen(
-    repository: GameRepository,
+    viewModel: SettingsViewModel,
     onNavigate: (String) -> Unit,
 ) {
-    val data by repository.gameData.collectAsState()
+    val settingsState by viewModel.collectAsState()
+    val data = settingsState.gameData
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
-    var showResetDialog by remember { mutableStateOf(false) }
 
     // System back → return to settings main when on sub-page
     androidx.activity.compose.BackHandler(enabled = currentPage != SettingsPage.MAIN) {
         currentPage = SettingsPage.MAIN
     }
-    var showDailyLogin by remember { mutableStateOf(false) }
 
-    if (showDailyLogin) {
+    if (settingsState.showDailyLogin) {
         DailyLoginDialog(
             data = data,
-            onClaim = {
-                val updated = claimReward(data)
-                repository.save(updated)
-                showDailyLogin = false
-            },
-            onDismiss = { showDailyLogin = false },
+            onClaim = { viewModel.claimDailyLogin() },
+            onDismiss = { viewModel.dismissDailyLogin() },
         )
     }
 
-    if (showResetDialog) {
+    if (settingsState.showResetDialog) {
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
+            onDismissRequest = { viewModel.dismissResetDialog() },
             containerColor = DarkNavy,
             titleContentColor = Gold,
             textContentColor = LightText,
@@ -105,7 +97,7 @@ fun SettingsScreen(
             confirmButton = {
                 NeonButton(
                     text = "초기화",
-                    onClick = { repository.save(GameData()); showResetDialog = false },
+                    onClick = { viewModel.resetData() },
                     accentColor = NeonRed,
                     accentColorDark = NeonRedDark,
                     fontSize = 13.sp,
@@ -114,7 +106,7 @@ fun SettingsScreen(
             dismissButton = {
                 NeonButton(
                     text = "취소",
-                    onClick = { showResetDialog = false },
+                    onClick = { viewModel.dismissResetDialog() },
                     accentColor = SubText,
                     accentColorDark = SubText.copy(alpha = 0.6f),
                     fontSize = 13.sp,
@@ -145,32 +137,31 @@ fun SettingsScreen(
             when (page) {
                 SettingsPage.MAIN -> SettingsMain(
                     onPageSelected = { currentPage = it },
-                    onShowDailyLogin = { showDailyLogin = true },
+                    onShowDailyLogin = { viewModel.showDailyLogin() },
                     onNavigate = onNavigate,
                 )
                 SettingsPage.AUDIO -> SettingsAudio(
                     data = data,
                     onBack = { currentPage = SettingsPage.MAIN },
-                    onToggleSound = { repository.save(data.copy(soundEnabled = !data.soundEnabled)) },
-                    onToggleMusic = { repository.save(data.copy(musicEnabled = !data.musicEnabled)) },
-                    onToggleHaptic = { repository.save(data.copy(hapticEnabled = !data.hapticEnabled)) },
+                    onToggleSound = { viewModel.toggleSound() },
+                    onToggleMusic = { viewModel.toggleMusic() },
+                    onToggleHaptic = { viewModel.toggleHaptic() },
                 )
                 SettingsPage.GAMEPLAY -> SettingsGameplay(
                     data = data,
                     onBack = { currentPage = SettingsPage.MAIN },
-                    onUpdate = { repository.save(it) },
+                    onUpdate = { viewModel.updateGameplay(it) },
                 )
                 SettingsPage.UPGRADE -> SettingsUpgrade(
                     data = data,
                     onBack = { currentPage = SettingsPage.MAIN },
-                    onUpdate = { repository.save(it) },
+                    onUpdate = { viewModel.updateGameplay(it) },
                 )
                 SettingsPage.DATA -> SettingsData(
                     onBack = { currentPage = SettingsPage.MAIN },
-                    onReset = { showResetDialog = true },
+                    onReset = { viewModel.showResetDialog() },
                 )
                 SettingsPage.PROFILE -> SettingsProfile(
-                    repository = repository,
                     onBack = { currentPage = SettingsPage.MAIN },
                 )
                 SettingsPage.FAQ -> SettingsFaq(
@@ -670,9 +661,10 @@ private fun SettingsUpgrade(
 
 @Composable
 private fun SettingsProfile(
-    repository: com.example.jaygame.data.GameRepository,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val repository = (context.applicationContext as com.example.jaygame.JayGameApplication).repository
     Column(modifier = Modifier.fillMaxSize()) {
         SubPageHeader(title = "프로필 칭호", onBack = onBack)
         ProfileScreen(

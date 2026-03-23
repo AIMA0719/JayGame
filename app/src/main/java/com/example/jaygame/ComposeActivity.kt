@@ -11,8 +11,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,43 +21,38 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
-import com.example.jaygame.util.HapticManager
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.GameRepository
-import com.example.jaygame.data.STAGES
-import com.example.jaygame.engine.BlueprintRegistry
-import com.example.jaygame.engine.RecipeSystem
-import com.example.jaygame.engine.OfflineRewardManager
 import com.example.jaygame.navigation.NavGraph
 import com.example.jaygame.ui.components.OfflineRewardDialog
 import com.example.jaygame.ui.screens.SplashScreen
 import com.example.jaygame.ui.theme.JayGameTheme
+import com.example.jaygame.ui.viewmodel.AppViewModel
+import com.example.jaygame.ui.viewmodel.gameViewModelFactory
+import com.example.jaygame.util.HapticManager
 import kotlinx.coroutines.delay
+import org.orbitmvi.orbit.compose.collectAsState
 import kotlin.math.max
 
 class ComposeActivity : ComponentActivity() {
-    lateinit var repository: GameRepository
+    private lateinit var appVm: AppViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
-        BlueprintRegistry.initialize(applicationContext)
-        RecipeSystem.initialize(applicationContext)
-        repository = GameRepository(this)
         SfxManager.init(this)
         setContent {
             JayGameTheme {
-                var showSplash by rememberSaveable { mutableStateOf(true) }
-                val data by repository.gameData.collectAsState()
+                val factory = gameViewModelFactory()
+                val vm: AppViewModel = viewModel(factory = factory)
+                appVm = vm
 
-                // Offline reward dialog
-                val offlineReward = remember {
-                    OfflineRewardManager.calculateReward(repository.gameData.value)
-                }
-                var showOfflineReward by remember { mutableStateOf(offlineReward != null) }
+                val appState by vm.collectAsState()
+                val data = appState.gameData
+                var showSplash by rememberSaveable { mutableStateOf(true) }
 
                 // A2: Battle launch zoom-in wipe state
                 var battleTransitionActive by remember { mutableStateOf(false) }
@@ -80,7 +75,6 @@ class ComposeActivity : ComponentActivity() {
                             ),
                         )
                         actuallyLaunchBattle()
-                        // Reset after a short delay so overlay persists during activity switch
                         delay(300L)
                         battleTransitionActive = false
                         battleWipeProgress.snapTo(0f)
@@ -88,19 +82,19 @@ class ComposeActivity : ComponentActivity() {
                 }
 
                 // Sync SFX enabled state with settings
-                androidx.compose.runtime.DisposableEffect(data.soundEnabled) {
+                DisposableEffect(data.soundEnabled) {
                     SfxManager.setEnabled(data.soundEnabled)
                     onDispose { }
                 }
 
                 // Sync haptic enabled state with settings
-                androidx.compose.runtime.DisposableEffect(data.hapticEnabled) {
+                DisposableEffect(data.hapticEnabled) {
                     HapticManager.setEnabled(data.hapticEnabled)
                     onDispose { }
                 }
 
                 // Default BGM for all non-battle screens
-                androidx.compose.runtime.DisposableEffect(data.musicEnabled) {
+                DisposableEffect(data.musicEnabled) {
                     if (data.musicEnabled) {
                         BgmManager.play(this@ComposeActivity, "audio/home_bgm.mp3")
                     } else {
@@ -114,7 +108,7 @@ class ComposeActivity : ComponentActivity() {
                         SplashScreen()
                     } else {
                         NavGraph(
-                            repository = repository,
+                            factory = factory,
                             onStartBattle = { battleTransitionActive = true },
                             onStartDungeonBattle = { dungeonId ->
                                 BattleBridge.setDungeonMode(dungeonId)
@@ -125,10 +119,10 @@ class ComposeActivity : ComponentActivity() {
                     }
 
                     // Offline reward dialog
-                    if (showOfflineReward && offlineReward != null && !showSplash) {
+                    if (appState.showOfflineRewardDialog && appState.offlineReward != null && !showSplash) {
                         OfflineRewardDialog(
-                            reward = offlineReward,
-                            onDismiss = { showOfflineReward = false },
+                            reward = appState.offlineReward!!,
+                            onDismiss = { vm.dismissOfflineReward() },
                         )
                     }
 
@@ -155,9 +149,9 @@ class ComposeActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         BgmManager.pause()
-        // Save last online time for offline reward calculation
-        val data = repository.gameData.value
-        repository.save(data.copy(lastOnlineTime = System.currentTimeMillis()))
+        val repo = (application as JayGameApplication).repository
+        val data = repo.gameData.value
+        repo.save(data.copy(lastOnlineTime = System.currentTimeMillis()))
     }
 
     override fun onDestroy() {
@@ -168,50 +162,22 @@ class ComposeActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Resume default BGM when coming back from battle
-        if (repository.gameData.value.musicEnabled) {
+        if (::appVm.isInitialized) {
+            appVm.onResume()
+        }
+        val repo = (application as JayGameApplication).repository
+        if (repo.gameData.value.musicEnabled) {
             BgmManager.play(this, "audio/home_bgm.mp3")
         }
-        repository.refresh()
-        BattleBridge.clearResult()
-
-        // Combine all data transformations into a single save to avoid UI thread blocking
-        var data = repository.gameData.value
-
-        // Auto-unlock stages based on trophies
-        val newUnlocked = STAGES.filter { it.unlockTrophies <= data.trophies }.map { it.id }
-        if (newUnlocked.toSet() != data.unlockedStages.toSet()) {
-            data = data.copy(unlockedStages = newUnlocked)
-        }
-
-        // Apply offline rewards and update last online time
-        data = OfflineRewardManager.claimReward(data)
-
-        // Season reset check (monthly)
-        val currentMonth = java.time.YearMonth.now().toString() // "2026-03"
-        if (data.seasonMonth != currentMonth && data.seasonMonth.isNotEmpty()) {
-            // New month → reset season XP and claimed tier
-            data = data.copy(
-                seasonXP = 0,
-                seasonClaimedTier = 0,
-                seasonMonth = currentMonth,
-            )
-        } else if (data.seasonMonth.isEmpty()) {
-            // First time — set current month
-            data = data.copy(seasonMonth = currentMonth)
-        }
-
-        repository.save(data)
     }
 
     private fun actuallyLaunchBattle() {
-        val data = repository.gameData.value
+        val repo = (application as JayGameApplication).repository
+        val data = repo.gameData.value
         BattleBridge.setStageId(data.currentStageId)
         BattleBridge.setDifficulty(data.difficulty)
-        // Stop main BGM before launching battle
         BgmManager.stop()
         startActivity(android.content.Intent(this, MainActivity::class.java))
-        // A2: No default activity animation (we handle it with the wipe overlay)
         @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
     }

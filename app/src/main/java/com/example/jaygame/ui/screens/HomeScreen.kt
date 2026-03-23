@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,18 +35,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jaygame.data.GameRepository
 import com.example.jaygame.data.STAGES
-import com.example.jaygame.data.StaminaManager
 import com.example.jaygame.ui.components.DailyLoginDialog
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.components.PreBattleDialog
 import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.components.ProfileBanner
 import com.example.jaygame.ui.components.StageCardPager
-import com.example.jaygame.ui.components.canClaim
-import com.example.jaygame.ui.components.claimReward
 import com.example.jaygame.ui.theme.*
+import com.example.jaygame.ui.viewmodel.HomeViewModel
+import com.example.jaygame.ui.viewmodel.HomeSideEffect
+import org.orbitmvi.orbit.compose.collectAsState
+import org.orbitmvi.orbit.compose.collectSideEffect
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -81,28 +80,29 @@ private class Particle {
 
 @Composable
 fun HomeScreen(
-    repository: GameRepository,
+    viewModel: HomeViewModel,
     onStartBattle: () -> Unit,
     onNavigateToDungeon: (() -> Unit)? = null,
 ) {
-    val data by repository.gameData.collectAsState()
-    var showDailyLogin by remember { mutableStateOf(false) }
-    var showPreBattle by remember { mutableStateOf(false) }
+    val state by viewModel.collectAsState()
+    val data = state.gameData
     val context = LocalContext.current
 
-    LaunchedEffect(data) {
-        if (canClaim(data)) showDailyLogin = true
+    LaunchedEffect(Unit) { viewModel.checkDailyLogin() }
+
+    viewModel.collectSideEffect { effect ->
+        when (effect) {
+            is HomeSideEffect.LaunchBattle -> onStartBattle()
+            is HomeSideEffect.ShowToast ->
+                android.widget.Toast.makeText(context, effect.message, android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
-    if (showDailyLogin) {
+    if (state.showDailyLogin) {
         DailyLoginDialog(
             data = data,
-            onClaim = {
-                val updated = claimReward(data)
-                repository.save(updated)
-                showDailyLogin = false
-            },
-            onDismiss = { showDailyLogin = false },
+            onClaim = { viewModel.claimDailyLogin() },
+            onDismiss = { viewModel.dismissDailyLogin() },
         )
     }
 
@@ -209,11 +209,7 @@ fun HomeScreen(
                 unlockedStages = data.unlockedStages,
                 stageBestWaves = data.stageBestWaves,
                 difficulty = data.difficulty,
-                onStageChanged = { stageId ->
-                    if (stageId != data.currentStageId) {
-                        repository.save(data.copy(currentStageId = stageId))
-                    }
-                },
+                onStageChanged = { stageId -> viewModel.selectStage(stageId) },
             )
 
             Spacer(modifier = Modifier.weight(0.5f))
@@ -290,7 +286,7 @@ fun HomeScreen(
                     ) {
                         NeonButton(
                             text = "전투 준비",
-                            onClick = { showPreBattle = true },
+                            onClick = { viewModel.showPreBattle() },
                             enabled = isUnlocked,
                             modifier = Modifier
                                 .weight(1f)
@@ -321,7 +317,7 @@ fun HomeScreen(
         }
 
         // Pre-battle dialog overlay (inside main Box for correct z-order)
-        if (showPreBattle) {
+        if (state.showPreBattle) {
             val stage2 = STAGES.getOrNull(data.currentStageId) ?: STAGES[0]
             val bestWave = data.stageBestWaves.getOrElse(data.currentStageId) { 0 }
             PreBattleDialog(
@@ -330,18 +326,9 @@ fun HomeScreen(
                 selectedDifficulty = data.difficulty,
                 staminaCost = stage2.staminaCost,
                 hasStamina = data.stamina >= stage2.staminaCost,
-                onDifficultySelected = { diff ->
-                    repository.save(data.copy(difficulty = diff))
-                },
-                onStartBattle = {
-                    val consumed = StaminaManager.consume(data, stage2.staminaCost)
-                    if (consumed != null) {
-                        repository.save(consumed.copy(currentStageId = data.currentStageId))
-                        showPreBattle = false
-                        onStartBattle()
-                    }
-                },
-                onDismiss = { showPreBattle = false },
+                onDifficultySelected = { diff -> viewModel.selectDifficulty(diff) },
+                onStartBattle = { viewModel.startBattle(stage2.staminaCost) },
+                onDismiss = { viewModel.dismissPreBattle() },
             )
         }
     }

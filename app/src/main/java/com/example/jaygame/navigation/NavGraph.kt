@@ -11,17 +11,16 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.jaygame.data.GameRepository
+import com.example.jaygame.JayGameApplication
 import com.example.jaygame.ui.components.GameBottomNavBar
 import com.example.jaygame.ui.components.NavTab
-import com.example.jaygame.engine.PetManager
-import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.screens.CollectionScreen
-
 import com.example.jaygame.ui.screens.HomeScreen
 import com.example.jaygame.ui.screens.SettingsScreen
 import com.example.jaygame.ui.screens.AchievementsScreen
@@ -32,13 +31,14 @@ import com.example.jaygame.data.STAGES
 import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
+import com.example.jaygame.ui.viewmodel.*
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import android.widget.Toast
 
 @Composable
 fun NavGraph(
-    repository: GameRepository,
+    factory: ViewModelProvider.Factory,
     onStartBattle: () -> Unit,
     onStartDungeonBattle: (dungeonId: Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -49,6 +49,7 @@ fun NavGraph(
 
     // ── Hidden cheat: tap shop tab 10 times within 10 seconds ──
     val context = androidx.compose.ui.platform.LocalContext.current
+    val repository = (context.applicationContext as JayGameApplication).repository
     val shopTapTimes = remember { mutableListOf<Long>() }
     var cheatActivated by remember { mutableStateOf(false) }
 
@@ -78,8 +79,9 @@ fun NavGraph(
             popExitTransition = { fadeOut(animationSpec = tween(300)) },
         ) {
             composable(Routes.HOME) {
+                val vm: HomeViewModel = viewModel(factory = factory)
                 HomeScreen(
-                    repository = repository,
+                    viewModel = vm,
                     onStartBattle = onStartBattle,
                     onNavigateToDungeon = {
                         navController.navigate(Routes.DUNGEON) {
@@ -89,56 +91,17 @@ fun NavGraph(
                 )
             }
             composable(Routes.COLLECTION) {
-                val gameData by repository.gameData.collectAsState()
-                val petMgr = remember { PetManager(gameData) }
-                CollectionScreen(
-                    repository = repository,
-                    onRelicUpgrade = { relicId ->
-                        val mgr = RelicManager(repository.gameData.value)
-                        val updated = mgr.upgradeRelic(relicId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onRelicEquip = { relicId ->
-                        val mgr = RelicManager(repository.gameData.value)
-                        val updated = mgr.equipRelic(relicId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onRelicUnequip = { relicId ->
-                        val mgr = RelicManager(repository.gameData.value)
-                        repository.save(mgr.unequipRelic(relicId))
-                    },
-                    onPetPull = {
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.pullPet()
-                        if (updated != null) repository.save(updated)
-                    },
-                    onPetPull10 = {
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.pullPet10()
-                        if (updated != null) repository.save(updated)
-                    },
-                    onPetUpgrade = { petId ->
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.upgradePet(petId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onPetEquip = { petId ->
-                        petMgr.syncData(repository.gameData.value)
-                        val updated = petMgr.equipPet(petId)
-                        if (updated != null) repository.save(updated)
-                    },
-                    onPetUnequip = { petId ->
-                        petMgr.syncData(repository.gameData.value)
-                        repository.save(petMgr.unequipPet(petId))
-                    },
-                )
+                val vm: CollectionViewModel = viewModel(factory = factory)
+                CollectionScreen(viewModel = vm)
             }
             composable(Routes.SHOP) {
-                ShopScreen(repository = repository)
+                val vm: ShopViewModel = viewModel(factory = factory)
+                ShopScreen(viewModel = vm)
             }
             composable(Routes.SETTINGS) {
+                val vm: SettingsViewModel = viewModel(factory = factory)
                 SettingsScreen(
-                    repository = repository,
+                    viewModel = vm,
                     onNavigate = { route ->
                         navController.navigate(route) {
                             popUpTo(Routes.SETTINGS) { saveState = true }
@@ -214,7 +177,6 @@ fun NavGraph(
                     if (tab == NavTab.SHOP && !cheatActivated) {
                         val now = System.currentTimeMillis()
                         shopTapTimes.add(now)
-                        // Keep only taps within the last 10 seconds
                         shopTapTimes.removeAll { now - it > 10_000L }
                         if (shopTapTimes.size >= 10) {
                             cheatActivated = true

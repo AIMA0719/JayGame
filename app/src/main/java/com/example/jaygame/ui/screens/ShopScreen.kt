@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,11 +25,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,10 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
-import com.example.jaygame.data.GameData
-import com.example.jaygame.data.GameRepository
-import com.example.jaygame.data.STAGES
-import com.example.jaygame.data.addRandomCardsToUnits
 import com.example.jaygame.ui.components.GachaProbabilityDialog
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
@@ -55,22 +48,33 @@ import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.DarkGold
-import com.example.jaygame.ui.theme.GoldCoin
 import com.example.jaygame.ui.theme.LightText
 import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.NeonRedDark
 import com.example.jaygame.ui.theme.SubText
+import com.example.jaygame.ui.viewmodel.ShopViewModel
+import com.example.jaygame.ui.viewmodel.ShopSideEffect
+import org.orbitmvi.orbit.compose.collectAsState
+import org.orbitmvi.orbit.compose.collectSideEffect
 
 private enum class CurrencyType { GOLD, DIAMOND, FREE }
+
+private sealed class ShopAction {
+    data class GoldPack(val diamondCost: Int, val goldAmount: Int) : ShopAction()
+    data class DiamondPack(val goldCost: Int, val diamondAmount: Int) : ShopAction()
+    data class RandomCards(val count: Int, val currencyIsGold: Boolean, val cost: Int) : ShopAction()
+    data class Stamina(val diamondCost: Int, val amount: Int) : ShopAction()
+    data class StarterPack(val diamondCost: Int) : ShopAction()
+}
 
 private data class ShopItem(
     val name: String,
     val description: String,
     val currencyType: CurrencyType,
     val priceAmount: String,
-    val onPurchase: ((GameData, GameRepository) -> Boolean)?,
+    val action: ShopAction,
 )
 
 private data class TierReward(
@@ -90,81 +94,48 @@ private val SEASON_REWARDS = (1..30).map { tier ->
 }
 
 @Composable
-fun ShopScreen(repository: GameRepository) {
-    val data by repository.gameData.collectAsState()
+fun ShopScreen(viewModel: ShopViewModel) {
+    val shopState by viewModel.collectAsState()
+    val data = shopState.gameData
+    val selectedTab = shopState.selectedTab
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var showProbabilityDialog by remember { mutableStateOf(false) }
 
-    if (showProbabilityDialog) {
-        GachaProbabilityDialog(onDismiss = { showProbabilityDialog = false })
+    viewModel.collectSideEffect { effect ->
+        when (effect) {
+            is ShopSideEffect.ShowToast ->
+                Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (shopState.showProbabilityDialog) {
+        GachaProbabilityDialog(onDismiss = { viewModel.dismissProbabilityDialog() })
     }
 
     val tabNames = listOf("골드팩", "다이아팩", "스페셜", "시즌패스")
 
     val goldPackItems = remember {
         listOf(
-            ShopItem("골드 100개", "소량의 골드를 획득합니다.", CurrencyType.DIAMOND, "10",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 10) { repo.save(d.copy(diamonds = d.diamonds - 10, gold = d.gold + 100)); true } else false
-                }),
-            ShopItem("골드 500개", "적당한 양의 골드를 획득합니다.", CurrencyType.DIAMOND, "40",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 40) { repo.save(d.copy(diamonds = d.diamonds - 40, gold = d.gold + 500)); true } else false
-                }),
-            ShopItem("골드 2,000개", "대량의 골드를 획득합니다.", CurrencyType.DIAMOND, "150",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 150) { repo.save(d.copy(diamonds = d.diamonds - 150, gold = d.gold + 2000)); true } else false
-                }),
-            ShopItem("골드 10,000개", "엄청난 양의 골드를 획득합니다.", CurrencyType.DIAMOND, "700",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 700) { repo.save(d.copy(diamonds = d.diamonds - 700, gold = d.gold + 10000)); true } else false
-                }),
+            ShopItem("골드 100개", "소량의 골드를 획득합니다.", CurrencyType.DIAMOND, "10", ShopAction.GoldPack(10, 100)),
+            ShopItem("골드 500개", "적당한 양의 골드를 획득합니다.", CurrencyType.DIAMOND, "40", ShopAction.GoldPack(40, 500)),
+            ShopItem("골드 2,000개", "대량의 골드를 획득합니다.", CurrencyType.DIAMOND, "150", ShopAction.GoldPack(150, 2000)),
+            ShopItem("골드 10,000개", "엄청난 양의 골드를 획득합니다.", CurrencyType.DIAMOND, "700", ShopAction.GoldPack(700, 10000)),
         )
     }
 
     val diamondPackItems = remember {
         listOf(
-            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "5,000",
-                onPurchase = { d, repo ->
-                    if (d.gold >= 5000) { repo.save(d.copy(gold = d.gold - 5000, diamonds = d.diamonds + 50)); true } else false
-                }),
-            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "18,000",
-                onPurchase = { d, repo ->
-                    if (d.gold >= 18000) { repo.save(d.copy(gold = d.gold - 18000, diamonds = d.diamonds + 200)); true } else false
-                }),
-            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "40,000",
-                onPurchase = { d, repo ->
-                    if (d.gold >= 40000) { repo.save(d.copy(gold = d.gold - 40000, diamonds = d.diamonds + 500)); true } else false
-                }),
+            ShopItem("다이아 50개", "소량의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "5,000", ShopAction.DiamondPack(5000, 50)),
+            ShopItem("다이아 200개", "적당한 양의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "18,000", ShopAction.DiamondPack(18000, 200)),
+            ShopItem("다이아 500개", "대량의 다이아몬드를 획득합니다.", CurrencyType.GOLD, "40,000", ShopAction.DiamondPack(40000, 500)),
         )
     }
 
     val specialItems = remember {
         listOf(
-            ShopItem("랜덤 유닛 카드 5장", "랜덤한 보유 유닛의 카드 5장을 획득합니다.", CurrencyType.GOLD, "1,000",
-                onPurchase = { d, repo ->
-                    if (d.gold >= 1000) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 5), gold = d.gold - 1000)); true } else false
-                }),
-            ShopItem("랜덤 유닛 카드 20장", "랜덤한 보유 유닛의 카드 20장을 획득합니다.", CurrencyType.DIAMOND, "50",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 50) { repo.save(d.copy(units = addRandomCardsToUnits(d.units, 20), diamonds = d.diamonds - 50)); true } else false
-                }),
-            ShopItem("스태미나 충전", "스태미나를 50 회복합니다.", CurrencyType.DIAMOND, "30",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 30) { repo.save(d.copy(diamonds = d.diamonds - 30, stamina = (d.stamina + 50).coerceAtMost(d.maxStamina))); true } else false
-                }),
-            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", CurrencyType.DIAMOND, "100",
-                onPurchase = { d, repo ->
-                    if (d.diamonds >= 100) {
-                        repo.save(d.copy(
-                            diamonds = d.diamonds - 100,
-                            gold = d.gold + 5000,
-                            units = addRandomCardsToUnits(d.units, 10),
-                        ))
-                        true
-                    } else false
-                }),
+            ShopItem("랜덤 유닛 카드 5장", "랜덤한 보유 유닛의 카드 5장을 획득합니다.", CurrencyType.GOLD, "1,000", ShopAction.RandomCards(5, currencyIsGold = true, 1000)),
+            ShopItem("랜덤 유닛 카드 20장", "랜덤한 보유 유닛의 카드 20장을 획득합니다.", CurrencyType.DIAMOND, "50", ShopAction.RandomCards(20, currencyIsGold = false, 50)),
+            ShopItem("스태미나 충전", "스태미나를 50 회복합니다.", CurrencyType.DIAMOND, "30", ShopAction.Stamina(30, 50)),
+            ShopItem("초보자 패키지", "골드 5,000 + 랜덤 카드 10장을 획득합니다.", CurrencyType.DIAMOND, "100", ShopAction.StarterPack(100)),
         )
     }
 
@@ -197,7 +168,7 @@ fun ShopScreen(repository: GameRepository) {
             )
             NeonButton(
                 text = "확률 보기",
-                onClick = { showProbabilityDialog = true },
+                onClick = { viewModel.showProbabilityDialog() },
                 fontSize = 11.sp,
                 accentColor = SubText,
                 accentColorDark = DimText,
@@ -224,7 +195,7 @@ fun ShopScreen(repository: GameRepository) {
                 tabNames.forEachIndexed { index, name ->
                     NeonButton(
                         text = name,
-                        onClick = { selectedTab = index },
+                        onClick = { viewModel.selectTab(index) },
                         modifier = Modifier.weight(1f),
                         fontSize = 12.sp,
                         accentColor = if (selectedTab == index) NeonRed else DimText,
@@ -254,7 +225,7 @@ fun ShopScreen(repository: GameRepository) {
         // Content
         if (selectedTab == 3) {
             // Season Pass tab
-            SeasonPassContent(repository = repository)
+            SeasonPassContent(data = data, viewModel = viewModel)
         } else {
             val currentItems = when (selectedTab) {
                 0 -> goldPackItems
@@ -273,17 +244,12 @@ fun ShopScreen(repository: GameRepository) {
                     ShopItemCard(
                         item = item,
                         onBuy = {
-                            val purchase = item.onPurchase
-                            if (purchase != null) {
-                                val currentData = repository.gameData.value
-                                val success = purchase(currentData, repository)
-                                if (success) {
-                                    Toast.makeText(context, "${item.name} 구매 완료!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "재화가 부족합니다.", Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                Toast.makeText(context, "준비 중입니다.", Toast.LENGTH_SHORT).show()
+                            when (val a = item.action) {
+                                is ShopAction.GoldPack -> viewModel.purchaseGoldPack(a.diamondCost, a.goldAmount)
+                                is ShopAction.DiamondPack -> viewModel.purchaseDiamondPack(a.goldCost, a.diamondAmount)
+                                is ShopAction.RandomCards -> viewModel.purchaseRandomCards(a.count, a.currencyIsGold, a.cost)
+                                is ShopAction.Stamina -> viewModel.purchaseStamina(a.diamondCost, a.amount)
+                                is ShopAction.StarterPack -> viewModel.purchaseStarterPack(a.diamondCost)
                             }
                         },
                     )
@@ -298,9 +264,7 @@ fun ShopScreen(repository: GameRepository) {
 }
 
 @Composable
-private fun SeasonPassContent(repository: GameRepository) {
-    val data by repository.gameData.collectAsState()
-    val context = LocalContext.current
+private fun SeasonPassContent(data: com.example.jaygame.data.GameData, viewModel: ShopViewModel) {
 
     val currentTier = data.seasonTier
     val tierProgress = data.seasonTierProgress
@@ -367,33 +331,15 @@ private fun SeasonPassContent(repository: GameRepository) {
                 NeonButton(
                     text = "모두 수령 (${claimableTiers}개)",
                     onClick = {
-                        val currentData = repository.gameData.value
-                        val ct = currentData.seasonTier
-                        val claimed = currentData.seasonClaimedTier
-                        var goldReward = 0
-                        var diamondReward = 0
-                        var cardReward = 0
-                        for (reward in SEASON_REWARDS) {
-                            if (reward.tier in (claimed + 1)..ct) {
-                                goldReward += reward.gold
-                                diamondReward += reward.diamonds
-                                cardReward += reward.cards
-                            }
+                        val ct = data.seasonTier
+                        val claimed = data.seasonClaimedTier
+                        val claimable = SEASON_REWARDS.filter { it.tier in (claimed + 1)..ct }
+                        if (claimable.isNotEmpty()) {
+                            viewModel.claimAllSeasonTiers(
+                                rewards = claimable.map { Triple(it.gold, it.diamonds, it.cards) },
+                                toTier = ct,
+                            )
                         }
-                        val updatedData = currentData.copy(
-                            units = addRandomCardsToUnits(currentData.units, cardReward),
-                            gold = currentData.gold + goldReward,
-                            diamonds = currentData.diamonds + diamondReward,
-                            seasonClaimedTier = ct,
-                        )
-                        repository.save(updatedData)
-                        Toast.makeText(
-                            context,
-                            "보상 수령! 골드+$goldReward" +
-                                (if (diamondReward > 0) " 다이아+$diamondReward" else "") +
-                                (if (cardReward > 0) " 카드+$cardReward" else ""),
-                            Toast.LENGTH_SHORT,
-                        ).show()
                     },
                     accentColor = NeonGreen,
                     accentColorDark = NeonGreen.copy(alpha = 0.6f),
@@ -436,22 +382,7 @@ private fun SeasonPassContent(repository: GameRepository) {
                     isClaimable = isClaimable,
                     isLocked = isLocked,
                     onClaim = {
-                        val currentData = repository.gameData.value
-                        // Only allow claiming the next unclaimed tier to prevent skipping
-                        if (reward.tier == currentData.seasonClaimedTier + 1) {
-                            val updatedData = currentData.copy(
-                                units = addRandomCardsToUnits(currentData.units, reward.cards),
-                                gold = currentData.gold + reward.gold,
-                                diamonds = currentData.diamonds + reward.diamonds,
-                                seasonClaimedTier = reward.tier,
-                            )
-                            repository.save(updatedData)
-                            Toast.makeText(
-                                context,
-                                "티어 ${reward.tier} 보상 수령!",
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
+                        viewModel.claimSeasonTier(reward.tier, reward.gold, reward.diamonds, reward.cards)
                     },
                 )
             }
@@ -494,17 +425,15 @@ private fun ShopItemCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            val btnAccent = when {
-                item.onPurchase == null -> DimText
-                item.currencyType == CurrencyType.DIAMOND -> NeonCyan
-                item.currencyType == CurrencyType.GOLD -> Gold
-                else -> SubText
+            val btnAccent = when (item.currencyType) {
+                CurrencyType.DIAMOND -> NeonCyan
+                CurrencyType.GOLD -> Gold
+                CurrencyType.FREE -> SubText
             }
-            val btnAccentDark = when {
-                item.onPurchase == null -> DimText.copy(alpha = 0.6f)
-                item.currencyType == CurrencyType.DIAMOND -> NeonCyan.copy(alpha = 0.7f)
-                item.currencyType == CurrencyType.GOLD -> DarkGold
-                else -> SubText.copy(alpha = 0.7f)
+            val btnAccentDark = when (item.currencyType) {
+                CurrencyType.DIAMOND -> NeonCyan.copy(alpha = 0.7f)
+                CurrencyType.GOLD -> DarkGold
+                CurrencyType.FREE -> SubText.copy(alpha = 0.7f)
             }
 
             if (item.currencyType == CurrencyType.FREE) {
@@ -512,14 +441,14 @@ private fun ShopItemCard(
                     text = item.priceAmount,
                     onClick = onBuy,
                     fontSize = 11.sp,
-                    enabled = item.onPurchase != null,
+                    enabled = true,
                     accentColor = btnAccent,
                     accentColorDark = btnAccentDark,
                 )
             } else {
                 NeonButton(
                     onClick = onBuy,
-                    enabled = item.onPurchase != null,
+                    enabled = true,
                     accentColor = btnAccent,
                     accentColorDark = btnAccentDark,
                 ) {

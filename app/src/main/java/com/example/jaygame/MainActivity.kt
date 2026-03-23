@@ -13,16 +13,12 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.GameRepository
-import com.example.jaygame.data.RelicGrade
-import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.ALL_DUNGEONS
-import com.example.jaygame.data.addRandomCardsToUnits
+import com.example.jaygame.data.STAGES
+import com.example.jaygame.engine.BattleEngine
+import com.example.jaygame.engine.BattleRewardCalculator
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.RecipeSystem
-import com.example.jaygame.engine.BattleEngine
-import com.example.jaygame.engine.DungeonManager
-import com.example.jaygame.engine.RelicManager
 import com.example.jaygame.ui.battle.BattleScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import kotlinx.coroutines.CoroutineScope
@@ -30,10 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 
-// A4: Smooth fade transition when returning to home
-
 class MainActivity : ComponentActivity() {
-    private lateinit var repository: GameRepository
     private var engine: BattleEngine? = null
     private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -43,7 +36,7 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         BlueprintRegistry.initialize(applicationContext)
         RecipeSystem.initialize(applicationContext)
-        repository = GameRepository(this)
+        val repository = (application as JayGameApplication).repository
 
         // Preserve stageId/difficulty/speed set by ComposeActivity, then reset battle state
         val stageId = BattleBridge.stageId.value
@@ -71,7 +64,6 @@ class MainActivity : ComponentActivity() {
 
         val maxWaves = dungeonDef?.waveCount ?: stage.maxWaves
         val effectiveDifficulty = if (dungeonDef != null) {
-            // Scale difficulty by dungeon multiplier
             (difficulty * dungeonDef.difficultyMultiplier).toInt().coerceAtLeast(difficulty)
         } else difficulty
 
@@ -109,130 +101,17 @@ class MainActivity : ComponentActivity() {
                 BattleScreen(
                     result = result,
                     onGoHome = {
-                        // Apply battle rewards to persistent data
                         val battleResult = BattleBridge.result.value
                         if (battleResult != null) {
-                            val current = repository.gameData.value
-                            val isDungeon = BattleBridge.isDungeonMode
-                            val dId = BattleBridge.dungeonId.value
-                            val dDef = if (dId >= 0) ALL_DUNGEONS.getOrNull(dId) else null
-
-                            // Apply dungeon reward multiplier to gold
-                            val goldMultiplier = dDef?.rewardMultiplier ?: 1f
-                            val finalGold = (battleResult.goldEarned * goldMultiplier).toInt()
-
-                            // Stage best waves (skip for dungeon mode)
-                            val stageIdx = BattleBridge.stageId.value
-                            val bestWaves = current.stageBestWaves.toMutableList()
-                            if (!isDungeon) {
-                                while (bestWaves.size <= stageIdx) bestWaves.add(0)
-                                if (battleResult.waveReached > bestWaves[stageIdx]) {
-                                    bestWaves[stageIdx] = battleResult.waveReached
-                                }
-                            }
-
-                            // Dungeon clears record
-                            val dungeonClears = current.dungeonClears.toMutableMap()
-                            if (isDungeon && dId >= 0) {
-                                val prev = dungeonClears[dId] ?: 0
-                                if (battleResult.waveReached > prev) {
-                                    dungeonClears[dId] = battleResult.waveReached
-                                }
-                            }
-
-                            // Dungeon-specific bonus rewards
-                            var petCardBonus = 0
-                            if (isDungeon && dDef != null) {
-                                when (dDef.type) {
-                                    com.example.jaygame.data.DungeonType.PET_EXPEDITION -> {
-                                        // Award pet cards based on waves cleared
-                                        petCardBonus = battleResult.waveReached / 4
-                                    }
-                                    else -> { /* other bonuses handled by rewardMultiplier */ }
-                                }
-                            }
-
-                            // Star rating bonus: 3-star = +50% gold, 2-star = +25%
-                            val starCount = if (!battleResult.victory) 0 else {
-                                var s = 1
-                                if (battleResult.noHpLost || battleResult.fastClear) s++
-                                if (battleResult.noHpLost && battleResult.fastClear) s++
-                                s
-                            }
-                            val starGoldBonus = when (starCount) {
-                                3 -> 0.5f
-                                2 -> 0.25f
-                                else -> 0f
-                            }
-                            val starBonusGold = (finalGold * starGoldBonus).toInt()
-
-                            // Cards earned → distribute to random units
-                            val updatedUnits = addRandomCardsToUnits(current.units, battleResult.cardsEarned)
-
-                            // XP from battle (wave reached * 10, bonus for victory)
-                            val xpGained = battleResult.waveReached * 10 + if (battleResult.victory) 50 else 0
-                            val newTotalXP = current.totalXP + xpGained
-                            val newPlayerLevel = (newTotalXP / 100) + 1 // level up every 100 XP
-
-                            // Season XP — dungeon clears give bonus
-                            val dungeonSeasonBonus = if (isDungeon && battleResult.victory) 50 else 0
-                            val seasonXpGained = battleResult.waveReached * 5 + (if (battleResult.victory) 30 else 0) + dungeonSeasonBonus
-                            val newSeasonXP = current.seasonXP + seasonXpGained
-
-                            // Single-type win detection: all placed units share the same family
-                            val singleTypeWin = engine?.let { eng ->
-                                val families = mutableSetOf<Int>()
-                                eng.units.forEach { u -> if (u.alive) families.add(u.family) }
-                                families.size == 1 && families.firstOrNull()?.let { it >= 0 } == true
-                            } ?: false
-
-                            // Apply relic drop if present (boosted chance in RELIC_HUNT dungeon handled by engine)
-                            val afterRelicData = if (battleResult.relicDropId >= 0 && battleResult.relicDropGrade >= 0) {
-                                val grade = RelicGrade.entries.getOrNull(battleResult.relicDropGrade)
-                                if (grade != null) {
-                                    RelicManager(current).acquireRelic(battleResult.relicDropId, grade)
-                                } else current
-                            } else current
-
-                            // 천장 카운터 저장
-                            val finalPity = engine?.currentPity ?: BattleBridge.unitPullPity.value
-
-                            // Pet card bonus for PET_EXPEDITION dungeon
-                            val finalPets = if (petCardBonus > 0) {
-                                val ownedCount = afterRelicData.pets.count { it.owned }.coerceAtLeast(1)
-                                val perPet = petCardBonus / ownedCount
-                                val remainder = petCardBonus % ownedCount
-                                var given = 0
-                                afterRelicData.pets.mapIndexed { idx, pet ->
-                                    if (pet.owned) {
-                                        val extra = if (given < remainder) 1 else 0
-                                        given++
-                                        pet.copy(cards = pet.cards + perPet + extra)
-                                    } else pet
-                                }
-                            } else afterRelicData.pets
-
-                            repository.save(afterRelicData.copy(
-                                gold = afterRelicData.gold + finalGold + starBonusGold,
-                                trophies = if (isDungeon) afterRelicData.trophies else (afterRelicData.trophies + battleResult.trophyChange).coerceAtLeast(0),
-                                totalKills = afterRelicData.totalKills + battleResult.killCount,
-                                totalMerges = afterRelicData.totalMerges + battleResult.mergeCount,
-                                totalGoldEarned = afterRelicData.totalGoldEarned + finalGold + starBonusGold,
-                                totalWins = afterRelicData.totalWins + if (battleResult.victory) 1 else 0,
-                                totalLosses = afterRelicData.totalLosses + if (!battleResult.victory) 1 else 0,
-                                highestWave = maxOf(afterRelicData.highestWave, battleResult.waveReached),
-                                wonWithoutDamage = afterRelicData.wonWithoutDamage || battleResult.noHpLost,
-                                wonWithSingleType = afterRelicData.wonWithSingleType || singleTypeWin,
-                                stageBestWaves = bestWaves,
-                                units = updatedUnits,
-                                totalXP = newTotalXP,
-                                playerLevel = newPlayerLevel,
-                                seasonXP = newSeasonXP,
-                                unitPullPity = finalPity,
-                                dungeonClears = dungeonClears,
-                                pets = finalPets,
-                                tutorialCompleted = true,
-                            ))
+                            val updatedData = BattleRewardCalculator.calculateRewards(
+                                current = repository.gameData.value,
+                                battleResult = battleResult,
+                                stageId = BattleBridge.stageId.value,
+                                isDungeon = BattleBridge.isDungeonMode,
+                                dungeonId = BattleBridge.dungeonId.value,
+                                engine = engine,
+                            )
+                            repository.save(updatedData)
                         }
                         BattleBridge.clearResult()
                         BattleBridge.clearDungeonMode()

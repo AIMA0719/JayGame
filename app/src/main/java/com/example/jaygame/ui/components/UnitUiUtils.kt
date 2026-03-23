@@ -109,9 +109,9 @@ fun GameFilterChip(
 
 // ── Shared stat row composable ──
 @Composable
-fun UnitStatRow(label: String, value: String, valueColor: Color) {
+fun UnitStatRow(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
