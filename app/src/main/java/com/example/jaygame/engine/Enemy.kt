@@ -174,5 +174,9 @@ class Enemy {
     var splitterTriggered = false
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f
-    val size: Float get() = if (type == 4 || type == 5) 96f else 48f
+    val size: Float get() = when (type) {
+        4, 5 -> 96f
+        6 -> 64f
+        else -> 48f
+    }
 }

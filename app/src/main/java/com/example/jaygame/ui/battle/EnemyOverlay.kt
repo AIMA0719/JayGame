@@ -37,16 +37,9 @@ private val HitFlashWhite = Color.White.copy(alpha = 0.7f)
 private val BossAuraRed = Color(0xFFFF2222).copy(alpha = 0.15f)
 private val BossGlowRed = Color(0xFFFF4444).copy(alpha = 0.25f)
 private val BossGlowRedBright = Color(0xFFFF6666).copy(alpha = 0.4f)
-private val DeathParticleColors = arrayOf(
+private val EnemyColors = arrayOf(
     Color(0xFFFF6B35), Color(0xFF64B5F6), Color(0xFF81C784),
-    Color(0xFFFFD54F), Color(0xFFCE93D8),
-)
-private val FallbackColors = arrayOf(
-    Color(0xFFFF6B35),
-    Color(0xFF64B5F6),
-    Color(0xFF81C784),
-    Color(0xFFFFD54F),
-    Color(0xFFCE93D8),
+    Color(0xFFFFD54F), Color(0xFFCE93D8), Color(0xFF43A047),
 )
 
 // ── Buff effect colors (pre-allocated to avoid GC) ──
@@ -123,6 +116,7 @@ fun EnemyOverlay() {
             2 to R.drawable.ic_enemy_2,
             3 to R.drawable.ic_enemy_3,
             4 to R.drawable.ic_enemy_4,
+            6 to R.drawable.ic_enemy_6,
             99 to R.drawable.ic_enemy_boss,
         )
         drawableIds.mapValues { (_, resId) ->
@@ -293,8 +287,12 @@ fun EnemyOverlay() {
 
             // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
             val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
-            val spriteSize = if (isBoss) pathWidth * 0.85f else pathWidth * 0.6f
-            val bitmap = if (isBoss) bossBitmap else enemyBitmaps[type % 5]
+            val spriteSize = when {
+                isBoss -> pathWidth * 0.85f
+                type == 6 -> pathWidth * 0.75f
+                else -> pathWidth * 0.6f
+            }
+            val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
             // ── Walking Wobble ──
             val wobbleAngle = sin(t * 8f + i * 1.3f) * 3f
@@ -343,7 +341,7 @@ fun EnemyOverlay() {
                 )
             } else {
                 // Fallback: colored circle
-                val color = FallbackColors[type % 5]
+                val color = EnemyColors[type % EnemyColors.size]
                 drawCircle(
                     color = color,
                     radius = drawSize / 2,
@@ -565,7 +563,7 @@ fun EnemyOverlay() {
             for (p in de.particles) {
                 val px = dx + p.vx * progress
                 val py = dy + p.vy * progress + 20f * progress * progress // gravity
-                val pColor = DeathParticleColors[p.colorIdx % 5]
+                val pColor = EnemyColors[p.colorIdx % EnemyColors.size]
                 val pSize = p.size * (1f - progress * 0.5f)
                 drawCircle(
                     color = pColor.copy(alpha = alpha * 0.7f),

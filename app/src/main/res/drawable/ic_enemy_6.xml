@@ -1,0 +1,170 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Baby Dragon (Emerald) -->
+
+    <!-- Ground shadow -->
+    <path
+        android:pathData="M10,44C10,42 14,40 24,40C34,40 38,42 38,44C38,46 34,46 24,46C14,46 10,46 10,44Z"
+        android:fillColor="#000000"
+        android:fillAlpha="0.15"/>
+
+    <!-- Tail -->
+    <path
+        android:pathData="M36,36Q42,34 44,28Q43,32 40,34Q38,35 36,36Z"
+        android:fillColor="#2E7D32"/>
+    <!-- Tail tip spike -->
+    <path
+        android:pathData="M44,28L46,25L43,27Z"
+        android:fillColor="#1B5E20"/>
+
+    <!-- Left wing -->
+    <path
+        android:pathData="M8,20Q2,10 6,6Q8,10 12,14Q10,16 8,20Z"
+        android:fillColor="#388E3C"/>
+    <!-- Wing membrane -->
+    <path
+        android:pathData="M8,20Q4,12 6,6Q8,12 12,14L8,20Z"
+        android:fillColor="#66BB6A"
+        android:fillAlpha="0.5"/>
+
+    <!-- Right wing -->
+    <path
+        android:pathData="M40,20Q46,10 42,6Q40,10 36,14Q38,16 40,20Z"
+        android:fillColor="#388E3C"/>
+    <!-- Wing membrane -->
+    <path
+        android:pathData="M40,20Q44,12 42,6Q40,12 36,14L40,20Z"
+        android:fillColor="#66BB6A"
+        android:fillAlpha="0.5"/>
+
+    <!-- Main body -->
+    <path
+        android:pathData="M24,42C14,42 8,36 8,28C8,18 14,10 20,8C22,7 24,7 24,7C24,7 26,7 28,8C34,10 40,18 40,28C40,36 34,42 24,42Z"
+        android:fillColor="#43A047"/>
+    <!-- Body highlight -->
+    <path
+        android:pathData="M24,9C20,9 16,12 14,16C12,20 10,24 10,28C14,24 18,14 24,12C30,14 34,24 38,28C38,24 36,20 34,16C32,12 28,9 24,9Z"
+        android:fillColor="#66BB6A"
+        android:fillAlpha="0.5"/>
+    <!-- Belly -->
+    <path
+        android:pathData="M18,30Q18,38 24,40Q30,38 30,30Q27,28 24,28Q21,28 18,30Z"
+        android:fillColor="#A5D6A7"
+        android:fillAlpha="0.7"/>
+
+    <!-- Head horns left -->
+    <path
+        android:pathData="M14,14L10,8L15,12Z"
+        android:fillColor="#FFD54F"/>
+    <!-- Head horns right -->
+    <path
+        android:pathData="M34,14L38,8L33,12Z"
+        android:fillColor="#FFD54F"/>
+
+    <!-- Spine ridges -->
+    <path
+        android:pathData="M22,8L24,5L26,8Z"
+        android:fillColor="#FFD54F"/>
+    <path
+        android:pathData="M24,10L24,7"
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+
+    <!-- Shine blob -->
+    <path
+        android:pathData="M16,16A3,4 -20,1 1,20,14A3,4 -20,1 1,16,16Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.4"/>
+
+    <!-- Left eye -->
+    <path
+        android:pathData="M15,24A4,4.5 0,1 1,23,24A4,4.5 0,1 1,15,24Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M17,24.5A2.5,3 0,1 1,22,24.5A2.5,3 0,1 1,17,24.5Z"
+        android:fillColor="#F44336"/>
+    <path
+        android:pathData="M18.5,23.5A1.2,1.5 0,1 1,20.5,23.5A1.2,1.5 0,1 1,18.5,23.5Z"
+        android:fillColor="#000000"/>
+    <!-- Eye shine -->
+    <path
+        android:pathData="M20,22.5A0.8,0.8 0,1 1,21.6,22.5A0.8,0.8 0,1 1,20,22.5Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+
+    <!-- Right eye -->
+    <path
+        android:pathData="M25,24A4,4.5 0,1 1,33,24A4,4.5 0,1 1,25,24Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M27,24.5A2.5,3 0,1 1,32,24.5A2.5,3 0,1 1,27,24.5Z"
+        android:fillColor="#F44336"/>
+    <path
+        android:pathData="M28.5,23.5A1.2,1.5 0,1 1,30.5,23.5A1.2,1.5 0,1 1,28.5,23.5Z"
+        android:fillColor="#000000"/>
+    <!-- Eye shine -->
+    <path
+        android:pathData="M30,22.5A0.8,0.8 0,1 1,31.6,22.5A0.8,0.8 0,1 1,30,22.5Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"/>
+
+    <!-- Snout / nose bumps -->
+    <path
+        android:pathData="M20,29A1.5,1.5 0,1 1,23,29A1.5,1.5 0,1 1,20,29Z"
+        android:fillColor="#2E7D32"/>
+    <path
+        android:pathData="M25,29A1.5,1.5 0,1 1,28,29A1.5,1.5 0,1 1,25,29Z"
+        android:fillColor="#2E7D32"/>
+    <!-- Nostrils -->
+    <path
+        android:pathData="M21,29A0.5,0.5 0,1 1,22,29A0.5,0.5 0,1 1,21,29Z"
+        android:fillColor="#1B5E20"/>
+    <path
+        android:pathData="M26,29A0.5,0.5 0,1 1,27,29A0.5,0.5 0,1 1,26,29Z"
+        android:fillColor="#1B5E20"/>
+
+    <!-- Mouth with fangs -->
+    <path
+        android:pathData="M17,33Q20,37 24,36Q28,37 31,33"
+        android:strokeColor="#1B5E20"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Fangs -->
+    <path
+        android:pathData="M18,33L19,36L20,33"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M28,33L29,36L30,33"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Nostril smoke puff left -->
+    <path
+        android:pathData="M19,27A1.5,1 0,1 1,21,26"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:fillAlpha="0.3"/>
+    <!-- Nostril smoke puff right -->
+    <path
+        android:pathData="M27,27A1.5,1 0,1 1,29,26"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:fillAlpha="0.3"/>
+
+    <!-- Small claws (feet) -->
+    <path
+        android:pathData="M16,40L14,43L17,41L15,44L18,41Z"
+        android:fillColor="#FFD54F"/>
+    <path
+        android:pathData="M32,40L34,43L31,41L33,44L30,41Z"
+        android:fillColor="#FFD54F"/>
+</vector>

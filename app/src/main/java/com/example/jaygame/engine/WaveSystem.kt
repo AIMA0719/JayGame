@@ -56,11 +56,15 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         val isBoss = forceBoss || (w + 1) % 10 == 0
         val isMiniBoss = !forceBoss && (w + 1) % 5 == 0 && !isBoss
 
-        // More diverse enemy types in later waves
+        // 6 regular types (0-4, 6) + type 5 (miniboss)
         val enemyType = when {
             isBoss -> 4
             isMiniBoss -> 5
-            w >= 30 -> w % 6          // 6 enemy type rotation in late game
+            w >= 30 -> {
+                val cycle = w % 6
+                if (cycle <= 4) cycle else 6
+            }
+            w >= 20 && w % 5 == 0 -> 6  // 드래곤: w=20,25 (표시 웨이브 21,26)
             w % 4 == 1 -> 1
             w % 4 == 2 -> 2
             w % 4 == 3 -> 3
