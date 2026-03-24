@@ -100,14 +100,29 @@ private val FamilyAuraColors = FamilyColorsByIndex
 
 // ── G1: Grade-based platform colors (pre-allocated) ──
 private val PlatformCommonColor = Color(0xFF9E9E9E)
+private val PlatformCommonInner = Color(0xFFBDBDBD)
 private val PlatformRareColor = Color(0xFF42A5F5)
 private val PlatformRareGlow = Color(0xFF42A5F5).copy(alpha = 0.3f)
+private val PlatformRareBeam = Color(0xFF90CAF9)
+private val PlatformRareRing = Color(0xFF1E88E5)
 private val PlatformHeroColor = Color(0xFFAB47BC)
 private val PlatformHeroGlow = Color(0xFFAB47BC).copy(alpha = 0.35f)
 private val PlatformHeroParticle = Color(0xFFCE93D8)
+private val PlatformHeroRing = Color(0xFF8E24AA)
+private val PlatformHeroCore = Color(0xFFE1BEE7)
 private val PlatformLegendColor = Color(0xFFFF8F00)
 private val PlatformLegendFlame = Color(0xFFFFD54F)
+private val PlatformLegendRing = Color(0xFFFF6D00)
 private val PlatformMythicGold = Color(0xFFFBBF24)
+private val PlatformMythicCore = Color(0xFFFFFFE0)
+private val EffectWhite = Color(0xFFFFFFFF) // 공용 백색 (스파크, 별빛, 하이라이트)
+
+// ── SSJ Aura colors (등급별 오라 — Platform과 동일한 색은 재사용) ──
+private val AuraRareOuter = Color(0xFF64B5F6)
+private val AuraRareInner = Color(0xFFBBDEFB)
+private val AuraLegendInner = Color(0xFFFFE082)
+private val AuraMythicElectric = Color(0xFF40C4FF)
+private const val TWO_PI = (2.0 * Math.PI).toFloat()
 
 // Rainbow shimmer colors for Mythic platform
 private val RainbowShimmer = arrayOf(
@@ -827,13 +842,18 @@ fun BattleField() {
                 }
             }
 
-            // Unit sprite (proper drawable icon) with bounce + attack scale + breathing
-            // Try legacy unitDefId first, fallback to blueprintId-based cache
+            // Unit sprite + SSJ aura
             val bitmap = unitBitmaps[unitDefId]
                 ?: (if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null)
             if (bitmap != null) {
                 val spriteSize = unitSize * 0.85f * finalScale
                 val spriteY = screenY - spriteSize - pedestalRy * 0.3f + bounceOffset
+                val spriteCenterY = spriteY + spriteSize * 0.5f
+
+                // ── SSJ Aura: 등급별 타오르는 오라 (스프라이트 뒤에 그림) ──
+                if (grade >= 1 && !highUnitCount) {
+                    drawSsjAura(grade, screenX, spriteCenterY, spriteSize, t, unitDefId)
+                }
 
                 drawImage(
                     image = bitmap,
@@ -961,7 +981,7 @@ fun BattleField() {
                 // Rare/Hero: particles scatter outward in family color
                 val particleCount = 8 + effect.grade * 4
                 for (p in 0 until particleCount) {
-                    val angle = (p.toFloat() / particleCount) * 2f * PI.toFloat()
+                    val angle = (p.toFloat() / particleCount) * TWO_PI
                     val dist = progress * unitSizeDefault * 0.8f
                     val px = (ex + cos(angle) * dist).toFloat()
                     val py = (ey + sin(angle) * dist).toFloat()
@@ -992,7 +1012,7 @@ fun BattleField() {
                 // Scatter particles
                 val particleCount = 12 + effect.grade * 3
                 for (p in 0 until particleCount) {
-                    val angle = (p.toFloat() / particleCount) * 2f * PI.toFloat() + progress * 2f
+                    val angle = (p.toFloat() / particleCount) * TWO_PI + progress * 2f
                     val dist = progress * unitSizeDefault * (0.6f + sin(p * 1.3f) * 0.3f)
                     val px = (ex + cos(angle) * dist).toFloat()
                     val py = (ey + sin(angle) * dist).toFloat()
@@ -1031,107 +1051,314 @@ private fun DrawScope.drawGradePlatform(
 
     when (grade) {
         0 -> {
-            // Common: simple gray circle
+            // Common: 은은한 호흡 애니메이션 + 내부 밝은 코어
+            val breathAlpha = 0.2f + sin(t * 1.5f + unitDefId * 0.3f) * 0.06f
             drawOval(
-                color = PlatformCommonColor.copy(alpha = 0.25f),
-                topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.2f),
-                size = Size(pedestalRx * 1.8f, pedestalRy * 1.8f),
+                color = PlatformCommonColor.copy(alpha = breathAlpha),
+                topLeft = Offset(screenX - pedestalRx * 1.0f, screenY - pedestalRy * 0.25f),
+                size = Size(pedestalRx * 2.0f, pedestalRy * 2.0f),
+            )
+            drawOval(
+                color = PlatformCommonInner.copy(alpha = breathAlpha + 0.08f),
+                topLeft = Offset(screenX - pedestalRx * 0.6f, screenY - pedestalRy * 0.05f),
+                size = Size(pedestalRx * 1.2f, pedestalRy * 1.2f),
             )
         }
         1 -> {
-            // Rare: blue soft glow circle — PERF: layered ovals instead of gradient
-            val glowAlpha = 0.2f + sin(t * 2f + unitDefId * 0.5f) * 0.05f
+            // Rare: 파란 이중 글로우 + 회전 빛줄기 2개 + 내부 링
+            val glowAlpha = 0.22f + sin(t * 2f + unitDefId * 0.5f) * 0.06f
             drawOval(
                 color = PlatformRareGlow.copy(alpha = glowAlpha),
-                topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.4f),
-                size = Size(pedestalRx * 2.2f, pedestalRy * 2.2f),
-            )
-            drawOval(
-                color = PlatformRareColor.copy(alpha = glowAlpha + 0.1f),
-                topLeft = Offset(screenX - pedestalRx * 0.8f, screenY - pedestalRy * 0.2f),
-                size = Size(pedestalRx * 1.6f, pedestalRy * 1.6f),
-            )
-        }
-        2 -> {
-            // Hero: purple glow with subtle orbiting particles — PERF: layered ovals
-            val glowAlpha = 0.25f + sin(t * 2.5f + unitDefId * 0.4f) * 0.08f
-            drawOval(
-                color = PlatformHeroGlow.copy(alpha = glowAlpha),
                 topLeft = Offset(screenX - pedestalRx * 1.15f, screenY - pedestalRy * 0.45f),
                 size = Size(pedestalRx * 2.3f, pedestalRy * 2.3f),
             )
             drawOval(
-                color = PlatformHeroColor.copy(alpha = glowAlpha + 0.05f),
+                color = PlatformRareColor.copy(alpha = glowAlpha + 0.12f),
+                topLeft = Offset(screenX - pedestalRx * 0.8f, screenY - pedestalRy * 0.2f),
+                size = Size(pedestalRx * 1.6f, pedestalRy * 1.6f),
+            )
+            // 회전 빛줄기
+            for (p in 0 until 2) {
+                val angle = t * 1.8f + p * PI.toFloat()
+                val bx = screenX + cos(angle) * pedestalRx * 0.85f
+                val by = screenY + sin(angle) * pedestalRy * 0.55f
+                val bAlpha = 0.35f + sin(t * 3f + p * 2f) * 0.15f
+                drawCircle(
+                    color = PlatformRareBeam.copy(alpha = bAlpha),
+                    radius = 2f,
+                    center = Offset(bx, by),
+                )
+            }
+            // 내부 링
+            drawOval(
+                color = PlatformRareRing.copy(alpha = glowAlpha * 0.5f),
+                topLeft = Offset(screenX - pedestalRx * 0.95f, screenY - pedestalRy * 0.3f),
+                size = Size(pedestalRx * 1.9f, pedestalRy * 1.7f),
+                style = ThinStroke1_5f,
+            )
+        }
+        2 -> {
+            // Hero: 보라 에너지 글로우 + 펄싱 코어 + 8개 궤도 파티클 + 외곽 에너지 링
+            val glowAlpha = 0.28f + sin(t * 2.5f + unitDefId * 0.4f) * 0.1f
+            drawOval(
+                color = PlatformHeroGlow.copy(alpha = glowAlpha),
+                topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
+                size = Size(pedestalRx * 2.4f, pedestalRy * 2.4f),
+            )
+            // 펄싱 코어
+            val coreAlpha = 0.2f + sin(t * 4f) * 0.1f
+            drawOval(
+                color = PlatformHeroCore.copy(alpha = coreAlpha),
+                topLeft = Offset(screenX - pedestalRx * 0.5f, screenY - pedestalRy * 0.05f),
+                size = Size(pedestalRx * 1.0f, pedestalRy * 1.0f),
+            )
+            drawOval(
+                color = PlatformHeroColor.copy(alpha = glowAlpha + 0.08f),
                 topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
                 size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
             )
-            for (p in 0 until 4) {
-                val angle = t * 1.2f + p * (PI.toFloat() / 2f)
-                val px = screenX + cos(angle) * pedestalRx * 0.7f
-                val py = screenY + sin(angle) * pedestalRy * 0.5f
-                val pAlpha = 0.3f + sin(t * 3f + p * 1.5f) * 0.15f
+            // 궤도 파티클 8개
+            for (p in 0 until 8) {
+                val angle = t * 1.5f + p * (PI.toFloat() / 4f)
+                val orbitR = pedestalRx * (0.65f + sin(t * 2f + p * 0.8f) * 0.1f)
+                val px = screenX + cos(angle) * orbitR
+                val py = screenY + sin(angle) * orbitR * 0.6f
+                val pAlpha = 0.35f + sin(t * 3.5f + p * 1.2f) * 0.2f
                 drawCircle(
                     color = PlatformHeroParticle.copy(alpha = pAlpha),
-                    radius = 1.5f,
+                    radius = 1.8f,
+                    center = Offset(px, py),
+                )
+            }
+            // 외곽 에너지 링
+            drawOval(
+                color = PlatformHeroRing.copy(alpha = glowAlpha * 0.6f),
+                topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.4f),
+                size = Size(pedestalRx * 2.2f, pedestalRy * 2.0f),
+                style = ThinStroke1_5f,
+            )
+        }
+        3 -> {
+            // Legend: 이중 불꽃 오라 + 불꽃 링 + 스파크 파티클 6개 + 내부 골드 코어
+            val flameAlpha = 0.35f + sin(t * 4f + unitDefId * 0.6f) * 0.14f
+            // 외곽 불꽃
+            drawOval(
+                color = PlatformLegendColor.copy(alpha = flameAlpha * 0.5f),
+                topLeft = Offset(screenX - pedestalRx * 1.3f, screenY - pedestalRy * 0.55f),
+                size = Size(pedestalRx * 2.6f, pedestalRy * 2.6f),
+            )
+            // 내부 불꽃
+            drawOval(
+                color = PlatformLegendFlame.copy(alpha = flameAlpha + 0.06f),
+                topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
+                size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
+            )
+            // 불꽃 외곽 링
+            drawOval(
+                color = PlatformLegendRing.copy(alpha = flameAlpha + 0.08f),
+                topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.35f),
+                size = Size(pedestalRx * 2.2f, pedestalRy * 2.0f),
+                style = GroundBorderStroke,
+            )
+            // 내부 골드 코어
+            val coreAlpha = 0.15f + sin(t * 5f) * 0.1f
+            drawOval(
+                color = PlatformLegendFlame.copy(alpha = coreAlpha),
+                topLeft = Offset(screenX - pedestalRx * 0.45f, screenY + pedestalRy * 0.0f),
+                size = Size(pedestalRx * 0.9f, pedestalRy * 0.9f),
+            )
+            // 스파크 파티클 6개 — 불꽃 주변에서 튀는 불씨
+            for (p in 0 until 6) {
+                val angle = t * 2.5f + p * (PI.toFloat() / 3f)
+                val sparkR = pedestalRx * (0.75f + sin(t * 4f + p * 1.5f) * 0.2f)
+                val px = screenX + cos(angle) * sparkR
+                val py = screenY + sin(angle) * sparkR * 0.55f
+                val sAlpha = 0.5f + sin(t * 6f + p * 2f) * 0.3f
+                drawCircle(
+                    color = EffectWhite.copy(alpha = sAlpha),
+                    radius = 1.2f,
                     center = Offset(px, py),
                 )
             }
         }
-        3 -> {
-            // Legend: gold flaming circle — PERF: layered ovals
-            val flameAlpha = 0.3f + sin(t * 4f + unitDefId * 0.6f) * 0.12f
-            drawOval(
-                color = PlatformLegendColor.copy(alpha = flameAlpha * 0.6f),
-                topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
-                size = Size(pedestalRx * 2.4f, pedestalRy * 2.4f),
-            )
-            drawOval(
-                color = PlatformLegendFlame.copy(alpha = flameAlpha + 0.05f),
-                topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
-                size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
-            )
-            drawOval(
-                color = PlatformLegendColor.copy(alpha = flameAlpha + 0.1f),
-                topLeft = Offset(screenX - pedestalRx * 1.0f, screenY - pedestalRy * 0.3f),
-                size = Size(pedestalRx * 2.0f, pedestalRy * 1.8f),
-                style = ThinStroke1_5f,
-            )
-        }
         4 -> {
-            // Mythic: golden holographic ring with rainbow shimmer
+            // Mythic: 레인보우 쉬머 + 골드 코어 펄스 + 이중 홀로 링 + 별빛 파티클 8개
             val shimmerPhase = t * 2f + unitDefId * 0.5f
-            val shimmerIdx = ((shimmerPhase % (2f * PI.toFloat())) / (2f * PI.toFloat()) * RainbowShimmer.size).toInt().coerceIn(0, RainbowShimmer.size - 1)
+            val shimmerIdx = ((shimmerPhase % (TWO_PI)) / (TWO_PI) * RainbowShimmer.size).toInt().coerceIn(0, RainbowShimmer.size - 1)
             val nextIdx = (shimmerIdx + 1) % RainbowShimmer.size
             val lerpFrac = (shimmerPhase % 1f)
             val shimmerColor = Color(
                 red = RainbowShimmer[shimmerIdx].red * (1f - lerpFrac) + RainbowShimmer[nextIdx].red * lerpFrac,
                 green = RainbowShimmer[shimmerIdx].green * (1f - lerpFrac) + RainbowShimmer[nextIdx].green * lerpFrac,
                 blue = RainbowShimmer[shimmerIdx].blue * (1f - lerpFrac) + RainbowShimmer[nextIdx].blue * lerpFrac,
-                alpha = 0.35f,
+                alpha = 0.4f,
             )
-            val mythicAlpha = 0.3f + sin(t * 3f) * 0.1f
-            // PERF: layered ovals instead of gradient
+            val mythicAlpha = 0.35f + sin(t * 3f) * 0.12f
+            // 외곽 글로우
             drawOval(
-                color = PlatformMythicGold.copy(alpha = mythicAlpha * 0.4f),
-                topLeft = Offset(screenX - pedestalRx * 1.3f, screenY - pedestalRy * 0.6f),
-                size = Size(pedestalRx * 2.6f, pedestalRy * 2.6f),
+                color = PlatformMythicGold.copy(alpha = mythicAlpha * 0.35f),
+                topLeft = Offset(screenX - pedestalRx * 1.4f, screenY - pedestalRy * 0.65f),
+                size = Size(pedestalRx * 2.8f, pedestalRy * 2.8f),
             )
+            // 내부 글로우
             drawOval(
-                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.05f),
+                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.06f),
                 topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.3f),
                 size = Size(pedestalRx * 1.8f, pedestalRy * 1.8f),
             )
+            // 레인보우 외곽 링
             drawOval(
                 color = shimmerColor,
-                topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.35f),
-                size = Size(pedestalRx * 2.2f, pedestalRy * 2.0f),
+                topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.4f),
+                size = Size(pedestalRx * 2.4f, pedestalRy * 2.2f),
                 style = GroundBorderStroke,
             )
+            // 골드 코어 펄스
+            val corePulse = 0.25f + sin(t * 5f) * 0.15f
             drawOval(
-                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.15f),
+                color = PlatformMythicCore.copy(alpha = corePulse),
+                topLeft = Offset(screenX - pedestalRx * 0.4f, screenY + pedestalRy * 0.0f),
+                size = Size(pedestalRx * 0.8f, pedestalRy * 0.8f),
+            )
+            // 내부 골드 링
+            drawOval(
+                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.18f),
                 topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.2f),
                 size = Size(pedestalRx * 1.8f, pedestalRy * 1.6f),
                 style = ThinStroke1_5f,
+            )
+            // 별빛 파티클 8개
+            for (p in 0 until 8) {
+                val angle = t * 1.2f + p * (PI.toFloat() / 4f)
+                val starR = pedestalRx * (0.9f + sin(t * 2.5f + p * 1.1f) * 0.2f)
+                val px = screenX + cos(angle) * starR
+                val py = screenY + sin(angle) * starR * 0.55f
+                val sAlpha = 0.5f + sin(t * 4f + p * 1.8f) * 0.35f
+                drawCircle(
+                    color = EffectWhite.copy(alpha = sAlpha),
+                    radius = 1.5f,
+                    center = Offset(px, py),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * SSJ Aura: 드래곤볼 슈퍼사이어인 스타일 — 유닛 몸체를 감싸며 위로 타오르는 에너지 불꽃.
+ * 등급이 높을수록 불꽃이 크고 밝고 층이 많다.
+ */
+private fun DrawScope.drawSsjAura(
+    grade: Int,
+    cx: Float,
+    cy: Float,
+    spriteSize: Float,
+    t: Float,
+    unitId: Int,
+) {
+    val seed = unitId * 0.7f
+    val halfW = spriteSize * 0.5f
+
+    when (grade) {
+        1 -> {
+            // Rare: 얇은 파란 오라 — 불꽃 기둥 3개
+            for (f in 0 until 3) {
+                val phase = t * 4f + f * 2.1f + seed
+                val fx = cx + sin(phase * 0.7f) * halfW * 0.4f + (f - 1) * halfW * 0.3f
+                val rise = (phase % (TWO_PI)) / (TWO_PI)
+                val fy = cy + spriteSize * 0.3f - rise * spriteSize * 1.0f
+                val fAlpha = (1f - rise) * 0.25f
+                val fRadius = halfW * (0.15f + (1f - rise) * 0.12f)
+                drawCircle(color = AuraRareOuter.copy(alpha = fAlpha), radius = fRadius * 1.4f, center = Offset(fx, fy))
+                drawCircle(color = AuraRareInner.copy(alpha = fAlpha * 0.7f), radius = fRadius * 0.7f, center = Offset(fx, fy))
+            }
+        }
+        2 -> {
+            // Hero: 보라 오라 — 불꽃 기둥 5개 + 내부 밝은 코어
+            for (f in 0 until 5) {
+                val phase = t * 4.5f + f * 1.26f + seed
+                val fx = cx + sin(phase * 0.6f) * halfW * 0.55f + (f - 2) * halfW * 0.22f
+                val rise = (phase % (TWO_PI)) / (TWO_PI)
+                val fy = cy + spriteSize * 0.3f - rise * spriteSize * 1.2f
+                val fAlpha = (1f - rise) * 0.3f
+                val fRadius = halfW * (0.18f + (1f - rise) * 0.14f)
+                drawCircle(color = PlatformHeroColor.copy(alpha = fAlpha), radius = fRadius * 1.5f, center = Offset(fx, fy))
+                drawCircle(color = PlatformHeroCore.copy(alpha = fAlpha * 0.6f), radius = fRadius * 0.6f, center = Offset(fx, fy))
+            }
+            val coreAlpha = 0.12f + sin(t * 5f + seed) * 0.06f
+            drawOval(
+                color = PlatformHeroCore.copy(alpha = coreAlpha),
+                topLeft = Offset(cx - halfW * 0.4f, cy - spriteSize * 0.4f),
+                size = Size(halfW * 0.8f, spriteSize * 0.8f),
+            )
+        }
+        3 -> {
+            // Legend: 금빛 슈퍼사이어인 오라 — 불꽃 기둥 7개 + 이중 코어 + 백색 하이라이트
+            for (f in 0 until 7) {
+                val phase = t * 5f + f * 0.9f + seed
+                val spread = (f - 3) * halfW * 0.18f
+                val fx = cx + sin(phase * 0.5f) * halfW * 0.6f + spread
+                val rise = (phase % (TWO_PI)) / (TWO_PI)
+                val fy = cy + spriteSize * 0.35f - rise * spriteSize * 1.4f
+                val fAlpha = (1f - rise) * 0.35f
+                val fRadius = halfW * (0.2f + (1f - rise) * 0.16f)
+                drawCircle(color = PlatformLegendColor.copy(alpha = fAlpha), radius = fRadius * 1.6f, center = Offset(fx, fy))
+                drawCircle(color = AuraLegendInner.copy(alpha = fAlpha * 0.7f), radius = fRadius * 0.8f, center = Offset(fx, fy))
+                if (f % 2 == 0) {
+                    drawCircle(color = EffectWhite.copy(alpha = fAlpha * 0.4f), radius = fRadius * 0.35f, center = Offset(fx, fy))
+                }
+            }
+            val coreAlpha = 0.15f + sin(t * 6f + seed) * 0.08f
+            drawOval(
+                color = PlatformLegendColor.copy(alpha = coreAlpha),
+                topLeft = Offset(cx - halfW * 0.55f, cy - spriteSize * 0.5f),
+                size = Size(halfW * 1.1f, spriteSize * 1.0f),
+            )
+            drawOval(
+                color = AuraLegendInner.copy(alpha = coreAlpha * 0.6f),
+                topLeft = Offset(cx - halfW * 0.3f, cy - spriteSize * 0.35f),
+                size = Size(halfW * 0.6f, spriteSize * 0.7f),
+            )
+        }
+        4 -> {
+            // Mythic: 황금+백색 폭발 오라 — 불꽃 기둥 10개 + 전기 스파크 + 삼중 코어
+            for (f in 0 until 10) {
+                val phase = t * 5.5f + f * 0.63f + seed
+                val spread = (f - 4.5f) * halfW * 0.14f
+                val wobble = sin(phase * 0.4f + f * 0.3f) * halfW * 0.65f
+                val fx = cx + wobble + spread
+                val rise = (phase % (TWO_PI)) / (TWO_PI)
+                val fy = cy + spriteSize * 0.4f - rise * spriteSize * 1.6f
+                val fAlpha = (1f - rise) * 0.38f
+                val fRadius = halfW * (0.22f + (1f - rise) * 0.18f)
+                drawCircle(color = PlatformMythicGold.copy(alpha = fAlpha), radius = fRadius * 1.7f, center = Offset(fx, fy))
+                drawCircle(color = PlatformMythicCore.copy(alpha = fAlpha * 0.7f), radius = fRadius * 0.8f, center = Offset(fx, fy))
+                if (f % 3 == 0) {
+                    drawCircle(color = EffectWhite.copy(alpha = fAlpha * 0.5f), radius = fRadius * 0.3f, center = Offset(fx, fy))
+                }
+            }
+            for (s in 0 until 4) {
+                val sPhase = t * 8f + s * 1.57f + seed
+                val sx = cx + cos(sPhase) * halfW * 0.7f
+                val sy = cy - spriteSize * 0.2f + sin(sPhase * 1.3f) * spriteSize * 0.4f
+                val sAlpha = (0.4f + sin(sPhase * 3f) * 0.4f).coerceAtLeast(0f)
+                drawCircle(color = AuraMythicElectric.copy(alpha = sAlpha), radius = 2f, center = Offset(sx, sy))
+            }
+            val coreAlpha = 0.18f + sin(t * 7f + seed) * 0.1f
+            drawOval(
+                color = PlatformMythicGold.copy(alpha = coreAlpha),
+                topLeft = Offset(cx - halfW * 0.65f, cy - spriteSize * 0.55f),
+                size = Size(halfW * 1.3f, spriteSize * 1.1f),
+            )
+            drawOval(
+                color = PlatformMythicCore.copy(alpha = coreAlpha * 0.7f),
+                topLeft = Offset(cx - halfW * 0.35f, cy - spriteSize * 0.4f),
+                size = Size(halfW * 0.7f, spriteSize * 0.8f),
+            )
+            drawOval(
+                color = EffectWhite.copy(alpha = coreAlpha * 0.3f),
+                topLeft = Offset(cx - halfW * 0.2f, cy - spriteSize * 0.3f),
+                size = Size(halfW * 0.4f, spriteSize * 0.6f),
             )
         }
     }

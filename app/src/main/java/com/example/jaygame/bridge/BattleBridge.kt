@@ -381,20 +381,8 @@ object BattleBridge {
         if (sourceTile.blueprintId.isEmpty() && sourceTile.grade == -1) return
         _moveModeTile.value = tileIndex
         _selectedTile.value = tileIndex
-        val srcBpId = sourceTile.blueprintId
-        val targets = BooleanArray(gs.size) { i ->
-            if (i == tileIndex) false
-            else {
-                val target = gs[i]
-                val isEmpty = target.blueprintId.isEmpty() && target.grade == -1
-                val canStack = target.blueprintId == srcBpId && target.level < Grid.MAX_STACK
-                val hasUnit = target.blueprintId.isNotEmpty()
-                val canSwap = hasUnit && target.blueprintId != srcBpId
-                val sameButFull = hasUnit && target.blueprintId == srcBpId && target.level >= Grid.MAX_STACK
-                isEmpty || canStack || canSwap || sameButFull
-            }
-        }
-        _validMoveTargets.value = targets
+        // 자기 자신만 제외, 나머지 모든 슬롯으로 이동/스왑 가능
+        _validMoveTargets.value = BooleanArray(gs.size) { it != tileIndex }
     }
 
     fun exitMoveMode() {

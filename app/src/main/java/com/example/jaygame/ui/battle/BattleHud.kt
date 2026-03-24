@@ -160,9 +160,11 @@ private val RecipeGradeWarningColor = Color(0xFFFFAA33)
 private data class RecipeDisplayInfo(
     val recipe: HiddenRecipe,
     val resultBlueprint: UnitBlueprint?,
-    val canCraftFromDeck: Boolean,
-    val readyOnField: Boolean,
-)
+    val fieldMatchCount: Int,     // 필드에서 충족된 재료 수
+    val totalIngredients: Int,    // 총 재료 수
+) {
+    val readyOnField get() = fieldMatchCount >= totalIngredients
+}
 
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
 
@@ -380,19 +382,6 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
 
 @Composable
 private fun RecipeBookDialog(onDismiss: () -> Unit) {
-    val deckBlueprints by BattleBridge.deckBlueprints.collectAsState()
-    val resolvedDeck = remember(deckBlueprints) {
-        if (!BlueprintRegistry.isReady) emptyList()
-        else deckBlueprints.mapNotNull { BlueprintRegistry.instance.findById(it) }
-    }
-
-    // Deck이 제공하는 family+role 조합
-    val deckFamilyRoles = remember(resolvedDeck) {
-        resolvedDeck.flatMap { bp ->
-            bp.families.map { fam -> fam to bp.role }
-        }.toSet()
-    }
-
     val allRecipes = remember {
         if (RecipeSystem.isReady) RecipeSystem.instance.allRecipes() else emptyList()
     }
@@ -403,51 +392,32 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
         gridState.filter { it.blueprintId.isNotEmpty() }
     }
 
-    val recipeInfos = remember(allRecipes, deckFamilyRoles, occupiedTiles) {
+    val recipeInfos = remember(allRecipes, occupiedTiles) {
         allRecipes.map { recipe ->
-            // 덱에서 각 재료를 서로 다른 유닛으로 충족할 수 있는지 체크
-            val canCraftFromDeck = run {
-                val usedBps = mutableSetOf<Int>()
-                recipe.ingredients.all { slot ->
-                    resolvedDeck.indices.any { bpIdx ->
-                        if (bpIdx in usedBps) return@any false
-                        val bp = resolvedDeck[bpIdx]
-                        val match = if (slot.specificUnitId != null) {
-                            bp.id == slot.specificUnitId
-                        } else {
-                            val famMatch = slot.family == null || slot.family in bp.families
-                            val roleMatch = slot.role == null || slot.role == bp.role
-                            famMatch && roleMatch
-                        }
-                        if (match) { usedBps.add(bpIdx); true } else false
+            // 필드 유닛 기반 재료 충족 수 카운트
+            val used = mutableSetOf<Int>()
+            var matchCount = 0
+            for (slot in recipe.ingredients) {
+                val found = occupiedTiles.indices.any { idx ->
+                    if (idx in used) return@any false
+                    val tile = occupiedTiles[idx]
+                    val match = if (slot.specificUnitId != null) {
+                        tile.blueprintId == slot.specificUnitId
+                    } else {
+                        (slot.family == null || slot.family in tile.families) &&
+                            (slot.role == null || slot.role == tile.role) &&
+                            tile.grade >= slot.minGrade.ordinal
                     }
+                    if (match) { used.add(idx); true } else false
                 }
-            }
-
-            // 필드에서 바로 조합 가능한지 체크 (occupiedTiles 재사용)
-            val readyOnField = run {
-                val used = mutableSetOf<Int>()
-                recipe.ingredients.all { slot ->
-                    occupiedTiles.indices.any { idx ->
-                        if (idx in used) return@any false
-                        val tile = occupiedTiles[idx]
-                        val match = if (slot.specificUnitId != null) {
-                            tile.blueprintId == slot.specificUnitId
-                        } else {
-                            (slot.family == null || slot.family in tile.families) &&
-                                (slot.role == null || slot.role == tile.role) &&
-                                tile.grade >= slot.minGrade.ordinal
-                        }
-                        if (match) { used.add(idx); true } else false
-                    }
-                }
+                if (found) matchCount++
             }
 
             val resultBp = if (BlueprintRegistry.isReady) {
                 BlueprintRegistry.instance.findById(recipe.resultId)
             } else null
-            RecipeDisplayInfo(recipe, resultBp, canCraftFromDeck, readyOnField)
-        }.sortedWith(compareByDescending<RecipeDisplayInfo> { it.readyOnField }.thenByDescending { it.canCraftFromDeck })
+            RecipeDisplayInfo(recipe, resultBp, matchCount, recipe.ingredients.size)
+        }.sortedByDescending { it.fieldMatchCount }
     }
 
     val hasReadyRecipe = recipeInfos.any { it.readyOnField }
@@ -513,7 +483,7 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.height(320.dp),
                     ) {
                         items(recipeInfos) { info ->
-                            RecipeCard(info.recipe, info.resultBlueprint, info.canCraftFromDeck, info.readyOnField)
+                            RecipeCard(info.recipe, info.resultBlueprint, info.fieldMatchCount, info.totalIngredients)
                         }
                     }
                 }
@@ -557,15 +527,17 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
 private fun RecipeCard(
     recipe: HiddenRecipe,
     resultBlueprint: UnitBlueprint?,
-    canCraftFromDeck: Boolean,
-    readyOnField: Boolean,
+    fieldMatchCount: Int,
+    totalIngredients: Int,
 ) {
+    val readyOnField = fieldMatchCount >= totalIngredients
+    val hasPartial = fieldMatchCount > 0
     val borderColor = when {
         readyOnField -> GoldBright.copy(alpha = 0.8f)
-        canCraftFromDeck -> RecipeAvailableGlow.copy(alpha = 0.6f)
+        hasPartial -> RecipeAvailableGlow.copy(alpha = 0.4f)
         else -> RecipeCardBorder
     }
-    val cardAlpha = if (canCraftFromDeck || readyOnField) 1f else 0.5f
+    val cardAlpha = if (hasPartial) 1f else 0.5f
 
     Box(
         modifier = Modifier
@@ -641,24 +613,24 @@ private fun RecipeCard(
 
             when {
                 readyOnField -> Text(
-                    text = "\u2728 필드에 재료 준비 완료!",
+                    text = "\u2728 조합 준비 완료!",
                     color = GoldBright,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
-                canCraftFromDeck -> {
+                hasPartial -> {
                     val maxGrade = recipe.ingredients.maxOf { it.minGrade.ordinal }
                     val gradeLabel = UnitGrade.entries.getOrNull(maxGrade)?.label ?: ""
+                    val gradeHint = if (maxGrade > 0) " ($gradeLabel↑)" else ""
                     Text(
-                        text = if (maxGrade > 0) "\u26A0 ${gradeLabel} 등급 이상 필요"
-                            else "\u2705 재료를 필드에 배치하세요",
-                        color = if (maxGrade > 0) RecipeGradeWarningColor else RecipeAvailableGlow,
+                        text = "\uD83D\uDD27 재료 $fieldMatchCount/$totalIngredients 준비됨$gradeHint",
+                        color = RecipeAvailableGlow,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
                 else -> Text(
-                    text = "\u274C 덱에 재료 없음",
+                    text = "재료 미배치",
                     color = RecipeUnavailableText,
                     fontSize = 10.sp,
                 )
