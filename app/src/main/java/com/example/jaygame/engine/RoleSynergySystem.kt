@@ -51,7 +51,12 @@ object RoleSynergySystem {
     private val CONTROLLER_4 = RoleSynergyBonus(ccChanceBonus = 0.1f, ccDurationBonus = 0.25f, specialEffect = RoleSpecialEffect.CC_HALF_ON_IMMUNE)
 
     /** Pre-counted version — avoids re-scanning the unit list per role. */
-    fun getBonusByCount(role: UnitRole, count: Int): RoleSynergyBonus = when (role) {
+    fun getBonusByCount(role: UnitRole, count: Int): RoleSynergyBonus {
+        // 역할 시너지 비활성화 — 종족 시스템으로 전환 예정
+        return NO_BONUS
+    }
+    @Suppress("unused")
+    private fun _getBonusByCountLegacy(role: UnitRole, count: Int): RoleSynergyBonus = when (role) {
         UnitRole.TANK -> when { count >= 4 -> TANK_4; count >= 3 -> TANK_3; count >= 2 -> TANK_2; else -> NO_BONUS }
         UnitRole.MELEE_DPS -> when { count >= 4 -> MELEE_4; count >= 3 -> MELEE_3; count >= 2 -> MELEE_2; else -> NO_BONUS }
         UnitRole.RANGED_DPS -> when { count >= 4 -> RANGED_4; count >= 3 -> RANGED_3; count >= 2 -> RANGED_2; else -> NO_BONUS }

@@ -1,88 +1,17 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
-
-    <!-- Body - wind archer/warrior -->
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M24,8 C27,8 29,10 29,13 C29,15 28,16.5 26.5,17.5 L28,20 L30,26 L31,34 C31,36 28,38 24,38 C20,38 17,36 17,34 L18,26 L20,20 L21.5,17.5 C20,16.5 19,15 19,13 C19,10 21,8 24,8Z" />
-
-    <!-- Hood / helm crest -->
+        android:fillColor="#5C3A21"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,4c4.42,0 8,3.58 8,8s-3.58,8 -8,8 -8,-3.58 -8,-8 3.58,-8 8,-8z"/>
     <path
-        android:fillColor="#80CBC4"
-        android:pathData="M24,6 C26,6 28,7 29,9 L24,8 L19,9 C20,7 22,6 24,6Z" />
-    <path
-        android:fillColor="#4DB6AC"
-        android:pathData="M24,5 L26,8 L24,7 L22,8Z" />
-
-    <!-- Face visor -->
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M21,12 L27,12 L27,14 L21,14Z" />
-
-    <!-- Flowing cape -->
-    <path
-        android:fillColor="#B2DFDB"
-        android:pathData="M17,20 C14,24 12,30 10,36 Q12,34 14,30 Q15,26 17,22Z" />
-    <path
-        android:fillColor="#B2DFDB"
-        android:pathData="M31,20 C34,24 36,30 38,36 Q36,34 34,30 Q33,26 31,22Z" />
-
-    <!-- Bow in hand -->
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#4DB6AC"
-        android:strokeWidth="1.2"
-        android:pathData="M34,16 Q38,24 34,32" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#80CBC4"
+        android:fillColor="#5C3A21"
+        android:pathData="M11.5,5v14M5,11.5h14"
         android:strokeWidth="0.8"
-        android:pathData="M34,16 L34,32" />
-
-    <!-- Arrow -->
+        android:strokeColor="#5C3A21"/>
     <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M28,24 L40,24" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M40,24 L38,22 L38,26Z" />
-
-    <!-- Wind swirls around body -->
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#80CBC4"
-        android:strokeWidth="1"
-        android:pathData="M8,22 Q12,19 16,22" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#80CBC4"
-        android:strokeWidth="0.8"
-        android:pathData="M6,26 Q10,24 14,26" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#80CBC4"
-        android:strokeWidth="1"
-        android:pathData="M4,34 Q8,31 12,34" />
-
-    <!-- Wind trail particles -->
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M8,20 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
-    <path
-        android:fillColor="#B2DFDB"
-        android:pathData="M6,28 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M10,38 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
-
-    <!-- Feet / stance -->
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M19,38 L17,42 L21,42Z M29,38 L27,42 L31,42Z" />
-
+        android:fillColor="#5C3A21"
+        android:pathData="M12,10.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3z"/>
 </vector>

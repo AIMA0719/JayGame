@@ -24,8 +24,20 @@ enum class UnitGrade(val label: String, val color: Color, val weight: Int) {
     HERO("영웅", Color(0xFFAB47BC), 12),
     LEGEND("전설", Color(0xFFFF8F00), 3),
     MYTHIC("신화", Color(0xFFFBBF24), 0),
+    IMMORTAL("불멸", Color(0xFFFF1744), 0),
 }
 
+/** 종족 분류 (구 UnitFamily 대체) */
+enum class UnitRace(val label: String, val color: Color) {
+    HUMAN("인간", Color(0xFFFFCC80)),
+    ANIMAL("동물", Color(0xFF81C784)),
+    DEMON("악마", Color(0xFFEF5350)),
+    SPIRIT("정령", Color(0xFF64B5F6)),
+    ROBOT("로봇", Color(0xFF90A4AE)),
+}
+
+/** @deprecated 종족(UnitRace)으로 대체됨. 기존 호환용으로만 유지. */
+@Deprecated("Use UnitRace instead")
 enum class UnitFamily(val label: String, val color: Color) {
     FIRE("화염", Color(0xFFFF6B35)),
     FROST("냉기", Color(0xFF64B5F6)),
@@ -35,7 +47,7 @@ enum class UnitFamily(val label: String, val color: Color) {
     WIND("바람", Color(0xFF80CBC4)),
 }
 
-val NUM_FAMILIES = UnitFamily.entries.size
+val NUM_RACES = UnitRace.entries.size
 
 /**
  * 고유 능력 정보 (고대 등급 이상)

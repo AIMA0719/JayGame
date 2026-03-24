@@ -83,7 +83,6 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onStartBattle: () -> Unit,
     onNavigateToDungeon: (() -> Unit)? = null,
-    onNavigateToDeck: (() -> Unit)? = null,
 ) {
     val state by viewModel.collectAsState()
     val data = state.gameData
@@ -329,10 +328,7 @@ fun HomeScreen(
                 hasStamina = data.stamina >= stage2.staminaCost,
                 activeDeck = data.activeDeck,
                 onDifficultySelected = { diff -> viewModel.selectDifficulty(diff) },
-                onEditDeck = {
-                    viewModel.dismissPreBattle()
-                    onNavigateToDeck?.invoke()
-                },
+                onDeckChanged = { newDeck -> viewModel.updateDeck(newDeck) },
                 onStartBattle = { viewModel.startBattle(stage2.staminaCost) },
                 onDismiss = { viewModel.dismissPreBattle() },
             )

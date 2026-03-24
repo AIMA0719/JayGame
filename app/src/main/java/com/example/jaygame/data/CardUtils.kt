@@ -32,6 +32,7 @@ fun addRandomCardsToUnits(units: Map<String, UnitProgress>, count: Int): Map<Str
 
     repeat(count) {
         val grade = rollCardGrade()
+        if (!BlueprintRegistry.isReady) return@repeat
         val candidates = BlueprintRegistry.instance.findByGradeAndSummonable(grade)
         if (candidates.isEmpty()) return@repeat
         val picked = candidates.random()

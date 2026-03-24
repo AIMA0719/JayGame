@@ -1,6 +1,7 @@
 package com.example.jaygame.engine
 
 import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.data.UnitRace
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -16,14 +17,16 @@ class BlueprintRegistry {
         fun initialize(context: android.content.Context) {
             if (::instance.isInitialized) return
             val registry = BlueprintRegistry()
-            // Load normal + hidden units from blueprints.json
-            val blueprintsJson = context.assets.open("units/blueprints.json")
-                .bufferedReader().use { it.readText() }
-            registry.loadFromJson(blueprintsJson)
-            // Load special units from special_units.json
-            val specialJson = context.assets.open("units/special_units.json")
-                .bufferedReader().use { it.readText() }
-            registry.loadFromJson(specialJson)
+            try {
+                val blueprintsJson = context.assets.open("units/blueprints.json")
+                    .bufferedReader().use { it.readText() }
+                registry.loadFromJson(blueprintsJson)
+                val specialJson = context.assets.open("units/special_units.json")
+                    .bufferedReader().use { it.readText() }
+                registry.loadFromJson(specialJson)
+            } catch (e: Exception) {
+                android.util.Log.e("BlueprintRegistry", "Failed to load blueprints", e)
+            }
             instance = registry
         }
     }
@@ -71,19 +74,32 @@ class BlueprintRegistry {
     fun count(): Int = blueprints.size
 
     private fun parseBlueprint(obj: JSONObject): UnitBlueprint {
-        val familiesArr = obj.getJSONArray("families")
-        val families = (0 until familiesArr.length()).map { UnitFamily.valueOf(familiesArr.getString(it)) }
+        // 신규 포맷: race 필드 (UnitRace)
+        val race = if (obj.has("race")) {
+            UnitRace.valueOf(obj.getString("race"))
+        } else {
+            UnitRace.HUMAN // fallback
+        }
+
+        // 하위 호환: families 필드 (deprecated)
+        val families = if (obj.has("families")) {
+            val familiesArr = obj.getJSONArray("families")
+            (0 until familiesArr.length()).mapNotNull {
+                try { UnitFamily.valueOf(familiesArr.getString(it)) } catch (_: Exception) { null }
+            }
+        } else emptyList()
 
         val statsObj = obj.getJSONObject("stats")
         val stats = UnitStats(
-            hp = statsObj.getDouble("hp").toFloat(),
             baseATK = statsObj.getDouble("baseATK").toFloat(),
             baseSpeed = statsObj.getDouble("baseSpeed").toFloat(),
             range = statsObj.getDouble("range").toFloat(),
-            defense = statsObj.getDouble("defense").toFloat(),
-            magicResist = statsObj.getDouble("magicResist").toFloat(),
-            moveSpeed = statsObj.getDouble("moveSpeed").toFloat(),
-            blockCount = statsObj.getInt("blockCount")
+            // 하위 호환 (deprecated fields)
+            hp = statsObj.optDouble("hp", 0.0).toFloat(),
+            defense = statsObj.optDouble("defense", 0.0).toFloat(),
+            magicResist = statsObj.optDouble("magicResist", 0.0).toFloat(),
+            moveSpeed = statsObj.optDouble("moveSpeed", 75.0).toFloat(),
+            blockCount = statsObj.optInt("blockCount", 0)
         )
 
         val ability = if (obj.isNull("ability")) null else parseAbilityDef(obj.getJSONObject("ability"))
@@ -92,13 +108,11 @@ class BlueprintRegistry {
         return UnitBlueprint(
             id = obj.getString("id"),
             name = obj.getString("name"),
-            families = families,
+            race = race,
             grade = UnitGrade.valueOf(obj.getString("grade")),
-            role = UnitRole.valueOf(obj.getString("role")),
             attackRange = AttackRange.valueOf(obj.getString("attackRange")),
             damageType = DamageType.valueOf(obj.getString("damageType")),
             stats = stats,
-            behaviorId = obj.getString("behaviorId"),
             ability = ability,
             uniqueAbility = uniqueAbility,
             mergeResultId = if (obj.isNull("mergeResultId")) null else obj.getString("mergeResultId"),
@@ -106,7 +120,11 @@ class BlueprintRegistry {
             summonWeight = obj.getInt("summonWeight"),
             unitCategory = UnitCategory.valueOf(obj.getString("unitCategory")),
             iconRes = obj.optInt("iconRes", 0),
-            description = obj.getString("description")
+            description = obj.getString("description"),
+            // deprecated fields for backward compat
+            families = families,
+            role = if (obj.has("role")) UnitRole.valueOf(obj.getString("role")) else UnitRole.MELEE_DPS,
+            behaviorId = obj.optString("behaviorId", ""),
         )
     }
 

@@ -13,5 +13,4 @@ object Routes {
     const val DUNGEON = "dungeon"
     const val PROFILE = "profile"
     const val PET = "pet"
-    const val DECK = "deck"
 }

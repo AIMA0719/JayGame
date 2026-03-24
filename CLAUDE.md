@@ -90,18 +90,36 @@ Battle:
 
 ## Game Content Structure
 
-### Grade System (5 Tiers)
+### Grade System (6 Tiers)
 | Grade | Korean | Ordinal | Summonable | Notes |
 |-------|--------|---------|------------|-------|
-| COMMON | 일반 | 0 | Yes (weight 60) | 기본 소환 유닛 |
-| RARE | 희귀 | 1 | Yes (weight 25) | |
-| HERO | 영웅 | 2 | Yes (weight 12) | 패시브 어빌리티 |
-| LEGEND | 전설 | 3 | Yes (weight 3) | 마나 궁극기 |
-| MYTHIC | 신화 | 4 | No | **레시피 전용** — 특정 영웅 조합으로만 획득 |
+| COMMON | 일반 | 0 | Yes (weight 60) | 간단한 패시브 |
+| RARE | 희귀 | 1 | Yes (weight 25) | 강화된 패시브 |
+| HERO | 영웅 | 2 | Yes (weight 12) | 패시브+고유 효과 |
+| LEGEND | 전설 | 3 | Yes (weight 3) | 패시브+궁극기, 합성 최상위 |
+| MYTHIC | 신화 | 4 | No | **레시피 전용** — 특정 전설 조합 |
+| IMMORTAL | 불멸 | 5 | No | **신화 조합 or 신화 만렙 진화** |
+
+### Race System (종족, 구 Family 대체)
+| Race | Korean | Color | 특색 | 유닛 수 |
+|------|--------|-------|------|---------|
+| HUMAN | 인간 | 0xFFFFCC80 | 밸런스형, 가장 많음 | 20 |
+| SPIRIT | 정령 | 0xFF64B5F6 | 마법·CC | 14 |
+| ANIMAL | 동물 | 0xFF81C784 | 버프·유틸 | 10 |
+| ROBOT | 로봇 | 0xFF90A4AE | CC·스턴 | 10 |
+| DEMON | 악마 | 0xFFEF5350 | 고공격력 | 6 |
+
+### Unit System (불사 타워 방식)
+- 아군 유닛은 **불사** — HP/방어력 없음, 배치하면 죽지 않음
+- 핵심 스탯: **공격력(ATK)**, **공격속도(Speed)** (도감 표시 2개만)
+- 내부 스탯: **사거리(range)** — 배치 전략용, 도감에서는 "근거리/원거리" 태그로만 표시
+- 분류: 근거리/원거리 + 물리/마법 (자유 조합)
+- 시너지: **비활성화** (코드 유지, 종족 시너지 전환 예정)
+- 역할(UnitRole): **비활성화** — 근거리/원거리(AttackRange)만 사용
 
 ### Adding New Units
-1. **Blueprint JSON** — `assets/units/blueprints.json` 또는 `special_units.json`에 추가
-   - 필수 필드: `id`, `name`, `families`, `grade`, `role`, `stats`, `behaviorId`, `isSummonable`, `summonWeight`, `iconRes`
+1. **Blueprint JSON** — `assets/units/blueprints.json`에 추가
+   - 필수 필드: `id`, `name`, `race`, `grade`, `attackRange`, `damageType`, `stats`, `isSummonable`, `summonWeight`, `iconRes`
 2. **Behavior** (선택) — `engine/behavior/YourBehavior.kt` 생성, `UnitBehavior` interface 구현
 3. **BehaviorFactory 등록** — `BehaviorFactory.createBehavior()` when절에 추가
 4. **BlueprintRegistry** — 앱 시작 시 자동 로드, 별도 등록 불필요
@@ -180,7 +198,7 @@ Battle:
 
 ### Battle Enhancement (등급 그룹 강화)
 - `UnitUpgradeSystem` — 등급 그룹 단위로 코인 소모하여 ATK/속도 업그레이드 (Lv0~15)
-- 3개 그룹: [일반/희귀] (grade 0,1), [영웅/전설] (grade 2,3), [신화] (grade 4)
+- 4개 그룹: [일반/희귀] (grade 0,1), [영웅/전설] (grade 2,3), [신화] (grade 4), [불멸] (grade 5)
 - 그룹 강화 시 해당 그룹의 **모든 유닛**에 보너스 적용
 - 마일스톤: Lv3 ATK+10%, Lv6 ATK+15%, Lv9 속도+10%, Lv12 ATK+15%, Lv15 ATK+속도+10%
 - 비용: **지수 곡선** — 그룹 0 base 10 (×1.18/lv), 그룹 1 base 20 (×1.22/lv), 그룹 2 base 40 (×1.24/lv)

@@ -1,117 +1,15 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
-
-    <!-- Outer storm aura -->
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#80CBC4"
-        android:fillAlpha="0.15"
-        android:pathData="M24,2 Q42,2 44,20 Q46,38 24,46 Q2,38 4,20 Q6,2 24,2Z" />
-
-    <!-- Lightning bolts behind -->
+        android:fillColor="#FF6B35"
+        android:pathData="M12,2c-1,3 -2,5 -4,8c-2,3 -3,5 -3,8c0,3 3,5 7,5s7,-2 7,-5c0,-3 -1,-5 -3,-8c-2,-3 -3,-5 -4,-8z"/>
     <path
-        android:fillColor="#E0F2F1"
-        android:pathData="M10,6 L12,14 L9,14 L13,24 L10,24 L15,34 L13,26 L16,26 L12,16 L15,16Z" />
+        android:fillColor="#FFD54F"
+        android:pathData="M12,8c-0.5,2 -1,3 -2,5c-1,2 -1.5,3 -1.5,5c0,2 1.5,3 3.5,3s3.5,-1 3.5,-3c0,-2 -0.5,-3 -1.5,-5c-1,-2 -1.5,-3 -2,-5z"/>
     <path
-        android:fillColor="#E0F2F1"
-        android:pathData="M38,6 L36,14 L39,14 L35,24 L38,24 L33,34 L35,26 L32,26 L36,16 L33,16Z" />
-
-    <!-- Heavy armored body - storm lord -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M24,9 C27,9 29.5,11 29.5,14 C29.5,16 28,17.5 26,18 L29,21 L32,28 L33,36 C33,38 29,40 24,40 C19,40 15,38 15,36 L16,28 L19,21 L22,18 C20,17.5 18.5,16 18.5,14 C18.5,11 21,9 24,9Z" />
-
-    <!-- Armored shoulders -->
-    <path
-        android:fillColor="#4DB6AC"
-        android:pathData="M14,20 L18,18 L19,22 L15,24Z" />
-    <path
-        android:fillColor="#4DB6AC"
-        android:pathData="M34,20 L30,18 L29,22 L33,24Z" />
-
-    <!-- Helm with crest -->
-    <path
-        android:fillColor="#00897B"
-        android:pathData="M24,6 C28,6 30,8 30,11 L29,14 L24,13 L19,14 L18,11 C18,8 20,6 24,6Z" />
-    <path
-        android:fillColor="#4DB6AC"
-        android:pathData="M24,3 L28,9 L24,7 L20,9Z" />
-    <!-- Helm horns -->
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M18,10 L14,5 L16,10Z" />
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M30,10 L34,5 L32,10Z" />
-
-    <!-- Glowing eyes -->
-    <path
-        android:fillColor="#E0F2F1"
-        android:pathData="M22,12 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
-    <path
-        android:fillColor="#E0F2F1"
-        android:pathData="M26,12 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
-
-    <!-- Chest emblem -->
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M24,24 L26,26 L24,28 L22,26Z" />
-    <path
-        android:fillColor="#4DB6AC"
-        android:pathData="M24,23 L24.8,25 L24,24.5 L23.2,25Z" />
-
-    <!-- Storm cape -->
-    <path
-        android:fillColor="#B2DFDB"
-        android:pathData="M15,22 C12,28 9,34 6,42 Q8,40 10,36 Q12,30 14,26Z" />
-    <path
-        android:fillColor="#B2DFDB"
-        android:pathData="M33,22 C36,28 39,34 42,42 Q40,40 38,36 Q36,30 34,26Z" />
-    <path
-        android:fillColor="#80CBC4"
-        android:fillAlpha="0.5"
-        android:pathData="M15,22 C11,30 7,38 4,44 Q6,42 8,38 Q10,32 13,26Z" />
-    <path
-        android:fillColor="#80CBC4"
-        android:fillAlpha="0.5"
-        android:pathData="M33,22 C37,30 41,38 44,44 Q42,42 40,38 Q38,32 35,26Z" />
-
-    <!-- Swirling storm winds -->
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#4DB6AC"
-        android:strokeWidth="1.5"
-        android:pathData="M4,16 Q10,12 16,16 Q22,20 28,16 Q34,12 40,16" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#80CBC4"
-        android:strokeWidth="1.2"
-        android:pathData="M2,32 Q8,28 14,32 Q20,36 26,32 Q32,28 38,32 Q44,28 46,32" />
-    <path
-        android:fillColor="@android:color/transparent"
-        android:strokeColor="#4DB6AC"
-        android:strokeWidth="0.8"
-        android:pathData="M6,40 Q12,36 18,40 Q24,44 30,40 Q36,36 42,40" />
-
-    <!-- Storm particles -->
-    <path
-        android:fillColor="#E0F2F1"
-        android:pathData="M7,22 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
-    <path
-        android:fillColor="#E0F2F1"
-        android:pathData="M41,22 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M5,36 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
-    <path
-        android:fillColor="#80CBC4"
-        android:pathData="M43,36 m-0.8,0 a0.8,0.8 0 1,1 1.6,0 a0.8,0.8 0 1,1 -1.6,0" />
-
-    <!-- Boots -->
-    <path
-        android:fillColor="#4DB6AC"
-        android:pathData="M19,40 L17,44 L22,44Z M29,40 L26,44 L31,44Z" />
-
+        android:fillColor="#FFD54F"
+        android:pathData="M9,1l1.5,2.5L12,1l1.5,2.5L15,1l-1.5,3L12,2.5L10.5,4z"/>
 </vector>

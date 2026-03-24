@@ -31,9 +31,9 @@ class SynergySystemTest {
         assertEquals(3, counts[UnitFamily.FIRE])
         assertEquals(1, counts[UnitFamily.LIGHTNING])
 
-        // FIRE has 3 so it should get a synergy bonus (basic: 1.08 ATK)
+        // 시너지 비활성화 — 종족 시스템으로 전환 예정, 기본값 반환
         val bonus = SynergySystem.getSynergyBonus(units, UnitFamily.FIRE)
-        assertEquals(1.08f, bonus.atkMultiplier, 0.001f)
+        assertEquals(1.0f, bonus.atkMultiplier, 0.001f)
     }
 
     @Test
@@ -48,9 +48,9 @@ class SynergySystemTest {
         val counts = SynergySystem.countFamilies(units)
         assertEquals(3, counts[UnitFamily.FIRE])
 
-        // Should get 3-count basic bonus, not full (4-count) bonus
+        // 시너지 비활성화 — 종족 시스템으로 전환 예정, 기본값 반환
         val bonus = SynergySystem.getSynergyBonus(units, UnitFamily.FIRE)
-        assertEquals(1.08f, bonus.atkMultiplier, 0.001f)
+        assertEquals(1.0f, bonus.atkMultiplier, 0.001f)
         assertEquals(SynergySystem.SpecialEffect.NONE, bonus.specialEffect)
     }
 }

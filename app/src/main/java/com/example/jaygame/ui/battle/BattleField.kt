@@ -163,9 +163,7 @@ fun BattleField() {
         }
     }
 
-    // Blueprint fallback bitmaps — map family+grade to existing icon resources.
-    // Legacy icon pattern: family 0-4 → id = grade*5+family; family 5 (wind) → id = 35+grade
-    // UNIT_ICONS covers ids 0-24 and 35-39, higher grades fall back to family's base icon.
+    // Blueprint bitmaps — family+grade → drawable 리소스 매핑 (전 패밀리 동일 스타일)
     val blueprintBitmapCache = remember {
         val cache = mutableMapOf<String, ImageBitmap?>()
         val iconMap = mapOf(
@@ -185,7 +183,7 @@ fun BattleField() {
             val id = if (familyOrd < 5) gradeOrd * 5 + familyOrd else 35 + gradeOrd
             return iconMap[id] ?: iconMap[familyOrd.coerceIn(0, 4)] ?: R.drawable.ic_unit_0
         }
-        // Pre-load bitmaps for all blueprints
+        if (!com.example.jaygame.engine.BlueprintRegistry.isReady) return@remember cache
         val registry = com.example.jaygame.engine.BlueprintRegistry.instance
         for (bp in registry.all()) {
             val familyOrd = bp.families.firstOrNull()?.ordinal ?: 0

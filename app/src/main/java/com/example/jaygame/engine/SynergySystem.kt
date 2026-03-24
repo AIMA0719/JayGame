@@ -59,6 +59,8 @@ object SynergySystem {
      * countFamilies()로 카운트 후 기존 보너스 테이블 활용.
      */
     fun getSynergyBonus(units: List<GameUnit>, family: UnitFamily): SynergyBonus {
+        // 시너지 비활성화 — 종족 시스템으로 전환 예정
+        return SynergyBonus()
         val counts = countFamilies(units)
         val familyCount = counts[family] ?: 0
         return getSynergyBonusByCount(family.ordinal, familyCount)

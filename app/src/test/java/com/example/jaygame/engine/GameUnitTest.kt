@@ -1,6 +1,7 @@
 package com.example.jaygame.engine
 
 import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.math.Vec2
 import org.junit.Assert.*
 import org.junit.Test
@@ -11,12 +12,13 @@ class GameUnitTest {
         val unit = GameUnit()
         val stats = UnitStats(hp=150f, baseATK=10f, baseSpeed=0.8f, range=40f, defense=10f, magicResist=3f, moveSpeed=70f, blockCount=1)
         val bp = UnitBlueprint(
-            id="fire_tank_01", name="test", families=listOf(UnitFamily.FIRE),
-            grade=UnitGrade.COMMON, role=UnitRole.TANK, attackRange=AttackRange.MELEE,
-            damageType=DamageType.PHYSICAL, stats=stats, behaviorId="tank_blocker",
+            id="fire_tank_01", name="test", race=UnitRace.HUMAN,
+            grade=UnitGrade.COMMON, attackRange=AttackRange.MELEE,
+            damageType=DamageType.PHYSICAL, stats=stats,
             ability=null, uniqueAbility=null, mergeResultId=null,
             isSummonable=true, summonWeight=60, unitCategory=UnitCategory.NORMAL,
-            iconRes=0, description="test"
+            iconRes=0, description="test",
+            families=listOf(UnitFamily.FIRE), role=UnitRole.TANK, behaviorId="tank_blocker"
         )
         unit.initFromBlueprint(bp)
         assertEquals("fire_tank_01", unit.blueprintId)
@@ -61,12 +63,13 @@ class GameUnitTest {
         val unit = GameUnit()
         val stats = UnitStats(200f, 50f, 1.2f, 60f, 10f, 5f, 100f, 0)
         val bp = UnitBlueprint(
-            id="hidden_test", name="hidden", families=listOf(UnitFamily.FIRE, UnitFamily.LIGHTNING),
-            grade=UnitGrade.HERO, role=UnitRole.MELEE_DPS, attackRange=AttackRange.MELEE,
-            damageType=DamageType.PHYSICAL, stats=stats, behaviorId="assassin_dash",
+            id="hidden_test", name="hidden", race=UnitRace.HUMAN,
+            grade=UnitGrade.HERO, attackRange=AttackRange.MELEE,
+            damageType=DamageType.PHYSICAL, stats=stats,
             ability=null, uniqueAbility=null, mergeResultId=null,
             isSummonable=false, summonWeight=0, unitCategory=UnitCategory.HIDDEN,
-            iconRes=0, description="test"
+            iconRes=0, description="test",
+            families=listOf(UnitFamily.FIRE, UnitFamily.LIGHTNING), role=UnitRole.MELEE_DPS, behaviorId="assassin_dash"
         )
         unit.initFromBlueprint(bp)
         assertEquals(2, unit.families.size)

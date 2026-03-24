@@ -32,10 +32,14 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
         @Synchronized
         fun initialize(context: android.content.Context) {
             if (::instance.isInitialized) return
-            val recipesJson = context.assets.open("units/hidden_recipes.json")
-                .bufferedReader().use { it.readText() }
             val system = RecipeSystem(BlueprintRegistry.instance)
-            system.loadRecipes(recipesJson)
+            try {
+                val recipesJson = context.assets.open("units/hidden_recipes.json")
+                    .bufferedReader().use { it.readText() }
+                system.loadRecipes(recipesJson)
+            } catch (e: Exception) {
+                android.util.Log.e("RecipeSystem", "Failed to load recipes", e)
+            }
             instance = system
         }
     }

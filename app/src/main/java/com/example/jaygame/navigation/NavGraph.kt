@@ -29,7 +29,6 @@ import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.DungeonScreen
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.ui.screens.ProfileScreen
-import com.example.jaygame.ui.screens.DeckScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
 import com.example.jaygame.ui.viewmodel.*
@@ -89,11 +88,6 @@ fun NavGraph(
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToDeck = {
-                        navController.navigate(Routes.DECK) {
-                            launchSingleTop = true
-                        }
-                    },
                 )
             }
             composable(Routes.COLLECTION) {
@@ -134,13 +128,6 @@ fun NavGraph(
                     repository = repository,
                     onBack = { navController.popBackStack() },
                     onStartDungeonBattle = onStartDungeonBattle,
-                )
-            }
-            composable(Routes.DECK) {
-                val vm: DeckViewModel = viewModel(factory = factory)
-                DeckScreen(
-                    viewModel = vm,
-                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Routes.PROFILE) {

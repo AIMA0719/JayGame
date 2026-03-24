@@ -1,6 +1,7 @@
 package com.example.jaygame.engine
 
 import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.math.Vec2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -41,6 +42,7 @@ class GameUnit {
     var attackRange: AttackRange = AttackRange.RANGED
     var damageType: DamageType = DamageType.PHYSICAL
     var unitCategory: UnitCategory = UnitCategory.NORMAL
+    var race: UnitRace = UnitRace.HUMAN
     var hp: Float = 0f
     var maxHp: Float = 0f
     var defense: Float = 0f
@@ -176,6 +178,7 @@ class GameUnit {
         attackRange = AttackRange.RANGED
         damageType = DamageType.PHYSICAL
         unitCategory = UnitCategory.NORMAL
+        race = UnitRace.HUMAN
         hp = 0f
         maxHp = 0f
         defense = 0f

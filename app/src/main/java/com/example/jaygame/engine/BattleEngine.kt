@@ -924,6 +924,9 @@ class BattleEngine(
     }
 
     private fun refreshSynergies() {
+        // 시너지 비활성화 — 종족 시스템으로 전환 예정
+        return
+
         synergyScratch.clear()
         units.forEach { if (it.alive) synergyScratch.add(it) }
 

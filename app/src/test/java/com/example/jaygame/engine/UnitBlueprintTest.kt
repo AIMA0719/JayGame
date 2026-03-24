@@ -1,6 +1,7 @@
 package com.example.jaygame.engine
 
 import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.data.UnitRace
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -9,12 +10,13 @@ class UnitBlueprintTest {
     fun `UnitBlueprint creation with single family`() {
         val stats = UnitStats(hp=100f, baseATK=10f, baseSpeed=1f, range=50f, defense=5f, magicResist=0f, moveSpeed=80f, blockCount=1)
         val bp = UnitBlueprint(
-            id="fire_tank_01", name="루비 가디언", families=listOf(UnitFamily.FIRE),
-            grade=UnitGrade.COMMON, role=UnitRole.TANK, attackRange=AttackRange.MELEE,
-            damageType=DamageType.PHYSICAL, stats=stats, behaviorId="tank_blocker",
+            id="fire_tank_01", name="루비 가디언", race=UnitRace.HUMAN,
+            grade=UnitGrade.COMMON, attackRange=AttackRange.MELEE,
+            damageType=DamageType.PHYSICAL, stats=stats,
             ability=null, uniqueAbility=null, mergeResultId="fire_tank_02",
             isSummonable=true, summonWeight=60, unitCategory=UnitCategory.NORMAL,
-            iconRes=0, description="테스트"
+            iconRes=0, description="테스트",
+            families=listOf(UnitFamily.FIRE), role=UnitRole.TANK, behaviorId="tank_blocker"
         )
         assertEquals("fire_tank_01", bp.id)
         assertEquals(listOf(UnitFamily.FIRE), bp.families)
@@ -26,13 +28,13 @@ class UnitBlueprintTest {
     fun `UnitBlueprint dual family for hidden unit`() {
         val stats = UnitStats(hp=200f, baseATK=50f, baseSpeed=1.2f, range=60f, defense=10f, magicResist=5f, moveSpeed=100f, blockCount=0)
         val bp = UnitBlueprint(
-            id="hidden_thunder_flame_knight", name="뇌염의 기사",
-            families=listOf(UnitFamily.FIRE, UnitFamily.LIGHTNING),
-            grade=UnitGrade.HERO, role=UnitRole.MELEE_DPS, attackRange=AttackRange.MELEE,
-            damageType=DamageType.PHYSICAL, stats=stats, behaviorId="assassin_dash",
+            id="hidden_thunder_flame_knight", name="뇌염의 기사", race=UnitRace.HUMAN,
+            grade=UnitGrade.HERO, attackRange=AttackRange.MELEE,
+            damageType=DamageType.PHYSICAL, stats=stats,
             ability=null, uniqueAbility=null, mergeResultId=null,
             isSummonable=false, summonWeight=0, unitCategory=UnitCategory.HIDDEN,
-            iconRes=0, description="듀얼"
+            iconRes=0, description="듀얼",
+            families=listOf(UnitFamily.FIRE, UnitFamily.LIGHTNING), role=UnitRole.MELEE_DPS, behaviorId="assassin_dash"
         )
         assertEquals(2, bp.families.size)
         assertTrue(bp.families.contains(UnitFamily.FIRE))

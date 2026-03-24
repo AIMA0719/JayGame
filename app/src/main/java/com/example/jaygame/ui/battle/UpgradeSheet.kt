@@ -37,9 +37,10 @@ private val groupColors = arrayOf(
     Color(0xFF42A5F5),  // 일반/희귀
     Color(0xFFFF9800),  // 영웅/전설
     Color(0xFFE040FB),  // 신화
+    Color(0xFFFF1744),  // 불멸
 )
-private val groupLabels = arrayOf("일반/희귀", "영웅/전설", "신화")
-private val groupIcons = arrayOf("⚔️", "🛡️", "👑")
+private val groupLabels = arrayOf("일반/희귀", "영웅/전설", "신화", "불멸")
+private val groupIcons = arrayOf("⚔️", "🛡️", "👑", "💀")
 
 @Composable
 fun UpgradeSheet(

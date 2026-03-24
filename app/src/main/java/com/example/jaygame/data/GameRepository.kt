@@ -30,9 +30,14 @@ class GameRepository(context: Context) {
     }
 
     fun loadDiscoveredRecipes(): Set<String> {
-        val json = prefs.getString("discovered_recipes", "[]") ?: "[]"
-        val arr = JSONArray(json)
-        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+        return try {
+            val json = prefs.getString("discovered_recipes", "[]") ?: "[]"
+            val arr = JSONArray(json)
+            (0 until arr.length()).map { arr.getString(it) }.toSet()
+        } catch (e: Exception) {
+            android.util.Log.w("GameRepository", "Failed to load discovered recipes", e)
+            emptySet()
+        }
     }
 
     private fun load(): GameData {

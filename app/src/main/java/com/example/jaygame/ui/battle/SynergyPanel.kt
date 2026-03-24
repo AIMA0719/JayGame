@@ -47,6 +47,10 @@ fun SynergyPanel(
     roleSynergies: Map<UnitRole, Int>,
     modifier: Modifier = Modifier,
 ) {
+    // Synergies disabled — race system replaces family/role synergies
+    return
+
+    @Suppress("UNREACHABLE_CODE")
     val activeRoles: Map<UnitRole, Int> = remember(roleSynergies) { roleSynergies.filter { it.value >= 3 } }
     val activeFamilies: Map<UnitFamily, Int> = remember(familySynergies) { familySynergies.filter { it.value >= 3 } }
 

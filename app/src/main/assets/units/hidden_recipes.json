@@ -1,192 +1,126 @@
 [
   {
-    "id": "recipe_thunder_flame_knight",
+    "id": "recipe_human_mythic_01",
     "ingredients": [
-      {
-        "family": "FIRE",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      },
-      {
-        "family": "LIGHTNING",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_03" }
     ],
-    "resultId": "hidden_thunder_flame_knight",
+    "resultId": "human_mythic_01",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_ice_poison_sage",
+    "id": "recipe_human_mythic_02",
     "ingredients": [
-      {
-        "family": "FROST",
-        "role": "CONTROLLER",
-        "minGrade": "RARE",
-        "specificUnitId": null
-      },
-      {
-        "family": "POISON",
-        "role": "CONTROLLER",
-        "minGrade": "RARE",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_03" }
     ],
-    "resultId": "hidden_ice_poison_sage",
+    "resultId": "human_mythic_02",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_shadow_assassin",
+    "id": "recipe_human_mythic_03",
     "ingredients": [
-      {
-        "family": "POISON",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      },
-      {
-        "family": "WIND",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_03" }
     ],
-    "resultId": "hidden_shadow_assassin",
+    "resultId": "human_mythic_03",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_blaze_frost_spirit",
+    "id": "recipe_spirit_mythic_01",
     "ingredients": [
-      {
-        "family": "FIRE",
-        "role": "RANGED_DPS",
-        "minGrade": "COMMON",
-        "specificUnitId": null
-      },
-      {
-        "family": "FROST",
-        "role": "RANGED_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" }
     ],
-    "resultId": "hidden_blaze_frost_spirit",
+    "resultId": "spirit_mythic_01",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_venom_thunder_drake",
+    "id": "recipe_spirit_mythic_02",
     "ingredients": [
-      {
-        "family": "POISON",
-        "role": "RANGED_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      },
-      {
-        "family": "LIGHTNING",
-        "role": "RANGED_DPS",
-        "minGrade": "LEGEND",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" }
     ],
-    "resultId": "hidden_venom_thunder_drake",
+    "resultId": "spirit_mythic_02",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_frost_wind_dancer",
+    "id": "recipe_spirit_mythic_03",
     "ingredients": [
-      {
-        "family": "FROST",
-        "role": "TANK",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      },
-      {
-        "family": "WIND",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" }
     ],
-    "resultId": "hidden_frost_wind_dancer",
+    "resultId": "spirit_mythic_03",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_lightning_wind_tempest",
+    "id": "recipe_animal_mythic_01",
     "ingredients": [
-      {
-        "family": "LIGHTNING",
-        "role": "RANGED_DPS",
-        "minGrade": "LEGEND",
-        "specificUnitId": null
-      },
-      {
-        "family": "WIND",
-        "role": "RANGED_DPS",
-        "minGrade": "LEGEND",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" }
     ],
-    "resultId": "hidden_lightning_wind_tempest",
+    "resultId": "animal_mythic_01",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_fire_wind_inferno_gale",
+    "id": "recipe_robot_mythic_01",
     "ingredients": [
-      {
-        "family": "FIRE",
-        "role": "MELEE_DPS",
-        "minGrade": "LEGEND",
-        "specificUnitId": null
-      },
-      {
-        "family": "WIND",
-        "role": "RANGED_DPS",
-        "minGrade": "LEGEND",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_02" }
     ],
-    "resultId": "hidden_fire_wind_inferno_gale",
+    "resultId": "robot_mythic_01",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_poison_frost_toxic_ice",
+    "id": "recipe_robot_mythic_02",
     "ingredients": [
-      {
-        "family": "POISON",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      },
-      {
-        "family": "FROST",
-        "role": "CONTROLLER",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" }
     ],
-    "resultId": "hidden_poison_frost_toxic_ice",
+    "resultId": "robot_mythic_02",
     "luckyStonesCost": 1
   },
   {
-    "id": "recipe_fire_poison_molten_venom",
+    "id": "recipe_demon_mythic_01",
     "ingredients": [
-      {
-        "family": "FIRE",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      },
-      {
-        "family": "POISON",
-        "role": "MELEE_DPS",
-        "minGrade": "HERO",
-        "specificUnitId": null
-      }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_01" }
     ],
-    "resultId": "hidden_fire_poison_molten_venom",
+    "resultId": "demon_mythic_01",
     "luckyStonesCost": 1
+  },
+  {
+    "id": "recipe_human_immortal_01",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "human_mythic_01" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "human_mythic_02" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "human_mythic_03" }
+    ],
+    "resultId": "human_immortal_01",
+    "luckyStonesCost": 3
+  },
+  {
+    "id": "recipe_spirit_immortal_01",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "spirit_mythic_01" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "spirit_mythic_02" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "spirit_mythic_03" }
+    ],
+    "resultId": "spirit_immortal_01",
+    "luckyStonesCost": 3
+  },
+  {
+    "id": "recipe_animal_immortal_01",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "animal_mythic_01" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "demon_mythic_01" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "robot_mythic_01" }
+    ],
+    "resultId": "animal_immortal_01",
+    "luckyStonesCost": 3
   }
 ]

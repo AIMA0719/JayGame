@@ -39,7 +39,6 @@ import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.DamageType
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
-import com.example.jaygame.ui.components.roleColor
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.NeonCyan
@@ -123,35 +122,36 @@ fun UnitDetailPopup() {
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                         )
-                        if (data.families.isNotEmpty()) {
+                        if (blueprint?.race != null) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = data.families.joinToString("/") { it.label },
-                                color = data.families.first().color,
+                                text = blueprint.race.label,
+                                color = blueprint.race.color,
                                 fontSize = 12.sp,
                             )
                         }
                     }
 
-                    // Role / Range / DamageType badges
+                    // Range + DamageType badges
                     if (data.blueprintId.isNotEmpty()) {
                         Row(
                             modifier = Modifier.padding(top = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            BadgeChip(data.role.label, roleColor(data.role))
-                            BadgeChip(data.attackRange.label, DarkNavy, NeonCyan)
+                            if (blueprint?.race != null) {
+                                BadgeChip(blueprint.race.label, blueprint.race.color.copy(alpha = 0.2f), blueprint.race.color)
+                            }
                             BadgeChip(
-                                if (data.damageType == DamageType.PHYSICAL) "물리" else "마법",
+                                if (data.attackRange == AttackRange.MELEE) "근거리·물리" else "원거리·마법",
                                 DarkNavy,
-                                if (data.damageType == DamageType.PHYSICAL) NeonRed else Color(0xFF7E57C2),
+                                if (data.attackRange == AttackRange.MELEE) NeonRed else Color(0xFF7E57C2),
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Stats
+                    // Stats (ATK + Speed only)
                     if (blueprint != null) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -159,16 +159,6 @@ fun UnitDetailPopup() {
                         ) {
                             StatItem("공격력", "${blueprint.stats.baseATK.toInt()}", NeonRed)
                             StatItem("공속", "%.1f".format(blueprint.stats.baseSpeed), NeonCyan)
-                            StatItem("사거리", "${blueprint.stats.range.toInt()}", Gold)
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            StatItem("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF4CAF50))
-                            StatItem("방어력", "${blueprint.stats.defense.toInt()}", Color(0xFF90A4AE))
-                            StatItem("마법저항", "${blueprint.stats.magicResist.toInt()}", Color(0xFF7E57C2))
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))

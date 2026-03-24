@@ -18,12 +18,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.SubText
 
-// ── Role icon labels ──
+// ── Race labels ──
+val RACE_LABELS: Map<UnitRace, String> = mapOf(
+    UnitRace.HUMAN to "인간",
+    UnitRace.ANIMAL to "동물",
+    UnitRace.DEMON to "악마",
+    UnitRace.SPIRIT to "정령",
+    UnitRace.ROBOT to "로봇",
+)
+
+// ── Race icons ──
+val RACE_ICONS: Map<UnitRace, String> = mapOf(
+    UnitRace.HUMAN to "🧑",
+    UnitRace.ANIMAL to "🐾",
+    UnitRace.DEMON to "😈",
+    UnitRace.SPIRIT to "✨",
+    UnitRace.ROBOT to "🤖",
+)
+
+// ── Role icon labels (deprecated — kept for compatibility) ──
+@Deprecated("Use RACE_LABELS instead")
 val ROLE_LABELS: Map<UnitRole, String> = mapOf(
     UnitRole.TANK to "🛡탱커",
     UnitRole.MELEE_DPS to "⚔근딜",
@@ -41,7 +61,8 @@ val BEHAVIOR_LABELS: Map<String, String> = mapOf(
     "controller_cc_ranged" to "원거리 제어형",
 )
 
-// ── Family emoji icons ──
+// ── Family emoji icons (deprecated — kept for compatibility) ──
+@Deprecated("Use RACE_ICONS instead")
 val FAMILY_ICONS: Map<UnitFamily, String> = mapOf(
     UnitFamily.FIRE to "\uD83D\uDD25",
     UnitFamily.FROST to "\u2744\uFE0F",
