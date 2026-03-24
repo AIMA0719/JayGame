@@ -60,6 +60,13 @@ class GameUnit {
 
     var moveSpeed = 75f
 
+    // ── AbilityEngine fields (data-driven ability system) ──
+    var activeAbility: ActiveAbility? = null
+    var abilityTimer: Float = 0f      // cooldown timer for periodic/self-buff abilities
+    var abilityCounter: Int = 0       // attack counter for Nth-attack triggers
+    var abilityStacks: Int = 0        // for stackable self-buffs
+    var abilityAuraTick: Float = 0f   // aura tick accumulator
+
     private var attackCooldown = 0f
     var currentTarget: Enemy? = null
 
@@ -196,6 +203,13 @@ class GameUnit {
         uniqueAbilityCooldown = 0f
         uniqueAbilityMaxCd = 0f
         passiveCounter = 0
+
+        // Reset AbilityEngine fields
+        activeAbility = null
+        abilityTimer = 0f
+        abilityCounter = 0
+        abilityStacks = 0
+        abilityAuraTick = 0f
 
         // Reset mana fields
         mana = 0f

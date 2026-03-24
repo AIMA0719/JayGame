@@ -36,6 +36,7 @@ class BuffContainer {
         if (type == BuffType.Shield) shieldHP += value
     }
 
+    fun countBuff(type: BuffType): Int = buffs.count { it.type == type && it.remaining > 0f }
     fun isStunned(): Boolean = buffs.any { it.type == BuffType.Stun && it.remaining > 0f }
     fun isSilenced(): Boolean = buffs.any { it.type == BuffType.Silence && it.remaining > 0f }
 

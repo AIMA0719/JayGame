@@ -573,6 +573,22 @@ class BattleEngine(
                 }
             }
 
+            // AbilityEngine: on-kill → 가장 가까운 ON_KILL 유닛 1체만 트리거
+            var closestKillUnit: GameUnit? = null
+            var closestDist = Float.MAX_VALUE
+            units.forEach { u ->
+                if (!u.alive) return@forEach
+                val ab = u.activeAbility ?: return@forEach
+                if (ab.primitive == AbilityPrimitive.ON_KILL) {
+                    val d = u.position.distanceSqTo(dead.position)
+                    if (d < closestDist) { closestDist = d; closestKillUnit = u }
+                }
+            }
+            closestKillUnit?.let { u ->
+                val result = AbilityEngine.applyOnKill(u.activeAbility!!, u)
+                if (result.coinBonus > 0) sp += result.coinBonus.toFloat()
+            }
+
             enemies.release(dead)
             killCount++
             // 코인 획득: 적 처치 시
@@ -592,6 +608,30 @@ class BattleEngine(
         enemies.fillActiveList(activeEnemiesScratch)
         val activeEnemies = activeEnemiesScratch
         UniqueAbilitySystem.update(unitList, dt, activeEnemies)
+
+        // ── AbilityEngine: periodic & aura ticks ──
+        units.forEach { u ->
+            if (!u.alive) return@forEach
+            val ab = u.activeAbility ?: return@forEach
+            // Periodic abilities (PERIODIC_AOE, SELF_BUFF_TIMER)
+            if (ab.cooldown > 0f && (ab.primitive == AbilityPrimitive.PERIODIC_AOE || ab.primitive == AbilityPrimitive.SELF_BUFF_TIMER)) {
+                u.abilityTimer -= dt
+                if (u.abilityTimer <= 0f) {
+                    val result = AbilityEngine.applyPeriodic(ab, u, activeEnemies, spatialHash, units)
+                    if (result.coinBonus > 0) sp += result.coinBonus.toFloat()
+                    u.abilityTimer = ab.cooldown
+                }
+            }
+            // Aura abilities
+            if (ab.primitive == AbilityPrimitive.AURA_BUFF) {
+                u.abilityAuraTick += dt
+                val result = AbilityEngine.applyAura(ab, u, units, activeEnemies, spatialHash, dt, u.abilityAuraTick)
+                if (result.triggered) {
+                    if (result.coinBonus > 0) sp += result.coinBonus.toFloat()
+                    u.abilityAuraTick = 0f
+                }
+            }
+        }
 
         units.forEach { unit ->
             if (!unit.alive && unit.state != UnitState.RESPAWNING) return@forEach
@@ -699,6 +739,18 @@ class BattleEngine(
         }
     }
 
+    /** Called from onProjectileHit — apply data-driven on-hit ability for the attacking unit. */
+    private fun applyAbilityOnHit(sourceUnitTile: Int, target: Enemy) {
+        val unit = grid.getUnit(sourceUnitTile) ?: return
+        val ab = unit.activeAbility ?: return
+        if (ab.primitive == AbilityPrimitive.ON_HIT_CHANCE ||
+            ab.primitive == AbilityPrimitive.NTH_ATTACK ||
+            ab.primitive == AbilityPrimitive.PASSIVE_STAT) {
+            val result = AbilityEngine.applyOnHit(ab, unit, target, spatialHash)
+            if (result.coinBonus > 0) sp += result.coinBonus.toFloat()
+        }
+    }
+
     private fun updateProjectiles(dt: Float) {
         deadProjectiles.clear()
         projectiles.forEach { proj ->
@@ -710,6 +762,8 @@ class BattleEngine(
                     val chain = projectiles.acquire() ?: return@onProjectileHit
                     chain.init(from, t, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
                 }
+                // Data-driven ability on-hit (AbilityEngine)
+                applyAbilityOnHit(proj.sourceUnitId, target)
                 val nx = target.position.x / W
                 val ny = target.position.y / H
                 BattleBridge.onDamageDealt(nx, ny, proj.damage.toInt(), proj.isCrit)
@@ -804,9 +858,10 @@ class BattleEngine(
         val synergy = AbilitySystem.activeSynergy
         val roleBonus = getRoleBonus(unit)
 
-        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance + roleBonus.critBonus)
+        val abilityCritBonus = AbilityEngine.getCritBonus(unit.activeAbility)
+        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance + roleBonus.critBonus + abilityCritBonus)
         val critMultiplier = 2f + relicCritDmg
-        val isMagic = unit.family == 1 || unit.family == 4
+        val isMagic = unit.damageType == DamageType.MAGIC
         val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.001f // +0.1% per level
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
         val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
@@ -967,6 +1022,9 @@ class BattleEngine(
         unit.range *= upgradeRangeMult
         // behaviorId가 비어있거나 미등록이면 behavior=null (기본 공격 로직으로 동작)
         unit.behavior = if (bp.behaviorId.isNotEmpty()) BehaviorFactory.create(bp.behaviorId) else null
+        // Data-driven ability engine: parse ability from blueprint
+        unit.activeAbility = AbilityEngine.parseAbility(bp.ability)
+        unit.abilityTimer = unit.activeAbility?.cooldown ?: 0f
         UniqueAbilitySystem.initUnit(unit)
         return unit
     }
