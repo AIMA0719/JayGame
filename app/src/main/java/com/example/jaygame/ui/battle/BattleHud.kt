@@ -74,6 +74,7 @@ import com.example.jaygame.engine.HiddenRecipe
 import com.example.jaygame.engine.RecipeSlot
 import com.example.jaygame.engine.RecipeSystem
 import com.example.jaygame.engine.UnitBlueprint
+import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.ui.components.roleColor
 import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
@@ -153,6 +154,7 @@ private val RecipeCraftBtnBot = Color(0xFF2E7D32)
 private val RecipeCraftEnabledBrush = Brush.verticalGradient(listOf(RecipeCraftBtnTop, RecipeCraftBtnBot))
 private val RecipeCraftDisabledBrush = Brush.verticalGradient(listOf(DisabledTop, DisabledBot))
 private val RecipeCraftEnabledBorder = Color(0xFF1B5E20)
+private val RecipeGradeWarningColor = Color(0xFFFFAA33)
 
 // Recipe dialog data models (file-level to avoid recomposition overhead)
 private data class RecipeDisplayInfo(
@@ -645,14 +647,12 @@ private fun RecipeCard(
                     fontWeight = FontWeight.ExtraBold,
                 )
                 canCraftFromDeck -> {
-                    // 최소 등급 요구 표시
                     val maxGrade = recipe.ingredients.maxOf { it.minGrade.ordinal }
-                    val gradeLabel = com.example.jaygame.engine.UnitGrade.entries
-                        .getOrNull(maxGrade)?.label ?: ""
+                    val gradeLabel = UnitGrade.entries.getOrNull(maxGrade)?.label ?: ""
                     Text(
                         text = if (maxGrade > 0) "\u26A0 ${gradeLabel} 등급 이상 필요"
                             else "\u2705 재료를 필드에 배치하세요",
-                        color = if (maxGrade > 0) Color(0xFFFFAA33) else RecipeAvailableGlow,
+                        color = if (maxGrade > 0) RecipeGradeWarningColor else RecipeAvailableGlow,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
