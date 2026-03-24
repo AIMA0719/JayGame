@@ -636,12 +636,19 @@ private fun RecipeCard(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
-                canCraftFromDeck -> Text(
-                    text = "\u2705 덱 조합 가능 — 재료를 필드에 배치하세요",
-                    color = RecipeAvailableGlow,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+                canCraftFromDeck -> {
+                    // 최소 등급 요구 표시
+                    val maxGrade = recipe.ingredients.maxOf { it.minGrade.ordinal }
+                    val gradeLabel = com.example.jaygame.engine.UnitGrade.entries
+                        .getOrNull(maxGrade)?.label ?: ""
+                    Text(
+                        text = if (maxGrade > 0) "\u26A0 ${gradeLabel} 등급 이상 필요"
+                            else "\u2705 재료를 필드에 배치하세요",
+                        color = if (maxGrade > 0) Color(0xFFFFAA33) else RecipeAvailableGlow,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
                 else -> Text(
                     text = "\u274C 덱에 재료 없음",
                     color = RecipeUnavailableText,
