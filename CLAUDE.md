@@ -120,9 +120,14 @@ Battle:
 ### Adding New Units
 1. **Blueprint JSON** — `assets/units/blueprints.json`에 추가
    - 필수 필드: `id`, `name`, `race`, `grade`, `attackRange`, `damageType`, `stats`, `isSummonable`, `summonWeight`, `iconRes`
-2. **Behavior** (선택) — `engine/behavior/YourBehavior.kt` 생성, `UnitBehavior` interface 구현
-3. **BehaviorFactory 등록** — `BehaviorFactory.createBehavior()` when절에 추가
-4. **BlueprintRegistry** — 앱 시작 시 자동 로드, 별도 등록 불필요
+2. **아이콘 PNG** — `res/drawable-xxhdpi/ic_bp_{blueprintId}.png` 추가 (코드 수정 불필요)
+   - 네이밍 규칙: `ic_bp_` + blueprintId → 예: `human_common_01` → `ic_bp_human_common_01.png`
+   - 권장 크기: 128×128 ~ 256×256, 투명 배경 PNG
+   - 자동 매핑: `blueprintIconRes()`가 런타임에 리소스 이름으로 자동 검색
+   - 파일 없으면 `ic_unit_0.png` fallback
+3. **Behavior** (선택) — `engine/behavior/YourBehavior.kt` 생성, `UnitBehavior` interface 구현
+4. **BehaviorFactory 등록** — `BehaviorFactory.createBehavior()` when절에 추가
+5. **BlueprintRegistry** — 앱 시작 시 자동 로드, 별도 등록 불필요
 
 ### Adding New Stages
 `data/StageData.kt`의 `STAGES` 리스트에 `StageDef` 추가:

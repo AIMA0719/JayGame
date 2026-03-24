@@ -1241,18 +1241,17 @@ fun BattleBottomHud(
             .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Row 1: [일괄판매(좌)] [금화+유닛수(가운데)] [조합법(우)] ──
-        Row(
+        // ── Row 1: [일괄판매(좌)] [금화(정중앙)] [조합법(우)] ──
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             // 일괄판매 (좌)
             val sellShape = RoundedCornerShape(10.dp)
             Box(
                 modifier = Modifier
+                    .align(Alignment.CenterStart)
                     .clip(sellShape)
                     .background(if (hasUnits) SellBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
                     .border(2.dp, if (hasUnits) Color(0xFF8B1A1A) else DisabledBot, sellShape)
@@ -1263,8 +1262,11 @@ fun BattleBottomHud(
                 Text("일괄판매", color = if (hasUnits) Color.White else DisabledText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
             }
 
-            // 금화 + 유닛수 (가운데)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // 금화 (정중앙 고정)
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 if (goldIcon != null) {
                     Image(bitmap = goldIcon, contentDescription = null, modifier = Modifier.size(20.dp))
                 }
@@ -1277,8 +1279,20 @@ fun BattleBottomHud(
                 )
             }
 
-            // 우측 여백 (좌우 균형)
-            Spacer(modifier = Modifier.width(1.dp))
+            // 조합법 (우)
+            val recipeShape = RoundedCornerShape(10.dp)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .clip(recipeShape)
+                    .background(RecipeBtnBrush)
+                    .border(2.dp, RecipeBtnBorder, recipeShape)
+                    .clickable { showRecipeBook = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("\uD83D\uDCD6 조합법", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+            }
         }
 
         // Recipe book dialog

@@ -11,8 +11,14 @@ class JayGameApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        appContext = applicationContext
         BlueprintRegistry.initialize(this)
         RecipeSystem.initialize(this)
         repository = GameRepository(this)
+    }
+
+    companion object {
+        lateinit var appContext: android.content.Context
+            private set
     }
 }

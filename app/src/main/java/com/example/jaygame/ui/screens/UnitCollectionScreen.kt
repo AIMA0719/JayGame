@@ -120,46 +120,40 @@ private val HiddenPlusColor = Color(0xFF555577)
 // Pre-allocated screen background brush
 private val ScreenBgBrush = Brush.verticalGradient(listOf(Color(0xFF0A0A1A), Color(0xFF1A1028)))
 
-// ── Blueprint ID → icon resource mapping ──
-private val BLUEPRINT_ICON_MAP: Map<String, Int> = mapOf(
-    "fire_mdps_01" to R.drawable.ic_unit_0,
-    "fire_mdps_02" to R.drawable.ic_unit_5,
-    "fire_mdps_03" to R.drawable.ic_unit_10,
-    "fire_mdps_04" to R.drawable.ic_unit_15,
-    "fire_mdps_05" to R.drawable.ic_unit_20,
-    "fire_mdps_06" to R.drawable.ic_unit_20,
-    "fire_mdps_07" to R.drawable.ic_unit_20,
-    "frost_rdps_01" to R.drawable.ic_unit_1,
-    "frost_rdps_02" to R.drawable.ic_unit_6,
-    "frost_rdps_03" to R.drawable.ic_unit_11,
-    "frost_rdps_04" to R.drawable.ic_unit_16,
-    "frost_rdps_05" to R.drawable.ic_unit_21,
-    "poison_mdps_01" to R.drawable.ic_unit_2,
-    "poison_mdps_02" to R.drawable.ic_unit_7,
-    "poison_mdps_03" to R.drawable.ic_unit_12,
-    "poison_mdps_04" to R.drawable.ic_unit_17,
-    "poison_mdps_05" to R.drawable.ic_unit_22,
-    "lightning_mdps_01" to R.drawable.ic_unit_3,
-    "lightning_mdps_02" to R.drawable.ic_unit_8,
-    "lightning_mdps_03" to R.drawable.ic_unit_13,
-    "lightning_mdps_04" to R.drawable.ic_unit_18,
-    "lightning_mdps_05" to R.drawable.ic_unit_23,
-    "support_support_01" to R.drawable.ic_unit_4,
-    "support_support_02" to R.drawable.ic_unit_9,
-    "support_support_03" to R.drawable.ic_unit_14,
-    "support_support_04" to R.drawable.ic_unit_19,
-    "support_support_05" to R.drawable.ic_unit_24,
-    "wind_mdps_01" to R.drawable.ic_unit_35,
-    "wind_mdps_02" to R.drawable.ic_unit_36,
-    "wind_mdps_03" to R.drawable.ic_unit_37,
-    "wind_mdps_04" to R.drawable.ic_unit_38,
-    "wind_mdps_05" to R.drawable.ic_unit_39,
-)
+// ── Blueprint ID → icon 자동 매핑 ──
+// 규칙: drawable-xxhdpi/ic_bp_{blueprintId}.png 파일이 있으면 자동으로 사용
+// 예: human_common_01 → ic_bp_human_common_01.png
+// 파일이 없으면 ic_unit_0 (기본 아이콘) fallback
+private var _iconResCache: Map<String, Int>? = null
 
-/** Resolve icon resource for a blueprint. Falls back to ic_unit_0. */
-internal fun blueprintIconRes(bp: UnitBlueprint): Int =
-    if (bp.iconRes != 0) bp.iconRes
-    else BLUEPRINT_ICON_MAP[bp.id] ?: R.drawable.ic_unit_0
+private fun getIconResMap(context: android.content.Context): Map<String, Int> {
+    _iconResCache?.let { return it }
+    val map = mutableMapOf<String, Int>()
+    if (com.example.jaygame.engine.BlueprintRegistry.isReady) {
+        for (bp in com.example.jaygame.engine.BlueprintRegistry.instance.all()) {
+            val resName = "ic_bp_${bp.id}"
+            val resId = context.resources.getIdentifier(resName, "drawable", context.packageName)
+            if (resId != 0) map[bp.id] = resId
+        }
+    }
+    _iconResCache = map
+    return map
+}
+
+/** Resolve icon resource for a blueprint.
+ *  우선순위: 1) bp.iconRes (JSON에 지정) 2) ic_bp_{id}.png (자동 매핑) 3) ic_unit_0 (fallback)
+ */
+internal fun blueprintIconRes(bp: UnitBlueprint, context: android.content.Context? = null): Int {
+    if (bp.iconRes != 0) return bp.iconRes
+    val ctx = context ?: try {
+        com.example.jaygame.JayGameApplication.appContext
+    } catch (_: Exception) { null }
+    if (ctx != null) {
+        val map = getIconResMap(ctx)
+        map[bp.id]?.let { return it }
+    }
+    return R.drawable.ic_unit_0
+}
 
 // Pre-allocated grade background brushes (avoid per-item creation)
 private val GradeBgBrushCommon = Brush.verticalGradient(listOf(CodexGradeBgCommon, Color(0xFF303030)))

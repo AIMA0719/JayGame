@@ -163,32 +163,13 @@ fun BattleField() {
         }
     }
 
-    // Blueprint bitmaps — family+grade → drawable 리소스 매핑 (전 패밀리 동일 스타일)
+    // Blueprint bitmaps — blueprintId별 아이콘 매핑 (blueprintIconRes 공유)
     val blueprintBitmapCache = remember {
         val cache = mutableMapOf<String, ImageBitmap?>()
-        val iconMap = mapOf(
-            0 to R.drawable.ic_unit_0, 1 to R.drawable.ic_unit_1, 2 to R.drawable.ic_unit_2,
-            3 to R.drawable.ic_unit_3, 4 to R.drawable.ic_unit_4, 5 to R.drawable.ic_unit_5,
-            6 to R.drawable.ic_unit_6, 7 to R.drawable.ic_unit_7, 8 to R.drawable.ic_unit_8,
-            9 to R.drawable.ic_unit_9, 10 to R.drawable.ic_unit_10, 11 to R.drawable.ic_unit_11,
-            12 to R.drawable.ic_unit_12, 13 to R.drawable.ic_unit_13, 14 to R.drawable.ic_unit_14,
-            15 to R.drawable.ic_unit_15, 16 to R.drawable.ic_unit_16, 17 to R.drawable.ic_unit_17,
-            18 to R.drawable.ic_unit_18, 19 to R.drawable.ic_unit_19, 20 to R.drawable.ic_unit_20,
-            21 to R.drawable.ic_unit_21, 22 to R.drawable.ic_unit_22, 23 to R.drawable.ic_unit_23,
-            24 to R.drawable.ic_unit_24,
-            35 to R.drawable.ic_unit_35, 36 to R.drawable.ic_unit_36, 37 to R.drawable.ic_unit_37,
-            38 to R.drawable.ic_unit_38, 39 to R.drawable.ic_unit_39,
-        )
-        fun iconForFamilyGrade(familyOrd: Int, gradeOrd: Int): Int {
-            val id = if (familyOrd < 5) gradeOrd * 5 + familyOrd else 35 + gradeOrd
-            return iconMap[id] ?: iconMap[familyOrd.coerceIn(0, 4)] ?: R.drawable.ic_unit_0
-        }
         if (!com.example.jaygame.engine.BlueprintRegistry.isReady) return@remember cache
         val registry = com.example.jaygame.engine.BlueprintRegistry.instance
         for (bp in registry.all()) {
-            val familyOrd = bp.families.firstOrNull()?.ordinal ?: 0
-            val gradeOrd = bp.grade.ordinal
-            val resId = iconForFamilyGrade(familyOrd, gradeOrd)
+            val resId = com.example.jaygame.ui.screens.blueprintIconRes(bp)
             cache[bp.id] = ContextCompat.getDrawable(context, resId)?.toBitmap(128, 128)?.asImageBitmap()
         }
         cache
