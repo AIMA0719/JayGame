@@ -152,7 +152,7 @@ internal fun blueprintIconRes(bp: UnitBlueprint, context: android.content.Contex
         val map = getIconResMap(ctx)
         map[bp.id]?.let { return it }
     }
-    return R.drawable.ic_unit_0
+    return R.drawable.ic_bp_human_common_01
 }
 
 // Pre-allocated grade background brushes (avoid per-item creation)

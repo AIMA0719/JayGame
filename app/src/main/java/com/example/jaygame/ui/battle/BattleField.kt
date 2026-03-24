@@ -405,7 +405,7 @@ fun BattleField() {
 
         val cellW = gridW / Grid.COLS
         val cellH = gridH / Grid.ROWS
-        val unitSizeNormal = minOf(cellW, cellH) * 0.7f
+        val unitSizeNormal = minOf(cellW, cellH) * 0.95f
         val gridState = BattleBridge.gridState.value
         // PERF: Reduce visual detail when many units exist
         val highUnitCount = data.count > 50
