@@ -25,7 +25,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.DeckManager
 import com.example.jaygame.navigation.NavGraph
 import com.example.jaygame.ui.components.OfflineRewardDialog
 import com.example.jaygame.ui.screens.SplashScreen
@@ -178,10 +177,6 @@ class ComposeActivity : ComponentActivity() {
         val data = repo.gameData.value
         BattleBridge.setStageId(data.currentStageId)
         BattleBridge.setDifficulty(data.difficulty)
-        val activeDeck = data.activeDeck
-        val validDeck = if (DeckManager.isValid(activeDeck, data)) activeDeck
-                        else DeckManager.autoFill(activeDeck, data)
-        BattleBridge.setDeckBlueprints(validDeck)
         BgmManager.stop()
         startActivity(android.content.Intent(this, MainActivity::class.java))
         @Suppress("DEPRECATION")

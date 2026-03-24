@@ -89,10 +89,7 @@ data class GameData(
     val tutorialCompleted: Boolean = false,
     // 행운석 (신화 레시피 합성 재화)
     val luckyStones: Int = 0,
-    val deckPresets: List<List<String>> = List(DeckManager.MAX_PRESETS) { emptyList() },
-    val activeDeckIndex: Int = 0,
 ) {
-    val activeDeck: List<String> get() = deckPresets.getOrElse(activeDeckIndex) { emptyList() }
     val equippedPetSlotCount: Int get() = if (trophies >= 2000) 2 else 1
     val equippedSlotCount: Int get() = when {
         trophies >= 3000 -> 4

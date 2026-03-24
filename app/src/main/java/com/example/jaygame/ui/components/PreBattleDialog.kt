@@ -49,7 +49,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
-import com.example.jaygame.data.DeckManager
 import com.example.jaygame.data.StageDef
 import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.AttackRange
@@ -59,11 +58,6 @@ import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.ui.screens.blueprintIconRes
 import com.example.jaygame.ui.theme.*
 
-private val DeckSlotFilledBg = Color(0xFF1A1A30)
-private val DeckSlotEmptyBg = Color(0xFF151520)
-private val DeckSlotEmptyBorder = Color(0x14FFFFFF)
-private val DeckSlotEmptyPlus = Color(0x26FFFFFF)
-private val SelectedSlotBorder = Color(0xFF00D4FF)
 
 private data class DifficultyInfo(
     val id: Int, val name: String, val desc: String,
@@ -85,25 +79,10 @@ fun PreBattleDialog(
     selectedDifficulty: Int,
     staminaCost: Int,
     hasStamina: Boolean,
-    activeDeck: List<String> = emptyList(),
     onDifficultySelected: (Int) -> Unit,
-    onDeckChanged: (List<String>) -> Unit = {},
     onStartBattle: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var editingDeck by remember { mutableStateOf(false) }
-    var currentDeck by remember(activeDeck) { mutableStateOf(activeDeck.toMutableList()) }
-    var selectedSlot by remember { mutableStateOf(-1) }
-    var raceFilter by remember { mutableStateOf<UnitRace?>(null) }
-    var rangeFilter by remember { mutableStateOf<AttackRange?>(null) }
-
-    val reg = remember { if (BlueprintRegistry.isReady) BlueprintRegistry.instance else null }
-    val deckBlueprints = remember(currentDeck.toList()) {
-        List(DeckManager.DECK_SIZE) { i ->
-            currentDeck.getOrNull(i)?.let { id -> reg?.findById(id) }
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -129,186 +108,6 @@ fun PreBattleDialog(
                 StatChip("\uD83C\uDF0A ${stage.maxWaves} 웨이브")
                 Spacer(modifier = Modifier.width(12.dp))
                 StatChip(if (bestWave > 0) "\uD83C\uDFC6 BEST $bestWave" else "미도전")
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // ── Deck Slots ──
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("출전 덱", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = LightText)
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = if (editingDeck) "완료" else "편집",
-                    fontSize = 11.sp,
-                    color = if (editingDeck) NeonGreen else NeonCyan,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.06f))
-                        .clickable {
-                            if (editingDeck) {
-                                onDeckChanged(currentDeck.toList())
-                                selectedSlot = -1
-                            }
-                            editingDeck = !editingDeck
-                        }
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                for (i in 0 until DeckManager.DECK_SIZE) {
-                    val bp = deckBlueprints[i]
-                    val isSelected = editingDeck && selectedSlot == i
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (bp != null) DeckSlotFilledBg else DeckSlotEmptyBg)
-                            .border(
-                                if (isSelected) 2.dp else 1.dp,
-                                when {
-                                    isSelected -> SelectedSlotBorder
-                                    bp != null -> bp.grade.color.copy(alpha = 0.5f)
-                                    else -> DeckSlotEmptyBorder
-                                },
-                                RoundedCornerShape(8.dp),
-                            )
-                            .clickable(enabled = editingDeck) {
-                                if (selectedSlot == i && bp != null) {
-                                    // 선택된 슬롯 다시 클릭 → 유닛 제거
-                                    currentDeck = currentDeck.toMutableList().apply {
-                                        if (i < size) removeAt(i)
-                                    }
-                                    selectedSlot = -1
-                                } else {
-                                    selectedSlot = i
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (bp != null) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Image(
-                                    painter = painterResource(blueprintIconRes(bp)),
-                                    contentDescription = bp.name,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                                Text(bp.name, color = bp.grade.color, fontSize = 7.sp,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(
-                                    text = if (bp.attackRange == AttackRange.MELEE) "근" else "원",
-                                    color = SubText, fontSize = 7.sp,
-                                )
-                            }
-                        } else {
-                            Text("+", color = DeckSlotEmptyPlus, fontSize = 16.sp)
-                        }
-                    }
-                }
-            }
-
-            // ── Inline Deck Editor (toggle) ──
-            AnimatedVisibility(
-                visible = editingDeck,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
-            ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    // Race + Range filter chips
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        // Race filters
-                        UnitRace.entries.forEach { race ->
-                            val selected = raceFilter == race
-                            val raceIcon = RACE_ICONS[race] ?: ""
-                            GameFilterChip(
-                                label = "$raceIcon${race.label}",
-                                selected = selected,
-                                onClick = { raceFilter = if (selected) null else race },
-                            )
-                        }
-                        // Range filters
-                        Text("│", color = SubText.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 2.dp))
-                        AttackRange.entries.forEach { range ->
-                            val selected = rangeFilter == range
-                            GameFilterChip(
-                                label = if (range == AttackRange.MELEE) "근거리" else "원거리",
-                                selected = selected,
-                                onClick = { rangeFilter = if (selected) null else range },
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Available units grid
-                    val availableUnits = remember(raceFilter, rangeFilter, currentDeck.toList()) {
-                        val all = reg?.all() ?: emptyList()
-                        all.filter { bp ->
-                            bp.isSummonable &&
-                            bp.grade == UnitGrade.COMMON &&
-                            bp.id !in currentDeck &&
-                            (raceFilter == null || bp.race == raceFilter) &&
-                            (rangeFilter == null || bp.attackRange == rangeFilter)
-                        }
-                    }
-
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 160.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        items(availableUnits, key = { it.id }) { bp ->
-                            Box(
-                                modifier = Modifier
-                                    .height(52.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(bp.race.color.copy(alpha = 0.08f))
-                                    .border(1.dp, bp.race.color.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                                    .clickable {
-                                        val deck = currentDeck.toMutableList()
-                                        if (selectedSlot in 0 until DeckManager.DECK_SIZE) {
-                                            // 선택된 슬롯에 배치
-                                            while (deck.size <= selectedSlot) deck.add("")
-                                            deck[selectedSlot] = bp.id
-                                            selectedSlot = (selectedSlot + 1).coerceAtMost(DeckManager.DECK_SIZE - 1)
-                                        } else if (deck.size < DeckManager.DECK_SIZE) {
-                                            deck.add(bp.id)
-                                        }
-                                        currentDeck = deck
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(
-                                        painter = painterResource(blueprintIconRes(bp)),
-                                        contentDescription = bp.name,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                    Text(bp.name, color = Color.White, fontSize = 7.sp,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(
-                                        text = if (bp.attackRange == AttackRange.MELEE) "근·${if (bp.damageType == com.example.jaygame.engine.DamageType.PHYSICAL) "물" else "마"}"
-                                        else "원·${if (bp.damageType == com.example.jaygame.engine.DamageType.PHYSICAL) "물" else "마"}",
-                                        color = SubText, fontSize = 6.sp,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!editingDeck && currentDeck.isEmpty()) {
-                Text("덱을 편집해 주세요 (자동 채워짐)", fontSize = 10.sp, color = SubText)
             }
 
             Spacer(modifier = Modifier.height(12.dp))

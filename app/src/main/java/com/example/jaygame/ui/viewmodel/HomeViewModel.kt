@@ -59,14 +59,6 @@ class HomeViewModel(private val repository: GameRepository) : ViewModel(), Conta
         repository.save(state.gameData.copy(difficulty = diff))
     }
 
-    fun updateDeck(newDeck: List<String>) = intent {
-        val presets = state.gameData.deckPresets.toMutableList()
-        val idx = state.gameData.activeDeckIndex
-        while (presets.size <= idx) presets.add(emptyList())
-        presets[idx] = newDeck
-        repository.save(state.gameData.copy(deckPresets = presets))
-    }
-
     fun showPreBattle() = intent {
         reduce { state.copy(showPreBattle = true) }
     }

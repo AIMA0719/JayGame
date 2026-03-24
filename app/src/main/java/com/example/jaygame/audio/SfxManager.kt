@@ -61,9 +61,12 @@ object SfxManager {
         for ((event, path) in assetPaths) {
             try {
                 val afd = context.assets.openFd(path)
-                val id = pool.load(afd, 1)
-                afd.close()
-                loadedIds[event] = id
+                try {
+                    val id = pool.load(afd, 1)
+                    loadedIds[event] = id
+                } finally {
+                    afd.close()
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to load $path for $event: ${e.message}")
             }

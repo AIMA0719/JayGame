@@ -9,6 +9,7 @@ import com.example.jaygame.engine.Grid
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.engine.UnitState
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,6 @@ data class BattleState(
     val elapsedTime: Float = 0f,
     val state: Int = 0, // 0=WaveDelay, 1=Playing, 2=Victory, 3=Defeat
     val summonCost: Int = 50,
-    val deckUnits: IntArray = intArrayOf(0, 1, 2),
     val enemyCount: Int = 0,
     val maxEnemyCount: Int = 100,
     val isBossRound: Boolean = false,
@@ -40,7 +40,6 @@ data class BattleState(
                 playerHP == other.playerHP && maxHP == other.maxHP &&
                 sp == other.sp && elapsedTime == other.elapsedTime &&
                 state == other.state && summonCost == other.summonCost &&
-                deckUnits.contentEquals(other.deckUnits) &&
                 enemyCount == other.enemyCount && maxEnemyCount == other.maxEnemyCount &&
                 isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining &&
                 waveElapsed == other.waveElapsed && maxUnitSlots == other.maxUnitSlots
@@ -222,9 +221,9 @@ data class LevelUpEvent(
 )
 
 object BattleBridge {
-    private var enemyFrameCounter = 0L
-    private var projFrameCounter = 0L
-    private var unitFrameCounter = 0L
+    private val enemyFrameCounter = AtomicLong(0)
+    private val projFrameCounter = AtomicLong(0)
+    private val unitFrameCounter = AtomicLong(0)
 
     // Pre-allocated event buffers to avoid per-event list allocations
     private val damageBuffer = ArrayDeque<DamageEvent>(32)
@@ -255,6 +254,7 @@ object BattleBridge {
             val betSize: com.example.jaygame.engine.GambleSystem.BetSize,
             val result: CompletableDeferred<com.example.jaygame.engine.GambleSystem.GambleResult?>,
         ) : BattleCommand()
+        object MergeAll : BattleCommand()
         object RecipeCraft : BattleCommand()
         data class BuyUnit(val unitDefId: Int, val cost: Int) : BattleCommand()
         data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
@@ -465,7 +465,6 @@ object BattleBridge {
             elapsedTime = elapsed,
             state = state,
             summonCost = summonCost,
-            deckUnits = _state.value.deckUnits,
             enemyCount = enemyCount,
             isBossRound = isBossRound != 0,
             waveTimeRemaining = waveTimeRemaining,
@@ -479,25 +478,6 @@ object BattleBridge {
         }
     }
 
-    @JvmStatic
-    fun setDeck(units: IntArray) {
-        _state.value = _state.value.copy(deckUnits = units)
-    }
-
-    private val _deckBlueprints = MutableStateFlow<List<String>>(emptyList())
-    val deckBlueprints: StateFlow<List<String>> = _deckBlueprints.asStateFlow()
-
-    fun setDeckBlueprints(ids: List<String>) {
-        _deckBlueprints.value = ids
-        // 시너지 표시를 위해 family ordinal 배열도 업데이트
-        if (BlueprintRegistry.isReady) {
-            val registry = BlueprintRegistry.instance
-            val familyOrdinals = ids.mapNotNull { id ->
-                registry.findById(id)?.families?.firstOrNull()?.ordinal
-            }.toIntArray()
-            setDeck(familyOrdinals)
-        }
-    }
 
     /**
      * C++에서 배틀 종료 시 호출 (JNI).
@@ -534,7 +514,7 @@ object BattleBridge {
 
     @JvmStatic
     fun updateEnemyPositions(xs: FloatArray, ys: FloatArray, types: IntArray, hpRatios: FloatArray, buffs: IntArray, count: Int) {
-        _enemyPositions.value = EnemyPositionData(xs, ys, types, hpRatios, buffs, count, ++enemyFrameCounter)
+        _enemyPositions.value = EnemyPositionData(xs, ys, types, hpRatios, buffs, count, enemyFrameCounter.incrementAndGet())
     }
 
     @JvmStatic
@@ -545,7 +525,7 @@ object BattleBridge {
         families: IntArray = IntArray(0),
         grades: IntArray = IntArray(0),
     ) {
-        _projectiles.value = ProjectileData(srcXs, srcYs, dstXs, dstYs, types, families, grades, count, ++projFrameCounter)
+        _projectiles.value = ProjectileData(srcXs, srcYs, dstXs, dstYs, types, families, grades, count, projFrameCounter.incrementAndGet())
     }
 
     @JvmStatic
@@ -567,7 +547,7 @@ object BattleBridge {
         stackCounts: IntArray = IntArray(0),
     ) {
         _unitPositions.value = UnitPositionData(
-            xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, ++unitFrameCounter,
+            xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, unitFrameCounter.incrementAndGet(),
             blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
             hps, maxHps, states, homeXs, homeYs, stackCounts,
         )
@@ -785,7 +765,7 @@ object BattleBridge {
         override fun hashCode(): Int = frameId.hashCode()
     }
 
-    private var zoneFrameCounter = 0L
+    private val zoneFrameCounter = AtomicLong(0)
     private val _zoneData = MutableStateFlow(ZoneData())
     val zoneData: StateFlow<ZoneData> = _zoneData.asStateFlow()
 
@@ -793,7 +773,7 @@ object BattleBridge {
         xs: FloatArray, ys: FloatArray, radii: FloatArray,
         families: IntArray, progresses: FloatArray, grades: IntArray, count: Int,
     ) {
-        _zoneData.value = ZoneData(xs, ys, radii, families, progresses, grades, count, ++zoneFrameCounter)
+        _zoneData.value = ZoneData(xs, ys, radii, families, progresses, grades, count, zoneFrameCounter.incrementAndGet())
     }
 
     /** 튜토리얼 모드 (첫 전투) */
@@ -822,11 +802,11 @@ object BattleBridge {
     fun reset() {
         _state.value = BattleState()
         _result.value = null
-        enemyFrameCounter = 0L
+        enemyFrameCounter.set(0)
         _enemyPositions.value = EnemyPositionData()
-        projFrameCounter = 0L
+        projFrameCounter.set(0)
         _projectiles.value = ProjectileData()
-        unitFrameCounter = 0L
+        unitFrameCounter.set(0)
         _unitPositions.value = UnitPositionData()
         synchronized(damageLock) {
             damageBuffer.clear()
@@ -857,18 +837,19 @@ object BattleBridge {
         }
         _bossModifier.value = null
         _unitPullPity.value = 0
-        zoneFrameCounter = 0L
+        zoneFrameCounter.set(0)
         _zoneData.value = ZoneData()
         _activeFamilySynergies.value = emptyMap()
         _activeRoleSynergies.value = emptyMap()
-        // Note: stageId, difficulty, battleSpeed, dungeonId, deckBlueprints are preserved — set by ComposeActivity before launch
+        // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _groupUpgradeLevels.value = IntArray(com.example.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 }
         _debugMode.value = false
         commandQueue.clear()
     }
 
-    // Kotlin engine reference (replaces C++ JNI)
+    @Volatile
+    @JvmStatic
     var engine: com.example.jaygame.engine.BattleEngine? = null
 
     // ── Request methods: enqueue commands for game-loop-thread processing ──
@@ -880,6 +861,11 @@ object BattleBridge {
     fun requestMerge(tileIndex: Int) {
         _selectedTile.value = -1
         commandQueue.add(BattleCommand.Merge(tileIndex))
+    }
+
+    /** 모든 합성 가능 슬롯에서 한 번씩 합성 실행 */
+    fun requestMergeAll() {
+        commandQueue.add(BattleCommand.MergeAll)
     }
 
     fun requestSell(tileIndex: Int) {

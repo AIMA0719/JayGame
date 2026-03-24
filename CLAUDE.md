@@ -68,19 +68,19 @@ Battle:
 - **Fixed timestep:** `FIXED_DT = 1f/60f`, coroutine on `Dispatchers.Default`
 - **Object pooling:** `ObjectPool<T>` — enemies(256), units(128), projectiles(512). Canvas 렌더링에서 GC 절대 유발 금지
 - **Spatial hashing:** `SpatialHash<Enemy>` cell 64×64 for range/collision queries
-- **Grid:** 3×6 슬롯 기반 그리드 (18슬롯), 480×300 필드, origin (120, 430) on 720×1280 canvas
+- **Grid:** 3×6 슬롯 기반 그리드 (18슬롯), 576×360 필드, origin (72, 400) on 720×1280 canvas
 - **유닛 배치:**
   - 슬롯에 유닛 배치, 배치 후 **위치 고정** (자동 이동 없음)
   - 사거리 내 적 **자동 공격** (타워 디펜스 방식)
-  - 같은 유닛을 **드래그하여 같은 슬롯에 중첩** (최대 3개)
-  - **3개 중첩 시 자동 합성** → 상위 등급 유닛 1개
+  - 같은 **유닛(동일 blueprintId)** 을 **드래그하여 같은 슬롯에 무제한 중첩**
+  - **수동 조합 버튼** → 같은 유닛 3개 소모 → 같은 종족의 상위 등급 랜덤 유닛
   - 유닛 탭 → **코인으로 강화** (ATK +50%/레벨)
-- **Monster path:** 그리드 주변 ㅁ형 직사각형 경로 (pathLeft=85, pathTop=395, pathRight=635, pathBottom=765), 30px 코너 보간
-- **슬롯→경로 거리:** 모서리 75px, 상하 가장자리 85px, 내부 가장자리 155px, 중앙 185px
-- **사거리 설계 (위치 전략):**
-  - TANK: 85~100 (가장자리 14/18슬롯에서만 공격 가능)
-  - MELEE_DPS: 90~140 (가장자리 전용, 고등급은 내부 일부 커버)
-  - RANGED_DPS: 160~260 (COMMON/RARE는 중앙 8,9 불가, HERO↑ 전체 커버)
+- **Monster path:** 그리드 주변 ㅁ형 직사각형 경로 (pathLeft=46, pathTop=370, pathRight=674, pathBottom=790), 30px 코너 보간
+- **슬롯→경로 거리:** 모서리 ~50px, 상하 가장자리 ~60px, 내부 가장자리 ~130px, 중앙 ~160px (그리드 확대로 경로와 더 가까워짐)
+- **사거리 설계 (위치 전략):** — 그리드 1.2x 확대 반영 완료
+  - TANK: 100~115 (가장자리 슬롯에서 공격 가능)
+  - MELEE_DPS: 105~145 (가장자리 전용, 고등급은 내부 일부 커버)
+  - RANGED_DPS: 160~260 (COMMON/RARE는 중앙 불가, HERO↑ 전체 커버)
   - CONTROLLER: 200~270 (전 슬롯 커버)
 - **Systems are volatile singletons:** `BlueprintRegistry`, `RecipeSystem`, `UniqueAbilitySystem` — 전역 상태, 매 프레임 BattleEngine에서 갱신
 
@@ -152,13 +152,15 @@ Battle:
 
 ## Core System Rules (반드시 준수)
 
-### Merge System (슬롯 중첩 합성)
-- 같은 유닛을 **드래그하여 한 슬롯에 중첩** (최대 3개)
-- **3개 중첩 시 자동 합성** → `mergeResultId`가 가리키는 상위 등급 유닛 1개
-- 소환 시에도 같은 유닛이 이미 있는 슬롯에 자동 중첩
+### Merge System (동일 유닛 기반 수동 합성)
+- 같은 **유닛(동일 blueprintId)** 을 **드래그하여 한 슬롯에 무제한 중첩**
+- **조합 버튼**으로 수동 합성 — 같은 유닛 3개 소모 → 같은 종족의 상위 등급 랜덤 유닛
+- 자동 합성 없음 — 플레이어가 조합 버튼을 눌러야 합성 실행
+- 소환 시 같은 유닛이 있는 슬롯에 자동 중첩
 - Lucky merge: 5% base + 유물 보너스 → 2단계 점프
 - LEGEND가 일반 합성 최상위 (MYTHIC은 레시피 전용)
 - SPECIAL 유닛은 합성 불가
+- 원형 배치: 1~3개 삼각형, 4~6개 원형, 7+ 원형+숫자뱃지
 
 ### Recipe System (신화 전용)
 - MYTHIC 유닛은 **특정 영웅 조합 레시피**로만 획득

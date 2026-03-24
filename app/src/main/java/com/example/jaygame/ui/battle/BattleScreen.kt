@@ -233,7 +233,8 @@ fun BattleScreen(
             }
             Canvas(modifier = Modifier.fillMaxSize()) {
                 drawRect(
-                    color = flashColor.copy(alpha = flashAlpha),
+                    color = flashColor,
+                    alpha = flashAlpha,
                     size = size,
                 )
             }
@@ -428,14 +429,16 @@ private fun ZoneGroundOverlay() {
             // Pulsing inner glow
             val pulseScale = 1f + kotlin.math.sin(tick * 2f) * 0.04f
             drawCircle(
-                color = color.copy(alpha = 0.12f * fadeAlpha),
+                color = color,
+                alpha = 0.12f * fadeAlpha,
                 radius = radius * pulseScale,
                 center = Offset(cx, cy),
             )
 
             // Secondary pulse layer (offset phase)
             drawCircle(
-                color = color.copy(alpha = 0.07f * fadeAlpha),
+                color = color,
+                alpha = 0.07f * fadeAlpha,
                 radius = radius * (0.85f + kotlin.math.sin(tick * 2f + 2f) * 0.05f),
                 center = Offset(cx, cy),
             )
@@ -445,7 +448,8 @@ private fun ZoneGroundOverlay() {
             val segmentSweep = 37f // (360 - 8*8) / 8
             for (s in 0 until 8) {
                 drawArc(
-                    color = color.copy(alpha = borderAlpha),
+                    color = color,
+                    alpha = borderAlpha,
                     startAngle = s * 45f + tickDeg * 0.3f,
                     sweepAngle = segmentSweep,
                     useCenter = false,
@@ -459,7 +463,8 @@ private fun ZoneGroundOverlay() {
             val innerRadius = radius * 0.7f
             for (s in 0 until 6) {
                 drawArc(
-                    color = color.copy(alpha = 0.2f * fadeAlpha),
+                    color = color,
+                    alpha = 0.2f * fadeAlpha,
                     startAngle = s * 60f - tickDeg * 0.5f,
                     sweepAngle = 40f,
                     useCenter = false,
@@ -477,7 +482,8 @@ private fun ZoneGroundOverlay() {
                 val py = cy + kotlin.math.sin(angle) * orbitRadius
                 val pAlpha = (0.5f + kotlin.math.sin(tick * 4f + p * 2f) * 0.3f) * fadeAlpha
                 drawCircle(
-                    color = color.copy(alpha = pAlpha.toFloat()),
+                    color = color,
+                    alpha = pAlpha.toFloat(),
                     radius = 3f,
                     center = Offset(px.toFloat(), py.toFloat()),
                 )
@@ -486,7 +492,8 @@ private fun ZoneGroundOverlay() {
             // Center symbol glow
             val centerAlpha = (0.3f + kotlin.math.sin(tick * 1.5f) * 0.15f) * fadeAlpha
             drawCircle(
-                color = color.copy(alpha = centerAlpha),
+                color = color,
+                alpha = centerAlpha,
                 radius = 6f,
                 center = Offset(cx, cy),
             )
@@ -618,19 +625,22 @@ private fun BattleResultTransition(
                     val maxR = max(size.width, size.height) * 0.8f
                     val radius = maxR * burst
                     drawCircle(
-                        color = VictoryGoldBright.copy(alpha = oAlpha * 0.6f),
+                        color = VictoryGoldBright,
+                        alpha = oAlpha * 0.6f,
                         radius = radius,
                         center = Offset(cx, cy),
                     )
                     drawCircle(
-                        color = VictoryGoldDim.copy(alpha = oAlpha * 0.4f),
+                        color = VictoryGoldDim,
+                        alpha = oAlpha * 0.4f,
                         radius = radius * 0.6f,
                         center = Offset(cx, cy),
                     )
                 } else {
                     // Defeat: dark overlay
                     drawRect(
-                        color = DefeatBlack.copy(alpha = oAlpha),
+                        color = DefeatBlack,
+                        alpha = oAlpha,
                         size = size,
                     )
                 }
@@ -800,29 +810,6 @@ private fun BattleMenuDialog(
                     }
                 }
 
-                // ── Active synergies ──
-                val battleState by BattleBridge.state.collectAsState()
-                val deckFamilies = battleState.deckUnits
-                val synergyCounts = remember(deckFamilies.toList()) {
-                    val counts = IntArray(6)
-                    deckFamilies.forEach { if (it in 0..5) counts[it]++ }
-                    counts.mapIndexed { idx, count -> idx to count }.filter { it.second >= 2 }
-                }
-                if (synergyCounts.isNotEmpty()) {
-                    Text(text = "활성 시너지", color = Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    synergyCounts.forEach { (familyOrd, count) ->
-                        val family = com.example.jaygame.data.UnitFamily.entries.getOrNull(familyOrd)
-                        if (family != null) {
-                            val isFull = count >= 3
-                            Text(
-                                text = "${family.label} x$count" + if (isFull) " (풀)" else "",
-                                color = family.color,
-                                fontSize = 11.sp,
-                            )
-                        }
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // ── Quit button ──
@@ -929,13 +916,15 @@ private fun GoldCoinOverlay() {
             val screenY = p.y * h
             // Gold coin body
             drawCircle(
-                color = GoldCoinColor.copy(alpha = alpha * 0.9f),
+                color = GoldCoinColor,
+                alpha = alpha * 0.9f,
                 radius = coinSize,
                 center = Offset(screenX, screenY),
             )
             // Highlight
             drawCircle(
-                color = GoldCoinHighlight.copy(alpha = alpha * 0.5f),
+                color = GoldCoinHighlight,
+                alpha = alpha * 0.5f,
                 radius = coinSize * 0.5f,
                 center = Offset(screenX - coinSize * 0.2f, screenY - coinSize * 0.2f),
             )
@@ -1000,25 +989,29 @@ private fun LevelUpOverlay() {
             // Light beam (vertical pillar)
             val beamTop = (cy - 120f).coerceAtLeast(0f)
             drawRect(
-                color = LevelUpBeamColor.copy(alpha = beamAlpha * 0.4f),
+                color = LevelUpBeamColor,
+                alpha = beamAlpha * 0.4f,
                 topLeft = Offset(cx - beamWidth / 2f, beamTop),
                 size = androidx.compose.ui.geometry.Size(beamWidth, cy - beamTop),
             )
             // Beam edges
             drawRect(
-                color = LevelUpBeamEdge.copy(alpha = beamAlpha * 0.6f),
+                color = LevelUpBeamEdge,
+                alpha = beamAlpha * 0.6f,
                 topLeft = Offset(cx - beamWidth / 2f, beamTop),
                 size = androidx.compose.ui.geometry.Size(2f, cy - beamTop),
             )
             drawRect(
-                color = LevelUpBeamEdge.copy(alpha = beamAlpha * 0.6f),
+                color = LevelUpBeamEdge,
+                alpha = beamAlpha * 0.6f,
                 topLeft = Offset(cx + beamWidth / 2f - 2f, beamTop),
                 size = androidx.compose.ui.geometry.Size(2f, cy - beamTop),
             )
 
             // Base glow
             drawCircle(
-                color = LevelUpBeamColor.copy(alpha = beamAlpha * 0.5f),
+                color = LevelUpBeamColor,
+                alpha = beamAlpha * 0.5f,
                 radius = beamWidth * 1.2f,
                 center = Offset(cx, cy),
             )
@@ -1043,13 +1036,15 @@ private fun LevelUpOverlay() {
 
                     // Star core (bright)
                     drawCircle(
-                        color = StarWhiteCore.copy(alpha = starAlpha * 0.9f),
+                        color = StarWhiteCore,
+                        alpha = starAlpha * 0.9f,
                         radius = size * 0.5f,
                         center = Offset(starX, starY),
                     )
                     // Star glow (gold)
                     drawCircle(
-                        color = StarGoldBright.copy(alpha = starAlpha * 0.7f),
+                        color = StarGoldBright,
+                        alpha = starAlpha * 0.7f,
                         radius = size,
                         center = Offset(starX, starY),
                     )
@@ -1057,13 +1052,15 @@ private fun LevelUpOverlay() {
                     val armLen = size * 1.5f
                     val crossAlpha = starAlpha * 0.5f
                     drawLine(
-                        color = StarGoldLight.copy(alpha = crossAlpha),
+                        color = StarGoldLight,
+                        alpha = crossAlpha,
                         start = Offset(starX - armLen, starY),
                         end = Offset(starX + armLen, starY),
                         strokeWidth = 1f,
                     )
                     drawLine(
-                        color = StarGoldLight.copy(alpha = crossAlpha),
+                        color = StarGoldLight,
+                        alpha = crossAlpha,
                         start = Offset(starX, starY - armLen),
                         end = Offset(starX, starY + armLen),
                         strokeWidth = 1f,
@@ -1085,7 +1082,8 @@ private fun LevelUpOverlay() {
                         val sy = cy + kotlin.math.sin(angle) * dist - sparkDelay * 10f
 
                         drawCircle(
-                            color = StarGoldDim.copy(alpha = sparkAlpha * 0.6f),
+                            color = StarGoldDim,
+                            alpha = sparkAlpha * 0.6f,
                             radius = 1.5f,
                             center = Offset(sx, sy),
                         )

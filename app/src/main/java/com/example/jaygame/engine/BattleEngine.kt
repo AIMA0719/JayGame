@@ -25,7 +25,6 @@ class BattleEngine(
     private val maxWaves: Int,
     gameData: GameData? = null,
     initialPity: Int = 0,
-    private val deckBlueprintIds: List<String> = emptyList(),
 ) {
     companion object {
         const val W = 720f
@@ -78,14 +77,6 @@ class BattleEngine(
 
     // 행운석 — 신화 레시피 합성에 소모
     var luckyStones: Int = gameData?.luckyStones ?: 0; private set
-
-    private val resolvedDeck: List<UnitBlueprint> = if (deckBlueprintIds.isNotEmpty() && BlueprintRegistry.isReady) {
-        deckBlueprintIds.mapNotNull { BlueprintRegistry.instance.findById(it) }.also { resolved ->
-            if (resolved.size != deckBlueprintIds.size) {
-                Log.w("BattleEngine", "Deck has invalid IDs: ${deckBlueprintIds.size} requested, ${resolved.size} resolved")
-            }
-        }
-    } else emptyList()
 
     val enemies = ObjectPool(MAX_ENEMIES, { Enemy() }) { it.reset() }
     val units = ObjectPool(MAX_UNITS, { GameUnit() }) { it.reset() }
@@ -214,11 +205,12 @@ class BattleEngine(
     }
 
     // Monster path: 경로 타일 중앙선을 따라 적이 이동 (720×1280 space)
-    // GRID(120,430,600,730), PATH(50,360,670,800), 좌우 70px, 상하 70px 마진
-    private val pathLeft = 85f      // 좌변 타일 중앙 (50+120)/2
-    private val pathTop = 395f      // 상변 타일 중앙 (360+430)/2
-    private val pathRight = 635f    // 우변 타일 중앙 (600+670)/2
-    private val pathBottom = 765f   // 하변 타일 중앙 (730+800)/2
+    private val pathMarginSide = 66f
+    private val pathMarginTB = 76f
+    private val pathLeft = Grid.ORIGIN_X - pathMarginSide / 2f
+    private val pathTop = Grid.ORIGIN_Y - pathMarginTB / 2f
+    private val pathRight = (Grid.ORIGIN_X + Grid.GRID_W) + pathMarginSide / 2f
+    private val pathBottom = (Grid.ORIGIN_Y + Grid.GRID_H) + pathMarginTB / 2f
 
     // Corner radius for smooth turns (8 interpolation points per corner)
     private val cornerR = 30f
@@ -297,6 +289,7 @@ class BattleEngine(
                     when (cmd) {
                         is BattleBridge.BattleCommand.Summon -> requestSummonBlueprint()
                         is BattleBridge.BattleCommand.Merge -> requestMerge(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.MergeAll -> requestMergeAll()
                         is BattleBridge.BattleCommand.Sell -> requestSell(cmd.tileIndex)
                         is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(requestBulkSell(cmd.grade))
                         is BattleBridge.BattleCommand.GroupUpgrade -> requestGroupUpgrade(cmd.groupIndex)
@@ -585,7 +578,8 @@ class BattleEngine(
                 }
             }
             closestKillUnit?.let { u ->
-                val result = AbilityEngine.applyOnKill(u.activeAbility!!, u)
+                val ab = u.activeAbility ?: return@let
+                val result = AbilityEngine.applyOnKill(ab, u)
                 if (result.coinBonus > 0) sp += result.coinBonus.toFloat()
             }
 
@@ -904,34 +898,27 @@ class BattleEngine(
     fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
         if (sp < summonCost) return
 
-        val selected: UnitBlueprint
-
-        if (resolvedDeck.isNotEmpty() && gradeOverride == null) {
-            selected = resolvedDeck.random()
+        val grade = if (gradeOverride != null) {
+            gradeOverride
         } else {
-            // ── Fallback: 기존 등급 롤 (gradeOverride 또는 덱 미설정) ──
-            val grade = if (gradeOverride != null) {
-                gradeOverride
-            } else {
-                val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
-                currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
-                BattleBridge.updateUnitPullPity(currentPity)
-                UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
-            }
-            val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
-            if (candidates.isEmpty()) return
-            val totalWeight = candidates.sumOf { it.summonWeight }
-            if (totalWeight <= 0) return
-            var roll = (Math.random() * totalWeight).toInt()
-            var sel: UnitBlueprint? = null
-            for (bp in candidates) {
-                roll -= bp.summonWeight
-                if (roll <= 0) { sel = bp; break }
-            }
-            selected = sel ?: return
+            val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
+            currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
+            BattleBridge.updateUnitPullPity(currentPity)
+            UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
         }
+        val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
+        if (candidates.isEmpty()) return
+        val totalWeight = candidates.sumOf { it.summonWeight }
+        if (totalWeight <= 0) return
+        var roll = (Math.random() * totalWeight).toInt()
+        var sel: UnitBlueprint? = null
+        for (bp in candidates) {
+            roll -= bp.summonWeight
+            if (roll <= 0) { sel = bp; break }
+        }
+        val selected = sel ?: return
 
-        // Try stacking first (same blueprintId), then find empty slot
+        // Try stacking by same unit first, then find empty slot
         var targetSlot = grid.findStackableSlot(selected.id)
         if (targetSlot < 0) {
             targetSlot = grid.findEmpty()
@@ -951,11 +938,6 @@ class BattleEngine(
             grade = selected.grade.ordinal,
             blueprintId = selected.id,
         )
-
-        // Auto-merge if slot is now full (3 stacked)
-        if (grid.getStackCount(targetSlot) >= Grid.MAX_STACK) {
-            tryAutoMergeSlot(targetSlot)
-        }
     }
 
     // Pre-allocated containers for refreshSynergies() — avoid per-call allocation
@@ -1052,8 +1034,27 @@ class BattleEngine(
         // 1) 레시피 체크 우선
         if (tryExecuteRecipeCraft()) return
 
-        // 2) 슬롯 기반 자동 합성 (3개 중첩 시)
-        tryAutoMergeSlot(tileIndex)
+        // 2) 수동 합성: 같은 유닛 3개 소모 → 다음 등급
+        tryMergeSlot(tileIndex)
+    }
+
+    /** 모든 합성 가능 슬롯에서 자동으로 3개씩 소모하여 합성 */
+    private fun requestMergeAll() {
+        tryExecuteRecipeCraft()
+        // 합성이 그리드를 변경하므로 매 합성 후 재스캔
+        var safety = 50 // 무한루프 방지
+        var merged = true
+        while (merged && safety-- > 0) {
+            merged = false
+            for (i in 0 until Grid.SLOT_COUNT) {
+                if (grid.getStackCount(i) >= Grid.MERGE_COST) {
+                    if (tryMergeSlot(i)) {
+                        merged = true
+                        break // 그리드 변경됨, 처음부터 재스캔
+                    }
+                }
+            }
+        }
     }
 
     /** 레시피 조합 요청 — 필드 전체 스캔하여 완성 가능한 레시피 합성 */
@@ -1126,35 +1127,60 @@ class BattleEngine(
         return count
     }
 
-    /** 슬롯에 3개 유닛 중첩 시 자동 합성 — 랜덤 상위 등급 유닛 */
-    private fun tryAutoMergeSlot(slotIndex: Int) {
-        if (grid.getStackCount(slotIndex) < Grid.MAX_STACK) return
-        val units = grid.getUnitsInSlot(slotIndex)
-        val firstUnit = units.firstOrNull() ?: return
+    /** 수동 합성 — 슬롯에서 같은 유닛 3개 소모 → 다음 등급 랜덤 유닛. 성공 시 true. */
+    private fun tryMergeSlot(slotIndex: Int): Boolean {
+        if (grid.getStackCount(slotIndex) < Grid.MERGE_COST) return false
+        val representative = grid.getUnit(slotIndex) ?: return false
+        val race = representative.race
 
-        val mergeResult = MergeSystem.determineMergeResult(firstUnit.blueprintId, blueprintRegistry)
-            ?: return
-        val resultBp = blueprintRegistry.findById(mergeResult.resultBlueprintId) ?: return
+        // 3개 소모 (앞에서부터) — 소모된 유닛에서 등급 판정
+        val consumed = grid.removeUnits(slotIndex, Grid.MERGE_COST)
+        if (consumed.size < Grid.MERGE_COST) {
+            // 롤백: 소모된 유닛 다시 배치
+            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
+            return false
+        }
 
-        // Remove all 3 units from slot
-        val consumed = grid.removeAllFromSlot(slotIndex)
+        val maxGrade = consumed.maxOf { UnitGrade.entries.getOrElse(it.grade) { UnitGrade.COMMON } }
+
+        val mergeResult = MergeSystem.determineMergeResult(race, maxGrade, blueprintRegistry)
+        if (mergeResult == null) {
+            // 합성 불가 — 롤백
+            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
+            return false
+        }
+        val resultBp = blueprintRegistry.findById(mergeResult.resultBlueprintId)
+        if (resultBp == null) {
+            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
+            return false
+        }
+
+        // 풀에서 결과 유닛 스폰 — 실패 시 소모 유닛 복원
+        val resultUnit = spawnFromBlueprint(resultBp)
+        if (resultUnit == null) {
+            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
+            return false
+        }
+
         consumed.forEach { u -> this.units.release(u) }
 
-        // Spawn result unit — 동일 유닛이 있는 슬롯에 우선 배치, 없으면 원래 슬롯
-        val resultUnit = spawnFromBlueprint(resultBp) ?: return
         val stackSlot = grid.findStackableSlot(resultBp.id)
-        val targetSlot = if (stackSlot >= 0) stackSlot else slotIndex
-        grid.placeUnit(targetSlot, resultUnit)
+        var actualSlot = when {
+            stackSlot >= 0 -> stackSlot
+            grid.getStackCount(slotIndex) == 0 -> slotIndex
+            else -> grid.findEmpty().takeIf { it >= 0 } ?: slotIndex
+        }
+        if (!grid.placeUnit(actualSlot, resultUnit)) {
+            val fallback = grid.findEmpty()
+            if (fallback >= 0) { grid.placeUnit(fallback, resultUnit); actualSlot = fallback }
+            else this.units.release(resultUnit)
+        }
 
         invalidateMergeCache()
         refreshSynergies()
         mergeCount++
-        BattleBridge.onMergeComplete(targetSlot, mergeResult.isLucky, -1, resultUnit.blueprintId)
-
-        // 배치된 슬롯에서 연쇄 합성 체크
-        if (grid.getStackCount(targetSlot) >= Grid.MAX_STACK) {
-            tryAutoMergeSlot(targetSlot)
-        }
+        BattleBridge.onMergeComplete(actualSlot, mergeResult.isLucky, -1, resultUnit.blueprintId)
+        return true
     }
 
     fun requestSwap(from: Int, to: Int) {
@@ -1163,9 +1189,6 @@ class BattleEngine(
         val unitsB = grid.removeAllFromSlot(to)
         for (u in unitsA) grid.placeUnit(to, u)
         for (u in unitsB) grid.placeUnit(from, u)
-        // 같은 blueprintId끼리 합쳐졌을 수 있으므로 자동 합성 체크
-        tryAutoMergeSlot(to)
-        tryAutoMergeSlot(from)
         invalidateMergeCache()
     }
 
@@ -1188,9 +1211,9 @@ class BattleEngine(
         val gradeEnum = UnitGrade.entries.getOrElse(gradeOrdinal) { UnitGrade.COMMON }
         val bp = blueprintRegistry.all().find { it.grade == gradeEnum && familyEnum in it.families }
 
-        // Find target slot: try stacking first, then empty slot
-        val blueprintId = bp?.id ?: ""
-        var targetSlot = if (blueprintId.isNotEmpty()) grid.findStackableSlot(blueprintId) else -1
+        // Find target slot: try stacking by same unit first, then empty slot
+        val bpId = bp?.id
+        var targetSlot = if (bpId != null) grid.findStackableSlot(bpId) else -1
         if (targetSlot < 0) {
             targetSlot = grid.findEmpty()
             if (targetSlot < 0) return  // No available slot
@@ -1227,18 +1250,13 @@ class BattleEngine(
             grade = gradeOrdinal,
             blueprintId = bp?.id ?: "",
         )
-
-        // Auto-merge if slot is now full (3 stacked)
-        if (grid.getStackCount(targetSlot) >= Grid.MAX_STACK) {
-            tryAutoMergeSlot(targetSlot)
-        }
     }
 
     fun requestBuyBlueprint(blueprintId: String, cost: Float) {
         if (sp < cost) return
         val bp = blueprintRegistry.findById(blueprintId) ?: return
 
-        var targetSlot = grid.findStackableSlot(blueprintId)
+        var targetSlot = grid.findStackableSlot(bp.id)
         if (targetSlot < 0) {
             targetSlot = grid.findEmpty()
             if (targetSlot < 0) return
@@ -1254,10 +1272,6 @@ class BattleEngine(
             grade = bp.grade.ordinal,
             blueprintId = bp.id,
         )
-
-        if (grid.getStackCount(targetSlot) >= Grid.MAX_STACK) {
-            tryAutoMergeSlot(targetSlot)
-        }
     }
 
     private fun inferRole(family: com.example.jaygame.data.UnitFamily): UnitRole = when (family) {
@@ -1373,14 +1387,15 @@ class BattleEngine(
         // Grid state — reuse pre-allocated buffers (slot-based)
         if (gridPushTimer >= 0.1f) {
             gridPushTimer = 0f
+            val mergeableTiles = getMergeableTiles()
             for (i in 0 until Grid.SLOT_COUNT) {
                 val u = grid.getUnit(i)
                 if (u != null) {
                     gridIdBuf[i] = u.unitDefId
                     gridGradeBuf[i] = u.grade
                     gridFamilyBuf[i] = u.family
-                    // canMerge = slot has full stack (3 units) ready to auto-merge
-                    gridCanMergeBuf[i] = grid.getStackCount(i) >= Grid.MAX_STACK
+                    // canMerge = 등급/카테고리까지 고려한 합성 가능 여부
+                    gridCanMergeBuf[i] = i in mergeableTiles
                     gridLevelBuf[i] = grid.getStackCount(i)  // Show stack count as level for UI
                     gridBlueprintIdBuf[i] = u.blueprintId
                     gridFamiliesListBuf[i] = u.families
@@ -1413,7 +1428,7 @@ class BattleEngine(
         val dungeonRewardMult = if (isDungeonMode) dungeonDef?.rewardMultiplier ?: 1f else 1f
         val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
         val relicWaveBonus = if (victory) (1f + (relicManager?.totalGoldWaveBonus() ?: 0f)) else 1f
-        val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt()
+        val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt().coerceAtLeast(1)
         val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 5 // HP never dropped below 80%

@@ -405,7 +405,7 @@ fun BattleField() {
 
         val cellW = gridW / Grid.COLS
         val cellH = gridH / Grid.ROWS
-        val unitSizeNormal = minOf(cellW, cellH) * 0.95f
+        val unitSizeNormal = minOf(cellW, cellH) * 1.1f
         val gridState = BattleBridge.gridState.value
         // PERF: Reduce visual detail when many units exist
         val highUnitCount = data.count > 50
@@ -826,7 +826,7 @@ fun BattleField() {
                 ?: (if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null)
             if (bitmap != null) {
                 val spriteSize = unitSize * 0.85f * finalScale
-                val spriteY = screenY - spriteSize - pedestalRy * 0.3f + bounceOffset
+                val spriteY = screenY - spriteSize * 0.85f + bounceOffset
                 val spriteCenterY = spriteY + spriteSize * 0.5f
 
                 // ── SSJ Aura: 등급별 타오르는 오라 (스프라이트 뒤에 그림) ──

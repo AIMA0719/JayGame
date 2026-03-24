@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.STAGES
+import com.example.jaygame.engine.Grid
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -55,17 +56,17 @@ private val TileBorder = Color.Black.copy(alpha = 0.08f)
 private val GroundEdgeLight = Color.White.copy(alpha = 0.15f)
 private val GroundEdgeDark = Color.Black.copy(alpha = 0.2f)
 
-// Coordinates in 720x1280 space — matching Grid.kt (480x300, grid centered)
-private const val GRID_LEFT = 120f       // Grid.ORIGIN_X
-private const val GRID_TOP = 430f        // Grid.ORIGIN_Y
-private const val GRID_RIGHT = 600f      // GRID_LEFT + 480
-private const val GRID_BOTTOM = 730f     // GRID_TOP + 300
-private const val PATH_MARGIN_SIDE = 70f  // 좌우 마진
-private const val PATH_MARGIN_TB = 70f    // 상하 마진 (동일)
-private const val PATH_LEFT = GRID_LEFT - PATH_MARGIN_SIDE       // 50
-private const val PATH_TOP = GRID_TOP - PATH_MARGIN_TB           // 280
-private const val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN_SIDE     // 670
-private const val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN_TB     // 720
+// Coordinates in 720x1280 space — derived from Grid.kt constants
+private val GRID_LEFT = Grid.ORIGIN_X                             // 72
+private val GRID_TOP = Grid.ORIGIN_Y                              // 400
+private val GRID_RIGHT = Grid.ORIGIN_X + Grid.GRID_W             // 648
+private val GRID_BOTTOM = Grid.ORIGIN_Y + Grid.GRID_H            // 760
+private const val PATH_MARGIN_SIDE = 66f  // 좌우 마진 (확대 비례)
+private const val PATH_MARGIN_TB = 76f    // 상하 마진 (확대 비례)
+private val PATH_LEFT = GRID_LEFT - PATH_MARGIN_SIDE              // 20
+private val PATH_TOP = GRID_TOP - PATH_MARGIN_TB                  // 340
+private val PATH_RIGHT = GRID_RIGHT + PATH_MARGIN_SIDE            // 700
+private val PATH_BOTTOM = GRID_BOTTOM + PATH_MARGIN_TB            // 820
 
 /**
  * Draws the battlefield: monster path (stone tiles) + unit ground (elevated cliff platform).

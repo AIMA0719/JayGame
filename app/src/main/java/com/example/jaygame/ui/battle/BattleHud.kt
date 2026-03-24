@@ -12,7 +12,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -379,7 +383,7 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
 
 }
 
-// ── Recipe Book Dialog — shows all craftable recipes for current deck ──
+// ── Recipe Book Dialog — shows all craftable recipes ──
 
 @Composable
 private fun RecipeBookDialog(onDismiss: () -> Unit) {
@@ -1216,8 +1220,6 @@ fun BattleBottomHud(
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
-    val deckBlueprints by BattleBridge.deckBlueprints.collectAsState()
-    val isDeckMode = deckBlueprints.isNotEmpty()
     var unitCount = 0
     var canMerge = false
     for (tile in gridState) {
@@ -1241,7 +1243,7 @@ fun BattleBottomHud(
             .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Row 1: [일괄판매(좌)] [금화(정중앙)] [조합법(우)] ──
+        // ── Row 1: [일괄판매(좌)] [금화(정중앙)] ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1279,19 +1281,22 @@ fun BattleBottomHud(
                 )
             }
 
-            // 조합법 (우)
-            val recipeShape = RoundedCornerShape(10.dp)
+            // 조합 (우) — 일괄판매 대칭
+            val mergeShape2 = RoundedCornerShape(10.dp)
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .clip(recipeShape)
-                    .background(RecipeBtnBrush)
-                    .border(2.dp, RecipeBtnBorder, recipeShape)
-                    .clickable { showRecipeBook = true }
+                    .clip(mergeShape2)
+                    .background(if (canMerge) MergeBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
+                    .border(2.dp, if (canMerge) Color(0xFF8B6914) else DisabledBot, mergeShape2)
+                    .then(if (canMerge) Modifier.clickable {
+                        HapticManager.medium(view)
+                        BattleBridge.requestMergeAll()
+                    } else Modifier)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("\uD83D\uDCD6 조합법", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                Text("조합", color = if (canMerge) WoodBrownDark else DisabledText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
 
@@ -1300,27 +1305,6 @@ fun BattleBottomHud(
             RecipeBookDialog(onDismiss = { showRecipeBook = false })
         }
 
-        // ── Row 2: 조합 가능 알림 ──
-        if (canMerge) {
-            val inf = rememberInfiniteTransition(label = "mg")
-            val glow by inf.animateFloat(0.7f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "mg")
-            val mergeShape = RoundedCornerShape(10.dp)
-            Box(
-                modifier = Modifier
-                    .graphicsLayer { alpha = glow }
-                    .clip(mergeShape)
-                    .background(MergeBtnBrush)
-                    .border(2.dp, Color(0xFF8B6914), mergeShape)
-                    .clickable {
-                        val tiles = BattleBridge.gridState.value
-                        for (i in tiles.indices) { if (tiles[i].canMerge) BattleBridge.requestMerge(i) }
-                    }
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("조합", color = WoodBrownDark, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-            }
-        }
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -1483,8 +1467,22 @@ private fun SummonButton(
     modifier: Modifier = Modifier,
     goldIcon: androidx.compose.ui.graphics.ImageBitmap? = null,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
+    var isPressed by remember { mutableStateOf(false) }
+
+    // enabled가 꺼지면 pressed 상태 리셋
+    if (!enabled) isPressed = false
+
+    // 꾹 누르면 200ms 간격으로 연속 소환
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            onClick()
+            delay(350L)
+            while (isPressed) {
+                onClick()
+                delay(200L)
+            }
+        }
+    }
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.93f else 1f,
@@ -1505,11 +1503,14 @@ private fun SummonButton(
                 drawThickOutlineButton(Color(0xFF1A1510), fillBrush, HighlightBrushBright)
             }
             .then(
-                if (enabled) Modifier.clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                ) else Modifier
+                if (enabled) Modifier.pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        isPressed = true
+                        waitForUpOrCancellation()
+                        isPressed = false
+                    }
+                } else Modifier
             ),
     ) {
         Column(

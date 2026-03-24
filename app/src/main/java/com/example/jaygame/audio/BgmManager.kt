@@ -29,17 +29,17 @@ object BgmManager {
         mediaPlayer = null
         currentAsset = null
 
-        val newPlayer = try {
+        val newPlayer = MediaPlayer()
+        try {
             val afd = context.assets.openFd(assetPath)
-            MediaPlayer().apply {
-                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                afd.close()
-                isLooping = loop
-                setVolume(0f, 0f)
-                prepare()
-                start()
-            }
+            newPlayer.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+            afd.close()
+            newPlayer.isLooping = loop
+            newPlayer.setVolume(0f, 0f)
+            newPlayer.prepare()
+            newPlayer.start()
         } catch (_: Exception) {
+            newPlayer.release()
             return
         }
         mediaPlayer = newPlayer
