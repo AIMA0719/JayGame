@@ -1776,18 +1776,18 @@
       "FIRE",
       "LIGHTNING"
     ],
-    "grade": "HERO",
+    "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
     "stats": {
-      "hp": 150,
-      "baseATK": 38,
-      "baseSpeed": 1.2,
-      "range": 110,
-      "defense": 8,
-      "magicResist": 6,
-      "moveSpeed": 135,
+      "hp": 450,
+      "baseATK": 95,
+      "baseSpeed": 1.5,
+      "range": 130,
+      "defense": 22,
+      "magicResist": 15,
+      "moveSpeed": 155,
       "blockCount": 0
     },
     "behaviorId": "assassin_dash",
@@ -1798,7 +1798,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "화염과 번개를 동시에 휘두르는 기사"
+    "description": "화염과 뇌격을 동시에 휘두르는 전설의 기사. 공격마다 대상 주위 적에게 번개 피해를 준다."
   },
   {
     "id": "hidden_ice_poison_sage",
@@ -1807,18 +1807,18 @@
       "FROST",
       "POISON"
     ],
-    "grade": "RARE",
+    "grade": "MYTHIC",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
     "stats": {
-      "hp": 110,
-      "baseATK": 12,
-      "baseSpeed": 0.8,
-      "range": 215,
-      "defense": 4,
-      "magicResist": 6,
-      "moveSpeed": 55,
+      "hp": 380,
+      "baseATK": 45,
+      "baseSpeed": 0.9,
+      "range": 270,
+      "defense": 12,
+      "magicResist": 22,
+      "moveSpeed": 60,
       "blockCount": 0
     },
     "behaviorId": "controller_cc_ranged",
@@ -1829,7 +1829,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "냉기와 독을 결합한 치명적인 제어 마법사"
+    "description": "빙결과 맹독을 결합한 최강의 제어 마법사. 공격 시 동결+독 동시 부여."
   },
   {
     "id": "hidden_shadow_assassin",
@@ -1838,18 +1838,18 @@
       "POISON",
       "WIND"
     ],
-    "grade": "HERO",
+    "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
     "stats": {
-      "hp": 120,
-      "baseATK": 40,
-      "baseSpeed": 1.3,
-      "range": 110,
-      "defense": 5,
-      "magicResist": 4,
-      "moveSpeed": 145,
+      "hp": 320,
+      "baseATK": 110,
+      "baseSpeed": 1.7,
+      "range": 130,
+      "defense": 10,
+      "magicResist": 8,
+      "moveSpeed": 170,
       "blockCount": 0
     },
     "behaviorId": "assassin_dash",
@@ -1860,7 +1860,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "바람처럼 나타나 독으로 적을 처단하는 암살자"
+    "description": "바람처럼 나타나 맹독으로 적을 처단하는 전설의 암살자. 처치 시 잠시 은신."
   },
   {
     "id": "hidden_blaze_frost_spirit",
@@ -1869,48 +1869,17 @@
       "FIRE",
       "FROST"
     ],
-    "grade": "HERO",
+    "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
     "stats": {
-      "hp": 115,
-      "baseATK": 30,
-      "baseSpeed": 1.15,
-      "range": 190,
-      "defense": 4,
-      "magicResist": 8,
-      "moveSpeed": 65,
-      "blockCount": 0
-    },
-    "behaviorId": "ranged_mage",
-    "ability": null,
-    "uniqueAbility": null,
-    "mergeResultId": null,
-    "isSummonable": false,
-    "summonWeight": 0,
-    "unitCategory": "HIDDEN",
-    "iconRes": 0,
-    "description": "얼음과 불꽃을 동시에 다루는 정령"
-  },
-  {
-    "id": "hidden_venom_thunder_drake",
-    "name": "뇌독룡",
-    "families": [
-      "POISON",
-      "LIGHTNING"
-    ],
-    "grade": "LEGEND",
-    "role": "RANGED_DPS",
-    "attackRange": "RANGED",
-    "damageType": "MAGIC",
-    "stats": {
-      "hp": 150,
-      "baseATK": 38,
-      "baseSpeed": 1.2,
-      "range": 210,
-      "defense": 5,
-      "magicResist": 10,
+      "hp": 350,
+      "baseATK": 85,
+      "baseSpeed": 1.4,
+      "range": 250,
+      "defense": 10,
+      "magicResist": 20,
       "moveSpeed": 70,
       "blockCount": 0
     },
@@ -1922,7 +1891,38 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "독전기를 뿜는 용"
+    "description": "얼음과 불꽃을 동시에 다루는 상위 정령. 화상과 동결을 동시에 부여한다."
+  },
+  {
+    "id": "hidden_venom_thunder_drake",
+    "name": "뇌독룡",
+    "families": [
+      "POISON",
+      "LIGHTNING"
+    ],
+    "grade": "MYTHIC",
+    "role": "RANGED_DPS",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 420,
+      "baseATK": 90,
+      "baseSpeed": 1.3,
+      "range": 260,
+      "defense": 14,
+      "magicResist": 18,
+      "moveSpeed": 75,
+      "blockCount": 0
+    },
+    "behaviorId": "ranged_mage",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "독전기 브레스를 뿜는 고대의 용. 중독된 적에게 번개 추가 피해."
   },
   {
     "id": "hidden_frost_wind_dancer",
@@ -1931,18 +1931,18 @@
       "FROST",
       "WIND"
     ],
-    "grade": "HERO",
+    "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
     "stats": {
-      "hp": 125,
-      "baseATK": 36,
-      "baseSpeed": 1.25,
-      "range": 110,
-      "defense": 5,
-      "magicResist": 5,
-      "moveSpeed": 140,
+      "hp": 360,
+      "baseATK": 88,
+      "baseSpeed": 1.6,
+      "range": 130,
+      "defense": 14,
+      "magicResist": 12,
+      "moveSpeed": 165,
       "blockCount": 0
     },
     "behaviorId": "assassin_dash",
@@ -1953,7 +1953,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "냉기와 바람의 춤으로 적을 얼린다"
+    "description": "냉기와 바람의 춤으로 적을 베고 얼리는 전설의 무희. 공격 시 주변 적 감속."
   },
   {
     "id": "hidden_lightning_wind_tempest",
@@ -1967,12 +1967,74 @@
     "attackRange": "RANGED",
     "damageType": "MAGIC",
     "stats": {
-      "hp": 185,
-      "baseATK": 48,
-      "baseSpeed": 1.35,
-      "range": 230,
-      "defense": 6,
-      "magicResist": 10,
+      "hp": 400,
+      "baseATK": 100,
+      "baseSpeed": 1.5,
+      "range": 260,
+      "defense": 12,
+      "magicResist": 16,
+      "moveSpeed": 80,
+      "blockCount": 0
+    },
+    "behaviorId": "ranged_mage",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "번개와 폭풍을 동시에 부르는 절대 군주. 광역 전격+넉백."
+  },
+  {
+    "id": "hidden_frost_lightning_glacial_storm",
+    "name": "빙뢰의 폭풍",
+    "families": [
+      "FROST",
+      "LIGHTNING"
+    ],
+    "grade": "MYTHIC",
+    "role": "CONTROLLER",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 400,
+      "baseATK": 55,
+      "baseSpeed": 1.0,
+      "range": 270,
+      "defense": 14,
+      "magicResist": 25,
+      "moveSpeed": 70,
+      "blockCount": 0
+    },
+    "behaviorId": "controller_cc_ranged",
+    "ability": null,
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "빙결과 전격을 동시에 가하는 궁극의 제어자. 주기적으로 전장 전체 동결."
+  },
+  {
+    "id": "hidden_fire_wind_inferno_gale",
+    "name": "화염폭풍 소환사",
+    "families": [
+      "FIRE",
+      "WIND"
+    ],
+    "grade": "MYTHIC",
+    "role": "RANGED_DPS",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "hp": 380,
+      "baseATK": 95,
+      "baseSpeed": 1.4,
+      "range": 260,
+      "defense": 10,
+      "magicResist": 14,
       "moveSpeed": 75,
       "blockCount": 0
     },
@@ -1984,26 +2046,26 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "번개와 폭풍을 동시에 부르는 군주"
+    "description": "화염과 폭풍을 합쳐 불 폭풍을 일으키는 궁극의 소환사. 광역 화상+넉백."
   },
   {
-    "id": "hidden_frost_lightning_glacial_storm",
-    "name": "빙뢰의 폭풍",
+    "id": "hidden_poison_frost_toxic_ice",
+    "name": "독빙의 마녀",
     "families": [
-      "FROST",
-      "LIGHTNING"
+      "POISON",
+      "FROST"
     ],
-    "grade": "LEGEND",
+    "grade": "MYTHIC",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
     "damageType": "MAGIC",
     "stats": {
-      "hp": 175,
-      "baseATK": 20,
-      "baseSpeed": 0.85,
-      "range": 245,
-      "defense": 6,
-      "magicResist": 12,
+      "hp": 370,
+      "baseATK": 50,
+      "baseSpeed": 0.95,
+      "range": 270,
+      "defense": 12,
+      "magicResist": 22,
       "moveSpeed": 65,
       "blockCount": 0
     },
@@ -2015,69 +2077,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "빙결과 전격을 동시에 가하는 폭풍 제어자"
-  },
-  {
-    "id": "hidden_fire_wind_inferno_gale",
-    "name": "화염폭풍 소환사",
-    "families": [
-      "FIRE",
-      "WIND"
-    ],
-    "grade": "LEGEND",
-    "role": "RANGED_DPS",
-    "attackRange": "RANGED",
-    "damageType": "MAGIC",
-    "stats": {
-      "hp": 145,
-      "baseATK": 36,
-      "baseSpeed": 1.2,
-      "range": 210,
-      "defense": 5,
-      "magicResist": 8,
-      "moveSpeed": 70,
-      "blockCount": 0
-    },
-    "behaviorId": "ranged_mage",
-    "ability": null,
-    "uniqueAbility": null,
-    "mergeResultId": null,
-    "isSummonable": false,
-    "summonWeight": 0,
-    "unitCategory": "HIDDEN",
-    "iconRes": 0,
-    "description": "화염과 바람을 합쳐 불 폭풍을 일으킨다"
-  },
-  {
-    "id": "hidden_poison_frost_toxic_ice",
-    "name": "독빙의 마녀",
-    "families": [
-      "POISON",
-      "FROST"
-    ],
-    "grade": "HERO",
-    "role": "CONTROLLER",
-    "attackRange": "RANGED",
-    "damageType": "MAGIC",
-    "stats": {
-      "hp": 135,
-      "baseATK": 15,
-      "baseSpeed": 0.8,
-      "range": 230,
-      "defense": 5,
-      "magicResist": 7,
-      "moveSpeed": 60,
-      "blockCount": 0
-    },
-    "behaviorId": "controller_cc_ranged",
-    "ability": null,
-    "uniqueAbility": null,
-    "mergeResultId": null,
-    "isSummonable": false,
-    "summonWeight": 0,
-    "unitCategory": "HIDDEN",
-    "iconRes": 0,
-    "description": "독을 얼려 만든 결정으로 적을 제압하는 마녀"
+    "description": "독 결정을 얼려 적을 제압하는 궁극의 마녀. 동결된 적에게 독 피해 2배."
   },
   {
     "id": "hidden_fire_poison_molten_venom",
@@ -2086,18 +2086,18 @@
       "FIRE",
       "POISON"
     ],
-    "grade": "HERO",
+    "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
     "damageType": "PHYSICAL",
     "stats": {
-      "hp": 140,
-      "baseATK": 37,
-      "baseSpeed": 1.15,
-      "range": 110,
-      "defense": 6,
-      "magicResist": 5,
-      "moveSpeed": 135,
+      "hp": 400,
+      "baseATK": 92,
+      "baseSpeed": 1.5,
+      "range": 130,
+      "defense": 18,
+      "magicResist": 12,
+      "moveSpeed": 155,
       "blockCount": 0
     },
     "behaviorId": "assassin_dash",
@@ -2108,6 +2108,6 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "불타는 독을 품은 맹독의 뱀"
+    "description": "용암의 독을 품은 전설의 맹독사. 공격 시 화상+독 동시 부여."
   }
 ]

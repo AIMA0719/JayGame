@@ -403,13 +403,21 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
 
     val recipeInfos = remember(allRecipes, deckFamilyRoles, occupiedTiles) {
         allRecipes.map { recipe ->
-            val canCraftFromDeck = recipe.ingredients.all { slot ->
-                if (slot.specificUnitId != null) {
-                    deckBlueprints.contains(slot.specificUnitId)
-                } else {
-                    deckFamilyRoles.any { (fam, role) ->
-                        (slot.family == null || slot.family == fam) &&
-                            (slot.role == null || slot.role == role)
+            // 덱에서 각 재료를 서로 다른 유닛으로 충족할 수 있는지 체크
+            val canCraftFromDeck = run {
+                val usedBps = mutableSetOf<Int>()
+                recipe.ingredients.all { slot ->
+                    resolvedDeck.indices.any { bpIdx ->
+                        if (bpIdx in usedBps) return@any false
+                        val bp = resolvedDeck[bpIdx]
+                        val match = if (slot.specificUnitId != null) {
+                            bp.id == slot.specificUnitId
+                        } else {
+                            val famMatch = slot.family == null || slot.family in bp.families
+                            val roleMatch = slot.role == null || slot.role == bp.role
+                            famMatch && roleMatch
+                        }
+                        if (match) { usedBps.add(bpIdx); true } else false
                     }
                 }
             }
@@ -1257,7 +1265,7 @@ fun BattleBottomHud(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = (-45).dp)
+            .offset(y = (-35).dp)
             .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
