@@ -370,10 +370,9 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             Text("\uD83D\uDCD6", fontSize = 20.sp) // 📖
         }
 
-        // TODO: RecipeBookDialog not yet implemented
-        // if (showRecipeBook) {
-        //     RecipeBookDialog(onDismiss = { showRecipeBook = false })
-        // }
+        if (showRecipeBook) {
+            RecipeBookDialog(onDismiss = { showRecipeBook = false })
+        }
     }
 
 }
@@ -1190,7 +1189,7 @@ fun BattleBottomHud(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = (-30).dp)
+            .offset(y = (-45).dp)
             .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1300,7 +1299,7 @@ fun BattleBottomHud(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp),
+                .height(105.dp),
             contentAlignment = Alignment.TopCenter,
         ) {
             // 소환 — 상단에 배치
