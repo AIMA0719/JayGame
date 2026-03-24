@@ -26,6 +26,8 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
         lateinit var instance: RecipeSystem
             private set
 
+        val isReady get() = ::instance.isInitialized
+
         /** Must be called AFTER BlueprintRegistry.initialize() */
         @Synchronized
         fun initialize(context: android.content.Context) {

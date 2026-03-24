@@ -255,6 +255,7 @@ object BattleBridge {
             val betSize: com.example.jaygame.engine.GambleSystem.BetSize,
             val result: CompletableDeferred<com.example.jaygame.engine.GambleSystem.GambleResult?>,
         ) : BattleCommand()
+        object RecipeCraft : BattleCommand()
         data class BuyUnit(val unitDefId: Int, val cost: Int) : BattleCommand()
         data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
@@ -902,6 +903,10 @@ object BattleBridge {
         val deferred = CompletableDeferred<Int>()
         commandQueue.add(BattleCommand.BulkSell(grade, deferred))
         return runBlocking { withTimeoutOrNull(100L) { deferred.await() } ?: 0 }
+    }
+
+    fun requestRecipeCraft() {
+        commandQueue.add(BattleCommand.RecipeCraft)
     }
 
     fun requestGroupUpgrade(groupIndex: Int) {

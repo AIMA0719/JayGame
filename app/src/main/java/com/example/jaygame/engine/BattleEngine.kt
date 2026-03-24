@@ -300,6 +300,7 @@ class BattleEngine(
                         is BattleBridge.BattleCommand.Sell -> requestSell(cmd.tileIndex)
                         is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(requestBulkSell(cmd.grade))
                         is BattleBridge.BattleCommand.GroupUpgrade -> requestGroupUpgrade(cmd.groupIndex)
+                        is BattleBridge.BattleCommand.RecipeCraft -> requestRecipeCraft()
                         is BattleBridge.BattleCommand.Swap -> requestSwap(cmd.from, cmd.to)
                         is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
                         is BattleBridge.BattleCommand.BuyUnit -> requestBuyUnit(cmd.unitDefId, cmd.cost.toFloat())
@@ -986,37 +987,39 @@ class BattleEngine(
         val existingUnit = grid.getUnit(tileIndex) ?: return
         if (existingUnit.unitCategory == UnitCategory.SPECIAL) return
 
-        // 1) 레시피 체크 우선 — 필드에 완성 가능한 레시피가 있으면 레시피 합성 (행운석 필요)
-        val recipeMatch = try {
-            RecipeSystem.instance.findMatchingRecipeOnGrid(grid, luckyStones)
-        } catch (_: UninitializedPropertyAccessException) { null }
-
-        if (recipeMatch != null) {
-            val (recipe, consumedTiles) = recipeMatch
-            val resultBp = RecipeSystem.instance.completeRecipe(
-                recipe,
-                consumedTiles.mapNotNull { grid.getUnit(it) }
-            )
-            if (resultBp != null) {
-                // 행운석 차감
-                luckyStones = (luckyStones - recipe.luckyStonesCost).coerceAtLeast(0)
-                val placeTile = consumedTiles.first()
-                consumedTiles.forEach { i ->
-                    val u = grid.removeUnit(i)
-                    if (u != null) units.release(u)
-                }
-                val unit = spawnFromBlueprint(resultBp) ?: return
-                grid.placeUnit(placeTile, unit)
-                invalidateMergeCache()
-                refreshSynergies()
-                mergeCount++
-                BattleBridge.onMergeComplete(placeTile, true, -1, unit.blueprintId)
-                return
-            }
-        }
+        // 1) 레시피 체크 우선
+        if (tryExecuteRecipeCraft()) return
 
         // 2) 슬롯 기반 자동 합성 (3개 중첩 시)
         tryAutoMergeSlot(tileIndex)
+    }
+
+    /** 레시피 조합 요청 — 필드 전체 스캔하여 완성 가능한 레시피 합성 */
+    fun requestRecipeCraft() {
+        tryExecuteRecipeCraft()
+    }
+
+    /** 필드에서 완성 가능한 레시피를 찾아 합성 실행. 성공 시 true 반환. */
+    private fun tryExecuteRecipeCraft(): Boolean {
+        if (!RecipeSystem.isReady) return false
+        val (recipe, consumedTiles) = RecipeSystem.instance.findMatchingRecipeOnGrid(grid, luckyStones) ?: return false
+        val resultBp = RecipeSystem.instance.completeRecipe(
+            recipe, consumedTiles.mapNotNull { grid.getUnit(it) }
+        ) ?: return false
+
+        luckyStones = (luckyStones - recipe.luckyStonesCost).coerceAtLeast(0)
+        val placeTile = consumedTiles.first()
+        consumedTiles.forEach { i ->
+            val u = grid.removeUnit(i)
+            if (u != null) units.release(u)
+        }
+        val unit = spawnFromBlueprint(resultBp) ?: return false
+        grid.placeUnit(placeTile, unit)
+        invalidateMergeCache()
+        refreshSynergies()
+        mergeCount++
+        BattleBridge.onMergeComplete(placeTile, true, -1, unit.blueprintId)
+        return true
     }
 
     /** 등급 그룹 통합 강화 요청 — 코인 소모하여 해당 그룹의 모든 유닛 ATK/속도 업그레이드 */
@@ -1075,14 +1078,21 @@ class BattleEngine(
         val consumed = grid.removeAllFromSlot(slotIndex)
         consumed.forEach { u -> this.units.release(u) }
 
-        // Spawn result unit
+        // Spawn result unit — 동일 유닛이 있는 슬롯에 우선 배치, 없으면 원래 슬롯
         val resultUnit = spawnFromBlueprint(resultBp) ?: return
-        grid.placeUnit(slotIndex, resultUnit)
+        val stackSlot = grid.findStackableSlot(resultBp.id)
+        val targetSlot = if (stackSlot >= 0) stackSlot else slotIndex
+        grid.placeUnit(targetSlot, resultUnit)
 
         invalidateMergeCache()
         refreshSynergies()
         mergeCount++
-        BattleBridge.onMergeComplete(slotIndex, mergeResult.isLucky, -1, resultUnit.blueprintId)
+        BattleBridge.onMergeComplete(targetSlot, mergeResult.isLucky, -1, resultUnit.blueprintId)
+
+        // 배치된 슬롯에서 연쇄 합성 체크
+        if (grid.getStackCount(targetSlot) >= Grid.MAX_STACK) {
+            tryAutoMergeSlot(targetSlot)
+        }
     }
 
     fun requestSwap(from: Int, to: Int) {

@@ -338,7 +338,7 @@ fun BattleField() {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            // 탭 제스처: move mode 또는 유닛 선택
+            // 탭: 이동 모드, 롱프레스: 유닛 상세 팝업
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { offset ->
@@ -346,7 +346,6 @@ fun BattleField() {
                         val h = size.height.toFloat()
 
                         if (BattleBridge.moveModeTile.value >= 0) {
-                            // Move mode — 탭한 슬롯이 유효 대상이면 이동 실행
                             val tappedSlot = findGridSlot(offset, w, h)
                             val targets = BattleBridge.validMoveTargets.value
                             if (tappedSlot >= 0 && tappedSlot < targets.size && targets[tappedSlot]) {
@@ -355,18 +354,12 @@ fun BattleField() {
                                 BattleBridge.exitMoveMode()
                             }
                         } else {
-                            // Normal mode — 유닛 탭 → move mode 진입
                             val tile = findClosestUnit(offset, w, h)
                             if (tile >= 0) {
                                 BattleBridge.enterMoveMode(tile)
                             }
                         }
-                    }
-                )
-            }
-            // 롱프레스: 유닛 상세 팝업 (정보 + 판매)
-            .pointerInput(Unit) {
-                detectTapGestures(
+                    },
                     onLongPress = { offset ->
                         val tile = findClosestUnit(offset, size.width.toFloat(), size.height.toFloat())
                         if (tile >= 0) {

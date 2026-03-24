@@ -145,6 +145,22 @@ private val RecipeAvailableGlow = Color(0xFF4CAF50)
 private val RecipeUnavailableText = Color(0xFF666666)
 private val RecipeIngredientBg = Color(0xFF1E1610)
 private val RecipeResultBg = Brush.verticalGradient(listOf(Color(0xFF3A2A10), Color(0xFF2A1E0C)))
+private val RecipeBtnTop = Color(0xFF6A4FA0)
+private val RecipeBtnBot = Color(0xFF4A3570)
+private val RecipeBtnBorder = Color(0xFF3A2860)
+private val RecipeCraftBtnTop = Color(0xFF4CAF50)
+private val RecipeCraftBtnBot = Color(0xFF2E7D32)
+private val RecipeCraftEnabledBrush = Brush.verticalGradient(listOf(RecipeCraftBtnTop, RecipeCraftBtnBot))
+private val RecipeCraftDisabledBrush = Brush.verticalGradient(listOf(DisabledTop, DisabledBot))
+private val RecipeCraftEnabledBorder = Color(0xFF1B5E20)
+
+// Recipe dialog data models (file-level to avoid recomposition overhead)
+private data class RecipeDisplayInfo(
+    val recipe: HiddenRecipe,
+    val resultBlueprint: UnitBlueprint?,
+    val canCraftFromDeck: Boolean,
+    val readyOnField: Boolean,
+)
 
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
 
@@ -153,7 +169,6 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
     val battleSpeed by BattleBridge.battleSpeed.collectAsState()
     val isBoss = battle.isBossRound
-    var showRecipeBook by remember { mutableStateOf(false) }
 
     // Boss pulse animation for HUD accent
     val bossPulse = if (isBoss) {
@@ -355,24 +370,6 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             Text("\u2630", fontSize = 21.sp, color = Color.White)
         }
 
-        // Top-left: recipe book button
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 8.dp)
-                .size(45.dp)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.5f))
-                .border(1.dp, RecipeBookBorder, CircleShape)
-                .clickable { showRecipeBook = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("\uD83D\uDCD6", fontSize = 20.sp) // 📖
-        }
-
-        if (showRecipeBook) {
-            RecipeBookDialog(onDismiss = { showRecipeBook = false })
-        }
     }
 
 }
@@ -395,18 +392,18 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
     }
 
     val allRecipes = remember {
-        try { RecipeSystem.instance.allRecipes() } catch (_: Exception) { emptyList() }
+        if (RecipeSystem.isReady) RecipeSystem.instance.allRecipes() else emptyList()
     }
 
-    data class RecipeDisplayInfo(
-        val recipe: HiddenRecipe,
-        val resultBlueprint: UnitBlueprint?,
-        val canCraft: Boolean,
-    )
+    // 필드 상태는 다이얼로그가 열릴 때만 스냅샷으로 캡처
+    val gridState by BattleBridge.gridState.collectAsState()
+    val occupiedTiles = remember(gridState) {
+        gridState.filter { it.blueprintId.isNotEmpty() }
+    }
 
-    val recipeInfos = remember(allRecipes, deckFamilyRoles) {
+    val recipeInfos = remember(allRecipes, deckFamilyRoles, occupiedTiles) {
         allRecipes.map { recipe ->
-            val canCraft = recipe.ingredients.all { slot ->
+            val canCraftFromDeck = recipe.ingredients.all { slot ->
                 if (slot.specificUnitId != null) {
                     deckBlueprints.contains(slot.specificUnitId)
                 } else {
@@ -416,12 +413,34 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                     }
                 }
             }
+
+            // 필드에서 바로 조합 가능한지 체크 (occupiedTiles 재사용)
+            val readyOnField = run {
+                val used = mutableSetOf<Int>()
+                recipe.ingredients.all { slot ->
+                    occupiedTiles.indices.any { idx ->
+                        if (idx in used) return@any false
+                        val tile = occupiedTiles[idx]
+                        val match = if (slot.specificUnitId != null) {
+                            tile.blueprintId == slot.specificUnitId
+                        } else {
+                            (slot.family == null || slot.family in tile.families) &&
+                                (slot.role == null || slot.role == tile.role) &&
+                                tile.grade >= slot.minGrade.ordinal
+                        }
+                        if (match) { used.add(idx); true } else false
+                    }
+                }
+            }
+
             val resultBp = if (BlueprintRegistry.isReady) {
                 BlueprintRegistry.instance.findById(recipe.resultId)
             } else null
-            RecipeDisplayInfo(recipe, resultBp, canCraft)
-        }.sortedByDescending { it.canCraft }
+            RecipeDisplayInfo(recipe, resultBp, canCraftFromDeck, readyOnField)
+        }.sortedWith(compareByDescending<RecipeDisplayInfo> { it.readyOnField }.thenByDescending { it.canCraftFromDeck })
     }
+
+    val hasReadyRecipe = recipeInfos.any { it.readyOnField }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -481,11 +500,42 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.height(360.dp),
+                        modifier = Modifier.height(320.dp),
                     ) {
                         items(recipeInfos) { info ->
-                            RecipeCard(info.recipe, info.resultBlueprint, info.canCraft)
+                            RecipeCard(info.recipe, info.resultBlueprint, info.canCraftFromDeck, info.readyOnField)
                         }
+                    }
+                }
+
+                // 조합하기 버튼
+                if (recipeInfos.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (hasReadyRecipe) RecipeCraftEnabledBrush else RecipeCraftDisabledBrush)
+                            .border(
+                                2.dp,
+                                if (hasReadyRecipe) RecipeCraftEnabledBorder else DisabledBot,
+                                RoundedCornerShape(12.dp),
+                            )
+                            .then(
+                                if (hasReadyRecipe) Modifier.clickable {
+                                    BattleBridge.requestRecipeCraft()
+                                    onDismiss()
+                                } else Modifier
+                            )
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (hasReadyRecipe) "\u2728 조합하기" else "필드에 재료를 배치하세요",
+                            color = if (hasReadyRecipe) Color.White else DisabledText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
                     }
                 }
             }
@@ -497,10 +547,15 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
 private fun RecipeCard(
     recipe: HiddenRecipe,
     resultBlueprint: UnitBlueprint?,
-    canCraft: Boolean,
+    canCraftFromDeck: Boolean,
+    readyOnField: Boolean,
 ) {
-    val borderColor = if (canCraft) RecipeAvailableGlow.copy(alpha = 0.6f) else RecipeCardBorder
-    val cardAlpha = if (canCraft) 1f else 0.5f
+    val borderColor = when {
+        readyOnField -> GoldBright.copy(alpha = 0.8f)
+        canCraftFromDeck -> RecipeAvailableGlow.copy(alpha = 0.6f)
+        else -> RecipeCardBorder
+    }
+    val cardAlpha = if (canCraftFromDeck || readyOnField) 1f else 0.5f
 
     Box(
         modifier = Modifier
@@ -574,15 +629,20 @@ private fun RecipeCard(
                 }
             }
 
-            if (canCraft) {
-                Text(
-                    text = "\u2705 조합 가능",
+            when {
+                readyOnField -> Text(
+                    text = "\u2728 필드에 재료 준비 완료!",
+                    color = GoldBright,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                canCraftFromDeck -> Text(
+                    text = "\u2705 덱 조합 가능 — 재료를 필드에 배치하세요",
                     color = RecipeAvailableGlow,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                 )
-            } else {
-                Text(
+                else -> Text(
                     text = "\u274C 덱에 재료 없음",
                     color = RecipeUnavailableText,
                     fontSize = 10.sp,
@@ -1181,6 +1241,7 @@ fun BattleBottomHud(
     val canSummon = battle.sp >= battle.summonCost && unitCount < battle.maxUnitSlots
     val canGamble = battle.sp > 0f
     val hasUnits = unitCount > 0
+    var showRecipeBook by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val view = LocalView.current
 
@@ -1193,11 +1254,11 @@ fun BattleBottomHud(
             .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Row 1: Floating merge/sell ──
+        // ── Row 1: Floating merge/sell/recipe ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(36.dp),
+                .height(52.dp),
         ) {
             if (hasUnits) {
                 val sellShape = RoundedCornerShape(10.dp)
@@ -1220,7 +1281,7 @@ fun BattleBottomHud(
                 val mergeShape = RoundedCornerShape(10.dp)
                 Box(
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
+                        .align(Alignment.Center)
                         .graphicsLayer { alpha = glow }
                         .clip(mergeShape)
                         .background(MergeBtnBrush)
@@ -1235,6 +1296,24 @@ fun BattleBottomHud(
                     Text("조합", color = WoodBrownDark, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
+
+            // Recipe craft button (6각형, 일괄판매 대칭)
+            WideHexButton(
+                icon = "\uD83D\uDCD6",
+                label = "조합법",
+                enabled = true,
+                gradientTop = RecipeBtnTop, gradientBot = RecipeBtnBot,
+                borderColor = RecipeBtnBorder,
+                onClick = { showRecipeBook = true },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(width = 60.dp, height = 52.dp),
+            )
+        }
+
+        // Recipe book dialog
+        if (showRecipeBook) {
+            RecipeBookDialog(onDismiss = { showRecipeBook = false })
         }
 
         // ── Row 2: Resource bar (SP 골드 | 유닛수) ──
@@ -1299,7 +1378,7 @@ fun BattleBottomHud(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(105.dp),
+                .height(125.dp),
             contentAlignment = Alignment.TopCenter,
         ) {
             // 소환 — 상단에 배치
@@ -1314,7 +1393,7 @@ fun BattleBottomHud(
                 },
                 modifier = Modifier
                     .fillMaxWidth(0.52f)
-                    .height(60.dp)
+                    .height(70.dp)
                     .align(Alignment.TopCenter),
                 goldIcon = goldIcon,
             )
@@ -1357,14 +1436,14 @@ fun BattleBottomHud(
                 modifier = Modifier
                     .fillMaxWidth(0.45f)
                     .align(Alignment.BottomCenter),
-                buttonHeight = 40.dp,
+                buttonHeight = 50.dp,
             )
         }
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Safe area for navigation bar
-        Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+        // 네비게이션 바 안전 영역 — 고정 높이로 레이아웃 점프 방지
+        Spacer(modifier = Modifier.height(48.dp))
     }
 }
 
