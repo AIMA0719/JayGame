@@ -69,7 +69,7 @@ Battle:
 - **Object pooling:** `ObjectPool<T>` — enemies(256), units(128), projectiles(512). Canvas 렌더링에서 GC 절대 유발 금지
 - **Spatial hashing:** `SpatialHash<Enemy>` cell 64×64 for range/collision queries
 - **Grid:** 3×6 슬롯 기반 그리드 (18슬롯), 480×300 필드, origin (120, 430) on 720×1280 canvas
-- **유닛 배치 (운빨존많겜 스타일):**
+- **유닛 배치:**
   - 슬롯에 유닛 배치, 배치 후 **위치 고정** (자동 이동 없음)
   - 사거리 내 적 **자동 공격** (타워 디펜스 방식)
   - 같은 유닛을 **드래그하여 같은 슬롯에 중첩** (최대 3개)
@@ -121,17 +121,15 @@ Battle:
 - Elite: 랜덤, HP 2배 + armor 1.5배
 
 ### Difficulty Multipliers
-| Level | Korean | Multiplier |
-|-------|--------|-----------|
-| 0 | 초보 | 1.0x |
-| 1 | 숙련자 | 1.5x |
-| 2 | 고인물 | 2.2x |
-| 3 | 썩은물 | 3.0x |
-| 4 | 챌린저 | 4.0x |
+| Level | Korean | HP Mult | CC Resist Bonus | Reward Mult | Special |
+|-------|--------|---------|----------------|-------------|---------|
+| 0 | 일반 | ×1.0 | +0% | ×1.0 | None |
+| 1 | 하드 | ×1.5 | +10% | ×1.5 | Elite regen |
+| 2 | 헬 | ×2.2 | +15% | ×2.5 | Regen + death enrage |
 
 ## Core System Rules (반드시 준수)
 
-### Merge System (운빨존많겜 스타일 — 슬롯 중첩 합성)
+### Merge System (슬롯 중첩 합성)
 - 같은 유닛을 **드래그하여 한 슬롯에 중첩** (최대 3개)
 - **3개 중첩 시 자동 합성** → `mergeResultId`가 가리키는 상위 등급 유닛 1개
 - 소환 시에도 같은 유닛이 이미 있는 슬롯에 자동 중첩
@@ -144,6 +142,13 @@ Battle:
 - `RecipeSystem.findMatchingRecipeOnGrid(grid)` — 필드에 레시피 재료가 모이면 자동 감지
 - 합성 시 레시피 체크 우선, 일반 합성보다 먼저 실행
 - `hidden_recipes.json`에 레시피 정의 (2~3재료, specificUnitId 매칭)
+
+### JSON Enum 정책 (반드시 준수)
+- JSON 데이터 파일(`assets/units/*.json`)에서 사용하는 enum 값은 **반드시 Kotlin enum 정의와 일치**해야 함
+- **UnitGrade**: `COMMON`, `RARE`, `HERO`, `LEGEND`, `MYTHIC` (이외 값 사용 금지 — "ANCIENT" 등 존재하지 않는 값은 파싱 시 무시됨)
+- **UnitFamily**: `FIRE`, `FROST`, `POISON`, `LIGHTNING`, `SUPPORT`, `WIND`
+- **UnitRole**: `TANK`, `MELEE_DPS`, `RANGED_DPS`, `SUPPORT`, `CONTROLLER`
+- enum 불일치 시 `RecipeSystem.loadRecipes()`에서 해당 레시피가 **조용히 스킵**되므로 주의
 
 ### Buff System
 - `BuffType`: Slow, DoT, ArmorBreak, AtkUp, SpdUp, Shield, Stun, Silence, DefUp
@@ -167,18 +172,20 @@ Battle:
 - `UniqueAbilitySystem.update()`에서 매 프레임 처리
 
 ### Battle Economy (코인 시스템)
-- **소환**: 코인 소비 (시작 10, 소환마다 +2, 최대 60)
-- **코인 획득**: 적 처치 2코인, 엘리트 5코인, 웨이브 클리어 20+wave×3
+- **초기 코인**: 50 (첫 소환 3~4회 가능)
+- **소환**: 코인 소비 (시작 10, 소환마다 +5, 최대 60, 11회만에 캡)
+- **코인 획득**: 적 처치 2코인, 엘리트 6코인, 웨이브 클리어 15+wave×2.5
 - **SP 자동 회복 없음** — 코인은 전투 활동으로만 획득
-- **유닛 판매**: 5 + grade×5 코인 반환
+- **유닛 판매**: 8 + grade×8 코인 반환 (소환 비용 30~40% 회수)
 
 ### Battle Enhancement (등급 그룹 강화)
 - `UnitUpgradeSystem` — 등급 그룹 단위로 코인 소모하여 ATK/속도 업그레이드 (Lv0~15)
-- 3개 그룹: [일반/희귀] (grade 0,1), [고대/전설] (grade 2,3), [신화] (grade 4)
+- 3개 그룹: [일반/희귀] (grade 0,1), [영웅/전설] (grade 2,3), [신화] (grade 4)
 - 그룹 강화 시 해당 그룹의 **모든 유닛**에 보너스 적용
 - 마일스톤: Lv3 ATK+10%, Lv6 ATK+15%, Lv9 속도+10%, Lv12 ATK+15%, Lv15 ATK+속도+10%
-- 비용: 그룹 0 base 8 (+0.3/lv), 그룹 1 base 15 (+0.4/lv), 그룹 2 base 30 (+0.5/lv)
-- 전략: 초반 [일반/희귀] 저렴하게 강화, 후반 [신화] 고비용 고효율
+- 비용: **지수 곡선** — 그룹 0 base 10 (×1.18/lv), 그룹 1 base 20 (×1.22/lv), 그룹 2 base 40 (×1.24/lv)
+- 교차점: 그룹0 Lv12, 그룹1 Lv7, 그룹2 Lv3에서 비용이 소환캡(60)을 초과
+- 전략: 초반 [일반/희귀] 저렴, 중반 "소환 vs 강화" 의사결정, 후반 [신화] 고비용
 
 ### Pity System (천장)
 - `unitPullPity`: 소환 카운터, 배틀 간 유지 (`BattleBridge.unitPullPity`)

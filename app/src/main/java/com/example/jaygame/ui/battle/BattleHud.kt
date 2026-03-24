@@ -23,8 +23,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -40,13 +44,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -62,11 +70,16 @@ import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.BossModifier
 import com.example.jaygame.engine.DamageType
+import com.example.jaygame.engine.HiddenRecipe
+import com.example.jaygame.engine.RecipeSlot
+import com.example.jaygame.engine.RecipeSystem
+import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.ui.components.roleColor
 import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import com.example.jaygame.util.HapticManager
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.window.Dialog
@@ -74,17 +87,13 @@ import androidx.compose.ui.window.Dialog
 // ── Warm medieval theme colors ──
 private val DungeonPurple = Color(0xFFAB47BC)
 private val WoodBrown = Color(0xFF5C3A1E)
-private val WoodBrownLight = Color(0xFF7B5230)
 private val WoodBrownDark = Color(0xFF3E2510)
 private val PanelBg = Color(0xFF2A1A0C).copy(alpha = 0.88f)
-private val PanelBgDark = Color(0xFF1A0F06).copy(alpha = 0.92f)
 private val BadgeBg = Color(0xFF1E1208).copy(alpha = 0.9f)
 private val GoldBright = Color(0xFFFFD700)
 private val GoldDark = Color(0xFFB8860B)
 private val GreenTeal = Color(0xFF2E8B57)
 private val GreenTealDark = Color(0xFF1B5E3A)
-private val BlueSky = Color(0xFF4A90D9)
-private val BlueSkyDark = Color(0xFF2C5F99)
 private val OrangeBright = Color(0xFFFF8C00)
 private val OrangeDark = Color(0xFFCC6600)
 private val BossRed = Color(0xFFFF4444)
@@ -94,6 +103,49 @@ private val BossMainBg = Brush.verticalGradient(listOf(Color(0xFF3D1515), Color(
 private val NormalWaveBg = Brush.verticalGradient(listOf(Color(0xFF5C3A1E), Color(0xFF3D2510)))
 private val NormalMainBg = Brush.verticalGradient(listOf(Color(0xFF4A3018), Color(0xFF2E1C0C)))
 
+// ── Disabled state colors ──
+private val DisabledTop = Color(0xFF3A3A3A)
+private val DisabledBot = Color(0xFF2A2A2A)
+private val DisabledText = Color(0xFF888888)
+
+// ── Pre-allocated drawBehind resources (GC-free rendering) ──
+private val HighlightBrush = Brush.verticalGradient(
+    listOf(Color.White.copy(alpha = 0.2f), Color.Transparent)
+)
+private val HighlightBrushBright = Brush.verticalGradient(
+    listOf(Color.White.copy(alpha = 0.3f), Color.Transparent)
+)
+private val BtnOuterRadius = 14f   // dp → converted at use site
+private val BtnInnerRadius = 11f
+private val BtnInset = 3f          // dp
+private val BtnShape = RoundedCornerShape(14.dp)
+
+// Pre-allocated highlight colors for polygon buttons
+private val PolyHighlightAlpha = Color.White.copy(alpha = 0.18f)
+private val PolyHighlightTransparent = Color.Transparent
+
+// Wide hexagon button shape for 구매/도박
+private val WideHexShape = WideHexagonShape(cornerRadiusDp = 5f)
+
+// Button border colors
+private val BuyBorderColor = Color(0xFF6B3A10)
+private val GambleBorderColor = Color(0xFF1A4A2A)
+
+// Sell/merge row pre-allocated brushes
+private val SellBtnBrush = Brush.verticalGradient(listOf(Color(0xFFEF5350), Color(0xFFC62828)))
+private val MergeBtnBrush = Brush.verticalGradient(listOf(GoldBright, GoldDark))
+
+// Recipe book colors
+private val RecipeBookBorder = Color(0xFF8B6A3A)
+private val RecipeBookBg = Color(0xFF1A1208)
+private val RecipeCardBg = Color(0xFF2A1E10)
+private val RecipeCardBorder = Color(0xFF5C3A1E)
+private val RecipeArrowColor = Color(0xFFFFD700)
+private val RecipeAvailableGlow = Color(0xFF4CAF50)
+private val RecipeUnavailableText = Color(0xFF666666)
+private val RecipeIngredientBg = Color(0xFF1E1610)
+private val RecipeResultBg = Brush.verticalGradient(listOf(Color(0xFF3A2A10), Color(0xFF2A1E0C)))
+
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
 
 @Composable
@@ -101,6 +153,7 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
     val battle by BattleBridge.state.collectAsState()
     val battleSpeed by BattleBridge.battleSpeed.collectAsState()
     val isBoss = battle.isBossRound
+    var showRecipeBook by remember { mutableStateOf(false) }
 
     // Boss pulse animation for HUD accent
     val bossPulse = if (isBoss) {
@@ -113,10 +166,6 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
         )
         pulse
     } else 0f
-
-    val totalSeconds = battle.elapsedTime.toInt()
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
 
     Box(
         modifier = Modifier
@@ -164,33 +213,40 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    // Wave remaining time — boss waves get bigger, more urgent display
-                    val waveMin = (battle.waveTimeRemaining / 60f).toInt()
-                    val waveSec = (battle.waveTimeRemaining % 60f).toInt()
-                    val isBossWave = battle.isBossRound
-                    val waveTimeColor = when {
-                        battle.waveTimeRemaining < 15f && isBossWave -> Color(0xFFFF0000) // critical
-                        battle.waveTimeRemaining < 30f -> NeonRed
-                        isBossWave -> Color(0xFFFF8844)
-                        else -> Color.White
+                    if (isBoss) {
+                        // 보스 웨이브: 60초 카운트다운
+                        val waveSec = battle.waveTimeRemaining.toInt().coerceAtLeast(0)
+                        val waveTimeColor = when {
+                            waveSec < 15 -> Color(0xFFFF0000)
+                            waveSec < 30 -> NeonRed
+                            else -> Color(0xFFFF8844)
+                        }
+                        val timerSize = if (waveSec < 30) 26.sp else 22.sp
+                        Text(
+                            text = "%d:%02d".format(waveSec / 60, waveSec % 60),
+                            color = waveTimeColor,
+                            fontSize = timerSize,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    } else {
+                        // 일반 웨이브: 경과 시간 카운트업
+                        val elapsed = battle.waveElapsed.toInt().coerceAtLeast(0)
+                        val timerColor = if (elapsed < 30) NeonGreen else Color.White
+                        Text(
+                            text = "%02d:%02d".format(elapsed / 60, elapsed % 60),
+                            color = timerColor,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
                     }
-                    val timerSize = if (isBossWave && battle.waveTimeRemaining < 30f) 26.sp else 22.sp
-                    Text(
-                        text = "%d:%02d".format(waveMin, waveSec),
-                        color = waveTimeColor,
-                        fontSize = timerSize,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
 
                     // Difficulty badge (settings-style)
                     val difficulty by BattleBridge.difficulty.collectAsState()
                     val diffInfo = when (difficulty) {
-                        0 -> "초보" to NeonGreen
-                        1 -> "숙련자" to NeonCyan
-                        2 -> "고인물" to Gold
-                        3 -> "썩은물" to NeonRed
-                        4 -> "챌린저" to Color(0xFFFF3333)
-                        else -> "초보" to NeonGreen
+                        0 -> "일반" to NeonGreen
+                        1 -> "하드" to Color(0xFFFF8800)
+                        2 -> "헬" to NeonRed
+                        else -> "일반" to NeonGreen
                     }
                     Box(
                         modifier = Modifier
@@ -277,9 +333,8 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
         ) {
             // Show current speed indicator on menu button
             val speedLabel = when (battleSpeed) {
-                2f -> "x2"
-                4f -> "x4"
-                8f -> "x8"
+                4f -> "x2"
+                8f -> "x4"
                 else -> ""
             }
             if (speedLabel.isNotEmpty()) {
@@ -288,9 +343,8 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                     fontSize = 9.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = when (battleSpeed) {
-                        2f -> GoldBright
-                        4f -> Color(0xFFFF6B6B)
-                        8f -> Color(0xFFFF3333)
+                        4f -> GoldBright
+                        8f -> Color(0xFFFF6B6B)
                         else -> Color.White
                     },
                     modifier = Modifier
@@ -300,8 +354,284 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             }
             Text("\u2630", fontSize = 21.sp, color = Color.White)
         }
+
+        // Top-left: recipe book button
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 8.dp)
+                .size(45.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.5f))
+                .border(1.dp, RecipeBookBorder, CircleShape)
+                .clickable { showRecipeBook = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("\uD83D\uDCD6", fontSize = 20.sp) // 📖
+        }
+
+        // TODO: RecipeBookDialog not yet implemented
+        // if (showRecipeBook) {
+        //     RecipeBookDialog(onDismiss = { showRecipeBook = false })
+        // }
     }
 
+}
+
+// ── Recipe Book Dialog — shows all craftable recipes for current deck ──
+
+@Composable
+private fun RecipeBookDialog(onDismiss: () -> Unit) {
+    val deckBlueprints by BattleBridge.deckBlueprints.collectAsState()
+    val resolvedDeck = remember(deckBlueprints) {
+        if (!BlueprintRegistry.isReady) emptyList()
+        else deckBlueprints.mapNotNull { BlueprintRegistry.instance.findById(it) }
+    }
+
+    // Deck이 제공하는 family+role 조합
+    val deckFamilyRoles = remember(resolvedDeck) {
+        resolvedDeck.flatMap { bp ->
+            bp.families.map { fam -> fam to bp.role }
+        }.toSet()
+    }
+
+    val allRecipes = remember {
+        try { RecipeSystem.instance.allRecipes() } catch (_: Exception) { emptyList() }
+    }
+
+    data class RecipeDisplayInfo(
+        val recipe: HiddenRecipe,
+        val resultBlueprint: UnitBlueprint?,
+        val canCraft: Boolean,
+    )
+
+    val recipeInfos = remember(allRecipes, deckFamilyRoles) {
+        allRecipes.map { recipe ->
+            val canCraft = recipe.ingredients.all { slot ->
+                if (slot.specificUnitId != null) {
+                    deckBlueprints.contains(slot.specificUnitId)
+                } else {
+                    deckFamilyRoles.any { (fam, role) ->
+                        (slot.family == null || slot.family == fam) &&
+                            (slot.role == null || slot.role == role)
+                    }
+                }
+            }
+            val resultBp = if (BlueprintRegistry.isReady) {
+                BlueprintRegistry.instance.findById(recipe.resultId)
+            } else null
+            RecipeDisplayInfo(recipe, resultBp, canCraft)
+        }.sortedByDescending { it.canCraft }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(RecipeBookBg)
+                .border(2.dp, RecipeBookBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp),
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "\uD83D\uDCD6 조합법",
+                        color = GoldBright,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.1f))
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("\u2715", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "현재 덱으로 조합 가능한 신화 레시피",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 11.sp,
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (recipeInfos.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "레시피 없음",
+                            color = RecipeUnavailableText,
+                            fontSize = 14.sp,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(360.dp),
+                    ) {
+                        items(recipeInfos) { info ->
+                            RecipeCard(info.recipe, info.resultBlueprint, info.canCraft)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipeCard(
+    recipe: HiddenRecipe,
+    resultBlueprint: UnitBlueprint?,
+    canCraft: Boolean,
+) {
+    val borderColor = if (canCraft) RecipeAvailableGlow.copy(alpha = 0.6f) else RecipeCardBorder
+    val cardAlpha = if (canCraft) 1f else 0.5f
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = cardAlpha }
+            .clip(RoundedCornerShape(12.dp))
+            .background(RecipeCardBg)
+            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Result unit name
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val resultName = resultBlueprint?.name ?: recipe.resultId
+                val resultGrade = resultBlueprint?.grade
+                val gradeColor = resultGrade?.color ?: GoldBright
+                Text("\u2728", fontSize = 14.sp)
+                Text(
+                    text = resultName,
+                    color = gradeColor,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                if (resultGrade != null) {
+                    Text(
+                        text = resultGrade.label,
+                        color = gradeColor.copy(alpha = 0.7f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            // Ingredients row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                recipe.ingredients.forEachIndexed { idx, slot ->
+                    if (idx > 0) {
+                        Text(
+                            "+",
+                            color = GoldBright.copy(alpha = 0.6f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    RecipeSlotChip(slot)
+                }
+
+                Text(
+                    " \u279C ",
+                    color = RecipeArrowColor,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(RecipeResultBg)
+                        .border(1.dp, GoldBright.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("\u2728", fontSize = 14.sp)
+                }
+            }
+
+            if (canCraft) {
+                Text(
+                    text = "\u2705 조합 가능",
+                    color = RecipeAvailableGlow,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            } else {
+                Text(
+                    text = "\u274C 덱에 재료 없음",
+                    color = RecipeUnavailableText,
+                    fontSize = 10.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecipeSlotChip(slot: RecipeSlot) {
+    val familyColor = slot.family?.color ?: Color.White.copy(alpha = 0.5f)
+    val familyLabel = slot.family?.label ?: "아무"
+    val roleLabel = slot.role?.label ?: "아무"
+    val gradeLabel = if (slot.minGrade.ordinal <= com.example.jaygame.engine.UnitGrade.COMMON.ordinal) {
+        ""
+    } else {
+        "${slot.minGrade.label}+"
+    }
+
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(RecipeIngredientBg)
+            .border(1.dp, familyColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = familyLabel,
+            color = familyColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+        Text(
+            text = roleLabel,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 9.sp,
+        )
+        if (gradeLabel.isNotEmpty()) {
+            Text(
+                text = gradeLabel,
+                color = GoldBright.copy(alpha = 0.6f),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
 }
 
 // ── Unit Card Strip — compact summary of all summoned units at top-left ──
@@ -836,13 +1166,12 @@ fun BattleBottomHud(
     onBuyClick: () -> Unit = {},
     onBulkSellClick: () -> Unit = {},
     onGambleClick: () -> Unit = {},
+    onUpgradeClick: () -> Unit = {},
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
-    val unitPullPity by BattleBridge.unitPullPity.collectAsState()
     val deckBlueprints by BattleBridge.deckBlueprints.collectAsState()
     val isDeckMode = deckBlueprints.isNotEmpty()
-    // Single pass over gridState for unit count, merge, and has-units flags
     var unitCount = 0
     var canMerge = false
     for (tile in gridState) {
@@ -859,203 +1188,184 @@ fun BattleBottomHud(
     val goldIcon = remember { loadAssetBitmap(context, "raw/ui/icon_gold.png") }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(y = (-30).dp)
+            .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Floating merge/sell row — fixed height so it doesn't push layout ──
+        // ── Row 1: Floating merge/sell ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 12.dp),
+                .height(36.dp),
         ) {
-            // Left: 일괄판매 button (symmetric to merge)
             if (hasUnits) {
-                val sellShape = RoundedCornerShape(14.dp)
+                val sellShape = RoundedCornerShape(10.dp)
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .shadow(6.dp, sellShape, ambientColor = Color(0xFFEF4444).copy(alpha = 0.3f), spotColor = Color(0xFFEF4444).copy(alpha = 0.4f))
                         .clip(sellShape)
-                        .background(Brush.verticalGradient(listOf(Color(0xFFEF5350), Color(0xFFC62828))))
-                        .border(2.dp, Color(0xFFFF8A80).copy(alpha = 0.8f), sellShape)
+                        .background(SellBtnBrush)
+                        .border(2.dp, Color(0xFF8B1A1A), sellShape)
                         .clickable(onClick = onBulkSellClick)
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "\uD83D\uDCB0 일괄판매",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
+                    Text("일괄판매", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
-
-            // Right: 조합 button
             if (canMerge) {
                 val inf = rememberInfiniteTransition(label = "mg")
                 val glow by inf.animateFloat(0.7f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "mg")
-                val mergeShape = RoundedCornerShape(14.dp)
+                val mergeShape = RoundedCornerShape(10.dp)
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .graphicsLayer { alpha = glow }
-                        .shadow(8.dp, mergeShape, ambientColor = GoldBright.copy(alpha = 0.3f), spotColor = GoldBright.copy(alpha = 0.4f))
                         .clip(mergeShape)
-                        .background(Brush.verticalGradient(listOf(GoldBright, GoldDark)))
-                        .border(2.dp, Color(0xFFFFEE88).copy(alpha = 0.8f), mergeShape)
+                        .background(MergeBtnBrush)
+                        .border(2.dp, Color(0xFF8B6914), mergeShape)
                         .clickable {
                             val tiles = BattleBridge.gridState.value
                             for (i in tiles.indices) { if (tiles[i].canMerge) BattleBridge.requestMerge(i) }
                         }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "\u2728 조합",
-                        color = WoodBrownDark,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
+                    Text("조합", color = WoodBrownDark, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
         }
 
-        // ── Resource row: SP bar ──
-        Box(modifier = Modifier.fillMaxWidth()) {
+        // ── Row 2: Resource bar (SP 골드 | 유닛수) ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (goldIcon != null) {
+                Image(bitmap = goldIcon, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                "${battle.sp.toInt()}",
+                color = GoldBright,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            // Unit count
+            Text(
+                "${unitCount} / ${battle.maxUnitSlots}",
+                color = Color(0xFFAABBCC),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            // Deck preview inline
+            if (isDeckMode) {
+                val resolvedDeck = remember(deckBlueprints) {
+                    if (com.example.jaygame.engine.BlueprintRegistry.isReady) {
+                        val reg = com.example.jaygame.engine.BlueprintRegistry.instance
+                        deckBlueprints.mapNotNull { reg.findById(it) }
+                    } else emptyList()
+                }
+                resolvedDeck.forEach { bp ->
+                    val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .padding(horizontal = 2.dp)
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(bp.grade.color.copy(alpha = 0.15f))
+                            .border(1.dp, bp.grade.color.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
+                    ) {
+                        Image(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = bp.name,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // ── Row 3+4: 소환(큰) 위, 구매/도박(중간) 겹침, 강화(아래) ──
+        // Box로 겹쳐서 구매/도박이 소환과 강화 사이에 위치
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            // 소환 — 상단에 배치
+            SummonButton(
+                cost = battle.summonCost,
+                enabled = canSummon,
+                gridFull = unitCount >= battle.maxUnitSlots,
+                onClick = {
+                    HapticManager.medium(view)
+                    SfxManager.play(SoundEvent.Summon)
+                    BattleBridge.requestSummon()
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.52f)
+                    .height(60.dp)
+                    .align(Alignment.TopCenter),
+                goldIcon = goldIcon,
+            )
+
+            // 구매/도박 — 중간 높이에 양쪽 배치
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(top = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                if (goldIcon != null) {
-                    Image(bitmap = goldIcon, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(12.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(WoodBrownDark)
-                        .border(1.dp, WoodBrown.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth((battle.sp / 500f).coerceIn(0f, 1f))
-                            .height(12.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Brush.horizontalGradient(listOf(GoldDark, GoldBright, Color(0xFFFFEE88)))),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth((battle.sp / 500f).coerceIn(0f, 1f))
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                            .background(Color.White.copy(alpha = 0.2f)),
-                    )
-                }
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("${battle.sp.toInt()}", color = GoldBright, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
-            }
-
-        }
-
-        // ── Deck preview (덱 모드일 때만) ──
-        if (isDeckMode) {
-            val resolvedDeck = remember(deckBlueprints) {
-                if (com.example.jaygame.engine.BlueprintRegistry.isReady) {
-                    val reg = com.example.jaygame.engine.BlueprintRegistry.instance
-                    deckBlueprints.mapNotNull { reg.findById(it) }
-                } else emptyList()
-            }
-            if (resolvedDeck.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    resolvedDeck.forEach { bp ->
-                        val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .padding(horizontal = 2.dp)
-                                .size(28.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(bp.grade.color.copy(alpha = 0.15f))
-                                .border(1.dp, bp.grade.color.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
-                        ) {
-                            Image(
-                                painter = painterResource(id = iconRes),
-                                contentDescription = bp.name,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-        }
-
-        // ── Action buttons ──
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Top row: 구매 | 소환 | 도박
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                // 구매 (Buy) — orange
-                WarmButton(
-                    topText = "\uD83D\uDECD",
-                    bottomText = "\uAD6C\uB9E4",
+                WideHexButton(
+                    icon = "\uD83D\uDECD\uFE0F",
+                    label = "구매",
                     enabled = true,
                     gradientTop = OrangeBright, gradientBot = OrangeDark,
-                    borderColor = Color(0xFFFFAA44),
+                    borderColor = BuyBorderColor,
                     onClick = onBuyClick,
-                    modifier = Modifier.weight(1f),
-                    buttonHeight = 58.dp,
+                    modifier = Modifier.size(width = 72.dp, height = 66.dp),
                 )
-
-                // 소환 (Summon) — BIG gold center
-                SummonButton(
-                    cost = battle.summonCost,
-                    enabled = canSummon,
-                    gridFull = unitCount >= battle.maxUnitSlots,
-                    pity = unitPullPity,
-                    isDeckMode = isDeckMode,
-                    onClick = {
-                        HapticManager.medium(view)
-                        SfxManager.play(SoundEvent.Summon)
-                        BattleBridge.requestSummon()
-                    },
-                    modifier = Modifier.weight(1.6f),
-                    goldIcon = goldIcon,
-                )
-
-                // 도박 (Gamble) — opens GambleDialog
-                GambleButton(
+                WideHexButton(
+                    icon = "\uD83C\uDFB2",
+                    label = "도박",
                     enabled = canGamble,
-                    onClick = { onGambleClick() },
-                    modifier = Modifier.weight(1f),
+                    gradientTop = GreenTeal, gradientBot = GreenTealDark,
+                    borderColor = GambleBorderColor,
+                    onClick = onGambleClick,
+                    modifier = Modifier.size(width = 72.dp, height = 66.dp),
                 )
             }
 
-            // 강화 버튼 제거됨 — 개별 유닛 탭 → UnitDetailPopup에서 강화
+            // 강화 — 하단에 배치
+            WarmButton(
+                topText = "\u25C6 강화",
+                bottomText = "",
+                enabled = true,
+                gradientTop = Color(0xFF4A3E32), gradientBot = Color(0xFF32281C),
+                borderColor = Color(0xFF1A1510),
+                onClick = onUpgradeClick,
+                modifier = Modifier
+                    .fillMaxWidth(0.45f)
+                    .align(Alignment.BottomCenter),
+                buttonHeight = 40.dp,
+            )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Safe area for navigation bar
+        Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
 
@@ -1092,41 +1402,19 @@ private fun WarmButton(
         label = "btnScale",
     )
 
-    val bgTop = if (enabled) gradientTop else Color(0xFF3A3A3A)
-    val bgBot = if (enabled) gradientBot else Color(0xFF2A2A2A)
-    val border = if (enabled) borderColor.copy(alpha = 0.7f) else Color(0xFF4A4A4A)
+    val bgTop = if (enabled) gradientTop else DisabledTop
+    val bgBot = if (enabled) gradientBot else DisabledBot
+    val outlineCol = if (enabled) borderColor else DisabledBot
+    val fillBrush = remember(bgTop, bgBot) { Brush.verticalGradient(listOf(bgTop, bgBot)) }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .height(buttonHeight)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(
-                if (enabled) 10.dp else 2.dp,
-                RoundedCornerShape(12.dp),
-                ambientColor = if (enabled) gradientBot.copy(alpha = 0.4f) else Color.Black,
-                spotColor = if (enabled) gradientBot.copy(alpha = 0.5f) else Color.Black,
-            )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(BtnShape)
             .drawBehind {
-                drawRoundRect(
-                    brush = Brush.verticalGradient(listOf(bgTop, bgBot)),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                )
-                // Top highlight
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.15f), Color.Transparent)
-                    ),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(size.width, size.height * 0.4f),
-                )
-                // Border
-                drawRoundRect(
-                    color = border,
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f.dp.toPx()),
-                )
+                drawThickOutlineButton(outlineCol, fillBrush, HighlightBrush)
             }
             .then(
                 if (enabled) Modifier.clickable(
@@ -1139,14 +1427,18 @@ private fun WarmButton(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = topText,
-                fontSize = 18.sp,
+                color = if (enabled) Color.White else DisabledText,
+                fontSize = if (bottomText.isEmpty()) 13.sp else 18.sp,
+                fontWeight = if (bottomText.isEmpty()) FontWeight.ExtraBold else FontWeight.Normal,
             )
-            Text(
-                text = bottomText,
-                color = if (enabled) Color.White else Color(0xFF888888),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
+            if (bottomText.isNotEmpty()) {
+                Text(
+                    text = bottomText,
+                    color = if (enabled) Color.White else DisabledText,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
         }
     }
 }
@@ -1154,12 +1446,10 @@ private fun WarmButton(
 // ── Summon Button (center, large, gold with coin icon) ──────
 
 @Composable
-fun SummonButton(
+private fun SummonButton(
     cost: Int,
     enabled: Boolean,
     gridFull: Boolean = false,
-    pity: Int = 0,
-    isDeckMode: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     goldIcon: androidx.compose.ui.graphics.ImageBitmap? = null,
@@ -1173,52 +1463,17 @@ fun SummonButton(
         label = "summonScale",
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "summonGlow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "glowPulse",
-    )
-
-    val bgTop = if (enabled) GoldBright else Color(0xFF3A3A3A)
-    val bgBot = if (enabled) GoldDark else Color(0xFF2A2A2A)
-    val borderCol = if (enabled) Color(0xFFFFEE88).copy(alpha = glowAlpha) else Color(0xFF4A4A4A)
+    val bgTop = if (enabled) GoldBright else DisabledTop
+    val bgBot = if (enabled) GoldDark else DisabledBot
+    val fillBrush = remember(bgTop, bgBot) { Brush.verticalGradient(listOf(bgTop, bgBot)) }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .height(70.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(
-                if (enabled) 12.dp else 2.dp,
-                RoundedCornerShape(14.dp),
-                ambientColor = if (enabled) GoldBright.copy(alpha = 0.4f) else Color.Black,
-                spotColor = if (enabled) GoldBright.copy(alpha = 0.5f) else Color.Black,
-            )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(BtnShape)
             .drawBehind {
-                drawRoundRect(
-                    brush = Brush.verticalGradient(listOf(bgTop, bgBot)),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                )
-                // Glossy highlight
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.25f), Color.Transparent)
-                    ),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(size.width, size.height * 0.45f),
-                )
-                // Border
-                drawRoundRect(
-                    color = borderCol,
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
-                )
+                drawThickOutlineButton(Color(0xFF1A1510), fillBrush, HighlightBrushBright)
             }
             .then(
                 if (enabled) Modifier.clickable(
@@ -1228,48 +1483,35 @@ fun SummonButton(
                 ) else Modifier
             ),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
                 text = "소환",
-                color = if (enabled) WoodBrownDark else Color(0xFF888888),
-                fontSize = 20.sp,
+                color = if (enabled) WoodBrownDark else DisabledText,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
                 if (goldIcon != null) {
                     Image(
                         bitmap = goldIcon,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                 }
                 Text(
                     text = if (gridFull) "FULL" else "$cost",
                     color = if (gridFull) NeonRed
-                    else if (enabled) WoodBrownDark.copy(alpha = 0.8f)
+                    else if (enabled) WoodBrownDark.copy(alpha = 0.85f)
                     else Color(0xFF666666),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            if (isDeckMode) {
-                Text(
-                    text = "\uD83C\uDFB4 덱 모드",
-                    color = NeonCyan,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            } else {
-                Text(
-                    text = "천장: $pity/100",
-                    color = when {
-                        pity >= 80 -> NeonRed
-                        pity >= 30 -> Color(0xFFFFAA44)
-                        else -> WoodBrownDark.copy(alpha = 0.6f)
-                    },
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
@@ -1329,56 +1571,147 @@ fun BossModifierAlert() {
     }
 }
 
-// ── Gamble Button (coin icon + 10 cost, like summon style) ──────
+// ── Shared drawBehind helper: thick dark outline + inset gradient fill + highlight ──
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawThickOutlineButton(
+    outlineColor: Color,
+    fillBrush: Brush,
+    highlightBrush: Brush,
+) {
+    val outerR = CornerRadius(BtnOuterRadius.dp.toPx())
+    val innerR = CornerRadius(BtnInnerRadius.dp.toPx())
+    val inset = BtnInset.dp.toPx()
+    val innerW = size.width - inset * 2
+    val innerH = size.height - inset * 2
+    val innerOffset = androidx.compose.ui.geometry.Offset(inset, inset)
+
+    drawRoundRect(color = outlineColor, cornerRadius = outerR)
+    drawRoundRect(
+        brush = fillBrush,
+        cornerRadius = innerR,
+        topLeft = innerOffset,
+        size = androidx.compose.ui.geometry.Size(innerW, innerH),
+    )
+    drawRoundRect(
+        brush = highlightBrush,
+        cornerRadius = innerR,
+        topLeft = innerOffset,
+        size = androidx.compose.ui.geometry.Size(innerW, innerH * 0.45f),
+    )
+}
+
+// ── Wide Hexagon shape for side buttons (구매/도박) ──
+
+private class WideHexagonShape(private val cornerRadiusDp: Float = 5f) : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline = Outline.Generic(
+        buildWideHexPath(size.width, size.height, cornerRadiusDp * density.density)
+    )
+}
+
+private fun buildWideHexPath(width: Float, height: Float, cornerPx: Float): Path {
+    val r = cornerPx.coerceAtMost(kotlin.math.min(width, height) * 0.2f)
+    val cy = height / 2f
+    val pointInset = width * 0.12f
+    val vx = floatArrayOf(0f, pointInset, width - pointInset, width, width - pointInset, pointInset)
+    val vy = floatArrayOf(cy, 0f, 0f, cy, height, height)
+    val path = Path()
+    val n = vx.size
+    for (i in 0 until n) {
+        val prev = (i - 1 + n) % n
+        val next = (i + 1) % n
+        val tpx = vx[prev] - vx[i]; val tpy = vy[prev] - vy[i]
+        val tnx = vx[next] - vx[i]; val tny = vy[next] - vy[i]
+        val lp = kotlin.math.sqrt(tpx * tpx + tpy * tpy)
+        val ln = kotlin.math.sqrt(tnx * tnx + tny * tny)
+        val pull = r.coerceAtMost(kotlin.math.min(lp, ln) / 2f)
+        val sx = vx[i] + tpx / lp * pull; val sy = vy[i] + tpy / lp * pull
+        val ex = vx[i] + tnx / ln * pull; val ey = vy[i] + tny / ln * pull
+        if (i == 0) path.moveTo(sx, sy) else path.lineTo(sx, sy)
+        @Suppress("DEPRECATION")
+        path.quadraticBezierTo(vx[i], vy[i], ex, ey)
+    }
+    path.close()
+    return path
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWideHexBackground(
+    outlineColor: Color,
+    fillBrush: Brush,
+    outerPath: Path,
+    innerPath: Path,
+    highlightBrush: Brush,
+) {
+    val inset = BtnInset.dp.toPx()
+    drawPath(path = outerPath, color = outlineColor)
+    val innerH = size.height - inset * 2f
+    if (innerH <= 0f) return
+    drawContext.transform.translate(inset, inset)
+    drawPath(path = innerPath, brush = fillBrush)
+    clipPath(innerPath) {
+        drawRect(
+            brush = highlightBrush,
+            size = androidx.compose.ui.geometry.Size(size.width - inset * 2f, innerH * 0.45f),
+        )
+    }
+    drawContext.transform.translate(-inset, -inset)
+}
+
+private class PolyDrawCache {
+    var outer: Path = Path()
+    var inner: Path = Path()
+    var highlight: Brush = HighlightBrush
+    var w: Float = 0f
+    var h: Float = 0f
+}
 
 @Composable
-private fun GambleButton(
+private fun WideHexButton(
+    icon: String,
+    label: String,
     enabled: Boolean,
+    gradientTop: Color,
+    gradientBot: Color,
+    borderColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.93f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f),
-        label = "gambleScale",
+        label = "hexScale",
     )
-
-    val bgTop = if (enabled) GreenTeal else Color(0xFF3A3A3A)
-    val bgBot = if (enabled) GreenTealDark else Color(0xFF2A2A2A)
-    val border = if (enabled) Color(0xFF66CC88).copy(alpha = 0.7f) else Color(0xFF4A4A4A)
+    val bgTop = if (enabled) gradientTop else DisabledTop
+    val bgBot = if (enabled) gradientBot else DisabledBot
+    val outlineCol = if (enabled) borderColor else DisabledBot
+    val fillBrush = remember(bgTop, bgBot) { Brush.verticalGradient(listOf(bgTop, bgBot)) }
+    val cache = remember { PolyDrawCache() }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .height(58.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(
-                if (enabled) 10.dp else 2.dp,
-                RoundedCornerShape(12.dp),
-                ambientColor = if (enabled) GreenTealDark.copy(alpha = 0.4f) else Color.Black,
-                spotColor = if (enabled) GreenTealDark.copy(alpha = 0.5f) else Color.Black,
-            )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(WideHexShape)
             .drawBehind {
-                drawRoundRect(
-                    brush = Brush.verticalGradient(listOf(bgTop, bgBot)),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                )
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.15f), Color.Transparent)
-                    ),
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    size = androidx.compose.ui.geometry.Size(size.width, size.height * 0.4f),
-                )
-                drawRoundRect(
-                    color = border,
-                    cornerRadius = CornerRadius(12.dp.toPx()),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f.dp.toPx()),
-                )
+                if (size.width != cache.w || size.height != cache.h) {
+                    cache.w = size.width; cache.h = size.height
+                    val insetPx = BtnInset.dp.toPx()
+                    val cornerPx = 5.dp.toPx()
+                    cache.outer = buildWideHexPath(size.width, size.height, cornerPx)
+                    val iw = size.width - insetPx * 2f
+                    val ih = size.height - insetPx * 2f
+                    cache.inner = buildWideHexPath(iw, ih, (cornerPx - insetPx * 0.5f).coerceAtLeast(0f))
+                    cache.highlight = Brush.verticalGradient(
+                        listOf(PolyHighlightAlpha, PolyHighlightTransparent),
+                        startY = 0f, endY = ih * 0.45f,
+                    )
+                }
+                drawWideHexBackground(outlineCol, fillBrush, cache.outer, cache.inner, cache.highlight)
             }
             .then(
                 if (enabled) Modifier.clickable(
@@ -1388,11 +1721,18 @@ private fun GambleButton(
                 ) else Modifier
             ),
     ) {
-        Text(
-            text = "\uD83C\uDFB2 도박",
-            color = if (enabled) Color.White else Color(0xFF888888),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.ExtraBold,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(text = icon, fontSize = 18.sp)
+            Text(
+                text = label,
+                color = if (enabled) Color.White else DisabledText,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
     }
 }
+

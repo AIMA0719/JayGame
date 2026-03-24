@@ -64,11 +64,9 @@ private data class DifficultyInfo(
 private val DialogBgBrush = Brush.verticalGradient(listOf(Color(0xFF2A1F15), Color(0xFF1A0F0A)))
 
 private val DIFFICULTIES = listOf(
-    DifficultyInfo(0, "초보", "입문자를 위한 난이도", "×1.0", "×1.0", NeonGreen),
-    DifficultyInfo(1, "숙련자", "조금 더 강한 적", "×1.5", "×1.3", NeonCyan),
-    DifficultyInfo(2, "고인물", "상당히 거친 전투", "×2.2", "×1.6", Gold),
-    DifficultyInfo(3, "썩은물", "극한의 도전", "×3.0", "×2.0", Color(0xFFFF6B35)),
-    DifficultyInfo(4, "챌린저", "최강자만 도전", "×4.0", "×2.5", NeonRed),
+    DifficultyInfo(0, "일반", "기본 난이도", "×1.0", "×1.0", NeonGreen),
+    DifficultyInfo(1, "하드", "강화된 적과 보상", "×1.5", "×1.5", Color(0xFFFF8800)),
+    DifficultyInfo(2, "헬", "극한의 도전", "×2.2", "×2.5", NeonRed),
 )
 
 @Composable

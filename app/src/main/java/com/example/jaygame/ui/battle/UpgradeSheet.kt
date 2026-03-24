@@ -28,73 +28,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.engine.UnitUpgradeSystem
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.*
 
-/** Upgrade types for in-battle buffs */
-enum class BattleUpgradeType(
-    val label: String,
-    val icon: String,
-    val description: String,
-    val effectPerLevel: String,
-    val maxLevel: Int,
-    val costs: List<Int>,
-    val color: Color,
-) {
-    ATK(
-        label = "공격력",
-        icon = "\u2694\uFE0F",
-        description = "전체 유닛 공격력 증가",
-        effectPerLevel = "+10%",
-        maxLevel = 5,
-        costs = listOf(50, 100, 180, 280, 400),
-        color = Color(0xFFFF6B35),
-    ),
-    ATTACK_SPEED(
-        label = "공격속도",
-        icon = "\u26A1",
-        description = "전체 유닛 공격속도 증가",
-        effectPerLevel = "+8%",
-        maxLevel = 5,
-        costs = listOf(60, 120, 200, 300, 450),
-        color = Color(0xFFFFD54F),
-    ),
-    CRIT_RATE(
-        label = "치명타",
-        icon = "\uD83D\uDCA5",
-        description = "전체 유닛 치명타 확률 증가",
-        effectPerLevel = "+5%",
-        maxLevel = 5,
-        costs = listOf(80, 150, 250, 380, 550),
-        color = Color(0xFFEF4444),
-    ),
-    RANGE(
-        label = "사거리",
-        icon = "\uD83C\uDFAF",
-        description = "전체 유닛 공격 사거리 증가",
-        effectPerLevel = "+10%",
-        maxLevel = 3,
-        costs = listOf(100, 200, 350),
-        color = Color(0xFF42A5F5),
-    ),
-    SP_REGEN(
-        label = "SP 회복",
-        icon = "\uD83D\uDC8E",
-        description = "초당 SP 회복량 증가",
-        effectPerLevel = "+0.7/초",
-        maxLevel = 4,
-        costs = listOf(120, 250, 420, 650),
-        color = Color(0xFFCE93D8),
-    ),
-}
+private val groupColors = arrayOf(
+    Color(0xFF42A5F5),  // 일반/희귀
+    Color(0xFFFF9800),  // 영웅/전설
+    Color(0xFFE040FB),  // 신화
+)
+private val groupLabels = arrayOf("일반/희귀", "영웅/전설", "신화")
+private val groupIcons = arrayOf("⚔️", "🛡️", "👑")
 
 @Composable
 fun UpgradeSheet(
     onDismiss: () -> Unit,
 ) {
     val battle by BattleBridge.state.collectAsState()
-    val upgradeLevels by BattleBridge.battleUpgradeLevels.collectAsState()
+    val groupLevels by BattleBridge.groupUpgradeLevels.collectAsState()
 
     Box(
         modifier = Modifier
@@ -120,7 +72,7 @@ fun UpgradeSheet(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                 ) {},
-            borderColor = Color(0xFF42A5F5).copy(alpha = 0.5f),
+            borderColor = Gold.copy(alpha = 0.5f),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -133,13 +85,13 @@ fun UpgradeSheet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "\u2B06 전투 강화",
-                        color = NeonCyan,
+                        text = "⬆ 통합 강화",
+                        color = Gold,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "\u2715",
+                        text = "✕",
                         color = SubText,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
@@ -150,32 +102,32 @@ fun UpgradeSheet(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "배틀 내내 적용되는 영구 버프",
+                    text = "같은 등급 그룹의 모든 유닛을 한번에 강화",
                     color = SubText,
                     fontSize = 11.sp,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Upgrade items
-                BattleUpgradeType.entries.forEach { type ->
-                    val currentLevel = upgradeLevels.getOrElse(type.ordinal) { 0 }
-                    val isMaxed = currentLevel >= type.maxLevel
-                    val nextCost = if (!isMaxed) type.costs[currentLevel] else 0
+                // 3 group upgrade rows
+                for (group in 0 until UnitUpgradeSystem.GROUP_COUNT) {
+                    val currentLevel = groupLevels.getOrElse(group) { 0 }
+                    val isMaxed = currentLevel >= UnitUpgradeSystem.MAX_UPGRADE_LEVEL
+                    val nextCost = if (!isMaxed) UnitUpgradeSystem.getGroupUpgradeCost(group, currentLevel) else 0
                     val canAfford = !isMaxed && battle.sp >= nextCost
 
-                    UpgradeRow(
-                        type = type,
+                    GroupUpgradeRow(
+                        group = group,
                         currentLevel = currentLevel,
                         nextCost = nextCost,
                         isMaxed = isMaxed,
                         canAfford = canAfford,
                         onClick = {
                             if (canAfford) {
-                                BattleBridge.requestBattleUpgrade(type.ordinal, nextCost)
+                                BattleBridge.requestGroupUpgrade(group)
                             }
                         },
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -185,76 +137,110 @@ fun UpgradeSheet(
 }
 
 @Composable
-private fun UpgradeRow(
-    type: BattleUpgradeType,
+private fun GroupUpgradeRow(
+    group: Int,
     currentLevel: Int,
     nextCost: Int,
     isMaxed: Boolean,
     canAfford: Boolean,
     onClick: () -> Unit,
 ) {
-    Row(
+    val color = groupColors[group]
+    val atkPercent = (UnitUpgradeSystem.getTotalAtkBonus(currentLevel) * 100).toInt()
+    val spdPercent = (UnitUpgradeSystem.getTotalSpdBonus(currentLevel) * 100).toInt()
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.horizontalGradient(
                     listOf(
-                        type.color.copy(alpha = 0.1f),
-                        Color(0xFF1A1025).copy(alpha = 0.5f),
+                        color.copy(alpha = 0.15f),
+                        Color(0xFF1A1025).copy(alpha = 0.6f),
                     )
                 )
             )
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        // Icon + info
-        Text(text = type.icon, fontSize = 20.sp)
-        Spacer(modifier = Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = type.label,
-                    color = type.color,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                // Level dots
-                Text(
-                    text = "Lv.$currentLevel/${type.maxLevel}",
-                    color = SubText,
-                    fontSize = 10.sp,
-                )
+        // Top row: icon + label + level
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = groupIcons[group], fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = groupLabels[group],
+                        color = color,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Lv.$currentLevel/${UnitUpgradeSystem.MAX_UPGRADE_LEVEL}",
+                        color = SubText,
+                        fontSize = 11.sp,
+                    )
+                }
+                // Current bonus stats
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "ATK +${atkPercent}%",
+                        color = NeonRed.copy(alpha = 0.9f),
+                        fontSize = 10.sp,
+                    )
+                    if (spdPercent > 0) {
+                        Text(
+                            text = "속도 +${spdPercent}%",
+                            color = NeonCyan.copy(alpha = 0.9f),
+                            fontSize = 10.sp,
+                        )
+                    }
+                }
             }
-            Text(
-                text = "${type.description} (${type.effectPerLevel}/Lv)",
-                color = SubText,
-                fontSize = 9.sp,
-            )
         }
 
-        // Buy button
-        if (isMaxed) {
-            Text(
-                text = "MAX",
-                color = Gold,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
-        } else {
-            NeonButton(
-                text = "$nextCost SP",
-                onClick = onClick,
-                modifier = Modifier
-                    .width(72.dp)
-                    .height(32.dp),
-                fontSize = 11.sp,
-                accentColor = if (canAfford) type.color else SubText,
-                accentColorDark = if (canAfford) type.color.copy(alpha = 0.5f) else DimText,
-                enabled = canAfford,
-            )
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Bottom row: milestone hint + buy button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!isMaxed) {
+                Text(
+                    text = "다음: ${UnitUpgradeSystem.nextMilestoneHint(currentLevel)}",
+                    color = SubText.copy(alpha = 0.8f),
+                    fontSize = 9.sp,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            if (isMaxed) {
+                Text(
+                    text = "MAX",
+                    color = Gold,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            } else {
+                NeonButton(
+                    text = "🪙 $nextCost",
+                    onClick = onClick,
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(34.dp),
+                    fontSize = 12.sp,
+                    accentColor = if (canAfford) color else SubText,
+                    accentColorDark = if (canAfford) color.copy(alpha = 0.5f) else DimText,
+                    enabled = canAfford,
+                )
+            }
         }
     }
 }
-

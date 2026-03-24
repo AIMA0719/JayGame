@@ -90,9 +90,9 @@ object DamageCalculator {
 
     /** 보스 제한 시간 계산 */
     fun calculateBossTimeLimit(currentWave: Int): Float {
-        // Wave 10: 60s, Wave 20: 55s, ... 최소 30s
-        val timeLimit = 60f - (currentWave / 10) * 5f
-        return timeLimit.coerceAtLeast(30f)
+        // Wave 10: 180s, Wave 20: 170s, ... 최소 120s
+        val timeLimit = 180f - (currentWave / 10) * 10f
+        return timeLimit.coerceAtLeast(120f)
     }
 
     private val LEVEL_MULTIPLIERS = floatArrayOf(1.0f, 1.5f, 2.5f, 4.0f, 6.0f)

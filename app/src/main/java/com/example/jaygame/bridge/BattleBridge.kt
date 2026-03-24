@@ -5,6 +5,7 @@ import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.BossModifier
 import com.example.jaygame.engine.DamageType
+import com.example.jaygame.engine.Grid
 import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.engine.UnitState
@@ -29,6 +30,7 @@ data class BattleState(
     val maxEnemyCount: Int = 100,
     val isBossRound: Boolean = false,
     val waveTimeRemaining: Float = 0f,
+    val waveElapsed: Float = 0f,
     val maxUnitSlots: Int = 18,
 ) {
     override fun equals(other: Any?): Boolean {
@@ -41,9 +43,9 @@ data class BattleState(
                 deckUnits.contentEquals(other.deckUnits) &&
                 enemyCount == other.enemyCount && maxEnemyCount == other.maxEnemyCount &&
                 isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining &&
-                maxUnitSlots == other.maxUnitSlots
+                waveElapsed == other.waveElapsed && maxUnitSlots == other.maxUnitSlots
     }
-    override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + if (isBossRound) 1 else 0
+    override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + waveElapsed.toBits() + if (isBossRound) 1 else 0
 }
 
 /**
@@ -135,6 +137,7 @@ data class UnitPositionData(
     val states: Array<UnitState> = emptyArray(),
     val homeXs: FloatArray = FloatArray(0),
     val homeYs: FloatArray = FloatArray(0),
+    val stackCounts: IntArray = IntArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -242,13 +245,11 @@ object BattleBridge {
 
     sealed class BattleCommand {
         object Summon : BattleCommand()
-        data class ClickTile(val tileIndex: Int) : BattleCommand()
         data class Merge(val tileIndex: Int) : BattleCommand()
         data class Sell(val tileIndex: Int) : BattleCommand()
         data class BulkSell(val grade: Int, val result: CompletableDeferred<Int>) : BattleCommand()
-        data class Upgrade(val tileIndex: Int) : BattleCommand()
+        data class GroupUpgrade(val groupIndex: Int) : BattleCommand()
         data class Swap(val from: Int, val to: Int) : BattleCommand()
-        data class Relocate(val tileIndex: Int, val x: Float, val y: Float) : BattleCommand()
         data class Gamble(
             val option: com.example.jaygame.engine.GambleSystem.GambleOption,
             val betSize: com.example.jaygame.engine.GambleSystem.BetSize,
@@ -346,8 +347,8 @@ object BattleBridge {
 
     fun setStageId(id: Int) { _stageId.value = id }
 
-    /** 현재 난이도 (0=쉬움, 1=보통, 2=어려움) */
-    private val _difficulty = MutableStateFlow(1)
+    /** 현재 난이도 (0=일반, 1=하드, 2=헬) */
+    private val _difficulty = MutableStateFlow(0)
     val difficulty: StateFlow<Int> = _difficulty.asStateFlow()
 
     fun setDifficulty(diff: Int) { _difficulty.value = diff }
@@ -364,26 +365,83 @@ object BattleBridge {
     private val _selectedTile = MutableStateFlow(-1)
     val selectedTile: StateFlow<Int> = _selectedTile.asStateFlow()
 
-    /** 유닛 정보 팝업 데이터 */
+    // ── Move mode: tap-to-select, tap-to-move 시스템 ──
+    private val EMPTY_BOOL_ARRAY = BooleanArray(0)
+
+    private val _moveModeTile = MutableStateFlow(-1)  // -1 = not in move mode
+    val moveModeTile: StateFlow<Int> = _moveModeTile.asStateFlow()
+
+    private val _validMoveTargets = MutableStateFlow(EMPTY_BOOL_ARRAY)
+    val validMoveTargets: StateFlow<BooleanArray> = _validMoveTargets.asStateFlow()
+
+    fun enterMoveMode(tileIndex: Int) {
+        val gs = _gridState.value
+        val sourceTile = gs.getOrNull(tileIndex) ?: return
+        if (sourceTile.blueprintId.isEmpty() && sourceTile.grade == -1) return
+        _moveModeTile.value = tileIndex
+        _selectedTile.value = tileIndex
+        val srcBpId = sourceTile.blueprintId
+        val targets = BooleanArray(gs.size) { i ->
+            if (i == tileIndex) false
+            else {
+                val target = gs[i]
+                val isEmpty = target.blueprintId.isEmpty() && target.grade == -1
+                val canStack = target.blueprintId == srcBpId && target.level < Grid.MAX_STACK
+                val hasUnit = target.blueprintId.isNotEmpty()
+                val canSwap = hasUnit && target.blueprintId != srcBpId
+                val sameButFull = hasUnit && target.blueprintId == srcBpId && target.level >= Grid.MAX_STACK
+                isEmpty || canStack || canSwap || sameButFull
+            }
+        }
+        _validMoveTargets.value = targets
+    }
+
+    fun exitMoveMode() {
+        _moveModeTile.value = -1
+        _validMoveTargets.value = EMPTY_BOOL_ARRAY
+        _selectedTile.value = -1
+    }
+
+    fun executeMoveMode(targetTile: Int) {
+        val fromTile = _moveModeTile.value
+        if (fromTile < 0) return
+        commandQueue.add(BattleCommand.Swap(fromTile, targetTile))
+        exitMoveMode()
+    }
+
+    /** 유닛 상세 팝업 데이터 (롱프레스 시 표시) */
     data class UnitPopupData(
         val tileIndex: Int,
-        @Deprecated("Use blueprintId instead") val unitDefId: Int,
         val grade: Int,
-        @Deprecated("Use families instead") val family: Int,
-        val canMerge: Boolean,
-        val level: Int = 1,
-        // Blueprint-system fields (Task 18)
         val blueprintId: String = "",
         val families: List<UnitFamily> = emptyList(),
         val role: UnitRole = UnitRole.RANGED_DPS,
         val attackRange: AttackRange = AttackRange.RANGED,
         val damageType: DamageType = DamageType.PHYSICAL,
-        val hp: Float = 0f,
-        val maxHp: Float = 0f,
-        val upgradeLevel: Int = 0,
     )
     private val _unitPopup = MutableStateFlow<UnitPopupData?>(null)
     val unitPopup: StateFlow<UnitPopupData?> = _unitPopup.asStateFlow()
+
+    fun showUnitPopup(tileIndex: Int) {
+        val gs = _gridState.value
+        val tile = gs.getOrNull(tileIndex) ?: return
+        if (tile.blueprintId.isEmpty() && tile.grade == -1) return
+        val bp = if (tile.blueprintId.isNotEmpty() && com.example.jaygame.engine.BlueprintRegistry.isReady)
+            com.example.jaygame.engine.BlueprintRegistry.instance.findById(tile.blueprintId) else null
+        _unitPopup.value = UnitPopupData(
+            tileIndex = tileIndex,
+            grade = tile.grade,
+            blueprintId = tile.blueprintId,
+            families = tile.families,
+            role = bp?.role ?: tile.role,
+            attackRange = bp?.attackRange ?: AttackRange.RANGED,
+            damageType = bp?.damageType ?: DamageType.PHYSICAL,
+        )
+    }
+
+    fun dismissPopup() {
+        _unitPopup.value = null
+    }
 
     /** 소환 결과 데이터 */
     data class SummonResult(
@@ -407,6 +465,7 @@ object BattleBridge {
         sp: Float, elapsed: Float,
         state: Int, summonCost: Int,
         enemyCount: Int, isBossRound: Int, waveTimeRemaining: Float,
+        waveElapsed: Float = 0f,
     ) {
         _state.value = BattleState(
             currentWave = wave,
@@ -421,6 +480,7 @@ object BattleBridge {
             enemyCount = enemyCount,
             isBossRound = isBossRound != 0,
             waveTimeRemaining = waveTimeRemaining,
+            waveElapsed = waveElapsed,
             maxUnitSlots = engine?.maxUnitSlots ?: 50,
         )
 
@@ -515,11 +575,12 @@ object BattleBridge {
         states: Array<UnitState> = emptyArray(),
         homeXs: FloatArray = FloatArray(0),
         homeYs: FloatArray = FloatArray(0),
+        stackCounts: IntArray = IntArray(0),
     ) {
         _unitPositions.value = UnitPositionData(
             xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, ++unitFrameCounter,
             blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
-            hps, maxHps, states, homeXs, homeYs,
+            hps, maxHps, states, homeXs, homeYs, stackCounts,
         )
     }
 
@@ -583,21 +644,6 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun onUnitClicked(
-        tileIndex: Int, unitDefId: Int, grade: Int, family: Int, canMerge: Boolean, level: Int,
-        blueprintId: String = "", families: List<UnitFamily> = emptyList(),
-        role: UnitRole = UnitRole.RANGED_DPS, attackRange: AttackRange = AttackRange.RANGED,
-        damageType: DamageType = DamageType.PHYSICAL, hp: Float = 0f, maxHp: Float = 0f,
-        upgradeLevel: Int = 0,
-    ) {
-        _selectedTile.value = tileIndex
-        _unitPopup.value = UnitPopupData(
-            tileIndex, unitDefId, grade, family, canMerge, level,
-            blueprintId, families, role, attackRange, damageType, hp, maxHp, upgradeLevel,
-        )
-    }
-
-    @JvmStatic
     fun onSummonResult(unitDefId: Int, grade: Int, blueprintId: String = "") {
         _summonResult.value = SummonResult(unitDefId, grade, blueprintId)
     }
@@ -605,11 +651,6 @@ object BattleBridge {
     @JvmStatic
     fun onMergeComplete(tileIndex: Int, isLucky: Boolean, resultUnitId: Int, resultBlueprintId: String = "") {
         _mergeEffect.value = MergeEffect(tileIndex, isLucky, resultUnitId, resultBlueprintId)
-    }
-
-    fun dismissPopup() {
-        _selectedTile.value = -1
-        _unitPopup.value = null
     }
 
     fun clearSummonResult() {
@@ -772,16 +813,15 @@ object BattleBridge {
 
     fun setTutorialMode(enabled: Boolean) { _tutorialMode.value = enabled }
 
-    /** 배속 (1f, 2f, 4f, 8f) */
-    private val _battleSpeed = MutableStateFlow(1f)
+    /** 배속 (2f=x1, 4f=x2, 8f=x4) — 내부 기본 2f */
+    private val _battleSpeed = MutableStateFlow(2f)
     val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
 
     fun cycleBattleSpeed() {
         _battleSpeed.value = when (_battleSpeed.value) {
-            1f -> 2f
             2f -> 4f
             4f -> 8f
-            else -> 1f
+            else -> 2f
         }
     }
 
@@ -809,6 +849,8 @@ object BattleBridge {
         }
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         _selectedTile.value = -1
+        _moveModeTile.value = -1
+        _validMoveTargets.value = EMPTY_BOOL_ARRAY
         _unitPopup.value = null
         _mergeEffect.value = null
         _summonResult.value = null
@@ -832,6 +874,7 @@ object BattleBridge {
         _activeRoleSynergies.value = emptyMap()
         // Note: stageId, difficulty, battleSpeed, dungeonId, deckBlueprints are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
+        _groupUpgradeLevels.value = IntArray(com.example.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 }
         _debugMode.value = false
         commandQueue.clear()
     }
@@ -845,17 +888,13 @@ object BattleBridge {
         commandQueue.add(BattleCommand.Summon)
     }
 
-    fun requestClickTile(tileIndex: Int) {
-        commandQueue.add(BattleCommand.ClickTile(tileIndex))
-    }
-
     fun requestMerge(tileIndex: Int) {
-        dismissPopup()
+        _selectedTile.value = -1
         commandQueue.add(BattleCommand.Merge(tileIndex))
     }
 
     fun requestSell(tileIndex: Int) {
-        dismissPopup()
+        _selectedTile.value = -1
         commandQueue.add(BattleCommand.Sell(tileIndex))
     }
 
@@ -865,16 +904,12 @@ object BattleBridge {
         return runBlocking { withTimeoutOrNull(100L) { deferred.await() } ?: 0 }
     }
 
-    fun requestUpgrade(tileIndex: Int) {
-        commandQueue.add(BattleCommand.Upgrade(tileIndex))
+    fun requestGroupUpgrade(groupIndex: Int) {
+        commandQueue.add(BattleCommand.GroupUpgrade(groupIndex))
     }
 
     fun requestSwap(fromTile: Int, toTile: Int) {
         commandQueue.add(BattleCommand.Swap(fromTile, toTile))
-    }
-
-    fun requestRelocate(tileIndex: Int, normX: Float, normY: Float) {
-        commandQueue.add(BattleCommand.Relocate(tileIndex, normX, normY))
     }
 
     // ── Gamble ──────────────────────────────────────────────
@@ -902,7 +937,7 @@ object BattleBridge {
         commandQueue.add(BattleCommand.BuyBlueprint(blueprintId, cost))
     }
 
-    // ── Battle Upgrades ─────────────────────────────────────
+    // ── Battle Upgrades (글로벌 버프) ─────────────────────────────────────
 
     private val _battleUpgradeLevels = MutableStateFlow(IntArray(5) { 0 })
     val battleUpgradeLevels: StateFlow<IntArray> = _battleUpgradeLevels.asStateFlow()
@@ -921,6 +956,15 @@ object BattleBridge {
         _battleUpgradeLevels.value = levels
 
         commandQueue.add(BattleCommand.BattleUpgrade(upgradeType, levels[upgradeType], cost.toFloat()))
+    }
+
+    // ── 등급 그룹 통합 강화 ─────────────────────────────────────
+
+    private val _groupUpgradeLevels = MutableStateFlow(IntArray(com.example.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 })
+    val groupUpgradeLevels: StateFlow<IntArray> = _groupUpgradeLevels.asStateFlow()
+
+    fun updateGroupUpgradeLevels(levels: IntArray) {
+        _groupUpgradeLevels.value = levels.copyOf()
     }
 
 }

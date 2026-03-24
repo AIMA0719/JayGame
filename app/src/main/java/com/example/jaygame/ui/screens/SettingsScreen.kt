@@ -446,12 +446,10 @@ private fun SettingsGameplay(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    listOf(1f, 2f, 4f, 8f).forEach { speed ->
+                    listOf(2f to "x1", 4f to "x2", 8f to "x4").forEach { (speed, label) ->
                         val isSelected = data.defaultBattleSpeed == speed
-                        val label = "x${speed.toInt()}"
                         val color = when (speed) {
-                            2f -> Gold
-                            4f -> NeonRed
+                            4f -> Gold
                             8f -> NeonRed
                             else -> LightText
                         }
@@ -873,16 +871,14 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqBullet("10웨이브마다 보스가 등장하며, 시간 내 처치하지 못하면 패배합니다")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("코인 획득")
-                FaqBullet("적 처치: 2코인 / 엘리트 처치: 5코인")
-                FaqBullet("웨이브 클리어: 20 + 웨이브×3 코인")
-                FaqBullet("유닛 판매: 5 + 등급×5 코인")
+                FaqBullet("적 처치: 2코인 / 엘리트 처치: 6코인")
+                FaqBullet("웨이브 클리어: 15 + 웨이브×2.5 코인")
+                FaqBullet("유닛 판매: 8 + 등급×8 코인")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("난이도")
-                FaqKeyValue("초보", "적 1.0배")
-                FaqKeyValue("숙련자", "적 1.5배")
-                FaqKeyValue("고인물", "적 2.2배")
-                FaqKeyValue("썩은물", "적 3.0배")
-                FaqKeyValue("챌린저", "적 4.0배")
+                FaqKeyValue("일반", "적 1.0배")
+                FaqKeyValue("하드", "적 1.5배")
+                FaqKeyValue("헬", "적 2.2배")
             }
 
             // ── 소환 & 등급 ──
@@ -893,7 +889,7 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 icon = "\u2728",
                 title = "유닛 소환은 어떻게 되나요?",
             ) {
-                FaqBullet("코인을 소모하여 유닛을 소환합니다 (시작 10, 소환마다 +2, 최대 60)")
+                FaqBullet("코인을 소모하여 유닛을 소환합니다 (시작 10, 소환마다 +5, 최대 60)")
                 FaqBullet("유물 '소환사의 오브'로 비용을 최대 50%까지 줄일 수 있습니다")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("소환 확률")
@@ -904,7 +900,7 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqBullet("신화 등급은 레시피 조합으로만 획득 가능합니다")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("천장 시스템")
-                FaqBullet("30회 소환 시 영웅 확률 2배 (24%)")
+                FaqBullet("30회 이후 영웅 확률 2배 (24%), 영웅 이상 획득 시 초기화")
                 FaqBullet("100회 소환 시 전설 확정")
             }
 
@@ -938,16 +934,14 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 icon = "\u2B06\uFE0F",
                 title = "유닛 강화는 어떻게 하나요?",
             ) {
-                FaqBullet("전투 중 유닛을 탭하면 코인(또는 행운석)으로 강화할 수 있습니다")
+                FaqBullet("전투 중 강화 버튼을 눌러 등급 그룹별 통합 강화를 할 수 있습니다")
+                FaqBullet("같은 그룹의 모든 유닛에 동일한 보너스가 적용됩니다")
                 FaqBullet("강화당 기본 ATK의 50% 증가 (최대 Lv.15)")
                 Spacer(Modifier.height(4.dp))
-                FaqSubTitle("강화 비용 (등급별)")
-                FaqKeyValue("일반", "5코인 기본")
-                FaqKeyValue("희귀", "8코인 기본")
-                FaqKeyValue("영웅", "12코인 기본")
-                FaqKeyValue("전설", "18행운석 기본")
-                FaqKeyValue("신화", "25행운석 기본")
-                FaqBullet("레벨이 오를수록 비용이 30%씩 증가합니다")
+                FaqSubTitle("강화 그룹 (코인, 지수 증가)")
+                FaqKeyValue("일반/희귀", "10코인~ (×1.18/Lv)")
+                FaqKeyValue("영웅/전설", "20코인~ (×1.22/Lv)")
+                FaqKeyValue("신화", "40코인~ (×1.24/Lv)")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("마일스톤 보너스")
                 FaqKeyValue("Lv.3", "ATK +10%")
@@ -973,15 +967,95 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqKeyValue("냉기", "공속 +6/12% · 둔화 +30%")
                 FaqKeyValue("독", "공격력 +8/14% · 사망 시 독 전파")
                 FaqKeyValue("번개", "공속 +8/15% · 체인 +1")
-                FaqKeyValue("보조", "사거리 +6/12% · 힐/버프 +25%")
-                FaqKeyValue("바람", "공격력 +6/10% · 넉백 +40%")
+                FaqKeyValue("보조", "사거리 +6/12%")
+                FaqKeyValue("바람", "공격력 +6/10% · 사거리 +5/10%")
             }
 
-            // ── 유물 ──
+            // ── 유닛 조작 ──
             FaqSection(
                 index = 5,
                 expanded = expandedSection == 5,
                 onToggle = { expandedSection = if (expandedSection == 5) -1 else 5 },
+                icon = "\uD83D\uDC49",
+                title = "유닛을 어떻게 이동하나요?",
+            ) {
+                FaqBullet("유닛을 탭하면 선택됩니다 (파란 하이라이트)")
+                FaqBullet("선택 후 빈 슬롯 또는 같은 유닛 슬롯을 탭하면 이동합니다")
+                FaqBullet("같은 유닛이 있는 슬롯으로 이동하면 중첩됩니다 (최대 3개)")
+                FaqBullet("이동 가능한 슬롯은 노란색으로 표시됩니다")
+                FaqBullet("그리드 밖 또는 이동 불가 슬롯을 탭하면 선택이 해제됩니다")
+            }
+
+            // ── 역할 시너지 ──
+            FaqSection(
+                index = 6,
+                expanded = expandedSection == 6,
+                onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
+                icon = "\uD83D\uDEE1\uFE0F",
+                title = "역할 시너지란?",
+            ) {
+                FaqBullet("같은 역할의 유닛을 2개 이상 배치하면 역할 시너지가 발동됩니다")
+                FaqBullet("패밀리 시너지와 별도로 중복 적용됩니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("역할별 보너스 (2/3/4+ 개수)")
+                FaqKeyValue("탱커", "블록 시간 +20% → +블록 수 +1 → 도발 효과")
+                FaqKeyValue("근딜", "돌진 데미지 +15% → +쿨타임 -20% → 즉시 재돌진")
+                FaqKeyValue("원딜", "사거리 +10% → +치명타 +5% → 관통 2회")
+                FaqKeyValue("서포터", "버프 범위 +15% → 버프 중첩 → 전체 미니힐")
+                FaqKeyValue("컨트롤러", "CC 확률 +10% → +CC 지속 +25% → CC 면역 관통")
+            }
+
+            // ── 웨이브 & 보스 ──
+            FaqSection(
+                index = 7,
+                expanded = expandedSection == 7,
+                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
+                icon = "\uD83D\uDC79",
+                title = "웨이브와 보스는 어떻게 되나요?",
+            ) {
+                FaqBullet("전 스테이지 60웨이브 고정입니다")
+                FaqBullet("보스: 10, 20, 30 웨이브 (HP 10배), 40+ 웨이브 (HP 15배)")
+                FaqBullet("미니보스: 5, 15, 25... 웨이브 (3마리, HP 5배/30+는 7배)")
+                FaqBullet("엘리트: 웨이브 20+부터 랜덤 등장")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("엘리트 적 스탯")
+                FaqBullet("HP 2배, 방어력 1.5배, 마법저항 1.3배")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("엘리트 출현 확률")
+                FaqKeyValue("웨이브 20~29", "10%")
+                FaqKeyValue("웨이브 30~44", "20%")
+                FaqKeyValue("웨이브 45+", "30%")
+            }
+
+            // ── 데미지 공식 ──
+            FaqSection(
+                index = 8,
+                expanded = expandedSection == 8,
+                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
+                icon = "\uD83D\uDCA5",
+                title = "데미지는 어떻게 계산되나요?",
+            ) {
+                FaqBullet("유닛은 물리 또는 마법 피해를 줍니다")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("물리 데미지")
+                FaqBullet("피해 × (100 / (100 + 방어력))")
+                FaqBullet("방어력이 높을수록 감소하지만 완전 면역은 불가")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("마법 데미지")
+                FaqBullet("피해 × (1 - 마법저항), 마법저항 최대 90%")
+                FaqBullet("방어력을 무시하며, 마법저항으로만 감소")
+                Spacer(Modifier.height(4.dp))
+                FaqSubTitle("마나 & 궁극기")
+                FaqBullet("전설: 공격 시 마나 +9, ~11회 공격으로 궁극기 발동")
+                FaqBullet("신화: 공격 시 마나 +6, ~17회 공격으로 궁극기 발동")
+                FaqBullet("마나 100 도달 시 자동 발동 → 마나 0으로 리셋")
+            }
+
+            // ── 유물 ──
+            FaqSection(
+                index = 9,
+                expanded = expandedSection == 9,
+                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
                 icon = "\uD83D\uDC8E",
                 title = "유물은 어떻게 얻나요?",
             ) {
@@ -1005,9 +1079,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 도감 ──
             FaqSection(
-                index = 6,
-                expanded = expandedSection == 6,
-                onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
+                index = 10,
+                expanded = expandedSection == 10,
+                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
                 icon = "\uD83D\uDCD6",
                 title = "도감은 무엇인가요?",
             ) {
@@ -1027,9 +1101,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 펫 ──
             FaqSection(
-                index = 7,
-                expanded = expandedSection == 7,
-                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
+                index = 11,
+                expanded = expandedSection == 11,
+                onToggle = { expandedSection = if (expandedSection == 11) -1 else 11 },
                 icon = "\uD83D\uDC3E",
                 title = "펫은 어떻게 얻나요?",
             ) {
@@ -1053,9 +1127,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 던전 ──
             FaqSection(
-                index = 8,
-                expanded = expandedSection == 8,
-                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
+                index = 12,
+                expanded = expandedSection == 12,
+                onToggle = { expandedSection = if (expandedSection == 12) -1 else 12 },
                 icon = "\uD83C\uDFF0",
                 title = "던전은 어떻게 들어가나요?",
             ) {
@@ -1072,9 +1146,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 스태미나 ──
             FaqSection(
-                index = 9,
-                expanded = expandedSection == 9,
-                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
+                index = 13,
+                expanded = expandedSection == 13,
+                onToggle = { expandedSection = if (expandedSection == 13) -1 else 13 },
                 icon = "\u26A1",
                 title = "스태미나는 어떻게 충전되나요?",
             ) {
@@ -1092,9 +1166,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 오프라인 보상 ──
             FaqSection(
-                index = 10,
-                expanded = expandedSection == 10,
-                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
+                index = 14,
+                expanded = expandedSection == 14,
+                onToggle = { expandedSection = if (expandedSection == 14) -1 else 14 },
                 icon = "\uD83C\uDF19",
                 title = "오프라인 보상이 있나요?",
             ) {
@@ -1106,9 +1180,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 시즌패스 & 랭크 ──
             FaqSection(
-                index = 11,
-                expanded = expandedSection == 11,
-                onToggle = { expandedSection = if (expandedSection == 11) -1 else 11 },
+                index = 15,
+                expanded = expandedSection == 15,
+                onToggle = { expandedSection = if (expandedSection == 15) -1 else 15 },
                 icon = "\uD83C\uDFC6",
                 title = "시즌패스와 랭크는?",
             ) {

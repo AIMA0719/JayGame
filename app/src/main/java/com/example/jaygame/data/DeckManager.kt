@@ -5,7 +5,7 @@ import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.engine.UnitGrade
 
 /**
- * 덱 시스템 유틸리티 — 운빨존많겜 벤치마킹
+ * 덱 시스템 유틸리티
  * 덱 검증, 자동 채움, 합성 체인 조회
  */
 object DeckManager {

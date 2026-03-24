@@ -76,7 +76,7 @@ private val White = Color.White
 /**
  * Skill effect overlay — renders active skill events from BattleBridge.
  * Each SkillVfxType has its own unique Canvas rendering.
- * 운빨존많겜-style flashy, dramatic effects.
+ * Flashy, dramatic effects.
  */
 /**
  * @param fieldOffset top-left of the battle field in root coordinates (px)

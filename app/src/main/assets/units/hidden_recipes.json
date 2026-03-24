@@ -5,13 +5,13 @@
       {
         "family": "FIRE",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       },
       {
         "family": "LIGHTNING",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       }
     ],
@@ -43,13 +43,13 @@
       {
         "family": "POISON",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       },
       {
         "family": "WIND",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       }
     ],
@@ -68,7 +68,7 @@
       {
         "family": "FROST",
         "role": "RANGED_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       }
     ],
@@ -81,7 +81,7 @@
       {
         "family": "POISON",
         "role": "RANGED_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       },
       {
@@ -100,13 +100,13 @@
       {
         "family": "FROST",
         "role": "TANK",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       },
       {
         "family": "WIND",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       }
     ],
@@ -157,13 +157,13 @@
       {
         "family": "POISON",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       },
       {
         "family": "FROST",
         "role": "CONTROLLER",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       }
     ],
@@ -176,13 +176,13 @@
       {
         "family": "FIRE",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       },
       {
         "family": "POISON",
         "role": "MELEE_DPS",
-        "minGrade": "ANCIENT",
+        "minGrade": "HERO",
         "specificUnitId": null
       }
     ],

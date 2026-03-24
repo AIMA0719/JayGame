@@ -22,8 +22,10 @@ class GameUnit {
     var abilityType = 0
     var abilityValue = 0f
     var isAttacking = false
-    /** Combined speed multiplier (upgrade + synergy) — set by BattleEngine each frame */
+    /** Combined speed multiplier (group upgrade + synergy) — set by BattleEngine each frame */
     var spdMultiplier = 1f
+    /** 통합 강화 ATK 보너스 — BattleEngine이 매 프레임 그룹별로 설정 */
+    var groupAtkBonus = 0f
     val buffs = BuffContainer()
 
     // ── Unique ability fields (M4) ──
@@ -48,14 +50,6 @@ class GameUnit {
     var fieldController: FieldEffectController? = null
     var state: UnitState = UnitState.IDLE
 
-    // ── 배틀 중 개별 강화 필드 (운빨존많겜 스타일) ──
-    /** 개별 유닛 강화 레벨 (0 ~ MAX_UPGRADE_LEVEL) */
-    var upgradeLevel: Int = 0
-    /** 강화 ATK 보너스 배율 — (1f + upgradeBonusATK)로 사용 */
-    var upgradeBonusATK: Float = 0f
-    /** 강화 공격속도 보너스 배율 — (1f + upgradeBonusSpd)로 사용 */
-    var upgradeBonusSpd: Float = 0f
-
     // ── 마나/궁극기 필드 ──
     var mana: Float = 0f                // 현재 마나 (0~maxMana)
     var maxMana: Float = 100f           // 최대 마나
@@ -63,7 +57,6 @@ class GameUnit {
     var hasUltimate: Boolean = false    // 궁극기 보유 여부
 
     var moveSpeed = 75f
-    private var chaseTarget: Enemy? = null
 
     private var attackCooldown = 0f
     var currentTarget: Enemy? = null
@@ -140,11 +133,9 @@ class GameUnit {
 
         val enemy = findEnemy(position, range)
         if (enemy != null) {
-            chaseTarget = enemy
             isAttacking = true
             currentTarget = enemy
         } else {
-            chaseTarget = null
             isAttacking = false
             currentTarget = null
         }
@@ -169,7 +160,7 @@ class GameUnit {
 
     fun effectiveATK(): Float {
         val levelMult = LEVEL_MULTIPLIERS.getOrElse(level - 1) { 1f }
-        return baseATK * levelMult * buffs.getAtkMultiplier() * (1f + upgradeBonusATK)
+        return baseATK * levelMult * buffs.getAtkMultiplier() * (1f + groupAtkBonus)
     }
 
     fun reset() {
@@ -191,14 +182,11 @@ class GameUnit {
         magicResist = 0f
         moveSpeed = 75f
         blockCount = 0
-        upgradeLevel = 0
-        upgradeBonusATK = 0f
-        upgradeBonusSpd = 0f
+        groupAtkBonus = 0f
 
         // Existing reset logic
         alive = false
         currentTarget = null
-        chaseTarget = null
         buffs.clear()
         uniqueAbilityType = -1
         uniqueAbilityCooldown = 0f

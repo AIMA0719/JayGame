@@ -56,7 +56,7 @@ data class GameData(
     // 난이도
     val difficulty: Int = 0,
     // 게임플레이 설정
-    val defaultBattleSpeed: Float = 1f,   // 1, 2, 4, 8
+    val defaultBattleSpeed: Float = 2f,   // 2(x1), 4(x2), 8(x4)
     val showDamageNumbers: Boolean = true,
     val healthBarMode: Int = 0,           // 0=항상, 1=피격 시만, 2=숨김
     // 가스

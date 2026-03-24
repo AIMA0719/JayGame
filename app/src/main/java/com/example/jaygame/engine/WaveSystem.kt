@@ -18,19 +18,19 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
     var waveComplete = false; private set
     private var spawnTimer = 0f
     private var spawnedCount = 0
-    private var waveTimer = 0f
+    private var waveTimer = 0f       // 보스: 카운트다운, 일반: 미사용
+    var waveElapsed = 0f; private set // 웨이브 경과 시간 (카운트업)
+    private var currentConfig: WaveConfig = getWaveConfig(0)
 
     companion object {
-        const val WAVE_DURATION = 180f // 3 minutes per wave
-        const val BOSS_DURATION = 300f // 5 minutes for boss waves
+        const val BOSS_DURATION = 180f
+        const val FAST_KILL_THRESHOLD = 30f // 30초 이내 클리어 시 보너스
     }
 
     private val difficultyMult = when (difficulty) {
-        0 -> 1f       // 초보
-        1 -> 1.5f     // 숙련자
-        2 -> 2.2f     // 고인물
-        3 -> 3.0f     // 썩은물
-        4 -> 4.0f     // 챌린저
+        0 -> 1f       // 일반
+        1 -> 1.5f     // 하드
+        2 -> 2.2f     // 헬
         else -> 1f
     }
 
@@ -48,10 +48,8 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         val baseArmor = ((capped * 1.8f).coerceAtMost(80f) + if (w >= 40) (w - 39) * 2.5f else 0f)
         val baseMR = ((capped * 1.3f).coerceAtMost(50f) + if (w >= 40) (w - 39) * 1.5f else 0f)
 
-        // Count scales with wave progression
-        val baseCount = 8 + (capped * 1.0f).toInt().coerceAtMost(25)
-        val lateCount = if (w >= 40) baseCount + (w - 39) / 4 else baseCount
-        val count = lateCount.coerceAtMost(40)
+        // 웨이브당 40마리 고정
+        val count = 40
 
         val isBoss = forceBoss || (w + 1) % 10 == 0
         val isMiniBoss = !forceBoss && (w + 1) % 5 == 0 && !isBoss
@@ -92,7 +90,11 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
             w >= 35 -> 0.1f + (w - 35) * 0.008f
             else -> 0f
         }
-        val ccResistance = (baseCcResist + difficulty * 0.05f).coerceAtMost(0.9f)
+        val ccResistance = (baseCcResist + when (difficulty) {
+            1 -> 0.10f
+            2 -> 0.15f
+            else -> 0f
+        }).coerceAtMost(0.9f)
 
         // Elite chance increases in later waves
         val eliteChance = when {
@@ -119,31 +121,34 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
 
     fun startWave(wave: Int) {
         currentWave = wave
-        val config = getWaveConfig(wave)
+        currentConfig = getWaveConfig(wave)
         spawnedCount = 0
         spawnTimer = 0f
-        waveTimer = if (config.isBoss) BOSS_DURATION else WAVE_DURATION
+        waveElapsed = 0f
+        waveTimer = if (currentConfig.isBoss) BOSS_DURATION else Float.MAX_VALUE
         waveComplete = false
     }
 
-    /** Returns number of enemies to spawn this tick. Wave completes when timer runs out. */
+    /** Returns number of enemies to spawn this tick. */
     fun update(dt: Float): Int {
         if (waveComplete) return 0
 
-        // Wave timer countdown
-        waveTimer -= dt
-        if (waveTimer <= 0f) {
-            waveComplete = true
-            return 0
+        waveElapsed += dt
+
+        if (currentConfig.isBoss) {
+            waveTimer -= dt
+            if (waveTimer <= 0f) {
+                waveComplete = true
+                return 0
+            }
         }
 
         // Spawn enemies until count reached
-        val config = getWaveConfig(currentWave)
-        if (spawnedCount >= config.enemyCount) return 0
+        if (spawnedCount >= currentConfig.enemyCount) return 0
 
         spawnTimer -= dt
         if (spawnTimer <= 0f) {
-            spawnTimer += config.spawnInterval
+            spawnTimer += currentConfig.spawnInterval
             spawnedCount++
             return 1
         }
@@ -151,11 +156,13 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
     }
 
     /** All enemies for this wave have been spawned */
-    val allSpawned get() = spawnedCount >= getWaveConfig(currentWave).enemyCount
+    val allSpawned get() = spawnedCount >= currentConfig.enemyCount
 
     fun forceComplete() { waveComplete = true }
 
     fun advanceWave() { currentWave++ }
     val isLastWave get() = currentWave >= maxWaves - 1
     val timeRemaining get() = waveTimer
+    /** 30초 이내 클리어 여부 */
+    val isFastKill get() = waveElapsed < FAST_KILL_THRESHOLD
 }

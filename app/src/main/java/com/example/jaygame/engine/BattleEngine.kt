@@ -35,11 +35,15 @@ class BattleEngine(
         const val MAX_UNITS = 128
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
-        const val COIN_PER_KILL = 2            // 적 처치 시 코인
-        const val COIN_PER_ELITE_KILL = 5       // 엘리트 처치 시 코인
-        const val BASE_SUMMON_COST = 10          // 기본 소환 비용 (코인)
-        const val SUMMON_COST_INCREMENT = 2      // 소환마다 비용 증가
-        const val MAX_SUMMON_COST = 60           // 최대 소환 비용
+        const val COIN_PER_KILL = 2
+        const val COIN_PER_ELITE_KILL = 6
+        const val BASE_SUMMON_COST = 10
+        const val SUMMON_COST_INCREMENT = 5
+        const val MAX_SUMMON_COST = 60
+        const val WAVE_CLEAR_BASE = 15f
+        const val WAVE_CLEAR_PER_WAVE = 2.5f
+        const val SELL_BASE = 8f
+        const val SELL_PER_GRADE = 8f
         const val MAX_ZONE_RENDER = 32
         const val WAVE_DELAY = 3f
     }
@@ -94,7 +98,7 @@ class BattleEngine(
     private val auraTicks = FloatArray(MAX_UNITS)
 
     /** 배틀 코인 — 적 처치/웨이브 클리어로 획득, 소환/강화에 사용 */
-    var sp = 30f; private set   // sp 필드명 유지 (BattleBridge 호환), 실제로는 코인
+    var sp = 50f; private set
     var summonCost = BASE_SUMMON_COST; private set
     private var summonCount = 0  // 소환 횟수 (비용 증가 추적)
     var elapsedTime = 0f; private set
@@ -113,6 +117,11 @@ class BattleEngine(
     private var upgradeCritRate = 0f
     private var upgradeRangeMult = 1f
     private var upgradeSpRegen = 0f
+
+    // ── 등급 그룹 통합 강화 (3그룹) ──
+    private val groupUpgradeLevels = IntArray(UnitUpgradeSystem.GROUP_COUNT)
+    private val groupAtkBonusCache = FloatArray(UnitUpgradeSystem.GROUP_COUNT)
+    private val groupSpdBonusCache = FloatArray(UnitUpgradeSystem.GROUP_COUNT)
 
     private var gridPushTimer = 0f
 
@@ -177,6 +186,7 @@ class BattleEngine(
     private val unitStateBuf = Array(MAX_UNITS) { UnitState.IDLE }
     private val unitHomeXBuf = FloatArray(MAX_UNITS)
     private val unitHomeYBuf = FloatArray(MAX_UNITS)
+    private val unitStackCountBuf = IntArray(MAX_UNITS)
 
     private val projSrcXBuf = FloatArray(MAX_PROJECTILES)
     private val projSrcYBuf = FloatArray(MAX_PROJECTILES)
@@ -261,7 +271,7 @@ class BattleEngine(
             val forceBoss = dungeonDef?.type == com.example.jaygame.data.DungeonType.BOSS_RUSH
             waveSystem = WaveSystem(maxWaves, difficulty, forceBoss = forceBoss)
         }
-        // 개별 강화 시스템 — 유닛별 upgradeLevel은 GameUnit.reset()에서 초기화
+        // 등급 그룹 통합 강화 — groupUpgradeLevels 배틀 시작 시 0으로 초기화
         // Initialize synergy as empty — will be refreshed when units are placed
         AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
         UniqueAbilitySystem.zonePool = zones
@@ -286,13 +296,11 @@ class BattleEngine(
                 for (cmd in BattleBridge.drainCommands()) {
                     when (cmd) {
                         is BattleBridge.BattleCommand.Summon -> requestSummonBlueprint()
-                        is BattleBridge.BattleCommand.ClickTile -> requestClickTile(cmd.tileIndex)
                         is BattleBridge.BattleCommand.Merge -> requestMerge(cmd.tileIndex)
                         is BattleBridge.BattleCommand.Sell -> requestSell(cmd.tileIndex)
                         is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(requestBulkSell(cmd.grade))
-                        is BattleBridge.BattleCommand.Upgrade -> requestUnitUpgrade(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.GroupUpgrade -> requestGroupUpgrade(cmd.groupIndex)
                         is BattleBridge.BattleCommand.Swap -> requestSwap(cmd.from, cmd.to)
-                        is BattleBridge.BattleCommand.Relocate -> requestRelocate(cmd.tileIndex, cmd.x, cmd.y)
                         is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
                         is BattleBridge.BattleCommand.BuyUnit -> requestBuyUnit(cmd.unitDefId, cmd.cost.toFloat())
                         is BattleBridge.BattleCommand.BuyBlueprint -> requestBuyBlueprint(cmd.blueprintId, cmd.cost.toFloat())
@@ -366,12 +374,12 @@ class BattleEngine(
                     }
                 }
 
-                // All enemies spawned & killed → immediate next wave
+                // 일반 웨이브: 전멸로만 클리어
                 if (!waveSystem.waveComplete && waveSystem.allSpawned && enemies.activeCount == 0) {
                     waveSystem.forceComplete()
                 }
 
-                // Boss timeout → instant defeat
+                // 보스 타임아웃 → 즉시 패배
                 if (isBossRound && waveSystem.waveComplete) {
                     var bossAlive = false
                     enemies.forEach { if (it.alive) bossAlive = true }
@@ -382,13 +390,17 @@ class BattleEngine(
                     }
                 }
 
-                // Wave time expired → next wave (previous enemies stay alive)
+                // 웨이브 클리어 → 보상 지급 및 다음 웨이브
                 if (waveSystem.waveComplete) {
-                    // Wave clear bonus: coins + gold
-                    val waveClearCoins = 20f + waveSystem.currentWave * 3f
+                    val waveClearCoins = WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
                     BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
+
+                    // 30초 이내 빠른 처치 보너스: 행운석 +1
+                    if (waveSystem.isFastKill) {
+                        luckyStones++
+                    }
 
                     if (waveSystem.isLastWave) {
                         state = State.Victory
@@ -420,7 +432,7 @@ class BattleEngine(
                 ccResistance = config.ccResistance + if (isElite) 0.1f else 0f,
             )
             // High difficulty: elite enemies get regeneration
-            if (isElite && difficulty >= 3) {
+            if (isElite && difficulty >= 1) {
                 enemy.bossModifier = BossModifier.REGENERATION
                 enemy.regenTimer = 8f
             }
@@ -548,8 +560,8 @@ class BattleEngine(
 
             val wasElite = dead.maxHp > waveSystem.getWaveConfig(waveSystem.currentWave).hp * 1.5f
 
-            // Challenger difficulty: enemy death enrages nearby enemies (+15% speed permanently)
-            if (difficulty >= 4) {
+            // Hell difficulty: enemy death enrages nearby enemies (+15% speed permanently)
+            if (difficulty >= 2) {
                 val enrageRect = com.example.jaygame.engine.math.GameRect(
                     dead.position.x - 80f, dead.position.y - 80f, 160f, 160f,
                 )
@@ -587,8 +599,7 @@ class BattleEngine(
             if (unit.behavior != null) {
                 val roleBonus = getRoleBonus(unit)
                 val synergy = AbilitySystem.activeSynergy
-                // Push speed multiplier to unit so behaviors can use it for cooldown scaling
-                unit.spdMultiplier = upgradeSpdMult * synergy.spdMultiplier * (1f + unit.upgradeBonusSpd)
+                applyGroupBonus(unit, synergy.spdMultiplier)
                 // Apply role synergy range multiplier to enemy detection
                 unit.behavior?.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
@@ -673,7 +684,7 @@ class BattleEngine(
                     unit.chargeMana()
                 }
             } else {
-                // Legacy update path — apply role synergy range multiplier
+                applyGroupBonus(unit, AbilitySystem.activeSynergy.spdMultiplier)
                 val legacyRoleBonus = getRoleBonus(unit)
                 unit.update(dt) { pos, range ->
                     findNearestEnemy(pos, range * legacyRoleBonus.rangeMultiplier)
@@ -898,8 +909,19 @@ class BattleEngine(
     // Dedicated scratch list for refreshSynergies — avoid per-call allocation
     private val synergyScratch = ArrayList<GameUnit>(MAX_UNITS)
 
-    /** Recalculate field-based synergies from currently alive units.
-     *  Picks the dominant family (highest count >= 2) for the global synergy bonus. */
+    private fun applyGroupBonus(unit: GameUnit, synergySpdMult: Float) {
+        val grp = UnitUpgradeSystem.gradeToGroup(unit.grade)
+        unit.groupAtkBonus = groupAtkBonusCache[grp]
+        unit.spdMultiplier = upgradeSpdMult * synergySpdMult * (1f + groupSpdBonusCache[grp])
+    }
+
+    private fun refreshGroupBonusCache() {
+        for (g in 0 until UnitUpgradeSystem.GROUP_COUNT) {
+            groupAtkBonusCache[g] = UnitUpgradeSystem.getTotalAtkBonus(groupUpgradeLevels[g])
+            groupSpdBonusCache[g] = UnitUpgradeSystem.getTotalSpdBonus(groupUpgradeLevels[g])
+        }
+    }
+
     private fun refreshSynergies() {
         synergyScratch.clear()
         units.forEach { if (it.alive) synergyScratch.add(it) }
@@ -997,22 +1019,22 @@ class BattleEngine(
         tryAutoMergeSlot(tileIndex)
     }
 
-    /** 개별 유닛 강화 요청 — 코인(or 행운석) 소모하여 해당 유닛 ATK/속도 업그레이드 */
-    fun requestUnitUpgrade(tileIndex: Int) {
-        val unit = grid.getUnit(tileIndex) ?: return
-        val result = UnitUpgradeSystem.tryUpgrade(unit, sp, luckyStones)
-        if (result.success) {
-            if (result.usesLuckyStones) {
-                luckyStones -= result.costPaid
-            } else {
-                sp -= result.costPaid
-            }
-        }
+    /** 등급 그룹 통합 강화 요청 — 코인 소모하여 해당 그룹의 모든 유닛 ATK/속도 업그레이드 */
+    fun requestGroupUpgrade(groupIndex: Int) {
+        if (groupIndex !in 0 until UnitUpgradeSystem.GROUP_COUNT) return
+        val currentLevel = groupUpgradeLevels[groupIndex]
+        if (currentLevel >= UnitUpgradeSystem.MAX_UPGRADE_LEVEL) return
+        val cost = UnitUpgradeSystem.getGroupUpgradeCost(groupIndex, currentLevel)
+        if (sp < cost) return
+        sp -= cost
+        groupUpgradeLevels[groupIndex] = currentLevel + 1
+        refreshGroupBonusCache()
+        BattleBridge.updateGroupUpgradeLevels(groupUpgradeLevels.copyOf())
     }
 
     fun requestSell(tileIndex: Int) {
         val unit = grid.removeUnit(tileIndex) ?: return
-        sp += 5f + unit.grade * 5f  // 코인 반환 (소환 비용 일부 회수)
+        sp += SELL_BASE + unit.grade * SELL_PER_GRADE
         units.release(unit)
         invalidateMergeCache()
         refreshSynergies()
@@ -1026,7 +1048,7 @@ class BattleEngine(
                 // Remove all units in this slot (stacked)
                 val removed = grid.removeAllFromSlot(i)
                 removed.forEach { u ->
-                    sp += 5f + u.grade * 5f  // 코인 반환
+                    sp += SELL_BASE + u.grade * SELL_PER_GRADE
                     units.release(u)
                     count++
                 }
@@ -1037,50 +1059,6 @@ class BattleEngine(
             refreshSynergies()
         }
         return count
-    }
-
-    fun requestClickTile(tileIndex: Int) {
-        val unit = grid.getUnit(tileIndex) ?: return
-        val mergeable = getMergeableTiles()
-        BattleBridge.onUnitClicked(
-            tileIndex, unit.unitDefId, unit.grade, unit.family,
-            tileIndex in mergeable, unit.level,
-            blueprintId = unit.blueprintId,
-            families = unit.families,
-            role = unit.role,
-            attackRange = unit.attackRange,
-            damageType = unit.damageType,
-            hp = unit.hp,
-            maxHp = unit.maxHp,
-            upgradeLevel = unit.upgradeLevel,
-        )
-    }
-
-    fun requestRelocate(tileIndex: Int, normX: Float, normY: Float) {
-        val unit = grid.getUnit(tileIndex) ?: return
-        val worldX = normX * W
-        val worldY = normY * H
-        val targetSlot = grid.getSlotAt(worldX, worldY)
-        if (targetSlot < 0 || targetSlot == tileIndex) return
-
-        // Try to stack on target slot (same blueprintId)
-        val targetUnit = grid.getUnit(targetSlot)
-        if (targetUnit != null && targetUnit.blueprintId == unit.blueprintId
-            && grid.getStackCount(targetSlot) < Grid.MAX_STACK) {
-            // Move unit from source to target (stack)
-            grid.removeUnit(tileIndex)
-            grid.placeUnit(targetSlot, unit)
-            // Check for auto-merge
-            if (grid.getStackCount(targetSlot) >= Grid.MAX_STACK) {
-                tryAutoMergeSlot(targetSlot)
-            }
-        } else if (targetUnit == null) {
-            // Move to empty slot
-            grid.removeUnit(tileIndex)
-            grid.placeUnit(targetSlot, unit)
-        }
-        // If different unit in target slot, do nothing (운빨존많겜 style — no swap of different units)
-        invalidateMergeCache()
     }
 
     /** 슬롯에 3개 유닛 중첩 시 자동 합성 — 랜덤 상위 등급 유닛 */
@@ -1108,10 +1086,14 @@ class BattleEngine(
     }
 
     fun requestSwap(from: Int, to: Int) {
-        val unitA = grid.removeUnit(from)
-        val unitB = grid.removeUnit(to)
-        if (unitA != null) grid.placeUnit(to, unitA)
-        if (unitB != null) grid.placeUnit(from, unitB)
+        // 슬롯 전체 스택을 한 묶음으로 이동
+        val unitsA = grid.removeAllFromSlot(from)
+        val unitsB = grid.removeAllFromSlot(to)
+        for (u in unitsA) grid.placeUnit(to, u)
+        for (u in unitsB) grid.placeUnit(from, u)
+        // 같은 blueprintId끼리 합쳐졌을 수 있으므로 자동 합성 체크
+        tryAutoMergeSlot(to)
+        tryAutoMergeSlot(from)
         invalidateMergeCache()
     }
 
@@ -1235,7 +1217,7 @@ class BattleEngine(
             waveSystem.currentWave + 1, maxWaves,
             (DEFEAT_ENEMY_COUNT - enemies.activeCount).coerceAtLeast(0), DEFEAT_ENEMY_COUNT,
             sp, elapsedTime, state.ordinal, summonCost,
-            enemies.activeCount, if (isBossRound) 1 else 0, waveSystem.timeRemaining,
+            enemies.activeCount, if (isBossRound) 1 else 0, waveSystem.timeRemaining, waveSystem.waveElapsed,
         )
 
         // Enemy positions + buff bitmasks — reuse pre-allocated buffers
@@ -1289,13 +1271,14 @@ class BattleEngine(
                 unitStateBuf[ui] = u.state
                 unitHomeXBuf[ui] = u.homePosition.x / W
                 unitHomeYBuf[ui] = u.homePosition.y / H
+                unitStackCountBuf[ui] = grid.getStackCount(u.tileIndex)
                 ui++
             }
         }
         BattleBridge.updateUnitPositions(
             unitXBuf, unitYBuf, unitDefIdBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui,
             unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
-            unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf,
+            unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf,
         )
 
         // Projectiles — reuse pre-allocated buffers
@@ -1349,7 +1332,11 @@ class BattleEngine(
         val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
             dungeonDef?.difficultyMultiplier ?: 1f
         } else {
-            1f + difficulty * 0.25f
+            when (difficulty) {
+                1 -> 1.5f    // 하드
+                2 -> 2.5f    // 헬
+                else -> 1.0f // 일반
+            }
         }
         val dungeonRewardMult = if (isDungeonMode) dungeonDef?.rewardMultiplier ?: 1f else 1f
         val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
@@ -1359,7 +1346,7 @@ class BattleEngine(
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
         val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 5 // HP never dropped below 80%
         val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
-        val baseCards = if (victory) 3 + stageId + difficulty else 1
+        val baseCards = if (victory) 3 + stageId + difficulty * 2 else 1
         val dungeonCardBonus = if (isDungeonMode && victory) waveSystem.currentWave / 5 else 0
         val cardsEarned = baseCards + dungeonCardBonus
         // Roll relic drop on victory (10% chance, 50% in RELIC_HUNT dungeon)

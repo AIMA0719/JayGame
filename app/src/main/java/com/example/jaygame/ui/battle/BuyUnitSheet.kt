@@ -46,7 +46,7 @@ import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.blueprintIconRes
 import com.example.jaygame.ui.theme.*
 
-private const val MYTHIC_BUY_PRICE = 3000
+private const val MYTHIC_BUY_PRICE = 800
 
 private fun getBuyableBlueprints(): List<UnitBlueprint> {
     if (!BlueprintRegistry.isReady) return emptyList()

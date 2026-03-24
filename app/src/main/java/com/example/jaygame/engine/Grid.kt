@@ -3,7 +3,7 @@ package com.example.jaygame.engine
 import com.example.jaygame.engine.math.Vec2
 
 /**
- * 3×6 슬롯 기반 그리드 (운빨존많겜 스타일).
+ * 3×6 슬롯 기반 그리드.
  * 각 슬롯에 동일 유닛 최대 3개까지 중첩 가능.
  * 3개 중첩 시 자동 합성 트리거.
  * 유닛은 슬롯에 고정, 드래그로 슬롯 간 이동.
@@ -92,9 +92,7 @@ class Grid {
             // 빈 슬롯에 배치
             slot.add(unit)
             unit.tileIndex = slotIndex
-            val center = slotCenter(slotIndex)
-            unit.position = center.copy()
-            unit.homePosition = center.copy()
+            repositionSlotUnits(slotIndex)
             return true
         }
 
@@ -102,9 +100,7 @@ class Grid {
         if (slot.size < MAX_STACK && slot.first().blueprintId == unit.blueprintId) {
             slot.add(unit)
             unit.tileIndex = slotIndex
-            val center = slotCenter(slotIndex)
-            unit.position = center.copy()
-            unit.homePosition = center.copy()
+            repositionSlotUnits(slotIndex)
             return true
         }
 
@@ -116,7 +112,9 @@ class Grid {
         if (slotIndex !in 0 until SLOT_COUNT) return null
         val slot = slots[slotIndex]
         if (slot.isEmpty()) return null
-        return slot.removeAt(slot.lastIndex)
+        val removed = slot.removeAt(slot.lastIndex)
+        repositionSlotUnits(slotIndex)
+        return removed
     }
 
     /** 슬롯의 모든 유닛 제거하고 반환 */
@@ -155,4 +153,39 @@ class Grid {
 
     /** 사용 중인 슬롯 수 */
     fun occupiedSlotCount(): Int = slots.count { it.isNotEmpty() }
+
+    // ── Triangle formation offsets for stacked units ──
+
+    private fun setUnitPos(unit: GameUnit, x: Float, y: Float) {
+        unit.position.x = x; unit.position.y = y
+        unit.homePosition.x = x; unit.homePosition.y = y
+    }
+
+    /**
+     * 슬롯 내 유닛들을 삼각형 포메이션으로 재배치.
+     * - 1개: 중앙
+     * - 2개: 좌우 수평 배치 (±offsetX)
+     * - 3개: 상단 1개 + 하단 2개 삼각형
+     */
+    private fun repositionSlotUnits(slotIndex: Int) {
+        val slot = slots[slotIndex]
+        if (slot.isEmpty()) return
+        val center = slotCenter(slotIndex)
+        val cx = center.x
+        val cy = center.y
+        val offsetX = CELL_W * 0.15f  // ~12px
+        val offsetY = CELL_H * 0.10f  // ~10px
+        when (slot.size) {
+            1 -> setUnitPos(slot[0], cx, cy)
+            2 -> {
+                setUnitPos(slot[0], cx - offsetX, cy)
+                setUnitPos(slot[1], cx + offsetX, cy)
+            }
+            3 -> {
+                setUnitPos(slot[0], cx, cy - offsetY)
+                setUnitPos(slot[1], cx - offsetX, cy + offsetY * 0.5f)
+                setUnitPos(slot[2], cx + offsetX, cy + offsetY * 0.5f)
+            }
+        }
+    }
 }

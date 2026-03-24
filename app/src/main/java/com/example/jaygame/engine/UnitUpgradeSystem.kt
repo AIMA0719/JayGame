@@ -1,76 +1,41 @@
 package com.example.jaygame.engine
 
+import kotlin.math.pow
+
 /**
- * 배틀 중 유닛 개별 강화 시스템 (운빨존많겜 스타일).
- * 유닛을 탭하여 개별적으로 강화. 업그레이드당 기본 ATK의 50% 증가.
+ * 배틀 중 등급 그룹 통합 강화 시스템.
+ * 같은 그룹의 모든 유닛에 동일 강화 보너스 적용.
  *
- * 비용: 일반~영웅 = 코인, 전설~신화 = 행운석
- * 최대 레벨: 15
+ * 3개 그룹:
+ * - 그룹 0: [일반/희귀] (grade 0, 1) — 코인 사용
+ * - 그룹 1: [영웅/전설] (grade 2, 3) — 코인 사용 (고비용)
+ * - 그룹 2: [신화]       (grade 4)    — 코인 사용 (최고비용)
  *
- * 마일스톤:
- * - Lv3: ATK +10%
- * - Lv6: 고유 업그레이드 (영웅별 특수 강화)
- * - Lv9: 공격속도 +10%
- * - Lv12: 고유 업그레이드 (영웅별 특수 강화)
- * - Lv15: ATK +10% + 공격속도 +10%
+ * 업그레이드당 기본 ATK의 50% 증가. 최대 레벨 15.
  */
 object UnitUpgradeSystem {
 
     const val MAX_UPGRADE_LEVEL = 15
-    /** 업그레이드당 기본 ATK의 50% 증가 */
     const val ATK_PER_LEVEL = 0.50f
+    const val GROUP_COUNT = 3
 
-    data class UpgradeResult(
-        val success: Boolean,
-        val newLevel: Int,
-        val costPaid: Int,
-        val usesLuckyStones: Boolean,
-    )
+    private val BASE_COSTS = intArrayOf(10, 20, 40)
+    private val COST_GROWTH = floatArrayOf(1.18f, 1.22f, 1.24f)
 
-    /** 강화 비용 계산. 등급에 따라 코인 or 행운석. */
-    fun getUpgradeCost(grade: Int, upgradeLevel: Int): Int {
-        if (upgradeLevel >= MAX_UPGRADE_LEVEL) return -1
-        // 기본 비용: 등급별 차등
-        val baseCost = when (grade) {
-            0 -> 5    // Common
-            1 -> 8    // Rare
-            2 -> 12   // Hero
-            3 -> 18   // Legend (행운석)
-            4 -> 25   // Mythic (행운석)
-            else -> 10
-        }
-        return (baseCost * (1f + upgradeLevel * 0.3f)).toInt()
+    fun gradeToGroup(grade: Int): Int = when (grade) {
+        0, 1 -> 0
+        2, 3 -> 1
+        4    -> 2
+        else -> 0
     }
 
-    /** 전설(3) 이상은 행운석 사용 */
-    fun usesLuckyStones(grade: Int): Boolean = grade >= 3
-
-    /** 유닛 강화 시도 */
-    fun tryUpgrade(unit: GameUnit, availableCoins: Float, availableLuckyStones: Int = Int.MAX_VALUE): UpgradeResult {
-        if (unit.upgradeLevel >= MAX_UPGRADE_LEVEL) {
-            return UpgradeResult(false, unit.upgradeLevel, 0, false)
-        }
-
-        val cost = getUpgradeCost(unit.grade, unit.upgradeLevel)
-        val needsStones = usesLuckyStones(unit.grade)
-
-        if (needsStones) {
-            if (availableLuckyStones < cost) {
-                return UpgradeResult(false, unit.upgradeLevel, 0, true)
-            }
-        } else {
-            if (availableCoins < cost) {
-                return UpgradeResult(false, unit.upgradeLevel, 0, false)
-            }
-        }
-
-        unit.upgradeLevel++
-        applyUpgradeBonuses(unit)
-
-        return UpgradeResult(true, unit.upgradeLevel, cost, needsStones)
+    fun getGroupUpgradeCost(group: Int, currentLevel: Int): Int {
+        if (currentLevel >= MAX_UPGRADE_LEVEL) return -1
+        val base = BASE_COSTS.getOrElse(group) { 10 }
+        val growth = COST_GROWTH.getOrElse(group) { 1.18f }
+        return (base * growth.toDouble().pow(currentLevel.toDouble())).toInt()
     }
 
-    /** 주어진 upgradeLevel에 대한 총 ATK 보너스 비율 계산 */
     fun getTotalAtkBonus(upgradeLevel: Int): Float {
         var bonus = upgradeLevel * ATK_PER_LEVEL
         if (upgradeLevel >= 3) bonus += 0.10f
@@ -80,25 +45,19 @@ object UnitUpgradeSystem {
         return bonus
     }
 
-    /** 현재 upgradeLevel에 맞는 총 보너스를 재계산 */
-    private fun applyUpgradeBonuses(unit: GameUnit) {
-        // 기본: 레벨 × 50% ATK
-        var atkBonus = unit.upgradeLevel * ATK_PER_LEVEL
-        var spdBonus = 0f
+    fun getTotalSpdBonus(upgradeLevel: Int): Float {
+        var bonus = 0f
+        if (upgradeLevel >= 9) bonus += 0.10f
+        if (upgradeLevel >= 15) bonus += 0.10f
+        return bonus
+    }
 
-        // 마일스톤 보너스
-        if (unit.upgradeLevel >= 3) atkBonus += 0.10f     // Lv3: ATK +10%
-        if (unit.upgradeLevel >= 9) spdBonus += 0.10f     // Lv9: 공격속도 +10%
-        if (unit.upgradeLevel >= 15) {                     // Lv15: ATK+속도 +10%
-            atkBonus += 0.10f
-            spdBonus += 0.10f
-        }
-        // Lv6, Lv12: 고유 업그레이드 (TODO: 영웅별 특수 강화)
-        // 현재는 ATK +15% 일괄 적용
-        if (unit.upgradeLevel >= 6) atkBonus += 0.15f
-        if (unit.upgradeLevel >= 12) atkBonus += 0.15f
-
-        unit.upgradeBonusATK = atkBonus
-        unit.upgradeBonusSpd = spdBonus
+    fun nextMilestoneHint(currentLevel: Int): String = when {
+        currentLevel < 3 -> "Lv.3: ATK +10%"
+        currentLevel < 6 -> "Lv.6: ATK +15%"
+        currentLevel < 9 -> "Lv.9: 공격속도 +10%"
+        currentLevel < 12 -> "Lv.12: ATK +15%"
+        currentLevel < 15 -> "Lv.15: ATK+속도 +10%"
+        else -> "MAX"
     }
 }

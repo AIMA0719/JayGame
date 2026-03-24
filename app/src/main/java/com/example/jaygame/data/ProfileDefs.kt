@@ -28,5 +28,5 @@ val ALL_PROFILES: List<ProfileDef> = listOf(
         // stageBestWaves is List<Int> indexed by stageId; stage 5 is index 5
         it.stageBestWaves.getOrElse(5) { 0 } >= 40
     }, isAnimated = true),
-    ProfileDef(14, "고인물", "챌린저 난이도 승리", { it.difficulty >= 4 && it.totalWins > 0 }),
+    ProfileDef(14, "고인물", "헬 난이도 승리", { it.difficulty >= 2 && it.totalWins > 0 }),
 )

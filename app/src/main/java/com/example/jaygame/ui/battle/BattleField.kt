@@ -1,11 +1,9 @@
 package com.example.jaygame.ui.battle
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
@@ -18,6 +16,7 @@ import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.engine.Grid
 import com.example.jaygame.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.abs
@@ -35,7 +34,6 @@ private val GroundBorderStroke = Stroke(width = 2.5f)
 private val SelectedStroke = Stroke(width = 2f)
 private val BadgeBorderStroke = Stroke(width = 1f)
 private val AttackGlow = Color.White.copy(alpha = 0.4f)
-private val DragGhost = Color(0xFF00D4FF).copy(alpha = 0.3f)
 
 // Family idle effect colors (pre-allocated)
 private val FireEmberColor = Color(0xFFFF9800)
@@ -67,7 +65,6 @@ private val TankHpBar = Color(0xFF4CAF50)
 private val DashTrailWhite03 = Color.White.copy(alpha = 0.3f)
 private val SpecialFieldFill = Color(0xFF9C27B0).copy(alpha = 0.12f)
 private val SpecialFieldStroke = Color(0xFF9C27B0).copy(alpha = 0.25f)
-private val DragShadow03 = Color.Black.copy(alpha = 0.3f)
 
 // Star badge colors
 private val StarColor = Color(0xFFFFD700)
@@ -86,6 +83,17 @@ private val MythicAuraStroke = Stroke(width = 3f)
 // Grid cell glow
 private val CellHighlight = Color.White.copy(alpha = 0.03f)
 private val CellHighlightBright = Color.White.copy(alpha = 0.06f)
+
+// Move mode highlight colors (pre-allocated)
+private val MoveHighlightFill = Color(0xFFFFD700).copy(alpha = 0.25f)
+private val MoveHighlightBorder = Color(0xFFFFD700).copy(alpha = 0.6f)
+private val MoveHighlightStroke = Stroke(width = 2f)
+private val MoveSourceFill = Color(0xFF00D4FF).copy(alpha = 0.3f)
+private val MoveSourceBorder = Color(0xFF00D4FF).copy(alpha = 0.7f)
+
+// Pre-allocated strokes for per-unit draw loop (avoid GC)
+private val ThinStroke1f = Stroke(width = 1f)
+private val ThinStroke1_5f = Stroke(width = 1.5f)
 
 private val GradeColors = GradeColorsByIndex
 private val FamilyAuraColors = FamilyColorsByIndex
@@ -114,13 +122,11 @@ private data class UnitDissolutionEffect(
     val startTime: Float,
 )
 
-// Grid area in 720x1280 space — must match Grid.kt (480x300, bottom portion)
-private const val CPP_GRID_W = 480f
-private const val CPP_GRID_H = 300f
-private const val GRID_NORM_X = 120f / 720f       // Grid.ORIGIN_X / W
-private const val GRID_NORM_Y = 430f / 1280f      // Grid.ORIGIN_Y / H
-private const val GRID_NORM_W = CPP_GRID_W / 720f // Grid width / W
-private const val GRID_NORM_H = CPP_GRID_H / 1280f // Grid height / H (NEW: /1280)
+// Grid area normalized — derived from Grid.kt constants
+private val GRID_NORM_X = Grid.ORIGIN_X / Grid.CANVAS_W
+private val GRID_NORM_Y = Grid.ORIGIN_Y / Grid.CANVAS_H
+private val GRID_NORM_W = Grid.GRID_W / Grid.CANVAS_W
+private val GRID_NORM_H = Grid.GRID_H / Grid.CANVAS_H
 
 
 /**
@@ -131,6 +137,8 @@ private const val GRID_NORM_H = CPP_GRID_H / 1280f // Grid height / H (NEW: /128
 fun BattleField() {
     val unitPositions by BattleBridge.unitPositions.collectAsState()
     val selectedTile by BattleBridge.selectedTile.collectAsState()
+    val moveModeTile by BattleBridge.moveModeTile.collectAsState()
+    val validMoveTargets by BattleBridge.validMoveTargets.collectAsState()
     val context = LocalContext.current
 
     // Legacy unit bitmaps (keyed by unitDefId)
@@ -297,11 +305,6 @@ fun BattleField() {
         }
     }
 
-    // Gesture state: 탭 = 상세팝업, 롱프레스+드래그 = 유닛 이동
-    var dragFromTile by remember { mutableIntStateOf(-1) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var isDragging by remember { mutableStateOf(false) }
-
     /** 터치 좌표에서 가장 가까운 유닛의 tileIndex 반환 (-1 = 없음) */
     fun findClosestUnit(offset: Offset, w: Float, h: Float): Int {
         val normX = offset.x / w
@@ -322,51 +325,54 @@ fun BattleField() {
         return if (closestIdx >= 0) data.tileIndices[closestIdx] else -1
     }
 
+    /** 화면 좌표에서 그리드 슬롯 인덱스 반환 (-1 = 그리드 밖) */
+    fun findGridSlot(offset: Offset, w: Float, h: Float): Int {
+        val normX = offset.x / w
+        val normY = offset.y / h
+        val col = ((normX - GRID_NORM_X) / (GRID_NORM_W / Grid.COLS)).toInt()
+        val row = ((normY - GRID_NORM_Y) / (GRID_NORM_H / Grid.ROWS)).toInt()
+        if (col !in 0 until Grid.COLS || row !in 0 until Grid.ROWS) return -1
+        return row * Grid.COLS + col
+    }
+
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            // 탭 제스처: 짧은 터치 → 유닛 상세 팝업
+            // 탭 제스처: move mode 또는 유닛 선택
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { offset ->
-                        val tile = findClosestUnit(offset, size.width.toFloat(), size.height.toFloat())
-                        if (tile >= 0) {
-                            BattleBridge.requestClickTile(tile)
+                        val w = size.width.toFloat()
+                        val h = size.height.toFloat()
+
+                        if (BattleBridge.moveModeTile.value >= 0) {
+                            // Move mode — 탭한 슬롯이 유효 대상이면 이동 실행
+                            val tappedSlot = findGridSlot(offset, w, h)
+                            val targets = BattleBridge.validMoveTargets.value
+                            if (tappedSlot >= 0 && tappedSlot < targets.size && targets[tappedSlot]) {
+                                BattleBridge.executeMoveMode(tappedSlot)
+                            } else {
+                                BattleBridge.exitMoveMode()
+                            }
+                        } else {
+                            // Normal mode — 유닛 탭 → move mode 진입
+                            val tile = findClosestUnit(offset, w, h)
+                            if (tile >= 0) {
+                                BattleBridge.enterMoveMode(tile)
+                            }
                         }
                     }
                 )
             }
-            // 롱프레스 + 드래그: 유닛 이동/슬롯 중첩
+            // 롱프레스: 유닛 상세 팝업 (정보 + 판매)
             .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { startOffset ->
-                        val tile = findClosestUnit(startOffset, size.width.toFloat(), size.height.toFloat())
+                detectTapGestures(
+                    onLongPress = { offset ->
+                        val tile = findClosestUnit(offset, size.width.toFloat(), size.height.toFloat())
                         if (tile >= 0) {
-                            dragFromTile = tile
-                            isDragging = true
-                            dragOffset = startOffset
+                            BattleBridge.exitMoveMode()
+                            BattleBridge.showUnitPopup(tile)
                         }
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        dragOffset += dragAmount
-                    },
-                    onDragEnd = {
-                        if (isDragging && dragFromTile >= 0) {
-                            val w = size.width.toFloat()
-                            val h = size.height.toFloat()
-                            val normX = dragOffset.x / w
-                            val normY = dragOffset.y / h
-                            BattleBridge.requestRelocate(dragFromTile, normX, normY)
-                        }
-                        isDragging = false
-                        dragFromTile = -1
-                        dragOffset = Offset.Zero
-                    },
-                    onDragCancel = {
-                        isDragging = false
-                        dragFromTile = -1
-                        dragOffset = Offset.Zero
                     },
                 )
             }
@@ -380,6 +386,28 @@ fun BattleField() {
         val gridW = GRID_NORM_W * w
         val gridH = GRID_NORM_H * h
 
+        // ── Move mode: highlight valid target slots ──
+        if (moveModeTile >= 0 && validMoveTargets.isNotEmpty()) {
+            val slotCellW = gridW / Grid.COLS
+            val slotCellH = gridH / Grid.ROWS
+
+            fun highlightSlot(slot: Int, fill: Color, border: Color) {
+                val col = slot % Grid.COLS
+                val row = slot / Grid.COLS
+                if (col !in 0 until Grid.COLS || row !in 0 until Grid.ROWS) return
+                val left = gridLeft + col * slotCellW + 2f
+                val top = gridTop + row * slotCellH + 2f
+                val sz = Size(slotCellW - 4f, slotCellH - 4f)
+                drawRect(color = fill, topLeft = Offset(left, top), size = sz)
+                drawRect(color = border, topLeft = Offset(left, top), size = sz, style = MoveHighlightStroke)
+            }
+
+            highlightSlot(moveModeTile, MoveSourceFill, MoveSourceBorder)
+            for (slot in validMoveTargets.indices) {
+                if (validMoveTargets[slot]) highlightSlot(slot, MoveHighlightFill, MoveHighlightBorder)
+            }
+        }
+
         // ── Draw unit sprites (Compose drawable icons) ──
         val data = unitPositions
         val sxArr = smoothXs.value
@@ -388,12 +416,9 @@ fun BattleField() {
         val moArr = microOffsets.value
         val useMicro = moArr.size == data.count * 2
 
-        // Unit size: 셀 크기의 ~70% (3×6 그리드 슬롯에 fit)
-        val cellW = gridW / 6f
-        val cellH = gridH / 3f
-        val unitSize = minOf(cellW, cellH) * 0.7f
-        val pedestalRx = unitSize * 0.45f
-        val pedestalRy = pedestalRx * 0.4f
+        val cellW = gridW / Grid.COLS
+        val cellH = gridH / Grid.ROWS
+        val unitSizeNormal = minOf(cellW, cellH) * 0.7f
         val gridState = BattleBridge.gridState.value
         // PERF: Reduce visual detail when many units exist
         val highUnitCount = data.count > 50
@@ -412,6 +437,9 @@ fun BattleField() {
             val screenYBase = baseScreenY + microDy
             val gradeColor = GradeColors.getOrElse(grade) { Color.Gray }
             val tileIdx = data.tileIndices[i]
+            val unitSize = unitSizeNormal
+            val pedestalRx = unitSize * 0.45f
+            val pedestalRy = pedestalRx * 0.4f
             val isSelected = selectedTile == tileIdx
             val isAttacking = data.isAttacking.getOrElse(i) { false }
             val family = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
@@ -421,9 +449,6 @@ fun BattleField() {
             }
             val unitDefId = data.unitDefIds[i]
             val level = data.levels[i]
-
-            // Skip dragged unit at original position
-            if (isDragging && dragFromTile == tileIdx) continue
 
             // ── G3: Breathing scale (slow sine 0.97-1.03, skip for low grade in high-count) ──
             val breathScale = if (skipMicro) 1f else 1f + sin(t * 1.8f + unitDefId * 0.3f) * 0.03f
@@ -496,39 +521,36 @@ fun BattleField() {
 
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
             if (family == 4 && grade >= 2 && (!highUnitCount || grade >= 3)) {
-                // AURA_RADIUS=150 in game world (720x720), convert to screen
-                val auraRadiusScreen = (150f / 720f) * w
+                val auraRadiusScreen = (150f / Grid.CANVAS_W) * w
                 val auraPulse = 0.08f + sin(t * 2f + unitDefId * 0.5f) * 0.04f
+                // Layered circles instead of Brush.radialGradient to avoid per-frame allocation
                 drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            FamilyAuraColors[4].copy(alpha = auraPulse * 0.5f),
-                            FamilyAuraColors[4].copy(alpha = auraPulse),
-                            Color.Transparent,
-                        ),
-                    ),
-                    radius = auraRadiusScreen,
+                    color = FamilyAuraColors[4].copy(alpha = auraPulse * 0.5f),
+                    radius = auraRadiusScreen * 0.5f,
                     center = Offset(screenX, screenY),
                 )
-                // Aura ring border
+                drawCircle(
+                    color = FamilyAuraColors[4].copy(alpha = auraPulse * 0.3f),
+                    radius = auraRadiusScreen * 0.8f,
+                    center = Offset(screenX, screenY),
+                )
                 drawCircle(
                     color = FamilyAuraColors[4].copy(alpha = auraPulse * 1.5f),
                     radius = auraRadiusScreen,
                     center = Offset(screenX, screenY),
-                    style = Stroke(width = 1f),
+                    style = ThinStroke1f,
                 )
             }
 
             // ── Selected unit: range circle ──
             if (isSelected) {
-                // Approximate range from UnitDefs (default ~200 world units in 720 world)
-                val rangeScreen = (200f / 720f) * w // fallback range
+                val rangeScreen = (200f / Grid.CANVAS_W) * w
                 val rangePulse = 0.15f + sin(t * 3f) * 0.05f
                 drawCircle(
                     color = gradeColor.copy(alpha = rangePulse),
                     radius = rangeScreen,
                     center = Offset(screenX, screenY),
-                    style = Stroke(width = 1.5f),
+                    style = ThinStroke1_5f,
                 )
             }
 
@@ -898,7 +920,7 @@ fun BattleField() {
             // ── Task 18: Field effect range circles for SPECIAL units (activated) ──
             if (unitCategory == com.example.jaygame.engine.UnitCategory.SPECIAL) {
                 // Use unit range as field effect radius (approximation)
-                val effectRadius = (200f / 720f) * w // default field effect radius
+                val effectRadius = (200f / Grid.CANVAS_W) * w // default field effect radius
                 drawCircle(
                     color = SpecialFieldFill,
                     radius = effectRadius,
@@ -908,7 +930,7 @@ fun BattleField() {
                     color = SpecialFieldStroke,
                     radius = effectRadius,
                     center = Offset(screenX, screenY),
-                    style = Stroke(width = 1.5f),
+                    style = ThinStroke1_5f,
                 )
             }
 
@@ -925,6 +947,7 @@ fun BattleField() {
         }
 
         // ── G5: Draw death/dissolution effects ──
+        val unitSizeDefault = unitSizeNormal
         for (effect in deathEffects.value) {
             val elapsed = t - effect.startTime
             val progress = (elapsed / 1f).coerceIn(0f, 1f)
@@ -938,7 +961,7 @@ fun BattleField() {
                 val fadeAlpha = (1f - progress) * 0.6f
                 drawCircle(
                     color = effectColor.copy(alpha = fadeAlpha),
-                    radius = unitSize * 0.4f * (1f + progress * 0.5f),
+                    radius = unitSizeDefault * 0.4f * (1f + progress * 0.5f),
                     center = Offset(ex, ey),
                 )
             } else if (effect.grade <= 2) {
@@ -946,7 +969,7 @@ fun BattleField() {
                 val particleCount = 8 + effect.grade * 4
                 for (p in 0 until particleCount) {
                     val angle = (p.toFloat() / particleCount) * 2f * PI.toFloat()
-                    val dist = progress * unitSize * 0.8f
+                    val dist = progress * unitSizeDefault * 0.8f
                     val px = (ex + cos(angle) * dist).toFloat()
                     val py = (ey + sin(angle) * dist).toFloat()
                     val pAlpha = (1f - progress) * 0.7f
@@ -958,7 +981,7 @@ fun BattleField() {
                 }
             } else {
                 // Legend+: dramatic burst with color-coded explosion
-                val burstRadius = progress * unitSize * 1.2f
+                val burstRadius = progress * unitSizeDefault * 1.2f
                 val burstAlpha = (1f - progress) * 0.5f
                 // Outer ring
                 drawCircle(
@@ -977,7 +1000,7 @@ fun BattleField() {
                 val particleCount = 12 + effect.grade * 3
                 for (p in 0 until particleCount) {
                     val angle = (p.toFloat() / particleCount) * 2f * PI.toFloat() + progress * 2f
-                    val dist = progress * unitSize * (0.6f + sin(p * 1.3f) * 0.3f)
+                    val dist = progress * unitSizeDefault * (0.6f + sin(p * 1.3f) * 0.3f)
                     val px = (ex + cos(angle) * dist).toFloat()
                     val py = (ey + sin(angle) * dist).toFloat()
                     val pAlpha = (1f - progress) * 0.8f
@@ -990,43 +1013,6 @@ fun BattleField() {
             }
         }
 
-        // Draw drag ghost at finger position — lifted Z-axis effect
-        if (isDragging && dragFromTile >= 0) {
-            val data2 = BattleBridge.unitPositions.value
-            val dragUnitIdx = (0 until data2.count).firstOrNull {
-                data2.tileIndices[it] == dragFromTile
-            }
-            if (dragUnitIdx != null) {
-                val liftOffset = 12f  // Z-axis lift: unit drawn higher
-                val liftScale = 1.25f // Scaled up when lifted
-                val liftedSize = unitSize * liftScale
-                val liftedX = dragOffset.x
-                val liftedY = dragOffset.y - liftOffset
-
-                // Drop shadow (on ground)
-                drawOval(
-                    color = DragShadow03,
-                    topLeft = Offset(dragOffset.x - liftedSize * 0.4f, dragOffset.y + liftedSize * 0.1f),
-                    size = Size(liftedSize * 0.8f, liftedSize * 0.3f),
-                )
-
-                // Lifted unit
-                val bitmap = unitBitmaps[data2.unitDefIds[dragUnitIdx]]
-                    ?: blueprintBitmapCache[data2.blueprintIds.getOrElse(dragUnitIdx) { "" }]
-                if (bitmap != null) {
-                    drawImage(
-                        image = bitmap,
-                        topLeft = Offset(liftedX - liftedSize / 2, liftedY - liftedSize / 2),
-                        alpha = 0.85f,
-                    )
-                }
-                drawCircle(
-                    color = DragGhost,
-                    radius = liftedSize * 0.55f,
-                    center = Offset(liftedX, liftedY),
-                )
-            }
-        }
     }
 }
 
@@ -1115,7 +1101,7 @@ private fun DrawScope.drawGradePlatform(
                 color = PlatformLegendColor.copy(alpha = flameAlpha + 0.1f),
                 topLeft = Offset(screenX - pedestalRx * 1.0f, screenY - pedestalRy * 0.3f),
                 size = Size(pedestalRx * 2.0f, pedestalRy * 1.8f),
-                style = Stroke(width = 1.5f),
+                style = ThinStroke1_5f,
             )
         }
         4 -> {
@@ -1146,13 +1132,13 @@ private fun DrawScope.drawGradePlatform(
                 color = shimmerColor,
                 topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.35f),
                 size = Size(pedestalRx * 2.2f, pedestalRy * 2.0f),
-                style = Stroke(width = 2.5f),
+                style = GroundBorderStroke,
             )
             drawOval(
                 color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.15f),
                 topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.2f),
                 size = Size(pedestalRx * 1.8f, pedestalRy * 1.6f),
-                style = Stroke(width = 1.5f),
+                style = ThinStroke1_5f,
             )
         }
     }

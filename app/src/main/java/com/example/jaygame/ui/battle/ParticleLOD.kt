@@ -29,7 +29,7 @@ object ParticleLOD {
      * Update LOD level based on the total active particle count across all overlays.
      * Call this once per frame with the aggregate particle count.
      */
-    fun updateLOD(particleCount: Int, battleSpeed: Float = 1f) {
+    fun updateLOD(particleCount: Int, battleSpeed: Float = 2f) {
         // At higher battle speeds, reduce particle thresholds for better perf
         val speedFactor = when {
             battleSpeed >= 8f -> 0.25f

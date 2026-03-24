@@ -320,7 +320,10 @@ class GameRepository(context: Context) {
             val soundEnabled = (settings?.optInt("soundEnabled", 1) ?: 1) != 0
             val musicEnabled = (settings?.optInt("musicEnabled", 1) ?: 1) != 0
             val hapticEnabled = (settings?.optInt("hapticEnabled", 1) ?: 1) != 0
-            val defaultBattleSpeed = settings?.optDouble("defaultBattleSpeed", 1.0)?.toFloat() ?: 1f
+            val defaultBattleSpeed = (settings?.optDouble("defaultBattleSpeed", 2.0)?.toFloat() ?: 2f).let {
+                // 기존 1f 저장값 마이그레이션 → 새 기본 2f
+                if (it < 2f) it * 2f else it
+            }
             val showDamageNumbers = (settings?.optInt("showDamageNumbers", 1) ?: 1) != 0
             val healthBarMode = settings?.optInt("healthBarMode", 0) ?: 0
             // dailyLogin
@@ -359,7 +362,7 @@ class GameRepository(context: Context) {
             while (stageBestWaves.size < 6) stageBestWaves.add(0)
 
             // difficulty
-            val difficulty = root.optInt("difficulty", 0)
+            val difficulty = root.optInt("difficulty", 0).coerceIn(0, 2)
 
             // gas
             val gas = root.optInt("gas", 0)

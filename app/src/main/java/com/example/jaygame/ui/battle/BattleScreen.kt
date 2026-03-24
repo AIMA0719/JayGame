@@ -86,10 +86,11 @@ fun BattleScreen(
 
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
-    var savedSpeed by remember { mutableFloatStateOf(1f) }
+    var savedSpeed by remember { mutableFloatStateOf(2f) }
     var showBulkSellDialog by remember { mutableStateOf(false) }
     var showBuySheet by remember { mutableStateOf(false) }
     var showGambleDialog by remember { mutableStateOf(false) }
+    var showUpgradeSheet by remember { mutableStateOf(false) }
 
     // Boss vignette
     val battleState by BattleBridge.state.collectAsState()
@@ -276,6 +277,7 @@ fun BattleScreen(
                 onBuyClick = { showBuySheet = true },
                 onBulkSellClick = { showBulkSellDialog = true },
                 onGambleClick = { showGambleDialog = true },
+                onUpgradeClick = { showUpgradeSheet = true },
             )
         }
 
@@ -306,6 +308,9 @@ fun BattleScreen(
         }
         if (showGambleDialog) {
             GambleDialog(onDismiss = { showGambleDialog = false })
+        }
+        if (showUpgradeSheet) {
+            UpgradeSheet(onDismiss = { showUpgradeSheet = false })
         }
 
         // Layer 4: Result screen with A3 transition
@@ -724,7 +729,6 @@ private fun QuitBattleDialog(
 private val MenuSpeedX1Color = Color.White
 private val MenuSpeedX2Color = Color(0xFFFFD700)
 private val MenuSpeedX4Color = Color(0xFFFF6B6B)
-private val MenuSpeedX8Color = Color(0xFFFF3333)
 
 @Composable
 private fun BattleMenuDialog(
@@ -784,12 +788,11 @@ private fun BattleMenuDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    listOf(1f to "x1", 2f to "x2", 4f to "x4", 8f to "x8").forEach { (speed, label) ->
+                    listOf(2f to "x1", 4f to "x2", 8f to "x4").forEach { (speed, label) ->
                         val isSelected = battleSpeed == speed
                         val color = when (speed) {
-                            2f -> MenuSpeedX2Color
-                            4f -> MenuSpeedX4Color
-                            8f -> MenuSpeedX8Color
+                            4f -> MenuSpeedX2Color
+                            8f -> MenuSpeedX4Color
                             else -> MenuSpeedX1Color
                         }
                         NeonButton(
