@@ -963,9 +963,10 @@ class BattleEngine(
     private fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
         val unit = units.acquire() ?: return null
         unit.initFromBlueprint(bp)
-        // Position will be set by grid.placeUnit() via slotCenter()
+        unit.race = bp.race
         unit.range *= upgradeRangeMult
-        unit.behavior = BehaviorFactory.create(bp.behaviorId) ?: run { units.release(unit); return null }
+        // behaviorId가 비어있거나 미등록이면 behavior=null (기본 공격 로직으로 동작)
+        unit.behavior = if (bp.behaviorId.isNotEmpty()) BehaviorFactory.create(bp.behaviorId) else null
         UniqueAbilitySystem.initUnit(unit)
         return unit
     }

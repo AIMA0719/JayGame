@@ -17,7 +17,7 @@ import kotlin.math.pow
 object UnitUpgradeSystem {
 
     const val MAX_UPGRADE_LEVEL = 15
-    const val ATK_PER_LEVEL = 0.50f
+    const val ATK_PER_LEVEL = 0.10f
     const val GROUP_COUNT = 4
 
     private val BASE_COSTS = intArrayOf(10, 20, 40, 60)
@@ -40,26 +40,23 @@ object UnitUpgradeSystem {
 
     fun getTotalAtkBonus(upgradeLevel: Int): Float {
         var bonus = upgradeLevel * ATK_PER_LEVEL
-        if (upgradeLevel >= 3) bonus += 0.10f
-        if (upgradeLevel >= 6) bonus += 0.15f
-        if (upgradeLevel >= 12) bonus += 0.15f
+        if (upgradeLevel >= 5) bonus += 0.05f
+        if (upgradeLevel >= 10) bonus += 0.05f
         if (upgradeLevel >= 15) bonus += 0.10f
         return bonus
     }
 
     fun getTotalSpdBonus(upgradeLevel: Int): Float {
         var bonus = 0f
-        if (upgradeLevel >= 9) bonus += 0.10f
-        if (upgradeLevel >= 15) bonus += 0.10f
+        if (upgradeLevel >= 10) bonus += 0.05f
+        if (upgradeLevel >= 15) bonus += 0.05f
         return bonus
     }
 
     fun nextMilestoneHint(currentLevel: Int): String = when {
-        currentLevel < 3 -> "Lv.3: ATK +10%"
-        currentLevel < 6 -> "Lv.6: ATK +15%"
-        currentLevel < 9 -> "Lv.9: 공격속도 +10%"
-        currentLevel < 12 -> "Lv.12: ATK +15%"
-        currentLevel < 15 -> "Lv.15: ATK+속도 +10%"
+        currentLevel < 5 -> "Lv.5: ATK +5%"
+        currentLevel < 10 -> "Lv.10: ATK +5%, 속도 +5%"
+        currentLevel < 15 -> "Lv.15: ATK +10%, 속도 +5%"
         else -> "MAX"
     }
 }

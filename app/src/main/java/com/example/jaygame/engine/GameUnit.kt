@@ -69,6 +69,7 @@ class GameUnit {
         families = bp.families
         family = bp.families.firstOrNull()?.ordinal ?: 0
         grade = bp.grade.ordinal
+        race = bp.race
         role = bp.role
         attackRange = bp.attackRange
         damageType = bp.damageType

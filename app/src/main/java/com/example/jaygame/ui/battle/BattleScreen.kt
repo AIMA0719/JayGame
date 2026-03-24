@@ -88,7 +88,6 @@ fun BattleScreen(
     var showQuitDialog by remember { mutableStateOf(false) }
     var savedSpeed by remember { mutableFloatStateOf(2f) }
     var showBulkSellDialog by remember { mutableStateOf(false) }
-    var showBuySheet by remember { mutableStateOf(false) }
     var showGambleDialog by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
 
@@ -274,7 +273,6 @@ fun BattleScreen(
             })
             Spacer(modifier = Modifier.weight(1f))
             BattleBottomHud(
-                onBuyClick = { showBuySheet = true },
                 onBulkSellClick = { showBulkSellDialog = true },
                 onGambleClick = { showGambleDialog = true },
                 onUpgradeClick = { showUpgradeSheet = true },
@@ -302,9 +300,6 @@ fun BattleScreen(
         // Layer 3.5: Feature sheets
         if (showBulkSellDialog) {
             BulkSellDialog(onDismiss = { showBulkSellDialog = false })
-        }
-        if (showBuySheet) {
-            BuyUnitSheet(onDismiss = { showBuySheet = false })
         }
         if (showGambleDialog) {
             GambleDialog(onDismiss = { showGambleDialog = false })

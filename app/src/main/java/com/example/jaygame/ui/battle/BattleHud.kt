@@ -149,6 +149,7 @@ private val RecipeResultBg = Brush.verticalGradient(listOf(Color(0xFF3A2A10), Co
 private val RecipeBtnTop = Color(0xFF6A4FA0)
 private val RecipeBtnBot = Color(0xFF4A3570)
 private val RecipeBtnBorder = Color(0xFF3A2860)
+private val RecipeBtnBrush = Brush.verticalGradient(listOf(RecipeBtnTop, RecipeBtnBot))
 private val RecipeCraftBtnTop = Color(0xFF4CAF50)
 private val RecipeCraftBtnBot = Color(0xFF2E7D32)
 private val RecipeCraftEnabledBrush = Brush.verticalGradient(listOf(RecipeCraftBtnTop, RecipeCraftBtnBot))
@@ -1209,7 +1210,6 @@ private fun DetailStatItem(label: String, value: String, color: Color) {
 
 @Composable
 fun BattleBottomHud(
-    onBuyClick: () -> Unit = {},
     onBulkSellClick: () -> Unit = {},
     onGambleClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {},
@@ -1241,61 +1241,44 @@ fun BattleBottomHud(
             .padding(horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ── Row 1: Floating merge/sell/recipe ──
-        Box(
+        // ── Row 1: [일괄판매(좌)] [금화+유닛수(가운데)] [조합법(우)] ──
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            if (hasUnits) {
-                val sellShape = RoundedCornerShape(10.dp)
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .clip(sellShape)
-                        .background(SellBtnBrush)
-                        .border(2.dp, Color(0xFF8B1A1A), sellShape)
-                        .clickable(onClick = onBulkSellClick)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("일괄판매", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                }
-            }
-            if (canMerge) {
-                val inf = rememberInfiniteTransition(label = "mg")
-                val glow by inf.animateFloat(0.7f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "mg")
-                val mergeShape = RoundedCornerShape(10.dp)
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .graphicsLayer { alpha = glow }
-                        .clip(mergeShape)
-                        .background(MergeBtnBrush)
-                        .border(2.dp, Color(0xFF8B6914), mergeShape)
-                        .clickable {
-                            val tiles = BattleBridge.gridState.value
-                            for (i in tiles.indices) { if (tiles[i].canMerge) BattleBridge.requestMerge(i) }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("조합", color = WoodBrownDark, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                }
+            // 일괄판매 (좌)
+            val sellShape = RoundedCornerShape(10.dp)
+            Box(
+                modifier = Modifier
+                    .clip(sellShape)
+                    .background(if (hasUnits) SellBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
+                    .border(2.dp, if (hasUnits) Color(0xFF8B1A1A) else DisabledBot, sellShape)
+                    .then(if (hasUnits) Modifier.clickable(onClick = onBulkSellClick) else Modifier)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("일괄판매", color = if (hasUnits) Color.White else DisabledText, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
             }
 
-            // Recipe craft button (6각형, 일괄판매 대칭)
-            WideHexButton(
-                icon = "\uD83D\uDCD6",
-                label = "조합법",
-                enabled = true,
-                gradientTop = RecipeBtnTop, gradientBot = RecipeBtnBot,
-                borderColor = RecipeBtnBorder,
-                onClick = { showRecipeBook = true },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(width = 60.dp, height = 52.dp),
-            )
+            // 금화 + 유닛수 (가운데)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (goldIcon != null) {
+                    Image(bitmap = goldIcon, contentDescription = null, modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    "${battle.sp.toInt()}",
+                    color = GoldBright,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+
+            // 우측 여백 (좌우 균형)
+            Spacer(modifier = Modifier.width(1.dp))
         }
 
         // Recipe book dialog
@@ -1303,62 +1286,29 @@ fun BattleBottomHud(
             RecipeBookDialog(onDismiss = { showRecipeBook = false })
         }
 
-        // ── Row 2: Resource bar (SP 골드 | 유닛수) ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (goldIcon != null) {
-                Image(bitmap = goldIcon, contentDescription = null, modifier = Modifier.size(20.dp))
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                "${battle.sp.toInt()}",
-                color = GoldBright,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            // Unit count
-            Text(
-                "${unitCount} / ${battle.maxUnitSlots}",
-                color = Color(0xFFAABBCC),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            // Deck preview inline
-            if (isDeckMode) {
-                val resolvedDeck = remember(deckBlueprints) {
-                    if (com.example.jaygame.engine.BlueprintRegistry.isReady) {
-                        val reg = com.example.jaygame.engine.BlueprintRegistry.instance
-                        deckBlueprints.mapNotNull { reg.findById(it) }
-                    } else emptyList()
-                }
-                resolvedDeck.forEach { bp ->
-                    val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .padding(horizontal = 2.dp)
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(bp.grade.color.copy(alpha = 0.15f))
-                            .border(1.dp, bp.grade.color.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
-                    ) {
-                        Image(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = bp.name,
-                            modifier = Modifier.size(18.dp),
-                        )
+        // ── Row 2: 조합 가능 알림 ──
+        if (canMerge) {
+            val inf = rememberInfiniteTransition(label = "mg")
+            val glow by inf.animateFloat(0.7f, 1f, infiniteRepeatable(tween(800), RepeatMode.Reverse), label = "mg")
+            val mergeShape = RoundedCornerShape(10.dp)
+            Box(
+                modifier = Modifier
+                    .graphicsLayer { alpha = glow }
+                    .clip(mergeShape)
+                    .background(MergeBtnBrush)
+                    .border(2.dp, Color(0xFF8B6914), mergeShape)
+                    .clickable {
+                        val tiles = BattleBridge.gridState.value
+                        for (i in tiles.indices) { if (tiles[i].canMerge) BattleBridge.requestMerge(i) }
                     }
-                }
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("조합", color = WoodBrownDark, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // ── Row 3+4: 소환(큰) 위, 구매/도박(중간) 겹침, 강화(아래) ──
         // Box로 겹쳐서 구매/도박이 소환과 강화 사이에 위치
@@ -1393,12 +1343,12 @@ fun BattleBottomHud(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 WideHexButton(
-                    icon = "\uD83D\uDECD\uFE0F",
-                    label = "구매",
+                    icon = "\uD83D\uDCD6",
+                    label = "조합법",
                     enabled = true,
-                    gradientTop = OrangeBright, gradientBot = OrangeDark,
-                    borderColor = BuyBorderColor,
-                    onClick = onBuyClick,
+                    gradientTop = RecipeBtnTop, gradientBot = RecipeBtnBot,
+                    borderColor = RecipeBtnBorder,
+                    onClick = { showRecipeBook = true },
                     modifier = Modifier.size(width = 72.dp, height = 66.dp),
                 )
                 WideHexButton(
