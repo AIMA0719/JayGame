@@ -57,9 +57,16 @@ private val UltSpriteMap: Map<String, String> = mapOf(
     "human_legend_03"  to "fx_ult_divine",
     "spirit_legend_01" to "fx_ult_cataclysm",
     "spirit_legend_02" to "fx_ult_nature",
+    "spirit_legend_03" to "fx_ult_abyss",
     "animal_legend_01" to "fx_ult_dragon",
+    "animal_legend_02" to "fx_ult_glacier",
+    "animal_legend_03" to "fx_ult_tiger",
     "robot_legend_01"  to "fx_ult_orbital",
     "robot_legend_02"  to "fx_ult_emp",
+    "robot_legend_03"  to "fx_ult_titan",
+    "demon_legend_01"  to "fx_ult_hellfire",
+    "demon_legend_02"  to "fx_ult_reaper",
+    "demon_legend_03"  to "fx_ult_apocalypse",
     // MYTHIC
     "human_mythic_01"  to "fx_ult_divine_2",
     "human_mythic_02"  to "fx_ult_judgement",
@@ -68,13 +75,20 @@ private val UltSpriteMap: Map<String, String> = mapOf(
     "spirit_mythic_02" to "fx_ult_eternal",
     "spirit_mythic_03" to "fx_ult_endless",
     "animal_mythic_01" to "fx_ult_four",
+    "animal_mythic_02" to "fx_ult_holyfire",
+    "animal_mythic_03" to "fx_ult_justice",
     "robot_mythic_01"  to "fx_ult_quantum",
     "robot_mythic_02"  to "fx_ult_absolute",
+    "robot_mythic_03"  to "fx_ult_emstorm",
     "demon_mythic_01"  to "fx_ult_dark",
+    "demon_mythic_02"  to "fx_ult_lucifer",
+    "demon_mythic_03"  to "fx_ult_doomsday",
     // IMMORTAL
     "human_immortal_01"  to "fx_ult_god",
     "spirit_immortal_01" to "fx_ult_world",
     "animal_immortal_01" to "fx_ult_divine_3",
+    "robot_immortal_01"  to "fx_ult_nexus",
+    "demon_immortal_01"  to "fx_ult_chaos",
 )
 
 /** DrawScope wrapper — size를 필드 크기로 변경하여 정규화 좌표 사용 */
