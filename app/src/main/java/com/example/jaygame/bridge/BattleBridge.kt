@@ -63,6 +63,12 @@ const val BUFF_BIT_WIND       = 1 shl 5  // Recently knocked back
 const val BUFF_BIT_STUN       = 1 shl 6  // Stun (stars)
 const val BUFF_BIT_SILENCE    = 1 shl 7  // Silence
 
+// Unit buff bits (아군 유닛 버프 표시용)
+const val UNIT_BUFF_ATK_UP   = 1 shl 0
+const val UNIT_BUFF_SPD_UP   = 1 shl 1
+const val UNIT_BUFF_SHIELD   = 1 shl 2
+const val UNIT_BUFF_DEF_UP   = 1 shl 3
+
 data class EnemyPositionData(
     val xs: FloatArray = FloatArray(0),
     val ys: FloatArray = FloatArray(0),
@@ -123,6 +129,7 @@ data class UnitPositionData(
     val grades: IntArray = IntArray(0),
     val levels: IntArray = IntArray(0),
     val isAttacking: BooleanArray = BooleanArray(0),
+    val attackAnimTimers: FloatArray = FloatArray(0),
     val tileIndices: IntArray = IntArray(0),
     val count: Int = 0,
     val frameId: Long = 0L,
@@ -139,6 +146,7 @@ data class UnitPositionData(
     val homeXs: FloatArray = FloatArray(0),
     val homeYs: FloatArray = FloatArray(0),
     val stackCounts: IntArray = IntArray(0),
+    val buffs: IntArray = IntArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -272,21 +280,6 @@ object BattleBridge {
             commands.add(cmd)
         }
         return commands
-    }
-
-    /** 활성 시너지 데이터 (BattleEngine → Compose) */
-    private val _activeFamilySynergies = MutableStateFlow<Map<UnitFamily, Int>>(emptyMap())
-    val activeFamilySynergies: StateFlow<Map<UnitFamily, Int>> = _activeFamilySynergies.asStateFlow()
-
-    private val _activeRoleSynergies = MutableStateFlow<Map<UnitRole, Int>>(emptyMap())
-    val activeRoleSynergies: StateFlow<Map<UnitRole, Int>> = _activeRoleSynergies.asStateFlow()
-
-    fun updateFamilySynergies(counts: Map<UnitFamily, Int>) {
-        _activeFamilySynergies.value = counts.toMap() // defensive copy — SynergySystem reuses internal map
-    }
-
-    fun updateRoleSynergies(counts: Map<UnitRole, Int>) {
-        _activeRoleSynergies.value = counts
     }
 
     /** Z16: Debug overlay toggle */
@@ -535,7 +528,7 @@ object BattleBridge {
     fun updateUnitPositions(
         xs: FloatArray, ys: FloatArray, unitDefIds: IntArray,
         grades: IntArray, levels: IntArray, isAttacking: BooleanArray,
-        tileIndices: IntArray, count: Int,
+        tileIndices: IntArray, count: Int, attackAnimTimers: FloatArray = FloatArray(0),
         blueprintIds: Array<String> = emptyArray(),
         familiesList: Array<List<UnitFamily>> = emptyArray(),
         roles: Array<UnitRole> = emptyArray(),
@@ -548,11 +541,12 @@ object BattleBridge {
         homeXs: FloatArray = FloatArray(0),
         homeYs: FloatArray = FloatArray(0),
         stackCounts: IntArray = IntArray(0),
+        buffs: IntArray = IntArray(0),
     ) {
         _unitPositions.value = UnitPositionData(
-            xs, ys, unitDefIds, grades, levels, isAttacking, tileIndices, count, unitFrameCounter.incrementAndGet(),
+            xs, ys, unitDefIds, grades, levels, isAttacking, attackAnimTimers, tileIndices, count, unitFrameCounter.incrementAndGet(),
             blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
-            hps, maxHps, states, homeXs, homeYs, stackCounts,
+            hps, maxHps, states, homeXs, homeYs, stackCounts, buffs,
         )
     }
 
@@ -842,8 +836,6 @@ object BattleBridge {
         _unitPullPity.value = 0
         zoneFrameCounter.set(0)
         _zoneData.value = ZoneData()
-        _activeFamilySynergies.value = emptyMap()
-        _activeRoleSynergies.value = emptyMap()
         // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _groupUpgradeLevels.value = IntArray(com.example.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 }

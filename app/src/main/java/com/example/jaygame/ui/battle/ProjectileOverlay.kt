@@ -129,38 +129,11 @@ fun ProjectileOverlay() {
             val angleDeg = atan2(curY - srcY, curX - srcX) * (180f / PI.toFloat())
             val rotation = angleDeg - ImageBaseAngles[visualType]
 
-            // Size scales with grade: 36 → 42 → 50 → 60 → 72 → 86
-            val baseSize = (36f + grade * 10f) * (w / 720f)
+            // Size scales with grade: 54 → 66 → 78 → 90 → 102 → 114
+            val baseSize = (54f + grade * 12f) * (w / 720f)
             val pulse = 1f + sin(fxTime * 2f * PI.toFloat() + i * 0.7f) * 0.06f
             val projSize = baseSize * pulse
             val halfSize = projSize / 2f
-
-            // ── Trail + Glow (skipped at high density for performance) ──
-            if (drawExtras) {
-                val trailColor = TrailColors[visualType]
-                val dx = curX - srcX
-                val dy = curY - srcY
-                for (t in 1..3) {
-                    val frac = t * 0.15f
-                    val tx = curX - dx * frac
-                    val ty = curY - dy * frac
-                    val trailRadius = projSize * (0.25f - t * 0.05f)
-                    drawCircle(
-                        color = trailColor,
-                        radius = trailRadius,
-                        center = Offset(tx, ty),
-                        blendMode = BlendMode.Screen,
-                    )
-                }
-
-                val glowColor = GlowColors[visualType]
-                drawCircle(
-                    color = glowColor,
-                    radius = projSize * 0.7f,
-                    center = Offset(curX, curY),
-                    blendMode = BlendMode.Screen,
-                )
-            }
 
             // ── Projectile image with rotation & additive blending ──
             rotate(degrees = rotation, pivot = Offset(curX, curY)) {

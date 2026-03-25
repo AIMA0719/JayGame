@@ -104,13 +104,4 @@ class CollectionViewModel(private val repository: GameRepository) : ViewModel(),
         repository.save(updated)
     }
 
-    fun upgradeFamilyStat(familyKey: String, goldCost: Int) = intent {
-        val d = state.gameData
-        if (d.gold < goldCost) return@intent
-        val currentLevel = d.familyUpgrades[familyKey] ?: 0
-        repository.save(d.copy(
-            gold = d.gold - goldCost,
-            familyUpgrades = d.familyUpgrades + (familyKey to currentLevel + 1),
-        ))
-    }
 }

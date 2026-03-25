@@ -64,6 +64,8 @@ object UniqueAbilitySystem {
      */
     // Reference to engine zone pool — set by BattleEngine
     @Volatile var zonePool: ObjectPool<ZoneEffect>? = null
+    // Reference to active units — set by BattleEngine (Support 궁극기용)
+    @Volatile var activeUnits: List<GameUnit>? = null
 
     /**
      * Update unique abilities for all active units.
@@ -212,7 +214,7 @@ object UniqueAbilitySystem {
             // ── Fire ──
             // N2: Inferno — Firestorm Meteor: AoE meteor strike
             SkillVfxType.FIRESTORM_METEOR -> {
-                emitVfx(vfx, tx, ty, 0.12f, unit, 1.5f)
+                emitVfx(vfx, tx, ty, 0.15f, unit, 3f)
                 val atk = unit.effectiveATK() * gradeScale
                 for (e in enemies) {
                     if (!e.alive) continue
@@ -241,7 +243,7 @@ object UniqueAbilitySystem {
             // ── Frost ──
             // O1: Frost Nova
             SkillVfxType.FROST_NOVA -> {
-                emitVfx(vfx, nx, ny, 0.1f, unit, 1f)
+                emitVfx(vfx, tx, ty, 0.12f, unit, 2.5f)
                 for (e in enemies) {
                     if (!e.alive) continue
                     val dx = e.position.x - unit.position.x
@@ -253,7 +255,7 @@ object UniqueAbilitySystem {
             }
             // O2: Iceborn — Absolute Zero: global freeze + shatter
             SkillVfxType.ABSOLUTE_ZERO -> {
-                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 2f)
+                emitVfx(vfx, 0.5f, 0.5f, 0.3f, unit, 4f)
                 for (e in enemies) {
                     if (!e.alive) continue
                     e.buffs.addBuff(BuffType.Slow, 0.8f, 3f) // 3s freeze
@@ -293,7 +295,7 @@ object UniqueAbilitySystem {
             }
             // P2: Corrosive — Acid Spray: cone AoE + defense reduction
             SkillVfxType.ACID_SPRAY -> {
-                emitVfx(vfx, tx, ty, 0.12f, unit, 2f)
+                emitVfx(vfx, tx, ty, 0.15f, unit, 3f)
                 val atk = unit.effectiveATK()
                 for (e in enemies) {
                     if (!e.alive) continue
@@ -323,14 +325,14 @@ object UniqueAbilitySystem {
             // ── Lightning ──
             // Q1: Thunder — Lightning Strike
             SkillVfxType.LIGHTNING_STRIKE -> {
-                emitVfx(vfx, tx, ty, 0.08f, unit, 0.5f)
+                emitVfx(vfx, tx, ty, 0.12f, unit, 2f)
                 targetEnemy.takeDamage(unit.effectiveATK() * 2.5f)
                 targetEnemy.buffs.addBuff(BuffType.Slow, 0.5f, 1.5f)
                 BattleBridge.onDamageDealt(tx, ty, (unit.effectiveATK() * 2.5f).toInt(), true)
             }
             // Q2: Storm — Static Field: chain lightning
             SkillVfxType.STATIC_FIELD -> {
-                emitVfx(vfx, nx, ny, 0.1f, unit, 4f)
+                emitVfx(vfx, tx, ty, 0.15f, unit, 4f)
                 val atk = unit.effectiveATK()
                 var chainDmg = atk * 1.8f
                 val hit = mutableSetOf<Enemy>()
@@ -362,15 +364,27 @@ object UniqueAbilitySystem {
             // ── Support ──
             // R1: Oracle — Heal Pulse
             SkillVfxType.HEAL_PULSE -> {
-                emitVfx(vfx, nx, ny, 0.12f, unit, 1f)
+                emitVfx(vfx, nx, ny, 0.15f, unit, 3f)
             }
-            // R2: Valkyrie — War Song: global ATK buff (emit VFX)
+            // R2: Valkyrie — War Song: 아군 전체 ATK +25% 버프 (6초)
             SkillVfxType.WAR_SONG_AURA -> {
-                emitVfx(vfx, nx, ny, 0.2f, unit, 6f)
+                emitVfx(vfx, 0.5f, 0.45f, 0.25f, unit, 6f)
+                val atkBonus = 0.25f * gradeScale
+                activeUnits?.forEach { ally ->
+                    if (ally.alive) {
+                        ally.buffs.addBuff(BuffType.AtkUp, atkBonus, 6f)
+                    }
+                }
             }
-            // R3: Seraphim — Divine Shield
+            // R3: Seraphim — Divine Shield: 아군 전체 실드 부여 (8초)
             SkillVfxType.DIVINE_SHIELD -> {
-                emitVfx(vfx, nx, ny, 0.15f, unit, 8f)
+                emitVfx(vfx, 0.5f, 0.45f, 0.25f, unit, 8f)
+                val shieldValue = unit.effectiveATK() * 2f * gradeScale
+                activeUnits?.forEach { ally ->
+                    if (ally.alive && !ally.buffs.hasBuff(BuffType.Shield)) {
+                        ally.buffs.addBuff(BuffType.Shield, shieldValue, 8f)
+                    }
+                }
             }
             // ── Wind ──
             // S1: Cyclone — Pull & damage
@@ -390,11 +404,11 @@ object UniqueAbilitySystem {
             }
             // S2: Typhoon — Eye of Storm zone
             SkillVfxType.EYE_OF_STORM -> {
-                emitVfx(vfx, nx, ny, 0.15f, unit, 6f)
+                emitVfx(vfx, tx, ty, 0.18f, unit, 6f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
-                        pos = unit.position.copy(),
+                        pos = targetEnemy.position.copy(),
                         radius = 130f, duration = 6f,
                         tickInterval = 0.5f,
                         tickDamage = unit.effectiveATK() * 2f,
@@ -405,7 +419,7 @@ object UniqueAbilitySystem {
             }
             // S3: Sky Lord — Vacuum Slash: line AoE
             SkillVfxType.VACUUM_SLASH -> {
-                emitVfx(vfx, tx, ty, 0.2f, unit, 1.5f)
+                emitVfx(vfx, tx, ty, 0.25f, unit, 3f)
                 val atk = unit.effectiveATK()
                 for (e in enemies) {
                     if (!e.alive) continue

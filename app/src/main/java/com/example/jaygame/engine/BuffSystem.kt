@@ -28,7 +28,7 @@ class BuffContainer {
         val effectiveDuration = if (type == BuffType.Slow || type == BuffType.Stun || type == BuffType.Silence) {
             duration * (1f - ccResistance)
         } else duration
-        val existing = buffs.filter { it.type == type && it.sourceId == sourceId }
+        val existing = buffs.filter { it.type == type }
         if (existing.size >= 3) {
             existing.minByOrNull { it.remaining }?.let { buffs.remove(it) }
         }

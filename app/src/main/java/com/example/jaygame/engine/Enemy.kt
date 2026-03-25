@@ -175,8 +175,8 @@ class Enemy {
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f
     val size: Float get() = when (type) {
-        4, 5 -> 96f
-        6 -> 64f
-        else -> 48f
+        4, 5 -> 163f
+        6 -> 109f
+        else -> 82f
     }
 }

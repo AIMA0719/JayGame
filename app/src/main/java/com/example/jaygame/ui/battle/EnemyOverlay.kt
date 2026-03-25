@@ -107,7 +107,8 @@ fun EnemyOverlay() {
     // Pre-load VFX sprite bitmaps from assets/fx/
     val fxBitmaps = remember {
         listOf("fx_slow", "fx_dot_fire", "fx_dot_poison", "fx_armor_break",
-            "fx_stun", "fx_freeze", "fx_execute")
+            "fx_stun", "fx_freeze", "fx_execute",
+            "fx_chain_lightning", "fx_aoe_earth")
             .associateWith { name -> decodeAssetBitmap(context, "fx/$name.png") }
     }
 
@@ -270,9 +271,9 @@ fun EnemyOverlay() {
             // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
             val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
             val spriteSize = when {
-                isBoss -> pathWidth * 1.15f
-                type == 6 -> pathWidth * 0.95f
-                else -> pathWidth * 0.8f
+                isBoss -> pathWidth * 1.955f
+                type == 6 -> pathWidth * 1.615f
+                else -> pathWidth * 1.36f
             }
             val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
@@ -369,20 +370,20 @@ fun EnemyOverlay() {
                 )
             }
 
-            // ── Buff Visual Effects (sprite-based, pre-resolved) ──
+            // ── Buff Visual Effects (sprite-based, 몹 크기의 1/3) ──
             val buffBits = if (i < data.buffs.size) data.buffs[i] else 0
-            val fxSize = (spriteSize * 1.2f).toInt().coerceAtLeast(1)
+            val fxSize = (spriteSize * 0.4f).toInt().coerceAtLeast(8)
 
             // E1: Fire DoT — pulsing flame sprite
             if (buffBits and BUFF_BIT_DOT != 0 && buffBits and BUFF_BIT_POISON == 0) {
                 fxBitmaps["fx_dot_fire"]?.let { bmp ->
-                    val pulse = 1f + sin(t * 6f) * 0.15f
+                    val pulse = 1f + sin(t * 6f) * 0.1f
                     val s = (fxSize * pulse).toInt()
                     drawImage(
                         image = bmp,
                         dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
                         dstSize = IntSize(s, s),
-                        alpha = 0.7f + sin(t * 8f) * 0.15f,
+                        alpha = 0.8f,
                     )
                 }
             }
@@ -390,13 +391,13 @@ fun EnemyOverlay() {
             // E2: Frost Slow — breathing ice sprite
             if (buffBits and BUFF_BIT_SLOW != 0 && buffBits and BUFF_BIT_POISON == 0) {
                 fxBitmaps["fx_slow"]?.let { bmp ->
-                    val pulse = 1f + sin(t * 3f) * 0.1f
+                    val pulse = 1f + sin(t * 3f) * 0.08f
                     val s = (fxSize * pulse).toInt()
                     drawImage(
                         image = bmp,
                         dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
                         dstSize = IntSize(s, s),
-                        alpha = 0.65f + sin(t * 4f) * 0.1f,
+                        alpha = 0.75f,
                     )
                 }
             }
@@ -404,13 +405,13 @@ fun EnemyOverlay() {
             // E3: Poison — toxic green sprite
             if (buffBits and BUFF_BIT_POISON != 0) {
                 fxBitmaps["fx_dot_poison"]?.let { bmp ->
-                    val pulse = 1f + sin(t * 2.5f) * 0.12f
+                    val pulse = 1f + sin(t * 2.5f) * 0.08f
                     val s = (fxSize * pulse).toInt()
                     drawImage(
                         image = bmp,
                         dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
                         dstSize = IntSize(s, s),
-                        alpha = 0.7f + sin(t * 3f) * 0.1f,
+                        alpha = 0.8f,
                     )
                 }
             }
@@ -423,63 +424,45 @@ fun EnemyOverlay() {
                         image = bmp,
                         dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
                         dstSize = IntSize(s, s),
-                        alpha = 0.75f + sin(t * 5f) * 0.15f,
+                        alpha = 0.8f,
                     )
                 }
             }
 
-            // E5: Lightning — Canvas 선 (스프라이트보다 선이 적합)
+            // E5: Lightning — sprite
             if (buffBits and BUFF_BIT_LIGHTNING != 0) {
-                drawCircle(color = LightningGlow, radius = spriteSize * 0.6f, center = Offset(screenX, screenY))
-                for (p in 0 until 4) {
-                    val angle = t * 12f + p * 1.571f
-                    val sparkLen = spriteSize * (0.3f + sin(t * 15f + p * 2f) * 0.15f)
-                    val sx1 = screenX + cos(angle) * spriteSize * 0.15f
-                    val sy1 = screenY + sin(angle) * spriteSize * 0.15f
-                    val ex1 = screenX + cos(angle) * sparkLen
-                    val ey1 = screenY + sin(angle) * sparkLen
-                    val mx = (sx1 + ex1) / 2f + sin(t * 20f + p * 3f) * 4f
-                    val my = (sy1 + ey1) / 2f + cos(t * 18f + p * 2.5f) * 4f
-                    val sparkAlpha = 0.5f + sin(t * 14f + p * 1.1f) * 0.3f
-                    drawLine(LightningYellow, Offset(sx1, sy1), Offset(mx, my), strokeWidth = 1.5f, alpha = sparkAlpha)
-                    drawLine(LightningWhite, Offset(mx, my), Offset(ex1, ey1), strokeWidth = 1f, alpha = sparkAlpha * 0.8f)
+                fxBitmaps["fx_chain_lightning"]?.let { bmp ->
+                    val pulse = 1f + sin(t * 10f) * 0.15f
+                    val s = (fxSize * pulse).toInt()
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.85f,
+                    )
                 }
             }
 
-            // E6: Wind — Canvas 소용돌이 (스프라이트보다 선이 적합)
+            // E6: Wind — sprite
             if (buffBits and BUFF_BIT_WIND != 0) {
-                for (p in 0 until 3) {
-                    val swirlAngle = t * 8f + p * 2.094f
-                    val swirlR = spriteSize * (0.35f + p * 0.08f)
-                    for (seg in 0 until 4) {
-                        val a1 = swirlAngle + seg * 0.3f
-                        val a2 = swirlAngle + (seg + 1) * 0.3f
-                        val swirlAlpha = (0.4f - seg * 0.08f).coerceAtLeast(0.1f)
-                        drawLine(
-                            color = WindCyan,
-                            start = Offset(screenX + cos(a1) * swirlR, screenY + sin(a1) * swirlR * 0.7f),
-                            end = Offset(screenX + cos(a2) * swirlR, screenY + sin(a2) * swirlR * 0.7f),
-                            strokeWidth = 1.5f, alpha = swirlAlpha,
-                        )
-                    }
-                }
-                for (p in 0 until 4) {
-                    val dustAngle = t * 5f + p * 1.571f
-                    val dustR = spriteSize * (0.4f + sin(t * 3f + p * 0.8f) * 0.1f)
-                    val dx2 = screenX + cos(dustAngle) * dustR
-                    val dy2 = screenY + sin(dustAngle) * dustR * 0.6f
-                    val dustAlpha = 0.3f + sin(t * 4f + p * 1.5f) * 0.15f
-                    drawCircle(WindDust, 1.5f + sin(t * 6f + p * 2f) * 0.5f, Offset(dx2, dy2), alpha = dustAlpha)
+                fxBitmaps["fx_aoe_earth"]?.let { bmp ->
+                    val pulse = 1f + sin(t * 5f) * 0.1f
+                    val s = (fxSize * pulse).toInt()
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.75f,
+                    )
                 }
             }
 
-            // E7: Stun — spinning stars sprite
+            // E7: Stun — 적 머리 위 스턴 아이콘
             if (buffBits and BUFF_BIT_STUN != 0) {
                 fxBitmaps["fx_stun"]?.let { bmp ->
-                    val s = (fxSize * 0.9f).toInt()
-                    // 스턴은 적 머리 위에 표시
-                    val stunY = screenY - spriteSize * 0.6f
-                    val wobble = sin(t * 4f) * 2f
+                    val s = fxSize
+                    val stunY = screenY - spriteSize * 0.5f
+                    val wobble = sin(t * 4f) * 1.5f
                     drawImage(
                         image = bmp,
                         dstOffset = IntOffset((screenX - s / 2f + wobble).toInt(), (stunY - s / 2f).toInt()),
@@ -489,11 +472,11 @@ fun EnemyOverlay() {
                 }
             }
 
-            // E8: Freeze — Stun + Slow 동시 적용 시 빙결 스프라이트 (강한 CC)
+            // E8: Freeze — Stun + Slow 동시 적용 시 빙결
             if (buffBits and BUFF_BIT_STUN != 0 && buffBits and BUFF_BIT_SLOW != 0) {
                 fxBitmaps["fx_freeze"]?.let { bmp ->
-                    val pulse = 1f + sin(t * 2f) * 0.08f
-                    val s = (fxSize * 1.1f * pulse).toInt()
+                    val pulse = 1f + sin(t * 2f) * 0.05f
+                    val s = (fxSize * 1.2f * pulse).toInt()
                     drawImage(
                         image = bmp,
                         dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),

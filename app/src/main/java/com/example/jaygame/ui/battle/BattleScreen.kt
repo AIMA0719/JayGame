@@ -111,25 +111,6 @@ fun BattleScreen(
         pulse
     } else 0f
 
-    // C3: Skill flash for high-grade skills
-    val skillEvents by BattleBridge.skillEvents.collectAsState()
-    val skillFlashAlpha = remember { Animatable(0f) }
-    val skillFlashFamily = remember { mutableStateOf(0) }
-    val prevSkillCount = remember { mutableStateOf(0) }
-    val currentSkillCount = skillEvents.size
-    LaunchedEffect(currentSkillCount) {
-        if (currentSkillCount > prevSkillCount.value) {
-            val newEvents = skillEvents.takeLast(currentSkillCount - prevSkillCount.value)
-            val highGradeEvent = newEvents.firstOrNull { it.grade >= 3 }
-            if (highGradeEvent != null) {
-                skillFlashFamily.value = highGradeEvent.family
-                skillFlashAlpha.snapTo(0f)
-                skillFlashAlpha.animateTo(0.3f, animationSpec = tween(100))
-                skillFlashAlpha.animateTo(0f, animationSpec = tween(100))
-            }
-        }
-        prevSkillCount.value = currentSkillCount
-    }
 
     // Load background image from assets
     val bgAssetName = remember(stageId) {
@@ -220,26 +201,6 @@ fun BattleScreen(
         // Skill VFX — sibling of the clipped field so effects can extend beyond the field boundary
         SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
 
-        // C3: Skill flash overlay (화면 전체)
-        val flashAlpha = skillFlashAlpha.value
-        if (flashAlpha > 0.01f) {
-            val flashColor = when (skillFlashFamily.value) {
-                0 -> FlashFireColor
-                1 -> FlashFrostColor
-                2 -> FlashPoisonColor
-                3 -> FlashLightningColor
-                4 -> FlashSupportColor
-                5 -> FlashWindColor
-                else -> FlashDefaultColor
-            }
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawRect(
-                    color = flashColor,
-                    alpha = flashAlpha,
-                    size = size,
-                )
-            }
-        }
 
         // Boss red vignette overlay (화면 전체)
         if (bossVignetteAlpha > 0.01f) {
@@ -280,19 +241,6 @@ fun BattleScreen(
                 onUpgradeClick = { showUpgradeSheet = true },
             )
         }
-
-        // Layer 2.5: Synergy panel (top-start corner)
-        val familySynergies by BattleBridge.activeFamilySynergies.collectAsState()
-        val roleSynergies by BattleBridge.activeRoleSynergies.collectAsState()
-        SynergyPanel(
-            familySynergies = familySynergies,
-            roleSynergies = roleSynergies,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .windowInsetsPadding(WindowInsets.displayCutout)
-                .padding(top = 48.dp, start = 4.dp),
-        )
-
 
         // Layer 3: Popups
         UnitDetailPopup()
@@ -553,15 +501,6 @@ private fun TutorialHintOverlay() {
         }
     }
 }
-
-// Pre-allocated C3 skill flash colors (avoid GC)
-private val FlashFireColor = Color(0xFFFF8C00)      // orange
-private val FlashFrostColor = Color(0xFF64B5F6)     // blue
-private val FlashPoisonColor = Color(0xFF66BB6A)    // green
-private val FlashLightningColor = Color(0xFFFFD54F) // yellow
-private val FlashSupportColor = Color(0xFFCE93D8)   // purple
-private val FlashWindColor = Color(0xFF80CBC4)       // teal
-private val FlashDefaultColor = Color.White
 
 // Pre-allocated colors for A3 transition Canvas (avoid GC)
 private val VictoryGoldBright = Color(0xFFFFD700)

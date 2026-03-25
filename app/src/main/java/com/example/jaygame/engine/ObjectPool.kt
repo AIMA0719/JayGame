@@ -1,5 +1,7 @@
 package com.example.jaygame.engine
 
+import java.util.IdentityHashMap
+
 class ObjectPool<T>(
     private val capacity: Int,
     private val factory: () -> T,
@@ -8,12 +10,15 @@ class ObjectPool<T>(
     @PublishedApi internal val objects = ArrayList<T>(capacity)
     @PublishedApi internal val active = BooleanArray(capacity)
     private val freeList = ArrayDeque<Int>()
+    private val indexMap = IdentityHashMap<T, Int>(capacity)
     var activeCount = 0; private set
 
     init {
         repeat(capacity) { i ->
-            objects.add(factory())
+            val obj = factory()
+            objects.add(obj)
             freeList.addLast(i)
+            indexMap[obj] = i
         }
     }
 
@@ -27,8 +32,8 @@ class ObjectPool<T>(
     }
 
     fun release(item: T) {
-        val idx = objects.indexOf(item)
-        if (idx >= 0 && active[idx]) {
+        val idx = indexMap[item] ?: return
+        if (active[idx]) {
             active[idx] = false
             activeCount--
             freeList.addLast(idx)

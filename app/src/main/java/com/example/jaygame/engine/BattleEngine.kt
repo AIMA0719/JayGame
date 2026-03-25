@@ -142,8 +142,6 @@ class BattleEngine(
         return mergeableTilesCache
     }
 
-    // Role synergy cache — refreshed alongside family synergies
-    private var roleSynergyCache: Map<UnitRole, RoleSynergySystem.RoleSynergyBonus> = emptyMap()
 
     // PERF-02: Scratch lists for toActiveList replacements
     private val activeUnitsScratch = ArrayList<GameUnit>(MAX_UNITS)
@@ -177,6 +175,7 @@ class BattleEngine(
     private val unitGradeBuf = IntArray(MAX_UNITS)
     private val unitLevelBuf = IntArray(MAX_UNITS)
     private val unitAttackingBuf = BooleanArray(MAX_UNITS)
+    private val unitAttackAnimBuf = FloatArray(MAX_UNITS)
     private val unitTileBuf = IntArray(MAX_UNITS)
     private val unitBlueprintIdBuf = Array(MAX_UNITS) { "" }
     private val unitFamiliesListBuf = Array<List<com.example.jaygame.data.UnitFamily>>(MAX_UNITS) { emptyList() }
@@ -190,6 +189,7 @@ class BattleEngine(
     private val unitHomeXBuf = FloatArray(MAX_UNITS)
     private val unitHomeYBuf = FloatArray(MAX_UNITS)
     private val unitStackCountBuf = IntArray(MAX_UNITS)
+    private val unitBuffBuf = IntArray(MAX_UNITS)
 
     private val projSrcXBuf = FloatArray(MAX_PROJECTILES)
     private val projSrcYBuf = FloatArray(MAX_PROJECTILES)
@@ -276,9 +276,8 @@ class BattleEngine(
             waveSystem = WaveSystem(maxWaves, difficulty, forceBoss = forceBoss)
         }
         // 등급 그룹 통합 강화 — groupUpgradeLevels 배틀 시작 시 0으로 초기화
-        // Initialize synergy as empty — will be refreshed when units are placed
-        AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
         UniqueAbilitySystem.zonePool = zones
+        UniqueAbilitySystem.activeUnits = activeUnitsScratch
         // Wire relic bonuses into subsystems
         relicManager?.let { rm ->
             MergeSystem.luckyMergeBonus = rm.totalLuckyMergeBonus()
@@ -549,22 +548,9 @@ class BattleEngine(
         }
         deadEnemies.clear()
         enemies.forEach { if (!it.alive) deadEnemies.add(it) }
-        val poisonSpread = AbilitySystem.activeSynergy.specialEffect == SynergySystem.SpecialEffect.POISON_SPREAD
         deadEnemies.forEach { dead ->
             val deathX = dead.position.x / W
             val deathY = dead.position.y / H
-
-            // POISON_SPREAD synergy: on death, spread poison to nearby enemies
-            if (poisonSpread && dead.buffs.hasBuff(BuffType.DoT)) {
-                val spreadRect = com.example.jaygame.engine.math.GameRect(
-                    dead.position.x - 100f, dead.position.y - 100f, 200f, 200f,
-                )
-                spatialHash.query(spreadRect).forEach { nearby ->
-                    if (nearby.alive && nearby !== dead) {
-                        nearby.buffs.addBuff(BuffType.DoT, 8f, 3f)
-                    }
-                }
-            }
 
             val wasElite = dead.maxHp > waveSystem.getWaveConfig(waveSystem.currentWave).hp * 1.5f
 
@@ -651,13 +637,11 @@ class BattleEngine(
 
             // NEW: Behavior-based update path — units with a behavior delegate to it
             if (unit.behavior != null) {
-                val roleBonus = getRoleBonus(unit)
-                val synergy = AbilitySystem.activeSynergy
-                applyGroupBonus(unit, synergy.spdMultiplier)
-                // Apply role synergy range multiplier to enemy detection
+                applyGroupBonus(unit, 1f)
                 unit.behavior?.update(unit, dt) { pos, range ->
-                    findNearestEnemy(pos, range * roleBonus.rangeMultiplier)
+                    findNearestEnemy(pos, range)
                 }
+                if (unit.attackAnimTimer > 0f) unit.attackAnimTimer = (unit.attackAnimTimer - dt).coerceAtLeast(0f)
                 // Clamp position — tanks in MOVING/BLOCKING can go to the enemy path area
                 val isTankChasing = unit.state == UnitState.MOVING || unit.state == UnitState.BLOCKING
                 if (isTankChasing) {
@@ -679,12 +663,11 @@ class BattleEngine(
                     val relicCritDmg = rm?.totalCritDamageBonus() ?: 0f
                     val relicArmorPen = rm?.totalArmorPenPercent() ?: 0f
                     val relicMagicDmg = rm?.totalMagicDmgPercent() ?: 0f
-                    val synergy = AbilitySystem.activeSynergy
 
                     // Re-evaluate crit with relic crit chance bonus
                     val boostedCrit = if (result.isCrit) true
-                        else if (roleBonus.critBonus + relicCritChance > 0f)
-                            Math.random() < (roleBonus.critBonus + relicCritChance)
+                        else if (relicCritChance > 0f)
+                            Math.random() < relicCritChance
                         else false
 
                     // Crit damage handling:
@@ -697,12 +680,12 @@ class BattleEngine(
                         else -> 1f                                                       // no crit
                     }
 
-                    val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.001f
+                    val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
                     val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
                     val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
                     val boostedDamage = result.damage * critBoost *
-                        upgradeAtkMult * (1f + relicAtkBonus) * synergy.atkMultiplier *
-                        roleBonus.atkMultiplier * familyUpgradeBonus * gradeBonus * advantageMult *
+                        upgradeAtkMult * (1f + relicAtkBonus) *
+                        familyUpgradeBonus * gradeBonus * advantageMult *
                         (if (result.isMagic) (1f + relicMagicDmg) else 1f) *
                         (if (!result.isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
                     val finalBoostedDamage = boostedDamage
@@ -731,7 +714,7 @@ class BattleEngine(
                                 abilityType = unit.abilityType,
                                 abilityValue = unit.abilityValue,
                                 grade = unit.grade, family = unit.family,
-                                attackerRange = unit.range * roleBonus.rangeMultiplier,
+                                attackerRange = unit.range,
                             )
                         }
                     }
@@ -739,15 +722,66 @@ class BattleEngine(
                     unit.chargeMana()
                 }
             } else {
-                applyGroupBonus(unit, AbilitySystem.activeSynergy.spdMultiplier)
-                val legacyRoleBonus = getRoleBonus(unit)
+                applyGroupBonus(unit, 1f)
                 unit.update(dt) { pos, range ->
-                    findNearestEnemy(pos, range * legacyRoleBonus.rangeMultiplier)
+                    findNearestEnemy(pos, range)
                 }
                 if (unit.canAttack()) {
                     fireProjectile(unit)
                     unit.onAttack()
                     unit.chargeMana()
+                }
+            }
+        }
+    }
+
+    /** 근접 유닛에 종족별 효과 적용 (투사체 경로의 onProjectileHit에 대응) */
+    private fun applyMeleeRacialEffect(unit: GameUnit, target: Enemy, damage: Float, isMagic: Boolean) {
+        when (unit.abilityType) {
+            1 -> { // Splash: 주변 적에게 50% 데미지 + DoT
+                target.buffs.addBuff(BuffType.DoT, damage * 0.1f, 2f, unit.tileIndex)
+                val splashRadius = unit.abilityValue.coerceAtLeast(60f)
+                val rect = com.example.jaygame.engine.math.GameRect(
+                    target.position.x - splashRadius, target.position.y - splashRadius,
+                    splashRadius * 2, splashRadius * 2,
+                )
+                spatialHash.query(rect).forEach { nearby ->
+                    if (nearby !== target && nearby.alive) {
+                        val dist = nearby.position.distanceTo(target.position)
+                        if (dist <= splashRadius) {
+                            nearby.takeDamage(damage * 0.5f, isMagic)
+                        }
+                    }
+                }
+            }
+            2 -> { // Slow
+                target.buffs.addBuff(BuffType.Slow, unit.abilityValue, 2f, unit.tileIndex)
+            }
+            3 -> { // DoT
+                target.buffs.addBuff(BuffType.DoT, unit.abilityValue, 3f, unit.tileIndex)
+            }
+            4 -> { // Chain: 근접이지만 주변 적에게 연쇄 데미지
+                val chainCount = unit.abilityValue.toInt().coerceIn(1, 6)
+                val rect = com.example.jaygame.engine.math.GameRect(
+                    target.position.x - 200f, target.position.y - 200f, 400f, 400f,
+                )
+                var chained = 0
+                spatialHash.query(rect).forEach { nearby ->
+                    if (chained < chainCount && nearby !== target && nearby.alive) {
+                        nearby.takeDamage(damage * 0.7f, isMagic)
+                        chained++
+                    }
+                }
+            }
+            6 -> { // ArmorBreak
+                target.buffs.addBuff(BuffType.ArmorBreak, unit.abilityValue, 3f, unit.tileIndex)
+            }
+            10 -> { // Knockback
+                val dir = target.position - unit.position
+                val len = dir.length
+                if (len > 0.01f) {
+                    target.position.x += (dir.x / len) * unit.abilityValue
+                    target.position.y += (dir.y / len) * unit.abilityValue
                 }
             }
         }
@@ -861,7 +895,6 @@ class BattleEngine(
 
     private fun fireProjectile(unit: GameUnit) {
         val target = unit.currentTarget ?: return
-        val proj = projectiles.acquire() ?: return
         val rm = relicManager
         val relicAtkBonus = rm?.totalAtkPercent() ?: 0f
         val relicCritChance = rm?.totalCritChanceBonus() ?: 0f
@@ -869,33 +902,47 @@ class BattleEngine(
         val relicArmorPen = rm?.totalArmorPenPercent() ?: 0f
         val relicMagicDmg = rm?.totalMagicDmgPercent() ?: 0f
 
-        // Synergy bonus (field-based)
-        val synergy = AbilitySystem.activeSynergy
-        val roleBonus = getRoleBonus(unit)
-
         val abilityCritBonus = AbilityEngine.getCritBonus(unit.activeAbility)
-        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance + roleBonus.critBonus + abilityCritBonus)
+        val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance + abilityCritBonus)
         val critMultiplier = 2f + relicCritDmg
         val isMagic = unit.damageType == DamageType.MAGIC
-        val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.001f // +0.1% per level
+        val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
         val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
-        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus) * synergy.atkMultiplier * roleBonus.atkMultiplier * familyUpgradeBonus * gradeBonus * advantageMult
+        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
             (if (isMagic) (1f + relicMagicDmg) else 1f) *
             (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
 
-        proj.init(
-            from = unit.position.copy(), target = target,
-            damage = dmg, speed = 400f,
-            type = unit.projectileVisualType(),
-            isMagic = isMagic, isCrit = isCrit,
-            sourceUnitId = unit.tileIndex,
-            abilityType = unit.abilityType,
-            abilityValue = unit.abilityValue,
-            grade = unit.grade, family = unit.family,
-            attackerRange = unit.range * roleBonus.rangeMultiplier,
-        )
+        if (unit.attackRange == AttackRange.MELEE) {
+            // 근접: 즉시 데미지 + 슬래시 이펙트
+            val finalDmg = target.takeDamage(dmg, isMagic, unit.range)
+            val nx = target.position.x / W
+            val ny = target.position.y / H
+            BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), isCrit)
+            val angle = kotlin.math.atan2(
+                target.position.y - unit.position.y,
+                target.position.x - unit.position.x,
+            )
+            BattleBridge.onMeleeHit(nx, ny, unit.family.coerceIn(0, 5), isCrit, angle)
+            tryPlayAttackSfx(isCrit)
+            applyMeleeRacialEffect(unit, target, dmg, isMagic)
+            applyAbilityOnHit(unit.tileIndex, target)
+        } else {
+            // 원거리: 투사체 발사
+            val proj = projectiles.acquire() ?: return
+            proj.init(
+                from = unit.position.copy(), target = target,
+                damage = dmg, speed = 400f,
+                type = unit.projectileVisualType(),
+                isMagic = isMagic, isCrit = isCrit,
+                sourceUnitId = unit.tileIndex,
+                abilityType = unit.abilityType,
+                abilityValue = unit.abilityValue,
+                grade = unit.grade, family = unit.family,
+                attackerRange = unit.range,
+            )
+        }
     }
 
     private fun findNearestEnemy(pos: Vec2, range: Float): Enemy? {
@@ -953,7 +1000,6 @@ class BattleEngine(
         val unit = spawnFromBlueprint(selected) ?: return
         grid.placeUnit(targetSlot, unit)
         invalidateMergeCache()
-        refreshSynergies()
         when {
             selected.grade >= UnitGrade.LEGEND -> SfxManager.play(SoundEvent.SummonLegend)
             selected.grade >= UnitGrade.RARE   -> SfxManager.play(SoundEvent.SummonRare)
@@ -964,13 +1010,6 @@ class BattleEngine(
             blueprintId = selected.id,
         )
     }
-
-    // Pre-allocated containers for refreshSynergies() — avoid per-call allocation
-    private val roleSynergyCacheMut = HashMap<UnitRole, RoleSynergySystem.RoleSynergyBonus>(5)
-    private val roleCountsScratch = HashMap<UnitRole, Int>(5)
-
-    // Dedicated scratch list for refreshSynergies — avoid per-call allocation
-    private val synergyScratch = ArrayList<GameUnit>(MAX_UNITS)
 
     private fun applyGroupBonus(unit: GameUnit, synergySpdMult: Float) {
         val grp = UnitUpgradeSystem.gradeToGroup(unit.grade)
@@ -985,41 +1024,6 @@ class BattleEngine(
         }
     }
 
-    private fun refreshSynergies() {
-        // 시너지 비활성화 — 종족 시스템으로 전환 예정
-        return
-
-        synergyScratch.clear()
-        units.forEach { if (it.alive) synergyScratch.add(it) }
-
-        // Family synergy — countFamilies is called once internally
-        val familyCounts = SynergySystem.getActiveSynergies(synergyScratch)
-        if (familyCounts.isEmpty()) {
-            AbilitySystem.activeSynergy = SynergySystem.SynergyBonus()
-        } else {
-            val dominantFamily = familyCounts.maxByOrNull { it.value }?.key ?: return
-            // Reuse cached counts from getActiveSynergies — avoid second countFamilies call
-            AbilitySystem.activeSynergy = SynergySystem.getSynergyBonusFromCached(dominantFamily)
-        }
-        BattleBridge.updateFamilySynergies(familyCounts)
-
-        // Role synergy — single pass: count roles + compute bonuses
-        roleCountsScratch.clear()
-        for (unit in synergyScratch) {
-            if (unit.unitCategory != UnitCategory.SPECIAL) {
-                roleCountsScratch[unit.role] = (roleCountsScratch[unit.role] ?: 0) + 1
-            }
-        }
-        roleSynergyCacheMut.clear()
-        for (role in UnitRole.entries) {
-            val count = roleCountsScratch[role] ?: 0
-            roleSynergyCacheMut[role] = RoleSynergySystem.getBonusByCount(role, count)
-        }
-        roleSynergyCache = HashMap(roleSynergyCacheMut)
-
-        BattleBridge.updateRoleSynergies(roleCountsScratch)
-    }
-
     /** Acquire a unit from pool, init from blueprint. Does NOT place on grid.
      *  Position is set by grid.placeUnit() → slotCenter(). */
     private fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
@@ -1027,7 +1031,9 @@ class BattleEngine(
         unit.initFromBlueprint(bp)
         unit.race = bp.race
         unit.range *= upgradeRangeMult
-        // behaviorId가 비어있거나 미등록이면 behavior=null (기본 공격 로직으로 동작)
+        val abilityInfo = abilityForFamily(GameUnit.raceToFamily(unit.race))
+        unit.abilityType = abilityInfo.first
+        unit.abilityValue = abilityInfo.second
         unit.behavior = if (bp.behaviorId.isNotEmpty()) BehaviorFactory.create(bp.behaviorId) else null
         // Data-driven ability engine: parse ability from blueprint
         unit.activeAbility = AbilityEngine.parseAbility(bp.ability)
@@ -1036,12 +1042,7 @@ class BattleEngine(
         return unit
     }
 
-    /** Get role synergy bonus for a unit. SPECIAL category units get no bonus. */
-    private fun getRoleBonus(unit: GameUnit): RoleSynergySystem.RoleSynergyBonus {
-        if (unit.unitCategory == UnitCategory.SPECIAL) return RoleSynergySystem.NO_BONUS
-        return roleSynergyCache[unit.role] ?: RoleSynergySystem.NO_BONUS
-    }
-
+    @Suppress("DEPRECATION")
     private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
         0 -> 1 to 80f      // Fire: Splash
         1 -> 2 to 0.3f     // Frost: Slow
@@ -1051,6 +1052,7 @@ class BattleEngine(
         5 -> 10 to 50f     // Wind: Knockback
         else -> 0 to 0f
     }
+
 
     fun requestMerge(tileIndex: Int) {
         val existingUnit = grid.getUnit(tileIndex) ?: return
@@ -1104,7 +1106,6 @@ class BattleEngine(
         val unit = spawnFromBlueprint(resultBp) ?: return false
         grid.placeUnit(placeTile, unit)
         invalidateMergeCache()
-        refreshSynergies()
         mergeCount++
         BattleBridge.onMergeComplete(placeTile, true, -1, unit.blueprintId)
         return true
@@ -1129,7 +1130,6 @@ class BattleEngine(
         sp += SELL_BASE + unit.grade * SELL_PER_GRADE
         units.release(unit)
         invalidateMergeCache()
-        refreshSynergies()
     }
 
     fun requestBulkSell(grade: Int): Int {
@@ -1148,8 +1148,7 @@ class BattleEngine(
         }
         if (count > 0) {
             invalidateMergeCache()
-            refreshSynergies()
-        }
+            }
         return count
     }
 
@@ -1203,7 +1202,6 @@ class BattleEngine(
         }
 
         invalidateMergeCache()
-        refreshSynergies()
         mergeCount++
         SfxManager.play(if (mergeResult.isLucky) SoundEvent.MergeLucky else SoundEvent.Merge)
         BattleBridge.onMergeComplete(actualSlot, mergeResult.isLucky, -1, resultUnit.blueprintId)
@@ -1271,7 +1269,6 @@ class BattleEngine(
         sp -= cost
         grid.placeUnit(targetSlot, unit)
         invalidateMergeCache()
-        refreshSynergies()
         BattleBridge.onSummonResult(
             unitDefId = if (bp != null) -1 else unitDefId,
             grade = gradeOrdinal,
@@ -1293,7 +1290,6 @@ class BattleEngine(
         sp -= cost
         grid.placeUnit(targetSlot, unit)
         invalidateMergeCache()
-        refreshSynergies()
         BattleBridge.onSummonResult(
             unitDefId = -1,
             grade = bp.grade.ordinal,
@@ -1374,6 +1370,7 @@ class BattleEngine(
                 unitGradeBuf[ui] = u.grade
                 unitLevelBuf[ui] = u.level
                 unitAttackingBuf[ui] = u.isAttacking
+                unitAttackAnimBuf[ui] = u.attackAnimTimer
                 unitTileBuf[ui] = u.tileIndex
                 unitBlueprintIdBuf[ui] = u.blueprintId
                 unitFamiliesListBuf[ui] = u.families
@@ -1387,13 +1384,19 @@ class BattleEngine(
                 unitHomeXBuf[ui] = u.homePosition.x / W
                 unitHomeYBuf[ui] = u.homePosition.y / H
                 unitStackCountBuf[ui] = grid.getStackCount(u.tileIndex)
+                var ubits = 0
+                if (u.buffs.hasBuff(BuffType.AtkUp)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_ATK_UP
+                if (u.buffs.hasBuff(BuffType.SpdUp)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_SPD_UP
+                if (u.buffs.hasBuff(BuffType.Shield)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_SHIELD
+                if (u.buffs.hasBuff(BuffType.DefUp)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_DEF_UP
+                unitBuffBuf[ui] = ubits
                 ui++
             }
         }
         BattleBridge.updateUnitPositions(
-            unitXBuf, unitYBuf, unitDefIdBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui,
+            unitXBuf, unitYBuf, unitDefIdBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui, unitAttackAnimBuf,
             unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
-            unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf,
+            unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf, unitBuffBuf,
         )
 
         // Projectiles — reuse pre-allocated buffers

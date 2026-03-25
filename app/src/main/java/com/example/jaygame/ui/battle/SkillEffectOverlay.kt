@@ -40,7 +40,7 @@ private val AoeVfxMap: Map<SkillVfxType, String> = mapOf(
     SkillVfxType.STATIC_FIELD to "fx_aoe_lightning",
     SkillVfxType.LIGHTNING_STRIKE to "fx_chain_lightning",
     // Support
-    SkillVfxType.DIVINE_SHIELD to "fx_buff_shield",
+    SkillVfxType.DIVINE_SHIELD to "fx_aoe_holy",
     SkillVfxType.WAR_SONG_AURA to "fx_buff_attack",
     SkillVfxType.HEAL_PULSE to "fx_buff_heal",
     // Wind

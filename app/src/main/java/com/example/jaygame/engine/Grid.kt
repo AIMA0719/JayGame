@@ -77,8 +77,11 @@ class Grid {
 
     /** 월드 좌표에서 슬롯 인덱스 반환. 범위 밖이면 -1 */
     fun getSlotAt(worldX: Float, worldY: Float): Int {
-        val col = ((worldX - ORIGIN_X) / CELL_W).toInt()
-        val row = ((worldY - ORIGIN_Y) / CELL_H).toInt()
+        val relX = worldX - ORIGIN_X
+        val relY = worldY - ORIGIN_Y
+        if (relX < 0f || relY < 0f) return -1
+        val col = (relX / CELL_W).toInt()
+        val row = (relY / CELL_H).toInt()
         if (col !in 0 until COLS || row !in 0 until ROWS) return -1
         return row * COLS + col
     }

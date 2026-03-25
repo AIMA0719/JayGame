@@ -23,6 +23,8 @@ class GameUnit {
     var abilityType = 0
     var abilityValue = 0f
     var isAttacking = false
+    /** 공격 발사 시 ATTACK_ANIM_DURATION→0 감소하는 1회성 애니메이션 타이머 */
+    var attackAnimTimer = 0f
     /** Combined speed multiplier (group upgrade + synergy) — set by BattleEngine each frame */
     var spdMultiplier = 1f
     /** 통합 강화 ATK 보너스 — BattleEngine이 매 프레임 그룹별로 설정 */
@@ -71,10 +73,12 @@ class GameUnit {
     // ── New blueprint-based init (Task 4) ──
     fun initFromBlueprint(bp: UnitBlueprint) {
         blueprintId = bp.id
-        families = bp.families
-        family = bp.families.firstOrNull()?.ordinal ?: 0
-        grade = bp.grade.ordinal
         race = bp.race
+        family = raceToFamily(bp.race)
+        families = bp.families.ifEmpty {
+            listOf(com.example.jaygame.data.UnitFamily.entries[family])
+        }
+        grade = bp.grade.ordinal
         role = bp.role
         attackRange = bp.attackRange
         damageType = bp.damageType
@@ -113,6 +117,7 @@ class GameUnit {
         this.abilityType = abilityType
         this.abilityValue = abilityValue
         this.isAttacking = false
+        this.attackAnimTimer = 0f
         this.attackCooldown = 0f
         this.buffs.clear()
         this.passiveCounter = 0
@@ -133,6 +138,7 @@ class GameUnit {
         buffs.update(dt)
         val spdMult = buffs.getSpdMultiplier()
         attackCooldown -= dt * spdMult
+        if (attackAnimTimer > 0f) attackAnimTimer = (attackAnimTimer - dt).coerceAtLeast(0f)
 
         // 셀 고정: 유닛은 homePosition에 고정, 사거리 내 적 탐지 시 제자리 공격
         position.x = homePosition.x
@@ -149,13 +155,28 @@ class GameUnit {
     }
 
     companion object {
+        const val ATTACK_ANIM_DURATION = 0.15f
         val LEVEL_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2.2f, 3.2f, 4.5f, 6f, 8f)
+
+        /**
+         * 종족(Race) → 레거시 가문(Family) 매핑.
+         * HUMAN→Fire(0), SPIRIT→Frost(1), DEMON→Poison(2),
+         * ROBOT→Lightning(3), ANIMAL→Support(4)
+         */
+        fun raceToFamily(race: UnitRace): Int = when (race) {
+            UnitRace.HUMAN  -> 0  // Fire: Splash
+            UnitRace.SPIRIT -> 1  // Frost: Slow/CC
+            UnitRace.DEMON  -> 2  // Poison: DoT
+            UnitRace.ROBOT  -> 3  // Lightning: Chain
+            UnitRace.ANIMAL -> 4  // Support: Buff
+        }
     }
 
     fun canAttack(): Boolean = isAttacking && attackCooldown <= 0f && currentTarget?.alive == true
 
     fun onAttack() {
         attackCooldown = 1f / atkSpeed
+        attackAnimTimer = ATTACK_ANIM_DURATION
     }
 
     /** 공격 성공 시 마나 축적 (전설/신화 궁극기용) */
@@ -197,6 +218,7 @@ class GameUnit {
         // Existing reset logic
         alive = false
         currentTarget = null
+        attackAnimTimer = 0f
         buffs.clear()
         uniqueAbilityType = -1
         passiveCounter = 0
@@ -214,4 +236,5 @@ class GameUnit {
         manaPerHit = 0f
         hasUltimate = false
     }
+
 }

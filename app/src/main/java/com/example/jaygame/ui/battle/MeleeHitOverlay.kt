@@ -61,22 +61,13 @@ fun MeleeHitOverlay() {
             val y = event.y * h
             val family = event.family.coerceIn(0, SlashGlowColors.size - 1)
 
-            // 크기: 75px 기본 (화면 비례), 크리티컬 1.5배
-            val baseSize = 75f * (w / 720f) * scale
+            // 크기: 110px 기본 (화면 비례), 크리티컬 1.5배
+            val baseSize = 110f * (w / 720f) * scale
             val critMult = if (event.isCrit) 1.5f else 1f
             val slashSize = baseSize * critMult
             val halfSize = slashSize / 2f
 
             val angleDeg = event.angle * (180f / PI.toFloat())
-
-            // 종족별 글로우
-            drawCircle(
-                color = SlashGlowColors[family],
-                radius = slashSize * 0.7f,
-                center = Offset(x, y),
-                alpha = alpha,
-                blendMode = BlendMode.Screen,
-            )
 
             // 슬래시 스프라이트 (종족별 틴트)
             rotate(degrees = angleDeg, pivot = Offset(x, y)) {
