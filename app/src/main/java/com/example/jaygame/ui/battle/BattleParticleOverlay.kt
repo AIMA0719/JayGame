@@ -20,9 +20,6 @@ import kotlin.math.sin
 private val ParticleGold = Color(0xFFD4A847)
 private val ParticleCyan = Color(0xFF5BA4CF)
 private val ParticleWhite = Color(0xFFF0E6D3)
-private val ParticleRed = Color(0xFFFF4444)
-private val ParticleGreen = Color(0xFF6DBF67)
-private val ParticlePurple = Color(0xFFCE93D8)
 
 // Pre-allocated soul particle colors (avoid .copy() in spawn hot path)
 private val SoulParticleColor = Color(0xFF5BA4CF).copy(alpha = 0.9f)
@@ -51,7 +48,7 @@ private val GradeParticleColorsEnd = Array(GradeParticleColors.size) { i ->
 
 /**
  * Compose particle data: lightweight struct for per-frame update.
- * Pooled — fields are reset via [resetParticle] rather than creating new objects.
+ * Pooled — fields are reset inline rather than creating new objects.
  */
 private class ComposeParticle(
     var x: Float = 0f,
@@ -67,11 +64,6 @@ private class ComposeParticle(
     var gravity: Float = 0f,
     var alive: Boolean = false,
 )
-
-private fun resetParticle(p: ComposeParticle) {
-    p.alive = false
-    p.life = 0f
-}
 
 private const val MAX_PARTICLES = 200
 

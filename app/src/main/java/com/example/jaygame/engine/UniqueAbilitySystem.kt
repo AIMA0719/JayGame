@@ -1,6 +1,8 @@
 @file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
+import com.example.jaygame.audio.SfxManager
+import com.example.jaygame.audio.SoundEvent
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.SkillEvent
 import com.example.jaygame.bridge.SkillVfxType
@@ -26,8 +28,6 @@ object UniqueAbilitySystem {
     fun initUnit(unit: GameUnit) {
         // Always reset ability fields first (GameUnit pool recycling safety)
         unit.uniqueAbilityType = -1
-        unit.uniqueAbilityMaxCd = 0f
-        unit.uniqueAbilityCooldown = 0f
         unit.passiveCounter = 0
         unit.mana = 0f
         unit.manaPerHit = 0f
@@ -49,13 +49,9 @@ object UniqueAbilitySystem {
                 unit.manaPerHit = if (unit.grade >= 4) 6f else 9f  // 신화: 느리게 충전, 강한 궁극기
                 unit.maxMana = 100f
                 unit.mana = 0f
-                unit.uniqueAbilityMaxCd = 0f // 쿨다운 대신 마나 사용
-                unit.uniqueAbilityCooldown = 0f
             }
             else -> {
                 // 고대: 패시브 (기존 방식 유지)
-                unit.uniqueAbilityMaxCd = 0f
-                unit.uniqueAbilityCooldown = 0f
             }
         }
     }
@@ -198,6 +194,7 @@ object UniqueAbilitySystem {
      * Activate an active ability (cooldown-based).
      */
     private fun activateAbility(unit: GameUnit, enemies: List<Enemy>) {
+        SfxManager.play(SoundEvent.SkillActivate, 0.8f)
         val vfx = resolveVfxTypeEnum(unit.family, unit.grade) ?: return
         val nx = unit.position.x / W
         val ny = unit.position.y / H
@@ -429,6 +426,7 @@ object UniqueAbilitySystem {
                 grade = unit.grade,
                 family = unit.family,
                 duration = duration,
+                abilityId = unit.blueprintId,
             )
         )
     }

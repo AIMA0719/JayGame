@@ -2,6 +2,8 @@
 package com.example.jaygame.engine
 
 import android.util.Log
+import com.example.jaygame.audio.SfxManager
+import com.example.jaygame.audio.SoundEvent
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.DungeonDef
 import com.example.jaygame.data.GameData
@@ -99,6 +101,16 @@ class BattleEngine(
 
     private var killCount = 0
     private var mergeCount = 0
+    private var lastAttackSfxTime = 0L
+    private var lastDeathSfxTime = 0L
+
+    private fun tryPlayAttackSfx(isCrit: Boolean) {
+        val now = System.currentTimeMillis()
+        if (now - lastAttackSfxTime > 200) {
+            SfxManager.play(if (isCrit) SoundEvent.CriticalHit else SoundEvent.Attack, 0.4f)
+            lastAttackSfxTime = now
+        }
+    }
     private var peakEnemyCount = 0
     private var hpEverLost = false // Track if player ever took HP damage
 
@@ -335,6 +347,7 @@ class BattleEngine(
                     waveSystem.startWave(waveSystem.currentWave)
                     val config = waveSystem.getWaveConfig(waveSystem.currentWave)
                     isBossRound = config.isBoss
+                    SfxManager.play(if (isBossRound) SoundEvent.BossAppear else SoundEvent.WaveStart, if (isBossRound) 1f else 0.7f)
                     sp += relicManager?.totalWaveStartSp() ?: 0f  // 유물 웨이브 시작 보너스 코인
                     state = State.Playing
                 }
@@ -386,6 +399,7 @@ class BattleEngine(
 
                 // 웨이브 클리어 → 보상 지급 및 다음 웨이브
                 if (waveSystem.waveComplete) {
+                    SfxManager.play(SoundEvent.WaveClear, 0.8f)
                     val waveClearCoins = WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
@@ -585,6 +599,11 @@ class BattleEngine(
 
             enemies.release(dead)
             killCount++
+            val now = System.currentTimeMillis()
+            if (now - lastDeathSfxTime > 100) {
+                SfxManager.play(SoundEvent.EnemyDeath, 0.5f)
+                lastDeathSfxTime = now
+            }
             // 코인 획득: 적 처치 시
             sp += if (wasElite) COIN_PER_ELITE_KILL.toFloat() else COIN_PER_KILL.toFloat()
             val eliteGoldMult = if (wasElite) 3f else 1f
@@ -696,6 +715,7 @@ class BattleEngine(
                         BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
                         val angle = atan2(target.position.y - unit.position.y, target.position.x - unit.position.x)
                         BattleBridge.onMeleeHit(nx, ny, unit.family.coerceIn(0, 5), boostedCrit, angle)
+                        tryPlayAttackSfx(boostedCrit)
                     } else {
                         // Projectile — melee slash uses fast projectile, ranged uses normal
                         val isSlash = unit.attackRange == AttackRange.MELEE
@@ -705,7 +725,7 @@ class BattleEngine(
                             proj.init(
                                 from = unit.position.copy(), target = target,
                                 damage = finalBoostedDamage, speed = projSpeed,
-                                type = unit.family.coerceIn(0, 5),
+                                type = unit.projectileVisualType(),
                                 isMagic = result.isMagic, isCrit = boostedCrit,
                                 sourceUnitId = unit.tileIndex,
                                 abilityType = unit.abilityType,
@@ -765,6 +785,7 @@ class BattleEngine(
                 if (proj.speed >= 800f) {
                     val angle = atan2(target.position.y - proj.sourcePos.y, target.position.x - proj.sourcePos.x)
                     BattleBridge.onMeleeHit(nx, ny, proj.family.coerceIn(0, 5), proj.isCrit, angle)
+                    tryPlayAttackSfx(proj.isCrit)
                 }
             }
             if (!proj.alive) deadProjectiles.add(proj)
@@ -867,7 +888,7 @@ class BattleEngine(
         proj.init(
             from = unit.position.copy(), target = target,
             damage = dmg, speed = 400f,
-            type = unit.family.coerceIn(0, 5),
+            type = unit.projectileVisualType(),
             isMagic = isMagic, isCrit = isCrit,
             sourceUnitId = unit.tileIndex,
             abilityType = unit.abilityType,
@@ -933,6 +954,10 @@ class BattleEngine(
         grid.placeUnit(targetSlot, unit)
         invalidateMergeCache()
         refreshSynergies()
+        when {
+            selected.grade >= UnitGrade.LEGEND -> SfxManager.play(SoundEvent.SummonLegend)
+            selected.grade >= UnitGrade.RARE   -> SfxManager.play(SoundEvent.SummonRare)
+        }
         BattleBridge.onSummonResult(
             unitDefId = -1,
             grade = selected.grade.ordinal,
@@ -1095,6 +1120,7 @@ class BattleEngine(
         sp -= cost
         groupUpgradeLevels[groupIndex] = currentLevel + 1
         refreshGroupBonusCache()
+        SfxManager.play(SoundEvent.LevelUp, 0.7f)
         BattleBridge.updateGroupUpgradeLevels(groupUpgradeLevels.copyOf())
     }
 
@@ -1179,6 +1205,7 @@ class BattleEngine(
         invalidateMergeCache()
         refreshSynergies()
         mergeCount++
+        SfxManager.play(if (mergeResult.isLucky) SoundEvent.MergeLucky else SoundEvent.Merge)
         BattleBridge.onMergeComplete(actualSlot, mergeResult.isLucky, -1, resultUnit.blueprintId)
         return true
     }
@@ -1320,9 +1347,11 @@ class BattleEngine(
                 val hasSlow = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.Slow)
                 val hasDot = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.DoT)
                 val hasArmorBreak = e.buffs.hasBuff(com.example.jaygame.engine.BuffType.ArmorBreak)
+                val hasStun = e.buffs.isStunned()
                 if (hasSlow) bits = bits or com.example.jaygame.bridge.BUFF_BIT_SLOW
                 if (hasDot) bits = bits or com.example.jaygame.bridge.BUFF_BIT_DOT
                 if (hasArmorBreak) bits = bits or com.example.jaygame.bridge.BUFF_BIT_ARMOR_BREAK
+                if (hasStun) bits = bits or com.example.jaygame.bridge.BUFF_BIT_STUN
                 // Poison = slow + dot combo
                 if (hasSlow && hasDot) bits = bits or com.example.jaygame.bridge.BUFF_BIT_POISON
                 // Lightning & Wind tracked via recentHitFlags
@@ -1416,6 +1445,7 @@ class BattleEngine(
     }
 
     private fun onBattleEnd(victory: Boolean) {
+        SfxManager.play(if (victory) SoundEvent.Victory else SoundEvent.Defeat)
         val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
             dungeonDef?.difficultyMultiplier ?: 1f
         } else {

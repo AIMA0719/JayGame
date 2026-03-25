@@ -43,7 +43,6 @@ import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.components.ResourceHeader
 import com.example.jaygame.ui.theme.DeepDark
-import com.example.jaygame.ui.theme.DiamondBlue
 import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.Divider
 import com.example.jaygame.ui.theme.Gold

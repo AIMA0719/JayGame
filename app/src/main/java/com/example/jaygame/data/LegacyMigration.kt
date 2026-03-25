@@ -92,6 +92,4 @@ object LegacyMigration {
         return result
     }
 
-    /** Look up the blueprintId for a legacy index, or null if unmapped. */
-    fun blueprintIdForLegacyIndex(index: Int): String? = LEGACY_INDEX_TO_BLUEPRINT[index]
 }

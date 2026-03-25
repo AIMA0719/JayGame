@@ -21,6 +21,12 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import kotlin.math.sin
 
@@ -37,6 +43,9 @@ private val BarColor = Color(0xFFFFD700).copy(alpha = 0.6f)
  */
 @Composable
 fun WaveAnnouncementOverlay() {
+    val context = LocalContext.current
+    val waveClearBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_wave_clear, 128)!! }
+
     val battleState by BattleBridge.state.collectAsState()
     val currentWave = battleState.currentWave
     val isBoss = battleState.isBossRound
@@ -142,6 +151,21 @@ fun WaveAnnouncementOverlay() {
                 val bossY = textY + textLayout.size.height + 8f
                 drawText(bossLayout, topLeft = Offset(bossX, bossY))
             }
+
+            // 웨이브 클리어 축하 이미지 (텍스트 뒤)
+            val waveImgSize = (w * 0.35f * scale).toInt().coerceAtLeast(1)
+            val waveImgHalf = waveImgSize / 2f
+            val waveImgY = textY + textLayout.size.height / 2f - waveImgHalf
+            drawImage(
+                image = waveClearBitmap,
+                dstOffset = IntOffset(
+                    (w / 2f - waveImgHalf).toInt(),
+                    waveImgY.toInt(),
+                ),
+                dstSize = IntSize(waveImgSize, waveImgSize),
+                alpha = alpha * 0.5f,
+                blendMode = BlendMode.Screen,
+            )
 
             // Decorative bars
             val barW = w * 0.4f * scale

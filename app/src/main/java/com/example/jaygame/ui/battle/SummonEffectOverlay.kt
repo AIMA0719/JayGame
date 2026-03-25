@@ -37,9 +37,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
-import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.*
 import kotlinx.coroutines.delay
@@ -64,6 +70,9 @@ private val RainbowColors = arrayOf(
 fun SummonEffectOverlay() {
     val summonResult by BattleBridge.summonResult.collectAsState()
     val data = summonResult ?: return
+
+    val context = LocalContext.current
+    val summonBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_summon, 128)!! }
 
     val unitDef = UNIT_DEFS_MAP[data.unitDefId]
     val grade = data.grade
@@ -174,6 +183,23 @@ fun SummonEffectOverlay() {
             val cy = size.height / 2f
             val bp = burstProgress
             val maxR = size.minDimension * 0.4f * bp
+
+            // 소환 이미지 스프라이트 (등급 2+ 에서 표시)
+            if (grade >= 2 && bp > 0.01f) {
+                val summonAlpha = (1f - bp * 0.6f).coerceIn(0f, 1f)
+                val summonSize = (maxR * 1.8f).toInt().coerceAtLeast(1)
+                val summonHalf = summonSize / 2f
+                drawImage(
+                    image = summonBitmap,
+                    dstOffset = IntOffset(
+                        (cx - summonHalf).toInt(),
+                        (cy - summonHalf).toInt(),
+                    ),
+                    dstSize = IntSize(summonSize, summonSize),
+                    alpha = summonAlpha * 0.7f,
+                    blendMode = BlendMode.Screen,
+                )
+            }
 
             when {
                 // ── GRADE 0 (Common): minimal sparkle ──

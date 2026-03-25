@@ -60,6 +60,8 @@ const val BUFF_BIT_ARMOR_BREAK = 1 shl 2 // ArmorBreak
 const val BUFF_BIT_POISON     = 1 shl 3  // Poison-family DoT (slow+dot combo)
 const val BUFF_BIT_LIGHTNING   = 1 shl 4 // Recently hit by lightning chain
 const val BUFF_BIT_WIND       = 1 shl 5  // Recently knocked back
+const val BUFF_BIT_STUN       = 1 shl 6  // Stun (stars)
+const val BUFF_BIT_SILENCE    = 1 shl 7  // Silence
 
 data class EnemyPositionData(
     val xs: FloatArray = FloatArray(0),
@@ -205,6 +207,7 @@ data class SkillEvent(
     val family: Int = 0,
     val startTime: Long = System.currentTimeMillis(),
     val duration: Float = 1f, // seconds
+    val abilityId: String = "", // 궁극기 스프라이트 매핑용
 )
 
 data class GoldPickupEvent(

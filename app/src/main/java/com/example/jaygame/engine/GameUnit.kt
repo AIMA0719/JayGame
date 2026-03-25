@@ -31,8 +31,6 @@ class GameUnit {
 
     // ── Unique ability fields (M4) ──
     var uniqueAbilityType = -1       // index into UniqueAbilitySystem types, -1 = none
-    var uniqueAbilityCooldown = 0f   // seconds until next activation
-    var uniqueAbilityMaxCd = 0f      // max cooldown for this ability
     var passiveCounter = 0           // generic counter for passive triggers (e.g., hit count)
 
     // ── New Strategy-pattern fields (Task 4) ──
@@ -117,7 +115,6 @@ class GameUnit {
         this.isAttacking = false
         this.attackCooldown = 0f
         this.buffs.clear()
-        this.uniqueAbilityCooldown = 0f
         this.passiveCounter = 0
         this.moveSpeed = when (family) {
             0 -> 110f
@@ -173,6 +170,8 @@ class GameUnit {
         return baseATK * levelMult * buffs.getAtkMultiplier() * (1f + groupAtkBonus)
     }
 
+    fun projectileVisualType(): Int = race.ordinal * 2 + if (damageType == DamageType.MAGIC) 1 else 0
+
     fun reset() {
         // Reset new strategy-pattern fields
         behavior?.reset()
@@ -200,8 +199,6 @@ class GameUnit {
         currentTarget = null
         buffs.clear()
         uniqueAbilityType = -1
-        uniqueAbilityCooldown = 0f
-        uniqueAbilityMaxCd = 0f
         passiveCounter = 0
 
         // Reset AbilityEngine fields

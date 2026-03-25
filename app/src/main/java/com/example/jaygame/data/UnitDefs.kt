@@ -47,7 +47,6 @@ enum class UnitFamily(val label: String, val color: Color) {
     WIND("바람", Color(0xFF80CBC4)),
 }
 
-val NUM_RACES = UnitRace.entries.size
 
 /**
  * 고유 능력 정보 (고대 등급 이상)
@@ -76,10 +75,6 @@ data class UnitDef(
     val uniqueAbility: UniqueAbility? = null,
 )
 
-@Suppress("unused")
-typealias UnitRarity = UnitGrade
-@Suppress("unused")
-typealias UnitElement = UnitFamily
 
 val UPGRADE_COSTS = listOf(2 to 100, 4 to 200, 10 to 500, 20 to 1000, 50 to 2000, 100 to 5000)
 val LEVEL_MULTIPLIER = floatArrayOf(1.0f, 1.5f, 2.2f, 3.2f, 4.5f, 6.0f, 8.0f)

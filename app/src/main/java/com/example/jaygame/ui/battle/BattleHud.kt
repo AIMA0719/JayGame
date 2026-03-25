@@ -108,6 +108,8 @@ private val BossMainBg = Brush.verticalGradient(listOf(Color(0xFF3D1515), Color(
 private val NormalWaveBg = Brush.verticalGradient(listOf(Color(0xFF5C3A1E), Color(0xFF3D2510)))
 private val NormalMainBg = Brush.verticalGradient(listOf(Color(0xFF4A3018), Color(0xFF2E1C0C)))
 
+private fun playClick() { SfxManager.play(SoundEvent.ButtonClick, 0.5f) }
+
 // ── Disabled state colors ──
 private val DisabledTop = Color(0xFF3A3A3A)
 private val DisabledBot = Color(0xFF2A2A2A)
@@ -352,7 +354,10 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                 .clip(CircleShape)
                 .background(Color.Black.copy(alpha = 0.5f))
                 .border(1.dp, WoodBrown.copy(alpha = 0.4f), CircleShape)
-                .clickable(onClick = onPauseClick),
+                .clickable(onClick = {
+                    playClick()
+                    onPauseClick()
+                }),
             contentAlignment = Alignment.Center,
         ) {
             // Show current speed indicator on menu button
@@ -1257,7 +1262,10 @@ fun BattleBottomHud(
                     .clip(sellShape)
                     .background(if (hasUnits) SellBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
                     .border(2.dp, if (hasUnits) Color(0xFF8B1A1A) else DisabledBot, sellShape)
-                    .then(if (hasUnits) Modifier.clickable(onClick = onBulkSellClick) else Modifier)
+                    .then(if (hasUnits) Modifier.clickable(onClick = {
+                    playClick()
+                    onBulkSellClick()
+                }) else Modifier)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1290,6 +1298,7 @@ fun BattleBottomHud(
                     .background(if (canMerge) MergeBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
                     .border(2.dp, if (canMerge) Color(0xFF8B6914) else DisabledBot, mergeShape2)
                     .then(if (canMerge) Modifier.clickable {
+                        playClick()
                         HapticManager.medium(view)
                         BattleBridge.requestMergeAll()
                     } else Modifier)
@@ -1346,7 +1355,10 @@ fun BattleBottomHud(
                     enabled = true,
                     gradientTop = RecipeBtnTop, gradientBot = RecipeBtnBot,
                     borderColor = RecipeBtnBorder,
-                    onClick = { showRecipeBook = true },
+                    onClick = {
+                        playClick()
+                        showRecipeBook = true
+                    },
                     modifier = Modifier.size(width = 72.dp, height = 66.dp),
                 )
                 WideHexButton(
@@ -1355,7 +1367,10 @@ fun BattleBottomHud(
                     enabled = canGamble,
                     gradientTop = GreenTeal, gradientBot = GreenTealDark,
                     borderColor = GambleBorderColor,
-                    onClick = onGambleClick,
+                    onClick = {
+                        playClick()
+                        onGambleClick()
+                    },
                     modifier = Modifier.size(width = 72.dp, height = 66.dp),
                 )
             }
@@ -1367,7 +1382,10 @@ fun BattleBottomHud(
                 enabled = true,
                 gradientTop = Color(0xFF4A3E32), gradientBot = Color(0xFF32281C),
                 borderColor = Color(0xFF1A1510),
-                onClick = onUpgradeClick,
+                onClick = {
+                    playClick()
+                    onUpgradeClick()
+                },
                 modifier = Modifier
                     .fillMaxWidth(0.45f)
                     .align(Alignment.BottomCenter),

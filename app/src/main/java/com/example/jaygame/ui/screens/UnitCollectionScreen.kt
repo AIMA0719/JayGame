@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,9 +27,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -90,8 +86,6 @@ private val CodexGradeBgCommon = Color(0xFF424242)
 private val CodexGradeBgRare = Color(0xFF1A237E)
 private val CodexGradeBgAncient = Color(0xFF4A148C)
 private val CodexGradeBorderGold = Color(0xFFFFD700)
-private val CodexGradeBorderRed = Color(0xFFEF4444)
-private val CodexGradeBorderRainbowStart = Color(0xFFFF6B35)
 private val CodexGradeBorderRainbowEnd = Color(0xFFFBBF24)
 
 // Filter chip colors imported from UnitUiUtils

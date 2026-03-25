@@ -36,9 +36,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UNIT_DEFS_MAP
-import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
@@ -84,6 +89,9 @@ private val LuckyTextPaint = android.graphics.Paint().apply {
 fun MergeEffectOverlay() {
     val effect by BattleBridge.mergeEffect.collectAsState()
     val data = effect ?: return
+
+    val context = LocalContext.current
+    val mergeBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_merge, 128)!! }
 
     val unitDef = UNIT_DEFS_MAP[data.resultUnitId]
     val grade = if (data.resultUnitId >= 0) com.example.jaygame.data.unitGradeOf(data.resultUnitId) else -1
@@ -234,6 +242,20 @@ fun MergeEffectOverlay() {
                 if (burst > 0.01f) {
                     val burstAlpha = (1f - burst).coerceIn(0f, 1f)
                     val burstRadius = 20f + burst * 80f
+
+                    // 합성 이미지 스프라이트
+                    val mergeImgSize = (burstRadius * 2.2f).toInt().coerceAtLeast(1)
+                    val mergeImgHalf = mergeImgSize / 2f
+                    drawImage(
+                        image = mergeBitmap,
+                        dstOffset = IntOffset(
+                            (cx - mergeImgHalf).toInt(),
+                            (cy - mergeImgHalf).toInt(),
+                        ),
+                        dstSize = IntSize(mergeImgSize, mergeImgSize),
+                        alpha = burstAlpha * 0.9f,
+                        blendMode = BlendMode.Screen,
+                    )
 
                     // Core glow
                     drawCircle(

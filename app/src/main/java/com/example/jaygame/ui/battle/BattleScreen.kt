@@ -1,5 +1,6 @@
 package com.example.jaygame.ui.battle
 
+import com.example.jaygame.R
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
@@ -50,19 +51,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jaygame.BuildConfig
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.BattleResultData
 import com.example.jaygame.data.STAGES
@@ -82,7 +84,6 @@ fun BattleScreen(
     val stageId by BattleBridge.stageId.collectAsState()
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
     val context = LocalContext.current
-    val view = LocalView.current
 
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
@@ -110,7 +111,6 @@ fun BattleScreen(
         pulse
     } else 0f
 
-    val damageEvents by BattleBridge.damageEvents.collectAsState()
     // C3: Skill flash for high-grade skills
     val skillEvents by BattleBridge.skillEvents.collectAsState()
     val skillFlashAlpha = remember { Animatable(0f) }
@@ -202,6 +202,7 @@ fun BattleScreen(
             EnemyOverlay()
             BattleField()
             ProjectileOverlay()
+            MeleeHitOverlay()
             DamageNumberOverlay()
             BattleParticleOverlay()
             WaveAnnouncementOverlay()
@@ -960,6 +961,9 @@ private fun LevelUpOverlay() {
 
     if (levelUpEvents.isEmpty()) return
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val levelUpImgBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_levelup, 96)!! }
+
     val now = System.currentTimeMillis()
 
     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1090,6 +1094,21 @@ private fun LevelUpOverlay() {
                     }
                 }
             }
+
+            // 레벨업 이미지 스프라이트 (비컨 + 금색 기둥)
+            val imgAlpha = beamAlpha * 1.2f
+            val imgSize = (60f + progress * 20f).toInt().coerceAtLeast(1)
+            val imgHalf = imgSize / 2f
+            drawImage(
+                image = levelUpImgBitmap,
+                dstOffset = IntOffset(
+                    (cx - imgHalf).toInt(),
+                    (cy - imgHalf - 10f).toInt(),
+                ),
+                dstSize = IntSize(imgSize, imgSize),
+                alpha = imgAlpha.coerceIn(0f, 1f),
+                blendMode = BlendMode.Screen,
+            )
 
             // "LV UP!" text using drawContext
             val textAlpha = when {

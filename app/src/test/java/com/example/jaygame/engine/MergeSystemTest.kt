@@ -1,5 +1,6 @@
 package com.example.jaygame.engine
 
+import com.example.jaygame.data.UnitRace
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.After
@@ -18,12 +19,15 @@ class MergeSystemTest {
      * - LEGEND 1종 (fire_legend_01) — 합성 불가 (MYTHIC은 레시피 전용)
      * - HIDDEN COMMON 1종 (hidden_unit_01) — 합성 가능
      * - SPECIAL COMMON 1종 (special_unit_01) — 합성 불가
+     *
+     * 모든 유닛은 race=HUMAN (종족 기반 합성 시스템)
      */
     private val testJson = """
     [
       {
         "id": "fire_archer_01",
         "name": "화염 궁수 1",
+        "race": "HUMAN",
         "families": ["FIRE"],
         "grade": "COMMON",
         "role": "RANGED_DPS",
@@ -43,6 +47,7 @@ class MergeSystemTest {
       {
         "id": "ice_mage_01",
         "name": "냉기 마법사 1",
+        "race": "HUMAN",
         "families": ["FROST"],
         "grade": "COMMON",
         "role": "RANGED_DPS",
@@ -62,6 +67,7 @@ class MergeSystemTest {
       {
         "id": "fire_archer_02",
         "name": "화염 궁수 2",
+        "race": "HUMAN",
         "families": ["FIRE"],
         "grade": "RARE",
         "role": "RANGED_DPS",
@@ -81,6 +87,7 @@ class MergeSystemTest {
       {
         "id": "ice_mage_02",
         "name": "냉기 마법사 2",
+        "race": "HUMAN",
         "families": ["FROST"],
         "grade": "RARE",
         "role": "RANGED_DPS",
@@ -100,6 +107,7 @@ class MergeSystemTest {
       {
         "id": "fire_hero_01",
         "name": "화염 고대",
+        "race": "HUMAN",
         "families": ["FIRE"],
         "grade": "HERO",
         "role": "RANGED_DPS",
@@ -119,6 +127,7 @@ class MergeSystemTest {
       {
         "id": "fire_legend_01",
         "name": "화염 전설",
+        "race": "HUMAN",
         "families": ["FIRE"],
         "grade": "LEGEND",
         "role": "RANGED_DPS",
@@ -138,6 +147,7 @@ class MergeSystemTest {
       {
         "id": "hidden_unit_01",
         "name": "숨겨진 유닛",
+        "race": "HUMAN",
         "families": ["FIRE"],
         "grade": "COMMON",
         "role": "MELEE_DPS",
@@ -157,6 +167,7 @@ class MergeSystemTest {
       {
         "id": "special_unit_01",
         "name": "특수 유닛",
+        "race": "HUMAN",
         "families": ["FIRE"],
         "grade": "COMMON",
         "role": "MELEE_DPS",
@@ -199,7 +210,6 @@ class MergeSystemTest {
 
     @Test
     fun `COMMON merge produces random RARE unit`() {
-        // 럭키 아님 (0.05 이상), 풀에서 첫 번째 선택 (0.0)
         var callCount = 0
         MergeSystem.randomOverride = {
             when (callCount++) {
@@ -208,7 +218,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_archer_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.COMMON, registry)
         assertNotNull(result)
         val resultBp = registry.findById(result!!.resultBlueprintId)!!
         assertEquals(UnitGrade.RARE, resultBp.grade)
@@ -217,7 +227,6 @@ class MergeSystemTest {
 
     @Test
     fun `COMMON merge result is from RARE pool`() {
-        // 럭키 아님, 랜덤으로 두 번째 RARE 유닛 선택
         var callCount = 0
         MergeSystem.randomOverride = {
             when (callCount++) {
@@ -226,7 +235,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_archer_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.COMMON, registry)
         assertNotNull(result)
         val resultBp = registry.findById(result!!.resultBlueprintId)!!
         assertEquals(UnitGrade.RARE, resultBp.grade)
@@ -242,7 +251,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_archer_02", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.RARE, registry)
         assertNotNull(result)
         val resultBp = registry.findById(result!!.resultBlueprintId)!!
         assertEquals(UnitGrade.HERO, resultBp.grade)
@@ -259,7 +268,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_hero_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.HERO, registry)
         assertNotNull(result)
         val resultBp = registry.findById(result!!.resultBlueprintId)!!
         assertEquals(UnitGrade.LEGEND, resultBp.grade)
@@ -268,7 +277,7 @@ class MergeSystemTest {
 
     @Test
     fun `LEGEND cannot merge - MYTHIC is recipe only`() {
-        val result = MergeSystem.determineMergeResult("fire_legend_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.LEGEND, registry)
         assertNull("LEGEND should not merge via normal merge", result)
     }
 
@@ -282,7 +291,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_archer_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.COMMON, registry)
         assertNotNull(result)
         assertTrue(result!!.isLucky)
         val resultBp = registry.findById(result.resultBlueprintId)!!
@@ -299,7 +308,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_archer_02", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.RARE, registry)
         assertNotNull(result)
         assertTrue(result!!.isLucky)
         val resultBp = registry.findById(result.resultBlueprintId)!!
@@ -317,7 +326,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_hero_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.HERO, registry)
         assertNotNull(result)
         // isLucky is false because targetGrade == nextGrade (fell back)
         assertFalse(result!!.isLucky)
@@ -327,6 +336,7 @@ class MergeSystemTest {
 
     @Test
     fun `HIDDEN unit can also merge by grade`() {
+        // HIDDEN units with race HUMAN, COMMON grade should still merge
         var callCount = 0
         MergeSystem.randomOverride = {
             when (callCount++) {
@@ -335,7 +345,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("hidden_unit_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.COMMON, registry)
         assertNotNull(result)
         val resultBp = registry.findById(result!!.resultBlueprintId)!!
         assertEquals(UnitGrade.RARE, resultBp.grade)
@@ -366,12 +376,12 @@ class MergeSystemTest {
     }
 
     @Test
-    fun `findFullStacks returns slots with 3 units`() {
+    fun `slots with 3 units have merge-ready stack count`() {
         repeat(3) { grid.placeUnit(0, makeUnit("fire_archer_01")) }
         grid.placeUnit(1, makeUnit("fire_archer_01"))  // only 1
 
-        val fullStacks = grid.findFullStacks()
-        assertEquals(listOf(0), fullStacks)
+        assertEquals(3, grid.getStackCount(0))
+        assertEquals(1, grid.getStackCount(1))
     }
 
     @Test
@@ -417,7 +427,7 @@ class MergeSystemTest {
                 else -> 0.5
             }
         }
-        val result = MergeSystem.determineMergeResult("fire_archer_01", registry)
+        val result = MergeSystem.determineMergeResult(UnitRace.HUMAN, UnitGrade.COMMON, registry)
         assertNotNull(result)
         assertTrue(result!!.isLucky)
         val resultBp = registry.findById(result.resultBlueprintId)!!

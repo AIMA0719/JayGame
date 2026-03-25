@@ -16,14 +16,16 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
 import com.example.jaygame.R
+import com.example.jaygame.bridge.BUFF_BIT_ARMOR_BREAK
 import com.example.jaygame.bridge.BUFF_BIT_DOT
 import com.example.jaygame.bridge.BUFF_BIT_LIGHTNING
 import com.example.jaygame.bridge.BUFF_BIT_POISON
 import com.example.jaygame.bridge.BUFF_BIT_SLOW
+import com.example.jaygame.bridge.BUFF_BIT_STUN
 import com.example.jaygame.bridge.BUFF_BIT_WIND
 import com.example.jaygame.bridge.BattleBridge
 import kotlin.math.cos
@@ -33,7 +35,6 @@ import kotlin.math.sin
 private val HpBarBg = Color.Black.copy(alpha = 0.6f)
 private val HpBarBorder = Color.White.copy(alpha = 0.3f)
 private val HpBarBorderStroke = Stroke(width = 1f)
-private val HitFlashWhite = Color.White.copy(alpha = 0.7f)
 private val BossAuraRed = Color(0xFFFF2222).copy(alpha = 0.15f)
 private val BossGlowRed = Color(0xFFFF4444).copy(alpha = 0.25f)
 private val BossGlowRedBright = Color(0xFFFF6666).copy(alpha = 0.4f)
@@ -43,32 +44,15 @@ private val EnemyColors = arrayOf(
 )
 
 // ── Buff effect colors (pre-allocated to avoid GC) ──
+// Lightning, Wind만 Canvas 렌더링 유지 (스프라이트보다 선/파티클이 적합)
 
-// E1: Fire — lingering flame particles
-private val FireFlameOrange = Color(0xFFFF6B00)
-private val FireFlameYellow = Color(0xFFFFAA00)
-private val FireFlameRed = Color(0xFFFF2200)
-private val FireGlow = Color(0xFFFF4400).copy(alpha = 0.15f)
-
-// E2: Frost — ice crystal particles
-private val FrostBlue = Color(0xFF88DDFF)
-private val FrostWhite = Color(0xFFCCEEFF)
-private val FrostGlow = Color(0xFF44AAFF).copy(alpha = 0.12f)
-
-// E3: Poison — green bubble particles
-private val PoisonGreen = Color(0xFF44DD44)
-private val PoisonDarkGreen = Color(0xFF228822)
-private val PoisonBubble = Color(0xFF66FF66)
-private val PoisonTint = Color(0xFF22CC22).copy(alpha = 0.18f)
-
-// E4: Lightning — spark lines
+// Lightning — spark lines
 private val LightningYellow = Color(0xFFFFEE44)
 private val LightningWhite = Color(0xFFFFFFCC)
 private val LightningGlow = Color(0xFFFFDD00).copy(alpha = 0.2f)
 
-// E5: Wind — swirl and dust
+// Wind — swirl and dust
 private val WindCyan = Color(0xFF88FFDD)
-private val WindWhite = Color(0xFFCCFFEE)
 private val WindDust = Color(0xFFBBAA88)
 
 // Pre-allocated HP bar colors at 10% increments to avoid Color() in draw loop
@@ -108,24 +92,23 @@ fun EnemyOverlay() {
     val hpBarMode by BattleBridge.healthBarMode.collectAsState()
     val context = LocalContext.current
 
-    // Pre-load enemy bitmaps
+    // Pre-load enemy bitmaps (PNG from drawable-xxhdpi, fallback to vector XML)
     val enemyBitmaps = remember {
-        val drawableIds = mapOf(
-            0 to R.drawable.ic_enemy_0,
-            1 to R.drawable.ic_enemy_1,
-            2 to R.drawable.ic_enemy_2,
-            3 to R.drawable.ic_enemy_3,
-            4 to R.drawable.ic_enemy_4,
-            6 to R.drawable.ic_enemy_6,
-            99 to R.drawable.ic_enemy_boss,
-        )
-        drawableIds.mapValues { (_, resId) ->
-            ContextCompat.getDrawable(context, resId)?.toBitmap(48, 48)?.asImageBitmap()
-        }
+        mapOf(
+            0 to R.drawable.ic_enemy_0, 1 to R.drawable.ic_enemy_1,
+            2 to R.drawable.ic_enemy_2, 3 to R.drawable.ic_enemy_3,
+            4 to R.drawable.ic_enemy_4, 5 to R.drawable.ic_enemy_5,
+            6 to R.drawable.ic_enemy_6, 99 to R.drawable.ic_enemy_boss,
+        ).mapValues { (_, resId) -> decodeScaledBitmap(context, resId, 96) }
     }
 
-    val bossBitmap = remember {
-        ContextCompat.getDrawable(context, R.drawable.ic_enemy_boss)?.toBitmap(72, 72)?.asImageBitmap()
+    val bossBitmap = remember { decodeScaledBitmap(context, R.drawable.ic_enemy_boss, 128) }
+
+    // Pre-load VFX sprite bitmaps from assets/fx/
+    val fxBitmaps = remember {
+        listOf("fx_slow", "fx_dot_fire", "fx_dot_poison", "fx_armor_break",
+            "fx_stun", "fx_freeze", "fx_execute")
+            .associateWith { name -> decodeAssetBitmap(context, "fx/$name.png") }
     }
 
     // Smooth interpolated positions
@@ -272,7 +255,6 @@ fun EnemyOverlay() {
         val t = animTime.floatValue
         val w = size.width
         val h = size.height
-
         // Use smooth positions if sizes match, otherwise fall back to raw
         val useSmooth = sxArr.size == data.count && data.count > 0
         val flashTimers = hitFlashTimers.value
@@ -288,14 +270,13 @@ fun EnemyOverlay() {
             // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
             val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
             val spriteSize = when {
-                isBoss -> pathWidth * 0.85f
-                type == 6 -> pathWidth * 0.75f
-                else -> pathWidth * 0.6f
+                isBoss -> pathWidth * 1.15f
+                type == 6 -> pathWidth * 0.95f
+                else -> pathWidth * 0.8f
             }
             val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
             // ── Walking Wobble ──
-            val wobbleAngle = sin(t * 8f + i * 1.3f) * 3f
             val wobbleOffsetX = sin(t * 8f + i * 1.3f) * 1.5f
 
             // ── Boss aura ──
@@ -388,133 +369,85 @@ fun EnemyOverlay() {
                 )
             }
 
-            // ── Buff Visual Effects ──
+            // ── Buff Visual Effects (sprite-based, pre-resolved) ──
             val buffBits = if (i < data.buffs.size) data.buffs[i] else 0
+            val fxSize = (spriteSize * 1.2f).toInt().coerceAtLeast(1)
 
-            // E1: Fire — flickering flame particles below enemy
+            // E1: Fire DoT — pulsing flame sprite
             if (buffBits and BUFF_BIT_DOT != 0 && buffBits and BUFF_BIT_POISON == 0) {
-                // Glow under enemy
-                drawCircle(
-                    color = FireGlow,
-                    radius = spriteSize * 0.6f,
-                    center = Offset(screenX, screenY + spriteSize * 0.2f),
-                )
-                // 4 flame particles flickering
-                for (p in 0 until 4) {
-                    val px = screenX + sin(t * 6f + p * 1.6f) * spriteSize * 0.3f
-                    val py = screenY + spriteSize * 0.15f - sin(t * 8f + p * 2.1f).coerceAtLeast(0f) * spriteSize * 0.4f
-                    val flameAlpha = (0.5f + sin(t * 10f + p * 1.3f) * 0.3f).coerceIn(0.2f, 0.8f)
-                    val flameSize = 2.5f + sin(t * 7f + p * 0.9f) * 1f
-                    val flameColor = when (p % 3) {
-                        0 -> FireFlameOrange
-                        1 -> FireFlameYellow
-                        else -> FireFlameRed
-                    }
-                    drawCircle(
-                        color = flameColor.copy(alpha = flameAlpha),
-                        radius = flameSize,
-                        center = Offset(px, py),
+                fxBitmaps["fx_dot_fire"]?.let { bmp ->
+                    val pulse = 1f + sin(t * 6f) * 0.15f
+                    val s = (fxSize * pulse).toInt()
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.7f + sin(t * 8f) * 0.15f,
                     )
                 }
             }
 
-            // E2: Frost — rotating ice crystal shapes around enemy
+            // E2: Frost Slow — breathing ice sprite
             if (buffBits and BUFF_BIT_SLOW != 0 && buffBits and BUFF_BIT_POISON == 0) {
-                // Frost glow
-                drawCircle(
-                    color = FrostGlow,
-                    radius = spriteSize * 0.55f,
-                    center = Offset(screenX, screenY),
-                )
-                // 3 ice crystals orbiting
-                for (p in 0 until 3) {
-                    val angle = t * 2.5f + p * 2.094f // 120 deg apart
-                    val orbitR = spriteSize * 0.45f
-                    val cx = screenX + cos(angle) * orbitR
-                    val cy = screenY + sin(angle) * orbitR * 0.6f
-                    val crystalSize = 2.5f + sin(t * 4f + p * 1.2f) * 0.8f
-                    val crystalAlpha = 0.6f + sin(t * 3f + p * 0.7f) * 0.2f
-                    // Diamond shape approximated by small rotated rect
-                    drawCircle(
-                        color = FrostBlue.copy(alpha = crystalAlpha),
-                        radius = crystalSize,
-                        center = Offset(cx, cy),
-                    )
-                    drawCircle(
-                        color = FrostWhite.copy(alpha = crystalAlpha * 0.7f),
-                        radius = crystalSize * 0.5f,
-                        center = Offset(cx, cy),
+                fxBitmaps["fx_slow"]?.let { bmp ->
+                    val pulse = 1f + sin(t * 3f) * 0.1f
+                    val s = (fxSize * pulse).toInt()
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.65f + sin(t * 4f) * 0.1f,
                     )
                 }
             }
 
-            // E3: Poison — green bubbles floating up + green tint
+            // E3: Poison — toxic green sprite
             if (buffBits and BUFF_BIT_POISON != 0) {
-                // Green tint overlay on enemy
-                drawRect(
-                    color = PoisonTint,
-                    topLeft = Offset(screenX - spriteSize / 2, screenY - spriteSize / 2),
-                    size = Size(spriteSize, spriteSize),
-                )
-                // 5 green bubbles floating upward
-                for (p in 0 until 5) {
-                    val bubblePhase = (t * 1.5f + p * 0.4f) % 1f // 0-1 cycle
-                    val bx = screenX + sin(t * 2f + p * 1.7f) * spriteSize * 0.35f
-                    val by = screenY + spriteSize * 0.2f - bubblePhase * spriteSize * 0.8f
-                    val bubbleAlpha = (1f - bubblePhase) * 0.6f
-                    val bubbleSize = 1.5f + sin(t * 3f + p * 0.5f) * 0.5f + (1f - bubblePhase) * 1.5f
-                    drawCircle(
-                        color = PoisonBubble.copy(alpha = bubbleAlpha),
-                        radius = bubbleSize,
-                        center = Offset(bx, by),
-                    )
-                    // Inner highlight
-                    drawCircle(
-                        color = PoisonGreen.copy(alpha = bubbleAlpha * 0.5f),
-                        radius = bubbleSize * 0.4f,
-                        center = Offset(bx - bubbleSize * 0.2f, by - bubbleSize * 0.2f),
+                fxBitmaps["fx_dot_poison"]?.let { bmp ->
+                    val pulse = 1f + sin(t * 2.5f) * 0.12f
+                    val s = (fxSize * pulse).toInt()
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.7f + sin(t * 3f) * 0.1f,
                     )
                 }
             }
 
-            // E4: Lightning — spark lines + electric glow
+            // E4: Armor Break
+            if (buffBits and BUFF_BIT_ARMOR_BREAK != 0) {
+                fxBitmaps["fx_armor_break"]?.let { bmp ->
+                    val s = fxSize
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.75f + sin(t * 5f) * 0.15f,
+                    )
+                }
+            }
+
+            // E5: Lightning — Canvas 선 (스프라이트보다 선이 적합)
             if (buffBits and BUFF_BIT_LIGHTNING != 0) {
-                // Electric glow
-                drawCircle(
-                    color = LightningGlow,
-                    radius = spriteSize * 0.6f,
-                    center = Offset(screenX, screenY),
-                )
-                // 4 spark lines radiating outward
+                drawCircle(color = LightningGlow, radius = spriteSize * 0.6f, center = Offset(screenX, screenY))
                 for (p in 0 until 4) {
-                    val angle = t * 12f + p * 1.571f // 90 deg apart, fast rotation
+                    val angle = t * 12f + p * 1.571f
                     val sparkLen = spriteSize * (0.3f + sin(t * 15f + p * 2f) * 0.15f)
-                    val sx = screenX + cos(angle) * spriteSize * 0.15f
-                    val sy = screenY + sin(angle) * spriteSize * 0.15f
-                    val ex = screenX + cos(angle) * sparkLen
-                    val ey = screenY + sin(angle) * sparkLen
-                    // Zigzag midpoint
-                    val mx = (sx + ex) / 2f + sin(t * 20f + p * 3f) * 4f
-                    val my = (sy + ey) / 2f + cos(t * 18f + p * 2.5f) * 4f
+                    val sx1 = screenX + cos(angle) * spriteSize * 0.15f
+                    val sy1 = screenY + sin(angle) * spriteSize * 0.15f
+                    val ex1 = screenX + cos(angle) * sparkLen
+                    val ey1 = screenY + sin(angle) * sparkLen
+                    val mx = (sx1 + ex1) / 2f + sin(t * 20f + p * 3f) * 4f
+                    val my = (sy1 + ey1) / 2f + cos(t * 18f + p * 2.5f) * 4f
                     val sparkAlpha = 0.5f + sin(t * 14f + p * 1.1f) * 0.3f
-                    drawLine(
-                        color = LightningYellow.copy(alpha = sparkAlpha),
-                        start = Offset(sx, sy),
-                        end = Offset(mx, my),
-                        strokeWidth = 1.5f,
-                    )
-                    drawLine(
-                        color = LightningWhite.copy(alpha = sparkAlpha * 0.8f),
-                        start = Offset(mx, my),
-                        end = Offset(ex, ey),
-                        strokeWidth = 1f,
-                    )
+                    drawLine(LightningYellow, Offset(sx1, sy1), Offset(mx, my), strokeWidth = 1.5f, alpha = sparkAlpha)
+                    drawLine(LightningWhite, Offset(mx, my), Offset(ex1, ey1), strokeWidth = 1f, alpha = sparkAlpha * 0.8f)
                 }
             }
 
-            // E5: Wind — swirl lines + dust particles
+            // E6: Wind — Canvas 소용돌이 (스프라이트보다 선이 적합)
             if (buffBits and BUFF_BIT_WIND != 0) {
-                // 3 swirl arc segments
                 for (p in 0 until 3) {
                     val swirlAngle = t * 8f + p * 2.094f
                     val swirlR = spriteSize * (0.35f + p * 0.08f)
@@ -523,62 +456,84 @@ fun EnemyOverlay() {
                         val a2 = swirlAngle + (seg + 1) * 0.3f
                         val swirlAlpha = (0.4f - seg * 0.08f).coerceAtLeast(0.1f)
                         drawLine(
-                            color = WindCyan.copy(alpha = swirlAlpha),
-                            start = Offset(
-                                screenX + cos(a1) * swirlR,
-                                screenY + sin(a1) * swirlR * 0.7f,
-                            ),
-                            end = Offset(
-                                screenX + cos(a2) * swirlR,
-                                screenY + sin(a2) * swirlR * 0.7f,
-                            ),
-                            strokeWidth = 1.5f,
+                            color = WindCyan,
+                            start = Offset(screenX + cos(a1) * swirlR, screenY + sin(a1) * swirlR * 0.7f),
+                            end = Offset(screenX + cos(a2) * swirlR, screenY + sin(a2) * swirlR * 0.7f),
+                            strokeWidth = 1.5f, alpha = swirlAlpha,
                         )
                     }
                 }
-                // 4 dust particles
                 for (p in 0 until 4) {
                     val dustAngle = t * 5f + p * 1.571f
                     val dustR = spriteSize * (0.4f + sin(t * 3f + p * 0.8f) * 0.1f)
                     val dx2 = screenX + cos(dustAngle) * dustR
                     val dy2 = screenY + sin(dustAngle) * dustR * 0.6f
                     val dustAlpha = 0.3f + sin(t * 4f + p * 1.5f) * 0.15f
-                    drawCircle(
-                        color = WindDust.copy(alpha = dustAlpha),
-                        radius = 1.5f + sin(t * 6f + p * 2f) * 0.5f,
-                        center = Offset(dx2, dy2),
+                    drawCircle(WindDust, 1.5f + sin(t * 6f + p * 2f) * 0.5f, Offset(dx2, dy2), alpha = dustAlpha)
+                }
+            }
+
+            // E7: Stun — spinning stars sprite
+            if (buffBits and BUFF_BIT_STUN != 0) {
+                fxBitmaps["fx_stun"]?.let { bmp ->
+                    val s = (fxSize * 0.9f).toInt()
+                    // 스턴은 적 머리 위에 표시
+                    val stunY = screenY - spriteSize * 0.6f
+                    val wobble = sin(t * 4f) * 2f
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f + wobble).toInt(), (stunY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.85f,
+                    )
+                }
+            }
+
+            // E8: Freeze — Stun + Slow 동시 적용 시 빙결 스프라이트 (강한 CC)
+            if (buffBits and BUFF_BIT_STUN != 0 && buffBits and BUFF_BIT_SLOW != 0) {
+                fxBitmaps["fx_freeze"]?.let { bmp ->
+                    val pulse = 1f + sin(t * 2f) * 0.08f
+                    val s = (fxSize * 1.1f * pulse).toInt()
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset((screenX - s / 2f).toInt(), (screenY - s / 2f).toInt()),
+                        dstSize = IntSize(s, s),
+                        alpha = 0.8f,
                     )
                 }
             }
         }
 
-        // ── Death Effects ──
+        // ── Death Effects (fx_execute 스프라이트 + 파티클) ──
         val effects = deathEffects.value
+        val executeBmp = fxBitmaps["fx_execute"]
         for (de in effects) {
             val progress = 1f - (de.timer / 0.5f) // 0 -> 1 as timer goes 0.5 -> 0
             val alpha = (1f - progress).coerceIn(0f, 1f)
             val dx = de.x * w
             val dy = de.y * h
 
+            // 처형 스프라이트 (초반 페이드인 → 페이드아웃)
+            if (executeBmp != null) {
+                val scale = 0.5f + progress * 0.8f
+                val s = (48f * scale).toInt().coerceAtLeast(1)
+                drawImage(
+                    image = executeBmp,
+                    dstOffset = IntOffset((dx - s / 2f).toInt(), (dy - s / 2f).toInt()),
+                    dstSize = IntSize(s, s),
+                    alpha = alpha * 0.9f,
+                )
+            }
+
             for (p in de.particles) {
                 val px = dx + p.vx * progress
-                val py = dy + p.vy * progress + 20f * progress * progress // gravity
+                val py = dy + p.vy * progress + 20f * progress * progress
                 val pColor = EnemyColors[p.colorIdx % EnemyColors.size]
                 val pSize = p.size * (1f - progress * 0.5f)
                 drawCircle(
                     color = pColor.copy(alpha = alpha * 0.7f),
                     radius = pSize,
                     center = Offset(px, py),
-                )
-            }
-
-            // Fading center flash
-            if (progress < 0.3f) {
-                val flashAlpha = (0.3f - progress) / 0.3f * 0.5f
-                drawCircle(
-                    color = Color.White.copy(alpha = flashAlpha),
-                    radius = 20f * (1f + progress),
-                    center = Offset(dx, dy),
                 )
             }
         }
