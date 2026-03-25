@@ -1490,14 +1490,14 @@ private fun SummonButton(
     // enabled가 꺼지면 pressed 상태 리셋
     if (!enabled) isPressed = false
 
-    // 꾹 누르면 200ms 간격으로 연속 소환
+    // 꾹 누르면 10ms 간격으로 연속 소환 (엔진 프레임 레이트로 자연 제한)
     LaunchedEffect(isPressed) {
         if (isPressed) {
             onClick()
-            delay(350L)
+            delay(200L)
             while (isPressed) {
                 onClick()
-                delay(200L)
+                delay(10L)
             }
         }
     }

@@ -804,6 +804,30 @@ object BattleBridge {
         _battleSpeed.value = speed.coerceIn(0f, 8f) // 0 = paused
     }
 
+    /** 라이프사이클 자동 일시정지 — onPause 시 속도 저장 후 0f, onResume 시 복원 */
+    @Volatile
+    @JvmStatic
+    private var speedBeforeLifecyclePause = 0f
+
+    @Volatile
+    @JvmStatic
+    private var pausedByLifecycle = false
+
+    fun pauseByLifecycle() {
+        if (!pausedByLifecycle) {
+            speedBeforeLifecyclePause = _battleSpeed.value
+            _battleSpeed.value = 0f
+            pausedByLifecycle = true
+        }
+    }
+
+    fun resumeFromLifecycle() {
+        if (pausedByLifecycle) {
+            pausedByLifecycle = false
+            _battleSpeed.value = speedBeforeLifecyclePause
+        }
+    }
+
     /** 새 배틀 시작 시 상태 초기화 */
     fun reset() {
         _state.value = BattleState()

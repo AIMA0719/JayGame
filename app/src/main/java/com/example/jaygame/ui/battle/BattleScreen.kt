@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -80,6 +81,10 @@ import kotlin.math.sin
 fun BattleScreen(
     result: BattleResultData?,
     onGoHome: () -> Unit,
+    bgmEnabled: Boolean = true,
+    sfxEnabled: Boolean = true,
+    onToggleBgm: () -> Unit = {},
+    onToggleSfx: () -> Unit = {},
 ) {
     val stageId by BattleBridge.stageId.collectAsState()
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
@@ -302,6 +307,10 @@ fun BattleScreen(
                     showMenuDialog = false
                     showQuitDialog = true
                 },
+                bgmEnabled = bgmEnabled,
+                sfxEnabled = sfxEnabled,
+                onToggleBgm = onToggleBgm,
+                onToggleSfx = onToggleSfx,
             )
         }
 
@@ -679,6 +688,10 @@ private val MenuSpeedX4Color = Color(0xFFFF6B6B)
 private fun BattleMenuDialog(
     onDismiss: () -> Unit,
     onQuitClick: () -> Unit,
+    bgmEnabled: Boolean,
+    sfxEnabled: Boolean,
+    onToggleBgm: () -> Unit,
+    onToggleSfx: () -> Unit,
 ) {
     val battleSpeed by BattleBridge.battleSpeed.collectAsState()
 
@@ -748,6 +761,39 @@ private fun BattleMenuDialog(
                             accentColorDark = if (isSelected) color.copy(alpha = 0.7f) else DimText,
                         )
                     }
+                }
+
+                // ── Sound controls ──
+                HorizontalDivider(color = Divider, thickness = 1.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("배경음", fontSize = 14.sp, color = LightText)
+                    Spacer(Modifier.weight(1f))
+                    NeonButton(
+                        text = if (bgmEnabled) "ON" else "OFF",
+                        onClick = onToggleBgm,
+                        modifier = Modifier.width(64.dp).height(34.dp),
+                        fontSize = 13.sp,
+                        accentColor = if (bgmEnabled) NeonGreen else NeonRed,
+                        accentColorDark = if (bgmEnabled) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("효과음", fontSize = 14.sp, color = LightText)
+                    Spacer(Modifier.weight(1f))
+                    NeonButton(
+                        text = if (sfxEnabled) "ON" else "OFF",
+                        onClick = onToggleSfx,
+                        modifier = Modifier.width(64.dp).height(34.dp),
+                        fontSize = 13.sp,
+                        accentColor = if (sfxEnabled) NeonGreen else NeonRed,
+                        accentColorDark = if (sfxEnabled) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))

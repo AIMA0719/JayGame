@@ -98,8 +98,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             JayGameTheme {
                 val result by BattleBridge.result.collectAsState()
+                val gameData by repository.gameData.collectAsState()
                 BattleScreen(
                     result = result,
+                    bgmEnabled = gameData.musicEnabled,
+                    sfxEnabled = gameData.soundEnabled,
+                    onToggleBgm = {
+                        val d = repository.gameData.value
+                        val newVal = !d.musicEnabled
+                        repository.save(d.copy(musicEnabled = newVal))
+                        if (newVal) BgmManager.resume() else BgmManager.pause()
+                    },
+                    onToggleSfx = {
+                        val d = repository.gameData.value
+                        val newVal = !d.soundEnabled
+                        repository.save(d.copy(soundEnabled = newVal))
+                        SfxManager.setEnabled(newVal)
+                    },
                     onGoHome = {
                         val battleResult = BattleBridge.result.value
                         if (battleResult != null) {
@@ -131,7 +146,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        BattleBridge.pauseByLifecycle()
         BgmManager.stop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        BattleBridge.resumeFromLifecycle()
     }
 
     override fun onDestroy() {

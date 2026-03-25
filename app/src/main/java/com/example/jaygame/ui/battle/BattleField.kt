@@ -619,18 +619,19 @@ fun BattleField() {
                 )
             }
 
-            // ── 유닛 버프 아이콘 (머리 위에 가로 나열, GC-free) ──
+            // ── 유닛 버프 아이콘 (발밑 장판 위에 가로 나열, GC-free) ──
             val unitBuffBits = if (i < data.buffs.size) data.buffs[i] else 0
             if (unitBuffBits != 0) {
-                val buffIconSize = (unitSize * 0.25f).toInt().coerceAtLeast(8)
-                val buffY = screenY - unitSize * 0.55f + bounceOffset
                 var buffCount = 0
                 if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_ATK_UP != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_ATK_UP }
                 if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_SPD_UP != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_SPD_UP }
                 if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_DEF_UP != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_DEF_UP }
                 if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_SHIELD != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_SHIELD }
+                // 페데스탈 폭에 맞춰 아이콘 크기 결정
+                val buffIconSize = ((pedestalRx * 2f) / buffCount.coerceAtLeast(1)).toInt().coerceIn(8, (pedestalRx * 0.7f).toInt().coerceAtLeast(8))
                 val totalWidth = buffCount * buffIconSize
                 val startX = screenX - totalWidth / 2f
+                val buffY = screenY + pedestalRy * 0.3f  // 페데스탈 중심 약간 아래
                 for (bi in 0 until buffCount) {
                     val bmp = buffSprites[buffScratch[bi]] ?: continue
                     val bx = startX + bi * buffIconSize
@@ -638,7 +639,7 @@ fun BattleField() {
                         image = bmp,
                         dstOffset = IntOffset(bx.toInt(), (buffY - buffIconSize / 2f).toInt()),
                         dstSize = IntSize(buffIconSize, buffIconSize),
-                        alpha = 0.85f,
+                        alpha = 0.7f,
                     )
                 }
             }

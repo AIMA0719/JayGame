@@ -127,7 +127,7 @@ fun SkillEffectOverlay(
                 val cx = event.x * size.width
                 val cy = event.y * size.height
                 val radius = event.radius * size.minDimension
-                val spriteR = if (ultAsset != null) radius * 2.5f else radius * 1.8f
+                val spriteR = if (ultAsset != null) radius * 1.2f else radius * 1.0f
                 val fadeAlpha = when {
                     progress < 0.1f -> progress / 0.1f
                     progress > 0.9f -> (1f - progress) / 0.1f
