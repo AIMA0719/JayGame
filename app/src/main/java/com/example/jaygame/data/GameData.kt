@@ -83,8 +83,6 @@ data class GameData(
     // 프로필
     val selectedProfileId: Int = 0,
     val unlockedProfiles: Set<Int> = setOf(0),
-    // 오프라인 보상
-    val lastOnlineTime: Long = System.currentTimeMillis(),
     // 튜토리얼
     val tutorialCompleted: Boolean = false,
     // 행운석 (신화 레시피 합성 재화)

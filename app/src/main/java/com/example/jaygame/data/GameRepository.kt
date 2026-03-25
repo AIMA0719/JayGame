@@ -211,9 +211,6 @@ class GameRepository(context: Context) {
             for (id in data.unlockedProfiles) unlockedProfilesArr.put(id)
             root.put("unlockedProfiles", unlockedProfilesArr)
 
-            // offline reward
-            root.put("lastOnlineTime", data.lastOnlineTime)
-
             // tutorial
             root.put("tutorialCompleted", data.tutorialCompleted)
 
@@ -444,9 +441,6 @@ class GameRepository(context: Context) {
             }
             if (unlockedProfiles.isEmpty()) unlockedProfiles.add(0)
 
-            // offline reward
-            val lastOnlineTime = root.optLong("lastOnlineTime", System.currentTimeMillis())
-
             // tutorial
             val tutorialCompleted = root.optBoolean("tutorialCompleted", false)
 
@@ -504,7 +498,6 @@ class GameRepository(context: Context) {
                 lastDungeonResetDate = lastDungeonResetDate,
                 selectedProfileId = selectedProfileId,
                 unlockedProfiles = unlockedProfiles,
-                lastOnlineTime = lastOnlineTime,
                 tutorialCompleted = tutorialCompleted,
                 luckyStones = luckyStones,
             )

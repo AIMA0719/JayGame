@@ -26,7 +26,6 @@ import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.navigation.NavGraph
-import com.example.jaygame.ui.components.OfflineRewardDialog
 import com.example.jaygame.ui.screens.SplashScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import com.example.jaygame.ui.viewmodel.AppViewModel
@@ -100,7 +99,7 @@ class ComposeActivity : ComponentActivity() {
                     } else {
                         BgmManager.stop()
                     }
-                    onDispose { }
+                    onDispose { BgmManager.stop() }
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -115,15 +114,6 @@ class ComposeActivity : ComponentActivity() {
                                 battleTransitionActive = true
                             },
                             modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-
-                    // Offline reward dialog
-                    val offlineReward = appState.offlineReward
-                    if (appState.showOfflineRewardDialog && offlineReward != null && !showSplash) {
-                        OfflineRewardDialog(
-                            reward = offlineReward,
-                            onDismiss = { vm.dismissOfflineReward() },
                         )
                     }
 
@@ -150,9 +140,6 @@ class ComposeActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         BgmManager.pause()
-        val repo = (application as JayGameApplication).repository
-        val data = repo.gameData.value
-        repo.save(data.copy(lastOnlineTime = System.currentTimeMillis()))
     }
 
     override fun onDestroy() {

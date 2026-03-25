@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.data.ProfileDef
 import com.example.jaygame.data.STAGES
 import com.example.jaygame.ui.components.DailyLoginDialog
 import com.example.jaygame.ui.components.NeonButton
@@ -88,7 +89,10 @@ fun HomeScreen(
     val data = state.gameData
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) { viewModel.checkDailyLogin() }
+    LaunchedEffect(Unit) {
+        viewModel.checkDailyLogin()
+        viewModel.checkNewTitles()
+    }
 
     viewModel.collectSideEffect { effect ->
         when (effect) {
@@ -103,6 +107,13 @@ fun HomeScreen(
             data = data,
             onClaim = { viewModel.claimDailyLogin() },
             onDismiss = { viewModel.dismissDailyLogin() },
+        )
+    }
+
+    state.newTitle?.let { title ->
+        NewTitleDialog(
+            title = title,
+            onDismiss = { viewModel.dismissNewTitle() },
         )
     }
 
@@ -329,6 +340,61 @@ fun HomeScreen(
                 onDifficultySelected = { diff -> viewModel.selectDifficulty(diff) },
                 onStartBattle = { viewModel.startBattle(stage2.staminaCost) },
                 onDismiss = { viewModel.dismissPreBattle() },
+            )
+        }
+    }
+}
+
+// ── 칭호 획득 다이얼로그 ──
+
+private val TitleDialogBg = Color(0xFF16213E)
+
+@Composable
+private fun NewTitleDialog(
+    title: ProfileDef,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(TitleDialogBg, androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "칭호 획득!",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Gold,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = title.name,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (title.isAnimated) NeonCyan else LightText,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = title.description,
+                fontSize = 13.sp,
+                color = SubText,
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            NeonButton(
+                text = "확인",
+                onClick = onDismiss,
+                fontSize = 14.sp,
+                accentColor = Gold,
+                accentColorDark = Gold.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

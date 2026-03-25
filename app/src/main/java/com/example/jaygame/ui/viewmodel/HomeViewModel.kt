@@ -1,8 +1,10 @@
 package com.example.jaygame.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.example.jaygame.data.ALL_PROFILES
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.GameRepository
+import com.example.jaygame.data.ProfileDef
 import com.example.jaygame.data.StaminaManager
 import com.example.jaygame.ui.components.canClaim
 import com.example.jaygame.ui.components.claimReward
@@ -13,6 +15,7 @@ data class HomeState(
     val gameData: GameData = GameData(),
     val showDailyLogin: Boolean = false,
     val showPreBattle: Boolean = false,
+    val newTitle: ProfileDef? = null,
 )
 
 sealed class HomeSideEffect {
@@ -37,6 +40,24 @@ class HomeViewModel(private val repository: GameRepository) : ViewModel(), Conta
         if (canClaim(state.gameData)) {
             reduce { state.copy(showDailyLogin = true) }
         }
+    }
+
+    fun checkNewTitles() = intent {
+        val data = state.gameData
+        val nowUnlocked = ALL_PROFILES.filter { it.condition(data) }.map { it.id }.toSet()
+        val newIds = nowUnlocked - data.unlockedProfiles
+        if (newIds.isNotEmpty()) {
+            val updated = data.copy(unlockedProfiles = data.unlockedProfiles + nowUnlocked)
+            repository.save(updated)
+            val firstNew = ALL_PROFILES.firstOrNull { it.id == newIds.first() }
+            if (firstNew != null) {
+                reduce { state.copy(newTitle = firstNew) }
+            }
+        }
+    }
+
+    fun dismissNewTitle() = intent {
+        reduce { state.copy(newTitle = null) }
     }
 
     fun claimDailyLogin() = intent {

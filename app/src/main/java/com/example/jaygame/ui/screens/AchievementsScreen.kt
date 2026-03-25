@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -140,6 +144,8 @@ private fun getProgress(achievement: AchievementDef, data: GameData): Int {
 
 // ── Screen composable ──
 
+private val TabBg = Color(0xFF0D1B2A)
+
 @Composable
 fun AchievementsScreen(
     repository: GameRepository,
@@ -151,6 +157,12 @@ fun AchievementsScreen(
 
     val filteredAchievements = remember(selectedTabIndex) {
         ACHIEVEMENTS.filter { it.category == categories[selectedTabIndex] }
+    }
+
+    // 현재 탭에서 수령 가능한 업적 개수
+    val claimableCount = filteredAchievements.count { a ->
+        val progress = getProgress(a, data)
+        progress >= a.threshold && a.id !in data.claimedAchievements
     }
 
     Column(
@@ -189,28 +201,83 @@ fun AchievementsScreen(
             Spacer(Modifier.width(56.dp))
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Category tabs
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        // Category tabs — ScrollableTabRow
+        ScrollableTabRow(
+            selectedTabIndex = selectedTabIndex,
+            containerColor = TabBg,
+            contentColor = LightText,
+            edgePadding = 12.dp,
+            indicator = { tabPositions ->
+                if (selectedTabIndex < tabPositions.size) {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = Gold,
+                    )
+                }
+            },
+            divider = {},
         ) {
             categories.forEachIndexed { index, category ->
-                NeonButton(
-                    text = category.label,
+                Tab(
+                    selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
-                    modifier = Modifier.weight(1f),
-                    fontSize = 12.sp,
-                    accentColor = if (selectedTabIndex == index) NeonRed else DimText,
-                    accentColorDark = if (selectedTabIndex == index) NeonRedDark else DimText.copy(alpha = 0.6f),
+                    text = {
+                        Text(
+                            text = category.label,
+                            fontSize = 13.sp,
+                            fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
+                            color = if (selectedTabIndex == index) Gold else DimText,
+                        )
+                    },
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 모두 수령 버튼
+        if (claimableCount > 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                NeonButton(
+                    text = "모두 수령 ($claimableCount)",
+                    onClick = {
+                        var current = repository.gameData.value
+                        var totalGold = 0
+                        var totalDiamonds = 0
+                        var claimed = current.claimedAchievements
+                        for (a in filteredAchievements) {
+                            if (a.id in claimed) continue
+                            val progress = getProgress(a, current)
+                            if (progress >= a.threshold) {
+                                totalGold += a.goldReward
+                                totalDiamonds += a.diamondReward
+                                claimed = claimed + a.id
+                            }
+                        }
+                        if (totalGold > 0 || totalDiamonds > 0) {
+                            repository.save(current.copy(
+                                gold = current.gold + totalGold,
+                                diamonds = current.diamonds + totalDiamonds,
+                                claimedAchievements = claimed,
+                                seasonXP = current.seasonXP + (claimed.size - current.claimedAchievements.size) * 10,
+                            ))
+                        }
+                    },
+                    fontSize = 13.sp,
+                    accentColor = NeonGreen,
+                    accentColorDark = NeonGreen.copy(alpha = 0.5f),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Achievement list
         LazyColumn(

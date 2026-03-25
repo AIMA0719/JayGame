@@ -18,12 +18,17 @@ import com.example.jaygame.data.STAGES
 import com.example.jaygame.data.UNIT_DEFS_MAP
 import com.example.jaygame.engine.Grid
 import com.example.jaygame.ui.theme.*
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
 // Pre-allocated constants
+// PERF: Pre-allocated scratch array for buff icon rendering (max 4 buff types, avoids per-frame list allocation)
+private val buffScratch = IntArray(4)
+
 private val GroundShadow = Color.Black.copy(alpha = 0.35f)
 private val GroundEdgeDark = Color(0xFF2A1A0A).copy(alpha = 0.7f)
 private val GroundEdgeLight = Color(0xFF8B6914).copy(alpha = 0.3f)
@@ -63,8 +68,6 @@ private val SelectedCyan07 = Color(0xFF5BA4CF).copy(alpha = 0.7f)
 private val TankHpBg = Color(0xFF333333)
 private val TankHpBar = Color(0xFF4CAF50)
 private val DashTrailWhite03 = Color.White.copy(alpha = 0.3f)
-private val SpecialFieldFill = Color(0xFF9C27B0).copy(alpha = 0.12f)
-private val SpecialFieldStroke = Color(0xFF9C27B0).copy(alpha = 0.25f)
 
 // Star badge colors
 private val StarColor = Color(0xFFFFD700)
@@ -173,6 +176,16 @@ fun BattleField() {
             cache[bp.id] = ContextCompat.getDrawable(context, resId)?.toBitmap(128, 128)?.asImageBitmap()
         }
         cache
+    }
+
+    // 유닛 버프 스프라이트 (공격력/속도/방어/실드)
+    val buffSprites = remember {
+        mapOf(
+            com.example.jaygame.bridge.UNIT_BUFF_ATK_UP to decodeAssetBitmap(context, "fx/fx_buff_attack.png"),
+            com.example.jaygame.bridge.UNIT_BUFF_SPD_UP to decodeAssetBitmap(context, "fx/fx_buff_speed.png"),
+            com.example.jaygame.bridge.UNIT_BUFF_DEF_UP to decodeAssetBitmap(context, "fx/fx_buff_defense.png"),
+            com.example.jaygame.bridge.UNIT_BUFF_SHIELD to decodeAssetBitmap(context, "fx/fx_buff_shield.png"),
+        )
     }
 
     val stageId by BattleBridge.stageId.collectAsState()
@@ -428,7 +441,6 @@ fun BattleField() {
             val pedestalRx = unitSize * 0.45f
             val pedestalRy = pedestalRx * 0.4f
             val isSelected = selectedTile == tileIdx
-            val isAttacking = data.isAttacking.getOrElse(i) { false }
             val family = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
                 data.familiesList[i].first().ordinal
             } else {
@@ -440,41 +452,45 @@ fun BattleField() {
             // ── G3: Breathing scale (slow sine 0.97-1.03, skip for low grade in high-count) ──
             val breathScale = if (skipMicro) 1f else 1f + sin(t * 1.8f + unitDefId * 0.3f) * 0.03f
 
-            // ── G2: Family-specific attack motion offsets ──
+            // ── Attack anim timer (ATTACK_ANIM_DURATION→0 감소, 공격 발사 시 리셋) ──
+            val attackAnimTimer = if (i < data.attackAnimTimers.size) data.attackAnimTimers[i] else 0f
+            val bouncePhase = (attackAnimTimer / com.example.jaygame.engine.GameUnit.ATTACK_ANIM_DURATION).coerceIn(0f, 1f)
+            val kick = if (bouncePhase > 0f) sin(bouncePhase * 3.1416f).toFloat() else 0f
+
+            // ── G2: One-shot attack motion (공격 순간 1회만) ──
             var attackOffsetX = 0f
             var attackOffsetY = 0f
             var attackRotation = 0f
             val attackScale: Float
-            if (isAttacking) {
-                val attackT = t * 15f
+            if (kick > 0f) {
                 attackScale = when (family) {
                     0 -> { // Fire: thrust forward
-                        attackOffsetY = -sin(attackT) * 6f
-                        1f + sin(attackT) * 0.1f
+                        attackOffsetY = -kick * 6f
+                        1f + kick * 0.1f
                     }
                     1 -> { // Frost: pulse/expand
-                        1f + sin(attackT) * 0.2f
+                        1f + kick * 0.2f
                     }
                     2 -> { // Poison: lean forward
-                        attackOffsetY = -abs(sin(attackT)) * 5f
-                        attackOffsetX = sin(attackT * 0.5f) * 2f
-                        1f + sin(attackT) * 0.08f
+                        attackOffsetY = -kick * 5f
+                        attackOffsetX = kick * 2f
+                        1f + kick * 0.08f
                     }
-                    3 -> { // Lightning: quick jitter/vibrate
-                        attackOffsetX = sin(attackT * 3f) * 3f
-                        attackOffsetY = cos(attackT * 2.7f) * 2f
-                        1f + sin(attackT) * 0.12f
+                    3 -> { // Lightning: quick jitter
+                        attackOffsetX = kick * 3f
+                        attackOffsetY = -kick * 2f
+                        1f + kick * 0.12f
                     }
-                    4 -> { // Support: raise up slightly
-                        attackOffsetY = -abs(sin(attackT * 0.7f)) * 8f
-                        1f + sin(attackT) * 0.1f
+                    4 -> { // Support: raise up
+                        attackOffsetY = -kick * 8f
+                        1f + kick * 0.1f
                     }
-                    5 -> { // Wind: spin motion
-                        attackRotation = sin(attackT) * 0.3f
-                        attackOffsetX = sin(attackT) * 4f
-                        1f + sin(attackT) * 0.1f
+                    5 -> { // Wind: spin
+                        attackRotation = kick * 0.3f
+                        attackOffsetX = kick * 4f
+                        1f + kick * 0.1f
                     }
-                    else -> 1f + sin(attackT) * 0.15f
+                    else -> 1f + kick * 0.15f
                 }
             } else {
                 attackScale = 1f
@@ -508,7 +524,7 @@ fun BattleField() {
 
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
             if (family == 4 && grade >= 2 && (!highUnitCount || grade >= 3)) {
-                val auraRadiusScreen = (150f / Grid.CANVAS_W) * w
+                val auraRadiusScreen = (45f / Grid.CANVAS_W) * w
                 val auraPulse = 0.08f + sin(t * 2f + unitDefId * 0.5f) * 0.04f
                 // Layered circles instead of Brush.radialGradient to avoid per-frame allocation
                 drawCircle(
@@ -541,8 +557,8 @@ fun BattleField() {
                 )
             }
 
-            // ── Idle Bounce ──
-            val bounceOffset = sin(t * 2.5f + unitDefId * 0.7f) * 3f
+            // ── Attack Bounce (one-shot, 공격 시에만 위로 튕김) ──
+            val bounceOffset = kick * -6f
 
             // ── G1: Grade-based platform effect ──
             drawGradePlatform(
@@ -603,132 +619,27 @@ fun BattleField() {
                 )
             }
 
-            // ── Family-specific attack flash (unique per family) ──
-            if (isAttacking) {
-                val attackPhase = t * 12f
-                when (family) {
-                    0 -> { // Fire: expanding flame burst
-                        val burstAlpha = (0.35f + sin(attackPhase) * 0.2f).coerceIn(0.1f, 0.55f)
-                        val burstR = unitSize * (0.5f + sin(attackPhase * 1.5f) * 0.1f)
-                        drawCircle(
-                            color = FireAttackFlash.copy(alpha = burstAlpha * 0.4f),
-                            radius = burstR,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                        drawCircle(
-                            color = FireEmberBright.copy(alpha = burstAlpha * 0.3f),
-                            radius = burstR * 0.6f,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                    }
-                    1 -> { // Frost: ice crystal flash
-                        val iceAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.5f)
-                        val iceR = unitSize * 0.5f
-                        drawCircle(
-                            color = FrostAttackFlash.copy(alpha = iceAlpha * 0.4f),
-                            radius = iceR,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                        // Crystal sparkle points
-                        for (sp in 0 until 4) {
-                            val spAngle = sp * (PI.toFloat() / 2f) + attackPhase * 0.5f
-                            val spR = iceR * 0.7f
-                            drawCircle(
-                                color = FrostSnowBright.copy(alpha = iceAlpha * 0.5f),
-                                radius = 1.5f,
-                                center = Offset(
-                                    screenX + cos(spAngle) * spR,
-                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spR,
-                                ),
-                            )
-                        }
-                    }
-                    2 -> { // Poison: toxic splash
-                        val toxicAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.45f)
-                        drawCircle(
-                            color = PoisonAttackFlash.copy(alpha = toxicAlpha * 0.35f),
-                            radius = unitSize * 0.5f,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                        // Drip splashes
-                        for (sp in 0 until 3) {
-                            val spAngle = sp * 2.094f + attackPhase * 0.3f
-                            val spDist = unitSize * 0.35f
-                            drawCircle(
-                                color = PoisonDripBright.copy(alpha = toxicAlpha * 0.4f),
-                                radius = 2f,
-                                center = Offset(
-                                    screenX + cos(spAngle) * spDist,
-                                    screenY - unitSize * 0.2f + bounceOffset + sin(spAngle) * spDist * 0.5f,
-                                ),
-                            )
-                        }
-                    }
-                    3 -> { // Lightning: electric spark burst
-                        val sparkAlpha = (0.35f + sin(attackPhase * 2f) * 0.25f).coerceIn(0.1f, 0.6f)
-                        drawCircle(
-                            color = LightAttackFlash.copy(alpha = sparkAlpha * 0.35f),
-                            radius = unitSize * 0.5f,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                        // Electric arc lines
-                        for (sp in 0 until 4) {
-                            val spAngle = sp * (PI.toFloat() / 2f) + sin(attackPhase * 3f + sp) * 0.8f
-                            val spLen = unitSize * 0.4f
-                            drawLine(
-                                color = LightSparkBright.copy(alpha = sparkAlpha * 0.5f),
-                                start = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                                end = Offset(
-                                    screenX + cos(spAngle) * spLen,
-                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spLen,
-                                ),
-                                strokeWidth = 1.5f,
-                            )
-                        }
-                    }
-                    4 -> { // Support: holy glow pulse
-                        val holyAlpha = (0.25f + sin(attackPhase * 0.8f) * 0.15f).coerceIn(0.1f, 0.4f)
-                        drawCircle(
-                            color = SupportAttackFlash.copy(alpha = holyAlpha * 0.3f),
-                            radius = unitSize * 0.6f,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                        drawCircle(
-                            color = SupportGlowBright.copy(alpha = holyAlpha * 0.2f),
-                            radius = unitSize * 0.4f,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                    }
-                    5 -> { // Wind: crystal flash (frost 스타일 + 바람 색상)
-                        val windAlpha = (0.3f + sin(attackPhase) * 0.15f).coerceIn(0.1f, 0.5f)
-                        val windR = unitSize * 0.5f
-                        drawCircle(
-                            color = WindAttackFlash.copy(alpha = windAlpha * 0.4f),
-                            radius = windR,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                        // Sparkle points
-                        for (sp in 0 until 4) {
-                            val spAngle = sp * (PI.toFloat() / 2f) + attackPhase * 0.5f
-                            val spR = windR * 0.7f
-                            drawCircle(
-                                color = WindLeafBright.copy(alpha = windAlpha * 0.5f),
-                                radius = 1.5f,
-                                center = Offset(
-                                    screenX + cos(spAngle) * spR,
-                                    screenY - unitSize * 0.3f + bounceOffset + sin(spAngle) * spR,
-                                ),
-                            )
-                        }
-                    }
-                    else -> {
-                        val glowAlpha = 0.3f + sin(attackPhase) * 0.15f
-                        drawCircle(
-                            color = familyTint.copy(alpha = glowAlpha),
-                            radius = unitSize * 0.55f,
-                            center = Offset(screenX, screenY - unitSize * 0.3f + bounceOffset),
-                        )
-                    }
+            // ── 유닛 버프 아이콘 (머리 위에 가로 나열, GC-free) ──
+            val unitBuffBits = if (i < data.buffs.size) data.buffs[i] else 0
+            if (unitBuffBits != 0) {
+                val buffIconSize = (unitSize * 0.25f).toInt().coerceAtLeast(8)
+                val buffY = screenY - unitSize * 0.55f + bounceOffset
+                var buffCount = 0
+                if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_ATK_UP != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_ATK_UP }
+                if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_SPD_UP != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_SPD_UP }
+                if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_DEF_UP != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_DEF_UP }
+                if (unitBuffBits and com.example.jaygame.bridge.UNIT_BUFF_SHIELD != 0) { buffScratch[buffCount++] = com.example.jaygame.bridge.UNIT_BUFF_SHIELD }
+                val totalWidth = buffCount * buffIconSize
+                val startX = screenX - totalWidth / 2f
+                for (bi in 0 until buffCount) {
+                    val bmp = buffSprites[buffScratch[bi]] ?: continue
+                    val bx = startX + bi * buffIconSize
+                    drawImage(
+                        image = bmp,
+                        dstOffset = IntOffset(bx.toInt(), (buffY - buffIconSize / 2f).toInt()),
+                        dstSize = IntSize(buffIconSize, buffIconSize),
+                        alpha = 0.85f,
+                    )
                 }
             }
 
@@ -909,22 +820,6 @@ fun BattleField() {
                 )
             }
 
-            // ── Task 18: Field effect range circles for SPECIAL units (activated) ──
-            if (unitCategory == com.example.jaygame.engine.UnitCategory.SPECIAL) {
-                // Use unit range as field effect radius (approximation)
-                val effectRadius = (200f / Grid.CANVAS_W) * w // default field effect radius
-                drawCircle(
-                    color = SpecialFieldFill,
-                    radius = effectRadius,
-                    center = Offset(screenX, screenY),
-                )
-                drawCircle(
-                    color = SpecialFieldStroke,
-                    radius = effectRadius,
-                    center = Offset(screenX, screenY),
-                    style = ThinStroke1_5f,
-                )
-            }
 
             // Merge indicator (pulsing)
             val tile = gridState.getOrNull(tileIdx)
