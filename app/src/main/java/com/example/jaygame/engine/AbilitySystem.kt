@@ -4,7 +4,7 @@ import com.example.jaygame.engine.math.GameRect
 import com.example.jaygame.engine.math.Vec2
 
 object AbilitySystem {
-    private const val AURA_RADIUS = 150f
+    private const val AURA_RADIUS = 90f
     private const val AURA_TICK = 0.5f
 
     fun onProjectileHit(

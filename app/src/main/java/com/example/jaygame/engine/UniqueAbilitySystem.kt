@@ -129,7 +129,7 @@ object UniqueAbilitySystem {
                 // Passive: periodically emit frost aura VFX
                 unit.passiveCounter++
                 if (unit.passiveCounter % 20 == 0) {
-                    emitVfx(vfx, nx, ny, 0.08f, unit, 0.6f)
+                    emitVfx(vfx, nx, ny, 0.08f, unit, 1.5f)
                 }
             }
 
@@ -152,7 +152,7 @@ object UniqueAbilitySystem {
                     val target = unit.currentTarget ?: return
                     val tx = target.position.x / W
                     val ty = target.position.y / H
-                    emitVfx(vfx, tx, ty, 0.08f, unit, 0.5f)
+                    emitVfx(vfx, tx, ty, 0.08f, unit, 1.5f)
                     // Bonus damage on overcharged hit
                     target.takeDamage(unit.effectiveATK() * 1f) // 200% total (100% normal + 100% bonus)
                     BattleBridge.onDamageDealt(tx, ty, (unit.effectiveATK() * 1f).toInt(), true)
@@ -163,7 +163,7 @@ object UniqueAbilitySystem {
             SkillVfxType.HEAL_PULSE -> {
                 unit.passiveCounter++
                 if (unit.passiveCounter % 30 == 0) {
-                    emitVfx(vfx, nx, ny, 0.1f, unit, 0.8f)
+                    emitVfx(vfx, nx, ny, 0.1f, unit, 1.5f)
                 }
             }
 
@@ -268,7 +268,7 @@ object UniqueAbilitySystem {
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
-                        pos = com.example.jaygame.engine.math.Vec2(360f, 640f),
+                        pos = com.example.jaygame.engine.math.Vec2(360f, 580f),
                         radius = 250f, duration = 8f,
                         tickInterval = 1f,
                         tickDamage = unit.effectiveATK() * 0.8f,
@@ -353,7 +353,7 @@ object UniqueAbilitySystem {
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
-                        pos = com.example.jaygame.engine.math.Vec2(360f, 640f),
+                        pos = com.example.jaygame.engine.math.Vec2(360f, 580f),
                         radius = 200f, duration = 8f,
                         tickInterval = 1f,
                         tickDamage = unit.effectiveATK() * 1.5f,

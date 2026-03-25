@@ -974,7 +974,8 @@ class BattleEngine(
             BattleBridge.updateUnitPullPity(currentPity)
             UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
         }
-        val candidates = blueprintRegistry.findByGradeAndSummonable(grade)
+        val selectedRaces = BattleBridge.selectedRaces.value
+        val candidates = blueprintRegistry.findByRacesAndGradeAndSummonable(selectedRaces, grade)
         if (candidates.isEmpty()) return
         val totalWeight = candidates.sumOf { it.summonWeight }
         if (totalWeight <= 0) return
@@ -1031,12 +1032,15 @@ class BattleEngine(
         unit.initFromBlueprint(bp)
         unit.race = bp.race
         unit.range *= upgradeRangeMult
-        val abilityInfo = abilityForFamily(GameUnit.raceToFamily(unit.race))
-        unit.abilityType = abilityInfo.first
-        unit.abilityValue = abilityInfo.second
         unit.behavior = if (bp.behaviorId.isNotEmpty()) BehaviorFactory.create(bp.behaviorId) else null
         // Data-driven ability engine: parse ability from blueprint
         unit.activeAbility = AbilityEngine.parseAbility(bp.ability)
+        // activeAbility가 있으면 레거시 종족 abilityType 스킵
+        if (unit.activeAbility == null) {
+            val abilityInfo = abilityForFamily(GameUnit.raceToFamily(unit.race))
+            unit.abilityType = abilityInfo.first
+            unit.abilityValue = abilityInfo.second
+        }
         unit.abilityTimer = unit.activeAbility?.cooldown ?: 0f
         UniqueAbilitySystem.initUnit(unit)
         return unit
@@ -1168,7 +1172,7 @@ class BattleEngine(
 
         val maxGrade = consumed.maxOf { UnitGrade.entries.getOrElse(it.grade) { UnitGrade.COMMON } }
 
-        val mergeResult = MergeSystem.determineMergeResult(race, maxGrade, blueprintRegistry)
+        val mergeResult = MergeSystem.determineMergeResult(race, maxGrade, blueprintRegistry, BattleBridge.selectedRaces.value)
         if (mergeResult == null) {
             // 합성 불가 — 롤백
             consumed.forEach { u -> grid.placeUnit(slotIndex, u) }

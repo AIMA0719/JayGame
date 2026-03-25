@@ -1,6 +1,7 @@
 package com.example.jaygame.bridge
 
 import com.example.jaygame.data.UnitFamily
+import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.BossModifier
@@ -717,6 +718,14 @@ object BattleBridge {
             }
             if (removed) _skillEvents.value = skillBuffer.toList()
         }
+    }
+
+    /** 종족 드래프트 선택 */
+    private val _selectedRaces = MutableStateFlow<Set<UnitRace>>(emptySet())
+    val selectedRaces: StateFlow<Set<UnitRace>> = _selectedRaces.asStateFlow()
+
+    fun setSelectedRaces(races: Set<UnitRace>) {
+        _selectedRaces.value = races
     }
 
     /** 유닛 소환 천장(Pity) 카운터 */

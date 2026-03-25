@@ -69,6 +69,18 @@ class BlueprintRegistry {
     fun findMergeableByGrade(grade: UnitGrade): List<UnitBlueprint> =
         mergeableByGradeCache[grade] ?: emptyList()
 
+    /** 선택된 종족들의 소환 가능 유닛을 등급별로 반환 */
+    fun findByRacesAndGradeAndSummonable(races: Set<UnitRace>, grade: UnitGrade): List<UnitBlueprint> {
+        if (races.isEmpty()) return findByGradeAndSummonable(grade)
+        return (summonableByGradeCache[grade] ?: emptyList()).filter { it.race in races }
+    }
+
+    /** 선택된 종족들의 합성 가능 유닛을 등급별로 반환 */
+    fun findMergeableByRacesAndGrade(races: Set<UnitRace>, grade: UnitGrade): List<UnitBlueprint> {
+        if (races.isEmpty()) return findMergeableByGrade(grade)
+        return (mergeableByGradeCache[grade] ?: emptyList()).filter { it.race in races }
+    }
+
     fun all(): List<UnitBlueprint> = blueprints.values.toList()
 
     fun count(): Int = blueprints.size

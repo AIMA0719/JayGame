@@ -31,7 +31,8 @@
     "id": "recipe_spirit_mythic_01",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_03" }
     ],
     "resultId": "spirit_mythic_01",
     "luckyStonesCost": 1
@@ -40,8 +41,7 @@
     "id": "recipe_spirit_mythic_02",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_03" }
     ],
     "resultId": "spirit_mythic_02",
     "luckyStonesCost": 1
@@ -50,7 +50,7 @@
     "id": "recipe_spirit_mythic_03",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_03" }
     ],
     "resultId": "spirit_mythic_03",
     "luckyStonesCost": 1
@@ -59,16 +59,36 @@
     "id": "recipe_animal_mythic_01",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_03" }
     ],
     "resultId": "animal_mythic_01",
+    "luckyStonesCost": 1
+  },
+  {
+    "id": "recipe_animal_mythic_02",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_03" }
+    ],
+    "resultId": "animal_mythic_02",
+    "luckyStonesCost": 1
+  },
+  {
+    "id": "recipe_animal_mythic_03",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_03" }
+    ],
+    "resultId": "animal_mythic_03",
     "luckyStonesCost": 1
   },
   {
     "id": "recipe_robot_mythic_01",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_02" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_03" }
     ],
     "resultId": "robot_mythic_01",
     "luckyStonesCost": 1
@@ -77,20 +97,46 @@
     "id": "recipe_robot_mythic_02",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_02" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_02" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_03" }
     ],
     "resultId": "robot_mythic_02",
     "luckyStonesCost": 1
   },
   {
+    "id": "recipe_robot_mythic_03",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "robot_legend_03" }
+    ],
+    "resultId": "robot_mythic_03",
+    "luckyStonesCost": 1
+  },
+  {
     "id": "recipe_demon_mythic_01",
     "ingredients": [
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "human_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "animal_legend_01" },
-      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "spirit_legend_01" }
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_03" }
     ],
     "resultId": "demon_mythic_01",
+    "luckyStonesCost": 1
+  },
+  {
+    "id": "recipe_demon_mythic_02",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_01" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_03" }
+    ],
+    "resultId": "demon_mythic_02",
+    "luckyStonesCost": 1
+  },
+  {
+    "id": "recipe_demon_mythic_03",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_02" },
+      { "family": null, "role": null, "minGrade": "LEGEND", "specificUnitId": "demon_legend_03" }
+    ],
+    "resultId": "demon_mythic_03",
     "luckyStonesCost": 1
   },
   {
@@ -117,10 +163,30 @@
     "id": "recipe_animal_immortal_01",
     "ingredients": [
       { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "animal_mythic_01" },
-      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "demon_mythic_01" },
-      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "robot_mythic_01" }
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "animal_mythic_02" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "animal_mythic_03" }
     ],
     "resultId": "animal_immortal_01",
+    "luckyStonesCost": 3
+  },
+  {
+    "id": "recipe_robot_immortal_01",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "robot_mythic_01" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "robot_mythic_02" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "robot_mythic_03" }
+    ],
+    "resultId": "robot_immortal_01",
+    "luckyStonesCost": 3
+  },
+  {
+    "id": "recipe_demon_immortal_01",
+    "ingredients": [
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "demon_mythic_01" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "demon_mythic_02" },
+      { "family": null, "role": null, "minGrade": "MYTHIC", "specificUnitId": "demon_mythic_03" }
+    ],
+    "resultId": "demon_immortal_01",
     "luckyStonesCost": 3
   }
 ]

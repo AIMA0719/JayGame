@@ -1743,7 +1743,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [폭풍제왕] + [생명나무]. 모든 원소를 지배하는 태초의 정령."
+    "description": "조합: [폭풍제왕] + [생명나무] + [어둠현자]. 모든 원소를 지배하는 태초의 정령."
   },
   {
     "id": "spirit_mythic_02",
@@ -1797,7 +1797,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [폭풍제왕] + [생명나무] + [용]. 절대영도의 지배자."
+    "description": "조합: [폭풍제왕] + [어둠현자]. 절대영도의 지배자."
   },
   {
     "id": "spirit_mythic_03",
@@ -1851,7 +1851,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [생명나무] + [용]. 꿈과 현실의 경계를 넘나드는 환술사."
+    "description": "조합: [생명나무] + [어둠현자]. 꿈과 현실의 경계를 넘나드는 환술사."
   },
   {
     "id": "animal_mythic_01",
@@ -1905,7 +1905,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [용] + [메가톤]. 태초에 세상을 창조한 4신수의 우두머리."
+    "description": "조합: [용] + [현무] + [백호]. 태초에 세상을 창조한 4신수의 우두머리."
   },
   {
     "id": "robot_mythic_01",
@@ -1959,7 +1959,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [메가톤] + [오버로드]. 최종 진화 로봇. 자가 진화하며 끝없이 강해진다."
+    "description": "조합: [메가톤] + [오버로드] + [타이탄]. 최종 진화 로봇. 자가 진화하며 끝없이 강해진다."
   },
   {
     "id": "robot_mythic_02",
@@ -2013,7 +2013,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [오버로드] + [메가톤] + [생명나무]. 절대 방어의 수호 로봇."
+    "description": "조합: [오버로드] + [타이탄]. 절대 방어의 수호 로봇."
   },
   {
     "id": "demon_mythic_01",
@@ -2067,7 +2067,7 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [용사] + [용] + [폭풍제왕]. 어둠을 지배하는 마왕."
+    "description": "조합: [아크데몬] + [데스로드] + [아자젤]. 어둠을 지배하는 마왕."
   },
   {
     "id": "human_immortal_01",
@@ -2229,6 +2229,1519 @@
     "summonWeight": 0,
     "unitCategory": "HIDDEN",
     "iconRes": 0,
-    "description": "조합: [신수] + [마왕] + [오메가]. 청룡·백호·주작·현무가 합체한 궁극의 존재."
+    "description": "조합: [신수] + [기린] + [해태]. 청룡·백호·주작·현무가 합체한 궁극의 존재."
+  },
+  {
+    "id": "spirit_common_04",
+    "name": "토정령",
+    "race": "SPIRIT",
+    "grade": "COMMON",
+    "attackRange": "MELEE",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 18,
+      "baseSpeed": 1.0,
+      "range": 110
+    },
+    "ability": {
+      "id": "earth_power",
+      "name": "대지의힘",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "3번째 공격마다 주변 적 감속 20% (2초)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "대지의 힘을 품은 정령. 무거운 일격으로 적을 느리게 한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "spirit_common_05",
+    "name": "빛정령",
+    "race": "SPIRIT",
+    "grade": "COMMON",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 15,
+      "baseSpeed": 1.1,
+      "range": 168
+    },
+    "ability": {
+      "id": "flash",
+      "name": "섬광",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 10.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 10% 확률로 적 1초 실명 (공격속도 50% 감소)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "빛을 다루는 정령. 눈부신 섬광으로 적의 시야를 빼앗는다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "spirit_rare_03",
+    "name": "숲의정령",
+    "race": "SPIRIT",
+    "grade": "RARE",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 26,
+      "baseSpeed": 1.0,
+      "range": 175
+    },
+    "ability": {
+      "id": "root_bind",
+      "name": "뿌리묶기",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 15% 확률로 적 2초 이동불가"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "깊은 숲의 수호자. 뿌리로 적을 묶어 움직이지 못하게 한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "spirit_rare_04",
+    "name": "화염술사",
+    "race": "SPIRIT",
+    "grade": "RARE",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 30,
+      "baseSpeed": 1.1,
+      "range": 170
+    },
+    "ability": {
+      "id": "combustion",
+      "name": "연소",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 10.0,
+      "cooldown": 0,
+      "range": 50,
+      "description": "공격 시 범위 50 내 적에게 DoT (초당 ATK 10%, 3초)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "화염을 다루는 마법사. 불꽃이 적을 지속적으로 태운다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "spirit_hero_04",
+    "name": "정령왕",
+    "race": "SPIRIT",
+    "grade": "HERO",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 42,
+      "baseSpeed": 1.1,
+      "range": 275
+    },
+    "ability": {
+      "id": "elemental_harmony",
+      "name": "원소조화",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 25.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 25% 확률로 랜덤 원소 효과 (화염DoT/냉기감속/번개스턴)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "모든 원소를 다스리는 정령의 왕. 공격마다 다른 원소의 힘을 발휘한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "spirit_legend_03",
+    "name": "어둠현자",
+    "race": "SPIRIT",
+    "grade": "LEGEND",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 52,
+      "baseSpeed": 1.1,
+      "range": 310
+    },
+    "ability": {
+      "id": "dark_veil",
+      "name": "어둠의장막",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 200,
+      "description": "범위 200 내 적 마법저항 20% 감소"
+    },
+    "uniqueAbility": {
+      "id": "abyss_call_ultimate",
+      "name": "심연의부름",
+      "passive": null,
+      "active": {
+        "id": "abyss_call_ult_active",
+        "name": "심연폭발",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 450.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 전장 적 전체 ATK 450% 마법 데미지 + 마법저항 40% 감소 (5초)"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "어둠의 지식을 탐구하는 현자. 심연의 힘으로 적의 마법 방어를 무력화한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_common_04",
+    "name": "여우",
+    "race": "ANIMAL",
+    "grade": "COMMON",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 20,
+      "baseSpeed": 1.2,
+      "range": 105
+    },
+    "ability": {
+      "id": "agility",
+      "name": "민첩",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 10% 확률로 3초간 공격속도 15% 증가"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "민첩한 여우. 빠른 발놀림으로 연속 공격을 퍼붓는다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_common_05",
+    "name": "거북",
+    "race": "ANIMAL",
+    "grade": "COMMON",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 18,
+      "baseSpeed": 0.7,
+      "range": 100
+    },
+    "ability": {
+      "id": "hard_shell",
+      "name": "단단한등껍질",
+      "type": "AURA",
+      "damageType": "PHYSICAL",
+      "value": 5.0,
+      "cooldown": 0,
+      "range": 90,
+      "description": "인접 아군 ATK 5% 증가"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "단단한 등껍질의 거북. 동료를 보호하며 힘을 나눠준다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_rare_03",
+    "name": "전갈",
+    "race": "ANIMAL",
+    "grade": "RARE",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 30,
+      "baseSpeed": 1.1,
+      "range": 110
+    },
+    "ability": {
+      "id": "venom_sting",
+      "name": "맹독침",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 12.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 30% 확률로 3초 독 DoT (초당 ATK 12%)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "맹독을 품은 전갈. 한 번 찔리면 독이 퍼져 고통스럽다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_rare_04",
+    "name": "매",
+    "race": "ANIMAL",
+    "grade": "RARE",
+    "attackRange": "RANGED",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 26,
+      "baseSpeed": 1.3,
+      "range": 175
+    },
+    "ability": {
+      "id": "dive_attack",
+      "name": "급강하",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 200.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "5번째 공격마다 ATK 200% 데미지"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "하늘의 사냥꾼. 급강하로 치명적인 일격을 가한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_hero_03",
+    "name": "바실리스크",
+    "race": "ANIMAL",
+    "grade": "HERO",
+    "attackRange": "MELEE",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 45,
+      "baseSpeed": 1.0,
+      "range": 115
+    },
+    "ability": {
+      "id": "petrify_gaze",
+      "name": "석화시선",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 25.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 8% 확률로 적 2초 스턴 + 방어력 25% 감소"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "눈을 마주치면 돌이 되는 전설의 뱀. 석화의 시선으로 적을 무력화한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_hero_04",
+    "name": "그리폰",
+    "race": "ANIMAL",
+    "grade": "HERO",
+    "attackRange": "RANGED",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 48,
+      "baseSpeed": 1.2,
+      "range": 275
+    },
+    "ability": {
+      "id": "sky_dive",
+      "name": "천공강하",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 150.0,
+      "cooldown": 8,
+      "range": 0,
+      "description": "8초마다 가장 먼 적에게 ATK 150% 데미지 + 1초 스턴"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "독수리와 사자의 합체. 하늘에서 내려꽂는 공격으로 적을 기절시킨다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_legend_02",
+    "name": "현무",
+    "race": "ANIMAL",
+    "grade": "LEGEND",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 48,
+      "baseSpeed": 0.9,
+      "range": 310
+    },
+    "ability": {
+      "id": "xuanwu_barrier",
+      "name": "현무의방벽",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 10.0,
+      "cooldown": 0,
+      "range": 250,
+      "description": "전장 아군 공격속도 10% 증가"
+    },
+    "uniqueAbility": {
+      "id": "north_guardian_ultimate",
+      "name": "북방수호",
+      "passive": null,
+      "active": {
+        "id": "north_guardian_ult_active",
+        "name": "빙하결계",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 400.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 전장 적 전체 ATK 400% 마법 데미지 + 3초 동결 + 방어 30% 감소"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "북방을 수호하는 신수. 빙하의 결계로 적을 얼려 붙인다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_legend_03",
+    "name": "백호",
+    "race": "ANIMAL",
+    "grade": "LEGEND",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 68,
+      "baseSpeed": 1.3,
+      "range": 130
+    },
+    "ability": {
+      "id": "fierce_tiger",
+      "name": "맹호출산",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 250.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "매 4번째 공격 시 ATK 250% 크리티컬"
+    },
+    "uniqueAbility": {
+      "id": "destruction_strike_ultimate",
+      "name": "파멸의일격",
+      "passive": null,
+      "active": {
+        "id": "destruction_strike_ult_active",
+        "name": "백호질풍참",
+        "type": "ACTIVE",
+        "damageType": "PHYSICAL",
+        "value": 650.0,
+        "cooldown": 0,
+        "range": 150,
+        "description": "마나 충전 시 범위 150 내 적 전체 ATK 650% 물리 데미지 + 방어력 50% 감소 (4초)"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "서방을 수호하는 백호. 질풍 같은 발톱으로 적을 갈기갈기 찢는다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_mythic_02",
+    "name": "기린",
+    "race": "ANIMAL",
+    "grade": "MYTHIC",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 85,
+      "baseSpeed": 1.3,
+      "range": 375
+    },
+    "ability": {
+      "id": "sacred_flame",
+      "name": "성스러운불꽃",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 아군 ATK 15%, ANIMAL 유닛 공격속도 10% 증가"
+    },
+    "uniqueAbility": {
+      "id": "celestial_grace_ultimate",
+      "name": "천상의은총",
+      "passive": {
+        "id": "celestial_grace_passive",
+        "name": "천운",
+        "type": "PASSIVE",
+        "damageType": "MAGIC",
+        "value": 3.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "웨이브 시작마다 코인 +3 + 랜덤 아군 마나 10 충전"
+      },
+      "active": {
+        "id": "celestial_grace_ult_active",
+        "name": "심판의화염",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 1000.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 ATK 1000% 마법 데미지 + 5초 화염 DoT"
+      },
+      "requiredGrade": "MYTHIC"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [용] + [현무] + [백호]. 하늘을 달리는 성스러운 기린.",
+    "behaviorId": ""
+  },
+  {
+    "id": "animal_mythic_03",
+    "name": "해태",
+    "race": "ANIMAL",
+    "grade": "MYTHIC",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 88,
+      "baseSpeed": 1.4,
+      "range": 140
+    },
+    "ability": {
+      "id": "justice_flame",
+      "name": "정의의불꽃",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 60.0,
+      "cooldown": 0,
+      "range": 100,
+      "description": "매 3번째 공격 시 범위 100 내 ATK 60% 화염 데미지 + 1초 스턴"
+    },
+    "uniqueAbility": {
+      "id": "judge_ultimate",
+      "name": "심판자",
+      "passive": {
+        "id": "judge_passive",
+        "name": "사악퇴치",
+        "type": "PASSIVE",
+        "damageType": "PHYSICAL",
+        "value": 25.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "보스/엘리트 대상 ATK 25% 추가 데미지"
+      },
+      "active": {
+        "id": "judge_ult_active",
+        "name": "정의구현",
+        "type": "ACTIVE",
+        "damageType": "PHYSICAL",
+        "value": 1100.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 전장 적 ATK 1100% 물리 데미지 + 3초 스턴 + 방어 40% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [현무] + [백호]. 선악을 판별하는 신성한 수호수.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_common_03",
+    "name": "수리봇",
+    "race": "ROBOT",
+    "grade": "COMMON",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 14,
+      "baseSpeed": 0.9,
+      "range": 165
+    },
+    "ability": {
+      "id": "repair_nano",
+      "name": "수리나노",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 4.0,
+      "cooldown": 0,
+      "range": 90,
+      "description": "주변 아군 공격속도 4% 증가"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "수리 전문 소형 로봇. 나노 기술로 주변 아군의 가동률을 높인다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_common_04",
+    "name": "지뢰봇",
+    "race": "ROBOT",
+    "grade": "COMMON",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 23,
+      "baseSpeed": 0.8,
+      "range": 100
+    },
+    "ability": {
+      "id": "self_destruct",
+      "name": "자폭프로토콜",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 80.0,
+      "cooldown": 0,
+      "range": 60,
+      "description": "처치 시 범위 60에 ATK 80% 스플래시"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "위험한 자폭 프로토콜이 탑재된 소형 로봇. 적을 처치하면 폭발한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_common_05",
+    "name": "스카우트",
+    "race": "ROBOT",
+    "grade": "COMMON",
+    "attackRange": "RANGED",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 18,
+      "baseSpeed": 1.3,
+      "range": 160
+    },
+    "ability": {
+      "id": "marking",
+      "name": "마킹",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 5.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격한 적 방어력 5% 감소 (3초, 최대 3스택)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "정찰 전문 경량 로봇. 적의 약점을 마킹하여 방어를 깎는다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_rare_03",
+    "name": "실드봇",
+    "race": "ROBOT",
+    "grade": "RARE",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 25,
+      "baseSpeed": 1.0,
+      "range": 110
+    },
+    "ability": {
+      "id": "energy_shield",
+      "name": "에너지실드",
+      "type": "AURA",
+      "damageType": "PHYSICAL",
+      "value": 8.0,
+      "cooldown": 0,
+      "range": 90,
+      "description": "인접 아군 ATK 8%, 공격속도 5% 증가"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "에너지 실드를 전개하는 방어형 로봇. 주변 아군을 강화한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_rare_04",
+    "name": "레이저봇",
+    "race": "ROBOT",
+    "grade": "RARE",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 28,
+      "baseSpeed": 1.0,
+      "range": 175
+    },
+    "ability": {
+      "id": "pierce_laser",
+      "name": "관통레이저",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 70.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격이 직선으로 적 2체 관통 (각 70% 데미지)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "고출력 레이저를 발사하는 로봇. 레이저가 적을 관통한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_hero_03",
+    "name": "플라즈마봇",
+    "race": "ROBOT",
+    "grade": "HERO",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 44,
+      "baseSpeed": 1.1,
+      "range": 275
+    },
+    "ability": {
+      "id": "plasma_cannon",
+      "name": "플라즈마포",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 25.0,
+      "cooldown": 0,
+      "range": 70,
+      "description": "공격 시 범위 70에 ATK 25% 스플래시 + 10% 확률 1.5초 스턴"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "플라즈마 포를 장착한 전투 로봇. 폭발로 주변 적까지 타격한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_hero_04",
+    "name": "퓨전코어",
+    "race": "ROBOT",
+    "grade": "HERO",
+    "attackRange": "RANGED",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 40,
+      "baseSpeed": 1.0,
+      "range": 280
+    },
+    "ability": {
+      "id": "energy_charging",
+      "name": "에너지차징",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 300.0,
+      "cooldown": 10,
+      "range": 100,
+      "description": "10초마다 다음 공격 ATK 300% + 범위 100 스플래시"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "핵융합 코어를 탑재한 로봇. 에너지를 모아 강력한 일격을 가한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_legend_03",
+    "name": "타이탄",
+    "race": "ROBOT",
+    "grade": "LEGEND",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 65,
+      "baseSpeed": 1.1,
+      "range": 130
+    },
+    "ability": {
+      "id": "iron_wall",
+      "name": "철벽",
+      "type": "AURA",
+      "damageType": "PHYSICAL",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 200,
+      "description": "인접 아군 ATK 15%, 공격속도 10% 증가"
+    },
+    "uniqueAbility": {
+      "id": "titan_smash_ultimate",
+      "name": "타이탄스매시",
+      "passive": null,
+      "active": {
+        "id": "titan_smash_ult_active",
+        "name": "대지분쇄",
+        "type": "ACTIVE",
+        "damageType": "PHYSICAL",
+        "value": 600.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 범위 200 내 적 전체 ATK 600% 물리 데미지 + 2초 스턴 + 방어 35% 감소"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "거대한 전투 로봇. 대지를 분쇄하는 강력한 힘을 지닌다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_mythic_03",
+    "name": "네메시스",
+    "race": "ROBOT",
+    "grade": "MYTHIC",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 80,
+      "baseSpeed": 1.3,
+      "range": 385
+    },
+    "ability": {
+      "id": "emp_field",
+      "name": "전자기장",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 200,
+      "description": "범위 200 내 적 이동속도 20% 감소 + 공격속도 10% 감소"
+    },
+    "uniqueAbility": {
+      "id": "extermination_protocol_ultimate",
+      "name": "절멸프로토콜",
+      "passive": {
+        "id": "extermination_protocol_passive",
+        "name": "전자전",
+        "type": "PASSIVE",
+        "damageType": "MAGIC",
+        "value": 15.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "공격 시 15% 확률로 적 2.5초 스턴"
+      },
+      "active": {
+        "id": "extermination_protocol_ult_active",
+        "name": "전자기폭풍",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 900.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 전체 ATK 900% 마법 데미지 + 3초 스턴 + 방어/마저 35% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [오버로드] + [타이탄]. 전자전의 대가. 전자기파로 전장을 제압한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "robot_immortal_01",
+    "name": "넥서스",
+    "race": "ROBOT",
+    "grade": "IMMORTAL",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 105,
+      "baseSpeed": 1.4,
+      "range": 430
+    },
+    "ability": {
+      "id": "quantum_network",
+      "name": "양자네트워크",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 30.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 모든 아군 ATK 30%, 모든 ROBOT 유닛 공격속도 25% 증가"
+    },
+    "uniqueAbility": {
+      "id": "digital_apocalypse_ultimate",
+      "name": "디지털종말",
+      "passive": {
+        "id": "digital_apocalypse_passive",
+        "name": "특이점",
+        "type": "PASSIVE",
+        "damageType": "PHYSICAL",
+        "value": 3.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "적 처치마다 ATK 3% 영구 증가 (최대 60%) + 10초마다 전장 적 1.5초 스턴"
+      },
+      "active": {
+        "id": "digital_apocalypse_ult_active",
+        "name": "양자포",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 2200.0,
+        "cooldown": 0,
+        "range": 300,
+        "description": "마나 충전 시 전장 적 전체 ATK 2200% 마법 데미지 + 5초 스턴 + 방어/마저 50% 감소"
+      },
+      "requiredGrade": "IMMORTAL"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [오메가] + [가디언X] + [네메시스]. 모든 기계의 종점. 양자 차원에서 적을 소멸시킨다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_common_03",
+    "name": "가고일",
+    "race": "DEMON",
+    "grade": "COMMON",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 23,
+      "baseSpeed": 0.9,
+      "range": 105
+    },
+    "ability": {
+      "id": "petrify",
+      "name": "석화",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 1.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "5번째 공격마다 적 1초 스턴"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "돌로 된 악마 조각상. 적을 석화시키는 힘을 지녔다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_common_04",
+    "name": "원령",
+    "race": "DEMON",
+    "grade": "COMMON",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 20,
+      "baseSpeed": 1.1,
+      "range": 165
+    },
+    "ability": {
+      "id": "curse_wave",
+      "name": "저주파동",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 15% 확률로 적 방어력 15% 감소 (3초)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "원한으로 떠도는 영혼. 저주의 파동으로 적의 방어를 깎는다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_common_05",
+    "name": "다크엘프",
+    "race": "DEMON",
+    "grade": "COMMON",
+    "attackRange": "RANGED",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 22,
+      "baseSpeed": 1.2,
+      "range": 160
+    },
+    "ability": {
+      "id": "poison_arrow",
+      "name": "독화살",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 8.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 20% 확률로 3초 독 DoT (초당 ATK 8%)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 60,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "어둠에 물든 엘프. 독을 바른 화살로 적을 서서히 죽인다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_rare_03",
+    "name": "나이트메어",
+    "race": "DEMON",
+    "grade": "RARE",
+    "attackRange": "MELEE",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 34,
+      "baseSpeed": 1.2,
+      "range": 110
+    },
+    "ability": {
+      "id": "nightmare",
+      "name": "악몽",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 15% 확률로 적 2초 감속 40% + 마법저항 20% 감소"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "악몽을 먹고 자란 악마. 공포로 적의 몸과 마음을 약화시킨다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_rare_04",
+    "name": "블러드메이지",
+    "race": "DEMON",
+    "grade": "RARE",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 32,
+      "baseSpeed": 1.0,
+      "range": 175
+    },
+    "ability": {
+      "id": "blood_magic",
+      "name": "혈액마법",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 데미지의 20%만큼 주변 아군 1체 ATK 보너스 (5초)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 25,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "피의 마법을 다루는 마법사. 적의 피를 아군의 힘으로 바꾼다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_hero_02",
+    "name": "리치",
+    "race": "DEMON",
+    "grade": "HERO",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 47,
+      "baseSpeed": 1.0,
+      "range": 277
+    },
+    "ability": {
+      "id": "necromancy",
+      "name": "사령술",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 25.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "적 처치 시 10초간 ATK 25% 증가 (최대 3스택)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "죽음을 초월한 마법사. 적을 쓰러뜨릴수록 강해진다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_hero_03",
+    "name": "뱀파이어",
+    "race": "DEMON",
+    "grade": "HERO",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 52,
+      "baseSpeed": 1.4,
+      "range": 110
+    },
+    "ability": {
+      "id": "vampirism",
+      "name": "흡혈",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 30.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 데미지의 30%만큼 다음 공격 ATK 보너스 + 처치 시 공격속도 25% 증가 (5초)"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "피를 갈구하는 밤의 귀족. 적의 피를 흡수하여 더욱 강해진다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_hero_04",
+    "name": "데스나이트",
+    "race": "DEMON",
+    "grade": "HERO",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 48,
+      "baseSpeed": 1.2,
+      "range": 120
+    },
+    "ability": {
+      "id": "death_aura",
+      "name": "죽음의오라",
+      "type": "AURA",
+      "damageType": "PHYSICAL",
+      "value": 10.0,
+      "cooldown": 0,
+      "range": 120,
+      "description": "주변 아군 ATK 10% 증가 + 공격 시 방어력 15% 무시"
+    },
+    "uniqueAbility": null,
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 12,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "죽음의 기사. 죽음의 오라로 주변을 강화하고 적의 방어를 무시한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_legend_01",
+    "name": "아크데몬",
+    "race": "DEMON",
+    "grade": "LEGEND",
+    "attackRange": "MELEE",
+    "damageType": "PHYSICAL",
+    "stats": {
+      "baseATK": 70,
+      "baseSpeed": 1.4,
+      "range": 130
+    },
+    "ability": {
+      "id": "hellfire",
+      "name": "지옥의화염",
+      "type": "PASSIVE",
+      "damageType": "PHYSICAL",
+      "value": 80.0,
+      "cooldown": 0,
+      "range": 100,
+      "description": "매 4번째 공격 시 범위 100 내 ATK 80% 화염 데미지"
+    },
+    "uniqueAbility": {
+      "id": "purgatory_ultimate",
+      "name": "연옥",
+      "passive": null,
+      "active": {
+        "id": "purgatory_ult_active",
+        "name": "업화",
+        "type": "ACTIVE",
+        "damageType": "PHYSICAL",
+        "value": 800.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 전장 적 ATK 800% 물리 데미지 + 5초 화염 DoT (초당 ATK 30%)"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "지옥에서 올라온 대악마. 업화로 적을 불태운다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_legend_02",
+    "name": "데스로드",
+    "race": "DEMON",
+    "grade": "LEGEND",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 56,
+      "baseSpeed": 1.1,
+      "range": 310
+    },
+    "ability": {
+      "id": "death_fog",
+      "name": "죽음의안개",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 200,
+      "description": "범위 200 내 적 방어력/마저 15% 감소"
+    },
+    "uniqueAbility": {
+      "id": "soul_harvest_ultimate",
+      "name": "영혼수확",
+      "passive": null,
+      "active": {
+        "id": "soul_harvest_ult_active",
+        "name": "사신낫",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 550.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 전장 적 ATK 550% 마법 데미지 + HP 8% 추가 데미지 + 처치당 코인 +3"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "죽음을 다스리는 군주. 영혼을 수확하여 부를 쌓는다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_legend_03",
+    "name": "아자젤",
+    "race": "DEMON",
+    "grade": "LEGEND",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 60,
+      "baseSpeed": 1.2,
+      "range": 315
+    },
+    "ability": {
+      "id": "corruption_whisper",
+      "name": "타락의속삭임",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 20% 확률로 적 방어력/마저 전부 무시 (3초)"
+    },
+    "uniqueAbility": {
+      "id": "doomsday_ultimate",
+      "name": "종말의날",
+      "passive": null,
+      "active": {
+        "id": "doomsday_ult_active",
+        "name": "종말",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 700.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 ATK 700% 마법 데미지 + 4초 공포 (이동불가) + 방어 40% 감소"
+      },
+      "requiredGrade": "LEGEND"
+    },
+    "mergeResultId": null,
+    "isSummonable": true,
+    "summonWeight": 3,
+    "unitCategory": "NORMAL",
+    "iconRes": 0,
+    "description": "타락한 천사. 속삭임으로 적의 방어를 무력화하고 종말을 선고한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_mythic_02",
+    "name": "루시퍼",
+    "race": "DEMON",
+    "grade": "MYTHIC",
+    "attackRange": "RANGED",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 92,
+      "baseSpeed": 1.4,
+      "range": 385
+    },
+    "ability": {
+      "id": "fallen_angel_light",
+      "name": "타천사의빛",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 25.0,
+      "cooldown": 0,
+      "range": 80,
+      "description": "공격 시 범위 80 스플래시 + 적 마법저항 25% 감소"
+    },
+    "uniqueAbility": {
+      "id": "paradise_lost_ultimate",
+      "name": "낙원추방",
+      "passive": {
+        "id": "paradise_lost_passive",
+        "name": "교만",
+        "type": "AURA",
+        "damageType": "MAGIC",
+        "value": 20.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "전장 DEMON 유닛 ATK 20%, 공격속도 15% 증가"
+      },
+      "active": {
+        "id": "paradise_lost_ult_active",
+        "name": "빛의심판",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 1300.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 ATK 1300% 마법 데미지 + 3초 스턴 + 5초 방어/마저 50% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [아크데몬] + [아자젤]. 빛을 잃은 천사. 타락한 빛으로 세상을 심판한다.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_mythic_03",
+    "name": "아바돈",
+    "race": "DEMON",
+    "grade": "MYTHIC",
+    "attackRange": "MELEE",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 88,
+      "baseSpeed": 1.5,
+      "range": 145
+    },
+    "ability": {
+      "id": "destruction_breath",
+      "name": "파멸의숨결",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 30.0,
+      "cooldown": 0,
+      "range": 200,
+      "description": "범위 200 내 적 이동속도 30% 감소 + 방어력 20% 감소"
+    },
+    "uniqueAbility": {
+      "id": "abyss_king_ultimate",
+      "name": "심연의왕",
+      "passive": {
+        "id": "abyss_king_passive",
+        "name": "멸망",
+        "type": "PASSIVE",
+        "damageType": "PHYSICAL",
+        "value": 20.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "매 4번째 공격 시 ATK 400% + 처치 시 ATK 5% 영구 증가 (최대 35%)"
+      },
+      "active": {
+        "id": "abyss_king_ult_active",
+        "name": "종말의나팔",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 1100.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 ATK 1100% 마법 데미지 + 4초 공포 + 방어/마저 40% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [데스로드] + [아자젤]. 심연에서 올라온 파멸의 군주.",
+    "behaviorId": ""
+  },
+  {
+    "id": "demon_immortal_01",
+    "name": "혼돈의군주",
+    "race": "DEMON",
+    "grade": "IMMORTAL",
+    "attackRange": "MELEE",
+    "damageType": "MAGIC",
+    "stats": {
+      "baseATK": 115,
+      "baseSpeed": 1.5,
+      "range": 145
+    },
+    "ability": {
+      "id": "chaos_domain",
+      "name": "혼돈의지배",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 35.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 모든 아군 ATK 35% 증가 + 적 이동속도 25% 감소"
+    },
+    "uniqueAbility": {
+      "id": "world_end_ultimate",
+      "name": "세계종말",
+      "passive": {
+        "id": "world_end_passive",
+        "name": "절대파괴",
+        "type": "PASSIVE",
+        "damageType": "PHYSICAL",
+        "value": 5.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "매 3번째 공격 시 ATK 400% + 처치 시 ATK 5% 영구 증가 (최대 40%)"
+      },
+      "active": {
+        "id": "world_end_ult_active",
+        "name": "혼돈의종말",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 2300.0,
+        "cooldown": 0,
+        "range": 300,
+        "description": "마나 충전 시 전장 적 ATK 2300% 마법 데미지 + 5초 공포 + 방어/마저 70% 감소"
+      },
+      "requiredGrade": "IMMORTAL"
+    },
+    "mergeResultId": null,
+    "isSummonable": false,
+    "summonWeight": 0,
+    "unitCategory": "HIDDEN",
+    "iconRes": 0,
+    "description": "조합: [마왕] + [루시퍼] + [아바돈]. 모든 악마의 정점. 혼돈으로 세계를 삼킨다.",
+    "behaviorId": ""
   }
 ]

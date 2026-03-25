@@ -26,6 +26,7 @@ import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.navigation.NavGraph
+import com.example.jaygame.ui.components.RaceDraftDialog
 import com.example.jaygame.ui.screens.SplashScreen
 import com.example.jaygame.ui.theme.JayGameTheme
 import com.example.jaygame.ui.viewmodel.AppViewModel
@@ -52,6 +53,7 @@ class ComposeActivity : ComponentActivity() {
                 val appState by vm.collectAsState()
                 val data = appState.gameData
                 var showSplash by rememberSaveable { mutableStateOf(true) }
+                var showRaceDraft by remember { mutableStateOf(false) }
 
                 // A2: Battle launch zoom-in wipe state
                 var battleTransitionActive by remember { mutableStateOf(false) }
@@ -108,12 +110,23 @@ class ComposeActivity : ComponentActivity() {
                     } else {
                         NavGraph(
                             factory = factory,
-                            onStartBattle = { battleTransitionActive = true },
+                            onStartBattle = { showRaceDraft = true },
                             onStartDungeonBattle = { dungeonId ->
                                 BattleBridge.setDungeonMode(dungeonId)
                                 battleTransitionActive = true
                             },
                             modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+
+                    if (showRaceDraft) {
+                        RaceDraftDialog(
+                            onConfirm = { selectedRaces ->
+                                BattleBridge.setSelectedRaces(selectedRaces)
+                                showRaceDraft = false
+                                battleTransitionActive = true
+                            },
+                            onDismiss = { showRaceDraft = false }
                         )
                     }
 

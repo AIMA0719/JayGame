@@ -130,7 +130,7 @@ fun SkillEffectOverlay(
                 val spriteR = if (ultAsset != null) radius * 2.5f else radius * 1.8f
                 val fadeAlpha = when {
                     progress < 0.1f -> progress / 0.1f
-                    progress > 0.8f -> (1f - progress) / 0.2f
+                    progress > 0.9f -> (1f - progress) / 0.1f
                     else -> 1f
                 }.coerceIn(0f, 1f)
                 val pulse = 1f + sin(elapsed * 3f) * 0.05f

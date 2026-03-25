@@ -29,7 +29,7 @@ class SupportAuraBehavior : UnitBehavior {
     }
 
     fun shouldApplyBuff(): Boolean = pendingBuff
-    fun getBuffRange(): Float = 120f  // Buff range in pixels
+    fun getBuffRange(): Float = 90f  // Buff range — 1 grid cell limit
 
     override fun onAttack(unit: GameUnit, target: Enemy): AttackResult {
         return AttackResult(

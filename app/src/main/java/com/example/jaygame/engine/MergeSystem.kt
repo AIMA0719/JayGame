@@ -1,6 +1,7 @@
 @file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
+import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.UnitGrade.Companion.nextGrade
 
@@ -33,6 +34,7 @@ object MergeSystem {
         race: UnitRace,
         currentGrade: UnitGrade,
         blueprintRegistry: BlueprintRegistry,
+        selectedRaces: Set<UnitRace> = emptySet(),
     ): BlueprintMergeResult? {
         // LEGEND 이상은 일반 합성 불가 (MYTHIC은 레시피 전용)
         if (currentGrade.ordinal >= UnitGrade.LEGEND.ordinal) return null
@@ -51,12 +53,11 @@ object MergeSystem {
             nextGrade
         }
 
-        // 같은 종족의 해당 등급 합성 가능 유닛 풀 우선
-        val racePool = blueprintRegistry.findMergeableByGrade(targetGrade)
-            .filter { it.race == race }
+        // 선택된 종족들의 해당 등급 합성 가능 유닛 풀
+        val racesPool = blueprintRegistry.findMergeableByRacesAndGrade(selectedRaces, targetGrade)
 
-        // 같은 종족 풀이 비어있으면 전체 등급 풀에서 선택
-        val pool = racePool.ifEmpty { blueprintRegistry.findMergeableByGrade(targetGrade) }
+        // 풀이 비어있으면 전체 등급 풀에서 선택
+        val pool = racesPool.ifEmpty { blueprintRegistry.findMergeableByGrade(targetGrade) }
         if (pool.isEmpty()) return null
 
         val selected = pool[(nextRandom() * pool.size).toInt().coerceIn(0, pool.size - 1)]
@@ -73,7 +74,7 @@ object MergeSystem {
                 val unit = grid.getUnit(i) ?: continue
                 if (unit.unitCategory == UnitCategory.SPECIAL) continue
                 val grade = UnitGrade.entries.getOrElse(unit.grade) { UnitGrade.COMMON }
-                if (determineMergeResult(unit.race, grade, blueprintRegistry) != null) {
+                if (determineMergeResult(unit.race, grade, blueprintRegistry, BattleBridge.selectedRaces.value) != null) {
                     mergeable.add(i)
                 }
             }
