@@ -18,19 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
-import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -40,19 +35,15 @@ import kotlinx.coroutines.launch
 private val GoldColor = Color(0xFFFFD700)               // Gold (text + bars)
 private val BossRed = Color(0xFFFF4444)                 // Red (boss text + rays)
 private val SubTextColor = Color.White.copy(alpha = 0.8f)
-private val BossRedGlow = Color(0xFFFF2222)
 private val ShimmerGold = Color(0xFFFFE57F)
 
 /**
  * Shows "WAVE X" announcement when a new wave starts.
  * Normal waves: slide-in from left, scale punch, decorative bars, slide-out right.
- * Boss waves: cinematic treatment with dim overlay, red edge glow, dramatic shake.
+ * Boss waves: cinematic treatment with red rays, dramatic shake.
  */
 @Composable
 fun WaveAnnouncementOverlay() {
-    val context = LocalContext.current
-    val waveClearBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_wave_clear, 128)!! }
-
     val battleState by BattleBridge.state.collectAsState()
     val currentWave = battleState.currentWave
     val isBoss = battleState.isBossRound
@@ -65,15 +56,12 @@ fun WaveAnnouncementOverlay() {
     val slideX = remember { Animatable(-300f) }
     val textScale = remember { Animatable(1f) }
     val textAlpha = remember { Animatable(0f) }
-    val flashAlpha = remember { Animatable(0f) }
     val shakeOffset = remember { Animatable(0f) }
     val barProgress = remember { Animatable(0f) }
 
     // Boss-specific animations
-    val dimAlpha = remember { Animatable(0f) }
     val bossSubAlpha = remember { Animatable(0f) }
     val bossRayAlpha = remember { Animatable(0f) }
-    val bossEdgeGlow = remember { Animatable(0f) }
 
     // Pre-compute wave text string outside Canvas
     val waveText = remember(currentWave) { "WAVE $currentWave" }
@@ -88,27 +76,13 @@ fun WaveAnnouncementOverlay() {
             slideX.snapTo(-300f)
             textScale.snapTo(1f)
             textAlpha.snapTo(0f)
-            flashAlpha.snapTo(0f)
             shakeOffset.snapTo(0f)
             barProgress.snapTo(0f)
-            dimAlpha.snapTo(0f)
             bossSubAlpha.snapTo(0f)
             bossRayAlpha.snapTo(0f)
-            bossEdgeGlow.snapTo(0f)
 
             if (isBoss) {
                 // ── BOSS WAVE TIMELINE ──
-                // 0ms: dim fade in, slide starts
-                launch {
-                    dimAlpha.animateTo(0.4f, tween(200, easing = FastOutSlowInEasing))
-                }
-
-                // Screen flash
-                launch {
-                    flashAlpha.animateTo(0.3f, tween(50))
-                    flashAlpha.animateTo(0f, tween(200))
-                }
-
                 // 0-300ms: text alpha + slide in
                 textAlpha.snapTo(1f)
                 slideX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
@@ -143,18 +117,9 @@ fun WaveAnnouncementOverlay() {
                 // 300ms: red rays appear and pulse
                 launch {
                     bossRayAlpha.animateTo(0.6f, tween(150))
-                    // Pulse loop until fade out
                     repeat(6) {
                         bossRayAlpha.animateTo(0.3f, tween(150))
                         bossRayAlpha.animateTo(0.6f, tween(150))
-                    }
-                }
-
-                // Boss edge glow pulse
-                launch {
-                    repeat(8) {
-                        bossEdgeGlow.animateTo(0.5f, tween(120))
-                        bossEdgeGlow.animateTo(0.15f, tween(120))
                     }
                 }
 
@@ -162,10 +127,8 @@ fun WaveAnnouncementOverlay() {
                 delay(880)
 
                 // 1500-2000ms: everything fades out
-                launch { dimAlpha.animateTo(0f, tween(500)) }
                 launch { bossSubAlpha.animateTo(0f, tween(500)) }
                 launch { bossRayAlpha.animateTo(0f, tween(300)) }
-                launch { bossEdgeGlow.animateTo(0f, tween(500)) }
                 launch { barProgress.animateTo(0f, tween(500)) }
                 launch {
                     slideX.animateTo(300f, tween(500, easing = FastOutSlowInEasing))
@@ -173,12 +136,6 @@ fun WaveAnnouncementOverlay() {
                 textAlpha.animateTo(0f, tween(500, easing = LinearEasing))
             } else {
                 // ── NORMAL WAVE TIMELINE ──
-                // 0ms: screen flash
-                launch {
-                    flashAlpha.animateTo(0.3f, tween(50))
-                    flashAlpha.animateTo(0f, tween(200))
-                }
-
                 // 0-300ms: slide in from left + text appears
                 textAlpha.snapTo(1f)
                 slideX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
@@ -215,9 +172,7 @@ fun WaveAnnouncementOverlay() {
 
     val textMeasurer = rememberTextMeasurer()
 
-    // Render when any visible element is active
     val anyVisible = textAlpha.value > 0.01f
-            || dimAlpha.value > 0.01f
             || bossRayAlpha.value > 0.01f
 
     if (anyVisible) {
@@ -228,41 +183,6 @@ fun WaveAnnouncementOverlay() {
             val scale = textScale.value
             val shake = shakeOffset.value
             val slide = slideX.value
-
-            // ── Boss dim overlay ──
-            val dAlpha = dimAlpha.value
-            if (dAlpha > 0f) {
-                drawRect(color = Color.Black.copy(alpha = dAlpha))
-            }
-
-            // ── Boss red edge glow ──
-            val edgeGlow = bossEdgeGlow.value
-            if (edgeGlow > 0f) {
-                // Top edge — solid rect, no gradient allocation
-                drawRect(
-                    color = BossRedGlow.copy(alpha = edgeGlow),
-                    topLeft = Offset(0f, 0f),
-                    size = Size(w, h * 0.05f),
-                )
-                // Bottom edge
-                drawRect(
-                    color = BossRedGlow.copy(alpha = edgeGlow),
-                    topLeft = Offset(0f, h * 0.95f),
-                    size = Size(w, h * 0.05f),
-                )
-                // Left edge
-                drawRect(
-                    color = BossRedGlow.copy(alpha = edgeGlow * 0.7f),
-                    topLeft = Offset(0f, 0f),
-                    size = Size(w * 0.04f, h),
-                )
-                // Right edge
-                drawRect(
-                    color = BossRedGlow.copy(alpha = edgeGlow * 0.7f),
-                    topLeft = Offset(w * 0.96f, 0f),
-                    size = Size(w * 0.04f, h),
-                )
-            }
 
             // ── Boss red light rays ──
             val rayAlpha = bossRayAlpha.value
@@ -292,12 +212,6 @@ fun WaveAnnouncementOverlay() {
                 }
             }
 
-            // ── Screen flash ──
-            val fAlpha = flashAlpha.value
-            if (fAlpha > 0f) {
-                drawRect(color = Color.White.copy(alpha = fAlpha))
-            }
-
             // ── Wave text ──
             val textColor = if (isBoss) BossRed else GoldColor
             val isLateWave = currentWave >= 50
@@ -305,7 +219,6 @@ fun WaveAnnouncementOverlay() {
 
             // Gold shimmer for wave 50+: blend gold with brighter gold
             val finalTextColor = if (isLateWave && !isBoss) {
-                // Shimmer effect: lerp between gold and bright gold based on time-ish (use scale as proxy)
                 val shimmerAmount = ((scale - 1f).coerceIn(0f, 0.15f) / 0.15f) * 0.3f
                 Color(
                     red = textColor.red + (ShimmerGold.red - textColor.red) * shimmerAmount,
@@ -333,21 +246,6 @@ fun WaveAnnouncementOverlay() {
             val textY = h * 0.38f
 
             drawText(textLayout, topLeft = Offset(textX, textY))
-
-            // ── Wave clear image (behind text) ──
-            val waveImgSize = (w * 0.35f * scale).toInt().coerceAtLeast(1)
-            val waveImgHalf = waveImgSize / 2f
-            val waveImgY = textY + textLayout.size.height / 2f - waveImgHalf
-            drawImage(
-                image = waveClearBitmap,
-                dstOffset = IntOffset(
-                    (w / 2f - waveImgHalf + slide).toInt(),
-                    waveImgY.toInt(),
-                ),
-                dstSize = IntSize(waveImgSize, waveImgSize),
-                alpha = alpha * 0.5f,
-                blendMode = BlendMode.Screen,
-            )
 
             // ── Decorative bars (glow + solid, expand from center) ──
             val barProg = barProgress.value

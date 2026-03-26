@@ -280,6 +280,152 @@ object AbilityEngine {
             "four_beasts_domain" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
                 listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.20f, 1f, true)))
 
+            // ── NEW SPIRIT ──
+            "earth_power" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, 80f, isMagic,
+                listOf(AbilityEffect.Slow(0.20f, 2f)), nthAttack = 3)
+
+            "flash" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.10f, r, isMagic,
+                listOf(AbilityEffect.Slow(0.50f, 1f)))
+
+            "root_bind" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.15f, r, isMagic,
+                listOf(AbilityEffect.Stun(2f)))
+
+            "combustion" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, 50f, isMagic,
+                listOf(AbilityEffect.DoT(v / 100f, 3f)))
+
+            "elemental_harmony" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.25f, r, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, true), AbilityEffect.Slow(0.20f, 1.5f)))
+
+            "dark_veil" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.MagicResistBreak(v / 100f, 1f)))
+
+            // ── NEW ANIMAL ──
+            "agility" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.10f, r, isMagic,
+                listOf(AbilityEffect.SelfSpdBuff(v / 100f, 3f)))
+
+            "hard_shell" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, false)))
+
+            "venom_sting" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.30f, r, isMagic,
+                listOf(AbilityEffect.DoT(v / 100f, 3f)))
+
+            "dive_attack" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false)), nthAttack = 5)
+
+            "petrify_gaze" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.08f, r, isMagic,
+                listOf(AbilityEffect.Stun(2f), AbilityEffect.ArmorBreak(v / 100f, 3f)))
+
+            "sky_dive" -> makeAbility(id, trigger, AbilityPrimitive.PERIODIC_AOE, 8f, 1f, r, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false), AbilityEffect.Stun(1f)))
+
+            "xuanwu_barrier" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.SpdBuff(v / 100f, 1f, true)))
+
+            "fierce_tiger" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false)), nthAttack = 4)
+
+            "sacred_flame" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.10f, 1f, false)))
+
+            "justice_flame" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, 100f, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false), AbilityEffect.Stun(1f)), nthAttack = 3)
+
+            // ── NEW ROBOT ──
+            "repair_nano" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.SpdBuff(v / 100f, 1f, false)))
+
+            "self_destruct" -> makeAbility(id, trigger, AbilityPrimitive.ON_KILL, cd, 1f, 60f, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false)))
+
+            "marking" -> makeAbility(id, trigger, AbilityPrimitive.PASSIVE_STAT, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.ArmorBreak(v / 100f, 3f)))
+
+            "energy_shield" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(0.08f, 1f, false), AbilityEffect.SpdBuff(0.05f, 1f, false)))
+
+            "pierce_laser" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Penetrate(2, v / 100f)))
+
+            "plasma_cannon" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, 70f, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, true), AbilityEffect.Stun(1.5f)))
+
+            "energy_charging" -> makeAbility(id, trigger, AbilityPrimitive.PERIODIC_AOE, 10f, 1f, 100f, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false), AbilityEffect.Stun(1f)))
+
+            "iron_wall" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, false), AbilityEffect.SpdBuff(0.10f, 1f, false)))
+
+            "emp_field" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Slow(v / 100f, 1f)))
+
+            "quantum_network" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.25f, 1f, false)))
+
+            // ── NEW DEMON ──
+            "petrify" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Stun(1f)), nthAttack = 5)
+
+            "curse_wave" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.15f, r, isMagic,
+                listOf(AbilityEffect.ArmorBreak(v / 100f, 3f)))
+
+            "poison_arrow" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.20f, r, isMagic,
+                listOf(AbilityEffect.DoT(v / 100f, 3f)))
+
+            "nightmare" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.15f, r, isMagic,
+                listOf(AbilityEffect.Slow(0.40f, 2f), AbilityEffect.MagicResistBreak(0.20f, 2f)))
+
+            "blood_magic" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.LifeDrain(v / 100f)))
+
+            "necromancy" -> makeAbility(id, trigger, AbilityPrimitive.ON_KILL, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.SelfAtkBuff(v / 100f, 10f, 3)))
+
+            "vampirism" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.LifeDrain(v / 100f)))
+
+            "death_aura" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, false), AbilityEffect.ArmorBreak(0.15f, 1f)))
+
+            "hellfire" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, 100f, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, false)), nthAttack = 4)
+
+            "death_fog" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.ArmorBreak(v / 100f, 1f), AbilityEffect.MagicResistBreak(v / 100f, 1f)))
+
+            "corruption_whisper" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.20f, r, isMagic,
+                listOf(AbilityEffect.ArmorBreak(1f, 3f), AbilityEffect.MagicResistBreak(1f, 3f)))
+
+            "fallen_angel_light" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, 80f, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, true), AbilityEffect.MagicResistBreak(0.25f, 3f)))
+
+            "chaos_domain" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.Slow(0.25f, 1f)))
+
+            "destruction_breath" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Slow(v / 100f, 1f), AbilityEffect.ArmorBreak(0.20f, 1f)))
+
+            // ── SPECIAL ──
+            "dragon_king_dominion" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, false), AbilityEffect.DoT(0.01f, 1f)))
+
+            "time_keeper_slow" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Slow(v / 100f, 1f)))
+
+            "void_emperor_nullify" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.ArmorBreak(v / 100f, 1f)))
+
+            "infernal_titan_burn" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.DoT(v / 100f, 1f)))
+
+            "primordial_chaos_shift" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Damage(v / 100f, true)))
+
+            "shadow_monarch_stealth" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, false)))
+
+            "frost_emperor_permafrost" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                listOf(AbilityEffect.Slow(v / 100f, 1f)))
+
             else -> {
                 // Fallback: attempt generic parsing by trigger type
                 parseGenericAbility(abilityDef)

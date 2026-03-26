@@ -232,11 +232,11 @@ class BattleEngine(
     private val pathRight = (Grid.ORIGIN_X + Grid.GRID_W) + pathMarginSide / 2f
     private val pathBottom = (Grid.ORIGIN_Y + Grid.GRID_H) + pathMarginTB / 2f
 
-    // Corner radius for smooth turns (8 interpolation points per corner)
+    // Corner radius for smooth turns (24 interpolation points per corner — 고속에서도 호 유지)
     private val cornerR = 30f
 
     val enemyPath: List<Vec2> = buildList {
-        val steps = 8
+        val steps = 24
         // Top edge: left→right
         add(Vec2(pathLeft + cornerR, pathTop))
         add(Vec2(pathRight - cornerR, pathTop))
@@ -316,6 +316,7 @@ class BattleEngine(
                         is BattleBridge.BattleCommand.Merge -> requestMerge(cmd.tileIndex)
                         is BattleBridge.BattleCommand.MergeAll -> requestMergeAll()
                         is BattleBridge.BattleCommand.Sell -> requestSell(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.SellAllSlot -> requestSellAllSlot(cmd.tileIndex)
                         is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(requestBulkSell(cmd.grade))
                         is BattleBridge.BattleCommand.GroupUpgrade -> requestGroupUpgrade(cmd.groupIndex)
                         is BattleBridge.BattleCommand.RecipeCraft -> requestRecipeCraft()
@@ -620,7 +621,7 @@ class BattleEngine(
         // Update unique abilities (hero+ grade skills)
         enemies.fillActiveList(activeEnemiesScratch)
         val activeEnemies = activeEnemiesScratch
-        UniqueAbilitySystem.update(unitList, dt, activeEnemies)
+        UniqueAbilitySystem.update(unitList, dt, activeEnemies, spatialHash, units)
 
         // ── AbilityEngine: periodic & aura ticks ──
         units.forEach { u ->
@@ -1076,10 +1077,21 @@ class BattleEngine(
         BattleBridge.updateGroupUpgradeLevels(groupUpgradeLevels.copyOf())
     }
 
+    private fun sellUnit(u: GameUnit) {
+        sp += SELL_BASE + u.grade * SELL_PER_GRADE
+        units.release(u)
+    }
+
     fun requestSell(tileIndex: Int) {
         val unit = grid.removeUnit(tileIndex) ?: return
-        sp += SELL_BASE + unit.grade * SELL_PER_GRADE
-        units.release(unit)
+        sellUnit(unit)
+        invalidateMergeCache()
+    }
+
+    fun requestSellAllSlot(tileIndex: Int) {
+        val removed = grid.removeAllFromSlot(tileIndex)
+        if (removed.isEmpty()) return
+        removed.forEach { sellUnit(it) }
         invalidateMergeCache()
     }
 
@@ -1088,18 +1100,11 @@ class BattleEngine(
         for (i in 0 until Grid.SLOT_COUNT) {
             val representative = grid.getUnit(i) ?: continue
             if (representative.grade == grade) {
-                // Remove all units in this slot (stacked)
                 val removed = grid.removeAllFromSlot(i)
-                removed.forEach { u ->
-                    sp += SELL_BASE + u.grade * SELL_PER_GRADE
-                    units.release(u)
-                    count++
-                }
+                removed.forEach { sellUnit(it); count++ }
             }
         }
-        if (count > 0) {
-            invalidateMergeCache()
-            }
+        if (count > 0) invalidateMergeCache()
         return count
     }
 

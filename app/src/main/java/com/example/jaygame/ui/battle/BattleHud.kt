@@ -402,15 +402,23 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
         gridState.filter { it.blueprintId.isNotEmpty() }
     }
 
-    val recipeInfos = remember(allRecipes, occupiedTiles) {
+    // 스택을 개별 유닛으로 펼침 (같은 슬롯에서 여러 재료 매칭 가능)
+    val expandedUnits = remember(occupiedTiles) {
+        occupiedTiles.flatMapIndexed { idx, tile ->
+            val count = tile.level.coerceAtLeast(1) // level = stackCount
+            List(count) { idx to tile }
+        }
+    }
+
+    val recipeInfos = remember(allRecipes, expandedUnits) {
         allRecipes.map { recipe ->
             // 필드 유닛 기반 재료 충족 수 카운트
             val used = mutableSetOf<Int>()
             var matchCount = 0
             for (slot in recipe.ingredients) {
-                val found = occupiedTiles.indices.any { idx ->
+                val found = expandedUnits.indices.any { idx ->
                     if (idx in used) return@any false
-                    val tile = occupiedTiles[idx]
+                    val (_, tile) = expandedUnits[idx]
                     val match = if (slot.specificUnitId != null) {
                         tile.blueprintId == slot.specificUnitId
                     } else {
@@ -651,41 +659,52 @@ private fun RecipeCard(
 
 @Composable
 private fun RecipeSlotChip(slot: RecipeSlot) {
-    val familyColor = slot.family?.color ?: Color.White.copy(alpha = 0.5f)
-    val familyLabel = slot.family?.label ?: "아무"
-    val roleLabel = slot.role?.label ?: "아무"
-    val gradeLabel = if (slot.minGrade.ordinal <= com.example.jaygame.engine.UnitGrade.COMMON.ordinal) {
-        ""
-    } else {
-        "${slot.minGrade.label}+"
-    }
+    val specificBp = remember(slot.specificUnitId) { slot.specificUnitId?.let { BlueprintRegistry.instance.findById(it) } }
+    val borderColor = if (specificBp != null) specificBp.grade.color.copy(alpha = 0.5f)
+    else (slot.family?.color ?: Color.White.copy(alpha = 0.5f)).copy(alpha = 0.4f)
 
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(RecipeIngredientBg)
-            .border(1.dp, familyColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = familyLabel,
-            color = familyColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.ExtraBold,
-        )
-        Text(
-            text = roleLabel,
-            color = Color.White.copy(alpha = 0.7f),
-            fontSize = 9.sp,
-        )
-        if (gradeLabel.isNotEmpty()) {
+        if (specificBp != null) {
             Text(
-                text = gradeLabel,
-                color = GoldBright.copy(alpha = 0.6f),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Bold,
+                text = specificBp.name,
+                color = specificBp.race.color,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
+            Text(
+                text = specificBp.grade.label,
+                color = specificBp.grade.color.copy(alpha = 0.7f),
+                fontSize = 9.sp,
+            )
+        } else {
+            Text(
+                text = slot.family?.label ?: "아무",
+                color = slot.family?.color ?: Color.White.copy(alpha = 0.5f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = slot.role?.label ?: "아무",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 9.sp,
+            )
+            val gradeLabel = if (slot.minGrade.ordinal <= UnitGrade.COMMON.ordinal) ""
+            else "${slot.minGrade.label}+"
+            if (gradeLabel.isNotEmpty()) {
+                Text(
+                    text = gradeLabel,
+                    color = GoldBright.copy(alpha = 0.6f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }

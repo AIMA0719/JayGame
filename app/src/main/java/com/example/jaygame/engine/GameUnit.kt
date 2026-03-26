@@ -215,6 +215,10 @@ class GameUnit {
         blockCount = 0
         groupAtkBonus = 0f
 
+        // Legacy ability fields (pool reuse 시 잔존 방지)
+        abilityType = 0
+        abilityValue = 0f
+
         // Existing reset logic
         alive = false
         currentTarget = null

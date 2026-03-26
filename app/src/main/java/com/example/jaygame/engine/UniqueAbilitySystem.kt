@@ -36,6 +36,20 @@ object UniqueAbilitySystem {
         // Only Hero (grade 2) and above have unique abilities
         if (unit.grade < 2) return
 
+        // Blueprint 기반 유닛: uniqueAbility JSON에서 마나/궁극기 설정
+        if (unit.blueprintId.isNotEmpty() && unit.activeAbility != null) {
+            val bp = if (BlueprintRegistry.isReady) BlueprintRegistry.instance.findById(unit.blueprintId) else null
+            if (bp?.uniqueAbility != null) {
+                val ua = bp.uniqueAbility
+                // LEGEND(grade 3): manaPerHit=9, MYTHIC(grade 4+): manaPerHit=6
+                unit.manaPerHit = if (unit.grade >= 4) 6f else if (unit.grade >= 3) 9f else 0f
+                unit.maxMana = 100f
+                unit.hasUltimate = unit.manaPerHit > 0f
+                unit.uniqueAbilityType = 100 + unit.grade  // blueprint-based marker (not family-based)
+            }
+            return  // skip legacy family-based init
+        }
+
         val vfxType = resolveVfxType(unit.family, unit.grade)
         if (vfxType < 0) return
 
@@ -71,7 +85,8 @@ object UniqueAbilitySystem {
      * Update unique abilities for all active units.
      * Called once per frame from BattleEngine.updateUnits().
      */
-    fun update(units: List<GameUnit>, dt: Float, enemies: List<Enemy>) {
+    fun update(units: List<GameUnit>, dt: Float, enemies: List<Enemy>,
+               spatialHash: SpatialHash<Enemy>? = null, allUnits: ObjectPool<GameUnit>? = null) {
         for (unit in units) {
             if (!unit.alive || unit.uniqueAbilityType < 0) continue
             if (unit.grade < 2) continue // only hero+ have unique abilities
@@ -84,8 +99,13 @@ object UniqueAbilitySystem {
             // 마나 기반 궁극기 발동 (전설/신화)
             if (unit.hasUltimate && unit.mana >= unit.maxMana) {
                 if (enemies.isNotEmpty()) {
-                    activateAbility(unit, enemies)
-                    unit.mana = 0f  // 마나 리셋
+                    // Blueprint-based ultimate (type >= 100)
+                    if (unit.uniqueAbilityType >= 100 && spatialHash != null && allUnits != null) {
+                        activateBlueprintUltimate(unit, enemies, spatialHash, allUnits)
+                    } else {
+                        activateAbility(unit, enemies)
+                        unit.mana = 0f  // 마나 리셋
+                    }
                 }
             }
 
@@ -558,5 +578,48 @@ object UniqueAbilitySystem {
             }
             else -> null
         }
+    }
+
+    private fun activateBlueprintUltimate(
+        unit: GameUnit,
+        enemies: List<Enemy>,
+        spatialHash: SpatialHash<Enemy>,
+        allUnits: ObjectPool<GameUnit>,
+    ) {
+        val bp = (if (BlueprintRegistry.isReady) BlueprintRegistry.instance.findById(unit.blueprintId) else null) ?: return
+        val ua = bp.uniqueAbility ?: return
+        val active = ua.active ?: return
+        val atk = unit.effectiveATK()
+        val atkMult = active.value / 100f
+        val range = active.range.coerceAtLeast(200f)
+        val isMagic = active.damageType == DamageType.MAGIC
+
+        // Pre-compute CC flags from description (avoid per-enemy string ops)
+        val desc = active.description
+        val hasStun = desc.contains("스턴") || desc.contains("정지")
+        val hasSlow = desc.contains("감속")
+        val hasArmorBreak = desc.contains("방어") || desc.contains("마저")
+        val hasDot = desc.contains("DoT") || desc.contains("화염") || desc.contains("독")
+
+        val rect = com.example.jaygame.engine.math.GameRect(
+            unit.position.x - range, unit.position.y - range, range * 2, range * 2
+        )
+        for (enemy in spatialHash.query(rect)) {
+            if (!enemy.alive) continue
+            if (enemy.position.distanceTo(unit.position) > range) continue
+            enemy.takeDamage(atk * atkMult, isMagic)
+            if (hasStun) enemy.buffs.addBuff(BuffType.Stun, 1f, 3f, unit.tileIndex)
+            if (hasSlow) enemy.buffs.addBuff(BuffType.Slow, 0.40f, 5f, unit.tileIndex)
+            if (hasArmorBreak) enemy.buffs.addBuff(BuffType.ArmorBreak, 0.40f, 5f, unit.tileIndex)
+            if (hasDot) enemy.buffs.addBuff(BuffType.DoT, atk * 0.10f, 5f, unit.tileIndex)
+        }
+
+        // Emit VFX using blueprintId (matches UltSpriteMap)
+        val nx = unit.position.x / 720f
+        val ny = unit.position.y / 1280f
+        val nr = range / 720f
+        emitVfx(SkillVfxType.VOLCANIC_ERUPTION, nx, ny, nr, unit, 2f)
+
+        unit.mana = 0f
     }
 }

@@ -76,7 +76,7 @@ data class UnitDef(
 )
 
 
-val UPGRADE_COSTS = listOf(2 to 100, 4 to 200, 10 to 500, 20 to 1000, 50 to 2000, 100 to 5000)
+val UPGRADE_COSTS = listOf(3 to 800, 6 to 3_000, 15 to 10_000, 30 to 30_000, 60 to 90_000, 120 to 250_000)
 val LEVEL_MULTIPLIER = floatArrayOf(1.0f, 1.5f, 2.2f, 3.2f, 4.5f, 6.0f, 8.0f)
 
 // TODO(Task18): Remove UNIT_DEFS once BattleEngine, UI screens, and BattleBridge are fully migrated to BlueprintRegistry.

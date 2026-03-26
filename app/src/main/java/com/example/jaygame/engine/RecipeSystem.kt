@@ -81,8 +81,10 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
     fun findMatchingRecipeOnGrid(grid: Grid, availableLuckyStones: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
         val allUnits = mutableListOf<Pair<Int, GameUnit>>() // (tileIndex, unit)
         for (i in 0 until Grid.TOTAL) {
-            val u = grid.getUnit(i) ?: continue
-            allUnits.add(i to u)
+            // 스택의 모든 유닛을 개별 candidate로 등록 (같은 슬롯에서 여러 개 매칭 가능)
+            for (u in grid.getUnitsInSlot(i)) {
+                allUnits.add(i to u)
+            }
         }
         for (recipe in recipes) {
             // 행운석 부족 시 해당 레시피 스킵

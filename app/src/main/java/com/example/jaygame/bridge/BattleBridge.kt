@@ -258,6 +258,7 @@ object BattleBridge {
         object Summon : BattleCommand()
         data class Merge(val tileIndex: Int) : BattleCommand()
         data class Sell(val tileIndex: Int) : BattleCommand()
+        data class SellAllSlot(val tileIndex: Int) : BattleCommand()
         data class BulkSell(val grade: Int, val result: CompletableDeferred<Int>) : BattleCommand()
         data class GroupUpgrade(val groupIndex: Int) : BattleCommand()
         data class Swap(val from: Int, val to: Int) : BattleCommand()
@@ -404,6 +405,7 @@ object BattleBridge {
         val role: UnitRole = UnitRole.RANGED_DPS,
         val attackRange: AttackRange = AttackRange.RANGED,
         val damageType: DamageType = DamageType.PHYSICAL,
+        val stackCount: Int = 1,
     )
     private val _unitPopup = MutableStateFlow<UnitPopupData?>(null)
     val unitPopup: StateFlow<UnitPopupData?> = _unitPopup.asStateFlow()
@@ -422,6 +424,7 @@ object BattleBridge {
             role = bp?.role ?: tile.role,
             attackRange = bp?.attackRange ?: AttackRange.RANGED,
             damageType = bp?.damageType ?: DamageType.PHYSICAL,
+            stackCount = tile.level.coerceAtLeast(1),
         )
     }
 
@@ -899,6 +902,11 @@ object BattleBridge {
     fun requestSell(tileIndex: Int) {
         _selectedTile.value = -1
         commandQueue.add(BattleCommand.Sell(tileIndex))
+    }
+
+    fun requestSellAllSlot(tileIndex: Int) {
+        _selectedTile.value = -1
+        commandQueue.add(BattleCommand.SellAllSlot(tileIndex))
     }
 
     fun requestBulkSell(grade: Int): Int {

@@ -42,8 +42,11 @@ import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.engine.BattleEngine
 import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.SubText
+
+private val SellAccentDark = NeonRed.copy(alpha = 0.5f)
 
 @Composable
 fun UnitDetailPopup() {
@@ -232,9 +235,12 @@ fun UnitDetailPopup() {
                         }
                     }
 
-                    // Slot info
+                    val sellPrice = (BattleEngine.SELL_BASE + data.grade * BattleEngine.SELL_PER_GRADE).toInt()
                     Text(
-                        text = "슬롯: #${data.tileIndex + 1}",
+                        text = if (data.stackCount > 1)
+                            "슬롯: #${data.tileIndex + 1}  (${data.stackCount}마리)"
+                        else
+                            "슬롯: #${data.tileIndex + 1}",
                         color = SubText.copy(alpha = 0.7f),
                         fontSize = 10.sp,
                         modifier = Modifier.fillMaxWidth(),
@@ -242,20 +248,53 @@ fun UnitDetailPopup() {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Sell button
-                    NeonButton(
-                        text = "판매",
-                        onClick = {
-                            BattleBridge.requestSell(data.tileIndex)
-                            BattleBridge.dismissPopup()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        fontSize = 13.sp,
-                        accentColor = NeonRed,
-                        accentColorDark = NeonRed.copy(alpha = 0.5f),
-                    )
+                    if (data.stackCount >= 2) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            NeonButton(
+                                text = "1개 판매 (${sellPrice}G)",
+                                onClick = {
+                                    BattleBridge.requestSell(data.tileIndex)
+                                    BattleBridge.dismissPopup()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                fontSize = 11.sp,
+                                accentColor = NeonRed,
+                                accentColorDark = SellAccentDark,
+                            )
+                            NeonButton(
+                                text = "모두 판매 (${sellPrice * data.stackCount}G)",
+                                onClick = {
+                                    BattleBridge.requestSellAllSlot(data.tileIndex)
+                                    BattleBridge.dismissPopup()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                fontSize = 11.sp,
+                                accentColor = NeonRed,
+                                accentColorDark = SellAccentDark,
+                            )
+                        }
+                    } else {
+                        NeonButton(
+                            text = "판매 (${sellPrice}G)",
+                            onClick = {
+                                BattleBridge.requestSell(data.tileIndex)
+                                BattleBridge.dismissPopup()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            fontSize = 13.sp,
+                            accentColor = NeonRed,
+                            accentColorDark = SellAccentDark,
+                        )
+                    }
                 }
             }
         }

@@ -87,9 +87,6 @@ fun SummonEffectOverlay() {
     val summonResult by BattleBridge.summonResult.collectAsState()
     val data = summonResult ?: return
 
-    val context = LocalContext.current
-    val summonBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_summon, 128)!! }
-
     val unitDef = UNIT_DEFS_MAP[data.unitDefId]
     val grade = data.grade
 
@@ -220,23 +217,6 @@ fun SummonEffectOverlay() {
             val bp = burstProgress
             val maxR = size.minDimension * 0.4f * bp
             val fadeAlpha = (1f - bp).coerceIn(0f, 1f)
-
-            // ── Summon sprite (grade 2+) ──
-            if (grade >= 2 && bp > 0.01f) {
-                val summonAlpha = (1f - bp * 0.6f).coerceIn(0f, 1f)
-                val summonSize = (maxR * 1.8f).toInt().coerceAtLeast(1)
-                val summonHalf = summonSize / 2f
-                drawImage(
-                    image = summonBitmap,
-                    dstOffset = IntOffset(
-                        (cx - summonHalf).toInt(),
-                        (cy - summonHalf).toInt(),
-                    ),
-                    dstSize = IntSize(summonSize, summonSize),
-                    alpha = summonAlpha * 0.7f,
-                    blendMode = BlendMode.Screen,
-                )
-            }
 
             // ══════════════════════════════════════════════
             // LIGHT PILLAR (all grades)

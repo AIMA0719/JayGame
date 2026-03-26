@@ -88,22 +88,27 @@ class Enemy {
         if (blockedBy != null) return true
 
         val effectiveSpeed = baseSpeed * buffs.getSlowFactor()
-        if (pathIndex < path.size) {
+        var remaining = effectiveSpeed * dt
+        var safety = path.size + 1
+        while (remaining > 0f && pathIndex < path.size && --safety > 0) {
             val target = path[pathIndex]
-            val dir = target - position
-            val dist = dir.length
-            val step = effectiveSpeed * dt
+            val dx = target.x - position.x
+            val dy = target.y - position.y
+            val dist = kotlin.math.sqrt(dx * dx + dy * dy)
 
-            if (dist <= step) {
-                position = target.copy()
+            if (dist <= remaining) {
+                position.x = target.x
+                position.y = target.y
+                remaining -= dist
                 pathIndex++
                 if (pathIndex >= path.size) {
                     pathIndex = 0
                 }
             } else {
-                val norm = dir.normalized()
-                position.x += norm.x * step
-                position.y += norm.y * step
+                val ratio = remaining / dist
+                position.x += dx * ratio
+                position.y += dy * ratio
+                remaining = 0f
             }
         }
         return true
