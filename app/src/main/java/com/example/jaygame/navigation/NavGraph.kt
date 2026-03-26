@@ -28,6 +28,8 @@ import com.example.jaygame.ui.screens.ResultScreen
 import com.example.jaygame.ui.screens.ShopScreen
 import com.example.jaygame.ui.screens.DungeonScreen
 import com.example.jaygame.data.STAGES
+import com.example.jaygame.data.UnitProgress
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.screens.ProfileScreen
 import com.example.jaygame.ui.screens.UnitCollectionScreen
 import com.example.jaygame.ui.theme.*
@@ -182,14 +184,21 @@ fun NavGraph(
                             cheatActivated = true
                             shopTapTimes.clear()
                             val current = repository.gameData.value
-                            val allUnlocked = current.units.mapValues { (_, u) -> u.copy(owned = true, cards = 999) }
+                            // 모든 블루프린트를 도감에 등록 (기존 맵에 없는 유닛 포함)
+                            val allUnits = current.units.toMutableMap()
+                            if (BlueprintRegistry.isReady) {
+                                for (bp in BlueprintRegistry.instance.all()) {
+                                    val existing = allUnits[bp.id]
+                                    allUnits[bp.id] = (existing ?: UnitProgress()).copy(owned = true, cards = 999)
+                                }
+                            }
                             repository.save(
                                 current.copy(
                                     gold = 9_999_999,
                                     diamonds = 9_999_999,
                                     stamina = 9_999,
                                     maxStamina = 9_999,
-                                    units = allUnlocked,
+                                    units = allUnits,
                                     unlockedStages = (0 until STAGES.size).toList(),
                                 ),
                             )
