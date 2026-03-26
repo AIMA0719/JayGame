@@ -6,6 +6,7 @@ import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.audio.SoundEvent
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.DungeonDef
+import com.example.jaygame.data.UnitRace
 import com.example.jaygame.data.GameData
 // TODO(Task18): Remove these legacy imports once requestMerge/requestBuyUnit
 //  are fully migrated to blueprint-based paths (tryMergeBlueprint, etc.)
@@ -125,6 +126,13 @@ class BattleEngine(
     private val groupUpgradeLevels = IntArray(UnitUpgradeSystem.GROUP_COUNT)
     private val groupAtkBonusCache = FloatArray(UnitUpgradeSystem.GROUP_COUNT)
     private val groupSpdBonusCache = FloatArray(UnitUpgradeSystem.GROUP_COUNT)
+
+    // ── 종족 드래프트 시너지 버프 ──
+    private var synergyAtkMult = 1f       // HUMAN: +10% ATK
+    private var synergySpdMult = 1f       // SPIRIT: +10% 공격속도
+    private var synergyCoinMult = 1f      // ANIMAL: +20% 코인 획득
+    private var synergyLuckyMerge = 0f    // ROBOT: 합성 확률 보너스
+    private var synergyBossDmgMult = 1f   // DEMON: +15% 보스 데미지
 
     private var gridPushTimer = 0f
 
@@ -278,10 +286,16 @@ class BattleEngine(
         // 등급 그룹 통합 강화 — groupUpgradeLevels 배틀 시작 시 0으로 초기화
         UniqueAbilitySystem.zonePool = zones
         UniqueAbilitySystem.activeUnits = activeUnitsScratch
+        // ── 종족 드래프트 시너지 초기화 ──
+        val draftedRaces = BattleBridge.selectedRaces.value
+        synergyAtkMult = if (UnitRace.HUMAN in draftedRaces) 1.10f else 1f
+        synergySpdMult = if (UnitRace.SPIRIT in draftedRaces) 1.10f else 1f
+        synergyCoinMult = if (UnitRace.ANIMAL in draftedRaces) 1.20f else 1f
+        synergyLuckyMerge = if (UnitRace.ROBOT in draftedRaces) 0.05f else 0f
+        synergyBossDmgMult = if (UnitRace.DEMON in draftedRaces) 1.15f else 1f
+
         // Wire relic bonuses into subsystems
-        relicManager?.let { rm ->
-            MergeSystem.luckyMergeBonus = rm.totalLuckyMergeBonus()
-        }
+        MergeSystem.luckyMergeBonus = (relicManager?.totalLuckyMergeBonus() ?: 0f) + synergyLuckyMerge
         validateLayout()
         validatePathSpeedUniformity()
         job = scope.launch(Dispatchers.Default) {
@@ -399,7 +413,7 @@ class BattleEngine(
                 // 웨이브 클리어 → 보상 지급 및 다음 웨이브
                 if (waveSystem.waveComplete) {
                     SfxManager.play(SoundEvent.WaveClear, 0.8f)
-                    val waveClearCoins = WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE
+                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * synergyCoinMult
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
                     BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
@@ -590,8 +604,8 @@ class BattleEngine(
                 SfxManager.play(SoundEvent.EnemyDeath, 0.5f)
                 lastDeathSfxTime = now
             }
-            // 코인 획득: 적 처치 시
-            sp += if (wasElite) COIN_PER_ELITE_KILL.toFloat() else COIN_PER_KILL.toFloat()
+            // 코인 획득: 적 처치 시 (ANIMAL 시너지: +20%)
+            sp += (if (wasElite) COIN_PER_ELITE_KILL.toFloat() else COIN_PER_KILL.toFloat()) * synergyCoinMult
             val eliteGoldMult = if (wasElite) 3f else 1f
             val killGold = (eliteGoldMult * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
             BattleBridge.onGoldPickup(deathX, deathY, killGold)
@@ -637,7 +651,7 @@ class BattleEngine(
 
             // NEW: Behavior-based update path — units with a behavior delegate to it
             if (unit.behavior != null) {
-                applyGroupBonus(unit, 1f)
+                applyGroupBonus(unit)
                 unit.behavior?.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range)
                 }
@@ -683,16 +697,16 @@ class BattleEngine(
                     val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
                     val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
                     val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
+                    val behBossMult = if (target.isBoss) synergyBossDmgMult else 1f
                     val boostedDamage = result.damage * critBoost *
-                        upgradeAtkMult * (1f + relicAtkBonus) *
+                        upgradeAtkMult * synergyAtkMult * (1f + relicAtkBonus) *
                         familyUpgradeBonus * gradeBonus * advantageMult *
                         (if (result.isMagic) (1f + relicMagicDmg) else 1f) *
-                        (if (!result.isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
-                    val finalBoostedDamage = boostedDamage
+                        (if (!result.isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f) *
+                        behBossMult
 
                     if (result.isInstant) {
-                        // Melee instant damage — use Enemy.takeDamage() for proper boss/buff handling
-                        val finalDmg = target.takeDamage(finalBoostedDamage, result.isMagic, unit.range)
+                        val finalDmg = target.takeDamage(boostedDamage, result.isMagic, unit.range)
                         val nx = target.position.x / W
                         val ny = target.position.y / H
                         BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
@@ -707,7 +721,7 @@ class BattleEngine(
                         if (proj != null) {
                             proj.init(
                                 from = unit.position.copy(), target = target,
-                                damage = finalBoostedDamage, speed = projSpeed,
+                                damage = boostedDamage, speed = projSpeed,
                                 type = unit.projectileVisualType(),
                                 isMagic = result.isMagic, isCrit = boostedCrit,
                                 sourceUnitId = unit.tileIndex,
@@ -722,7 +736,7 @@ class BattleEngine(
                     unit.chargeMana()
                 }
             } else {
-                applyGroupBonus(unit, 1f)
+                applyGroupBonus(unit)
                 unit.update(dt) { pos, range ->
                     findNearestEnemy(pos, range)
                 }
@@ -735,57 +749,6 @@ class BattleEngine(
         }
     }
 
-    /** 근접 유닛에 종족별 효과 적용 (투사체 경로의 onProjectileHit에 대응) */
-    private fun applyMeleeRacialEffect(unit: GameUnit, target: Enemy, damage: Float, isMagic: Boolean) {
-        when (unit.abilityType) {
-            1 -> { // Splash: 주변 적에게 50% 데미지 + DoT
-                target.buffs.addBuff(BuffType.DoT, damage * 0.1f, 2f, unit.tileIndex)
-                val splashRadius = unit.abilityValue.coerceAtLeast(60f)
-                val rect = com.example.jaygame.engine.math.GameRect(
-                    target.position.x - splashRadius, target.position.y - splashRadius,
-                    splashRadius * 2, splashRadius * 2,
-                )
-                spatialHash.query(rect).forEach { nearby ->
-                    if (nearby !== target && nearby.alive) {
-                        val dist = nearby.position.distanceTo(target.position)
-                        if (dist <= splashRadius) {
-                            nearby.takeDamage(damage * 0.5f, isMagic)
-                        }
-                    }
-                }
-            }
-            2 -> { // Slow
-                target.buffs.addBuff(BuffType.Slow, unit.abilityValue, 2f, unit.tileIndex)
-            }
-            3 -> { // DoT
-                target.buffs.addBuff(BuffType.DoT, unit.abilityValue, 3f, unit.tileIndex)
-            }
-            4 -> { // Chain: 근접이지만 주변 적에게 연쇄 데미지
-                val chainCount = unit.abilityValue.toInt().coerceIn(1, 6)
-                val rect = com.example.jaygame.engine.math.GameRect(
-                    target.position.x - 200f, target.position.y - 200f, 400f, 400f,
-                )
-                var chained = 0
-                spatialHash.query(rect).forEach { nearby ->
-                    if (chained < chainCount && nearby !== target && nearby.alive) {
-                        nearby.takeDamage(damage * 0.7f, isMagic)
-                        chained++
-                    }
-                }
-            }
-            6 -> { // ArmorBreak
-                target.buffs.addBuff(BuffType.ArmorBreak, unit.abilityValue, 3f, unit.tileIndex)
-            }
-            10 -> { // Knockback
-                val dir = target.position - unit.position
-                val len = dir.length
-                if (len > 0.01f) {
-                    target.position.x += (dir.x / len) * unit.abilityValue
-                    target.position.y += (dir.y / len) * unit.abilityValue
-                }
-            }
-        }
-    }
 
     /** Called from onProjectileHit — apply data-driven on-hit ability for the attacking unit. */
     private fun applyAbilityOnHit(sourceUnitTile: Int, target: Enemy) {
@@ -909,10 +872,12 @@ class BattleEngine(
         val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
         val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
-        val baseAtk = unit.effectiveATK() * upgradeAtkMult * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
+        val bossMult = if (target.isBoss) synergyBossDmgMult else 1f
+        val baseAtk = unit.effectiveATK() * upgradeAtkMult * synergyAtkMult * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
             (if (isMagic) (1f + relicMagicDmg) else 1f) *
-            (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f)
+            (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f) *
+            bossMult
 
         if (unit.attackRange == AttackRange.MELEE) {
             // 근접: 즉시 데미지 + 슬래시 이펙트
@@ -926,7 +891,6 @@ class BattleEngine(
             )
             BattleBridge.onMeleeHit(nx, ny, unit.family.coerceIn(0, 5), isCrit, angle)
             tryPlayAttackSfx(isCrit)
-            applyMeleeRacialEffect(unit, target, dmg, isMagic)
             applyAbilityOnHit(unit.tileIndex, target)
         } else {
             // 원거리: 투사체 발사
@@ -1012,7 +976,7 @@ class BattleEngine(
         )
     }
 
-    private fun applyGroupBonus(unit: GameUnit, synergySpdMult: Float) {
+    private fun applyGroupBonus(unit: GameUnit) {
         val grp = UnitUpgradeSystem.gradeToGroup(unit.grade)
         unit.groupAtkBonus = groupAtkBonusCache[grp]
         unit.spdMultiplier = upgradeSpdMult * synergySpdMult * (1f + groupSpdBonusCache[grp])
@@ -1035,26 +999,9 @@ class BattleEngine(
         unit.behavior = if (bp.behaviorId.isNotEmpty()) BehaviorFactory.create(bp.behaviorId) else null
         // Data-driven ability engine: parse ability from blueprint
         unit.activeAbility = AbilityEngine.parseAbility(bp.ability)
-        // activeAbility가 있으면 레거시 종족 abilityType 스킵
-        if (unit.activeAbility == null) {
-            val abilityInfo = abilityForFamily(GameUnit.raceToFamily(unit.race))
-            unit.abilityType = abilityInfo.first
-            unit.abilityValue = abilityInfo.second
-        }
         unit.abilityTimer = unit.activeAbility?.cooldown ?: 0f
         UniqueAbilitySystem.initUnit(unit)
         return unit
-    }
-
-    @Suppress("DEPRECATION")
-    private fun abilityForFamily(family: Int): Pair<Int, Float> = when (family) {
-        0 -> 1 to 80f      // Fire: Splash
-        1 -> 2 to 0.3f     // Frost: Slow
-        2 -> 3 to 10f      // Poison: DoT
-        3 -> 4 to 3f       // Lightning: Chain
-        4 -> 5 to 0.15f    // Support: Buff
-        5 -> 10 to 50f     // Wind: Knockback
-        else -> 0 to 0f
     }
 
 
@@ -1255,13 +1202,12 @@ class BattleEngine(
             // Fallback: legacy init — position will be set by grid.placeUnit()
             unit = units.acquire() ?: return
             val family = unitFamilyOf(unitDefId)
-            val abilityInfo = abilityForFamily(family)
             unit.init(
                 unitDefId = unitDefId, grade = gradeOrdinal, family = family, level = 1,
                 tileIndex = targetSlot, homePos = Grid.FIELD_CENTER.copy(),
                 baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
                 range = def.range * upgradeRangeMult,
-                abilityType = abilityInfo.first, abilityValue = abilityInfo.second,
+                abilityType = 0, abilityValue = 0f,
             )
             unit.families = listOf(familyEnum)
             unit.role = inferRole(familyEnum)

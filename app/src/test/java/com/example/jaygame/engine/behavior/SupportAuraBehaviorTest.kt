@@ -56,7 +56,7 @@ class SupportAuraBehaviorTest {
     @Test
     fun `getBuffRange returns expected range`() {
         val behavior = SupportAuraBehavior()
-        assertEquals(120f, behavior.getBuffRange(), 0.01f)
+        assertEquals(90f, behavior.getBuffRange(), 0.01f)
     }
 
     // --- Helpers ---

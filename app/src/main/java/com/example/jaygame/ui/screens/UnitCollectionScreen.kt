@@ -57,6 +57,7 @@ import com.example.jaygame.R
 import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.engine.AttackRange
 import com.example.jaygame.engine.BlueprintRegistry
+import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.engine.DamageType
 import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.engine.HiddenRecipe
@@ -1083,12 +1084,17 @@ private fun HiddenUnitCard(
 
 @Composable
 private fun RecipeSlotHint(slot: RecipeSlot) {
-    val familyLabel = slot.family?.label ?: "아무"
-    val roleLabel = slot.role?.label ?: "아무"
-    val gradeLabel = if (slot.minGrade == UnitGrade.COMMON) "" else "(${slot.minGrade.label}+)"
+    val label = if (slot.specificUnitId != null) {
+        blueprintDisplayName(slot.specificUnitId) ?: slot.specificUnitId
+    } else {
+        val familyLabel = slot.family?.label ?: "아무"
+        val roleLabel = slot.role?.label ?: "아무"
+        val gradeLabel = if (slot.minGrade == UnitGrade.COMMON) "" else "(${slot.minGrade.label}+)"
+        "$familyLabel $roleLabel$gradeLabel"
+    }
 
     Text(
-        text = "$familyLabel $roleLabel$gradeLabel",
+        text = label,
         color = Color(0xFF8888AA),
         fontSize = 7.sp,
         fontWeight = FontWeight.Medium,

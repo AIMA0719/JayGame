@@ -2,10 +2,7 @@
   {
     "id": "special_dragon_king",
     "name": "용왕",
-    "families": [
-      "FIRE",
-      "WIND"
-    ],
+    "families": ["FIRE", "WIND"],
     "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
@@ -21,8 +18,41 @@
       "blockCount": 0
     },
     "behaviorId": "ranged_mage",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "dragon_king_dominion",
+      "name": "용왕의위엄",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 30.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 화염/바람 계열 아군 ATK 30% 증가 + 모든 적에게 초당 최대HP 1% 화염 피해"
+    },
+    "uniqueAbility": {
+      "id": "dragon_king_ultimate",
+      "name": "해신강림",
+      "passive": {
+        "id": "dragon_king_passive",
+        "name": "용린",
+        "type": "PASSIVE",
+        "damageType": "MAGIC",
+        "value": 200.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "매 4번째 공격 시 ATK 200% 해일 데미지 + 2초 감속 40%"
+      },
+      "active": {
+        "id": "dragon_king_ult_active",
+        "name": "폭풍해일",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 1200.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 전체 ATK 1200% 마법 데미지 + 4초 감속 50% + 3초 화염 DoT"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
@@ -33,10 +63,7 @@
   {
     "id": "special_time_keeper",
     "name": "시간의 관리자",
-    "families": [
-      "FROST",
-      "LIGHTNING"
-    ],
+    "families": ["FROST", "LIGHTNING"],
     "grade": "MYTHIC",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
@@ -52,8 +79,41 @@
       "blockCount": 0
     },
     "behaviorId": "controller_cc_ranged",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "time_keeper_slow",
+      "name": "시간왜곡",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 20.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 모든 적 이동속도 20% 감소 + 냉기/번개 CC 지속시간 +1초"
+    },
+    "uniqueAbility": {
+      "id": "time_keeper_ultimate",
+      "name": "시간정지",
+      "passive": {
+        "id": "time_keeper_passive",
+        "name": "시간지배",
+        "type": "PASSIVE",
+        "damageType": "MAGIC",
+        "value": 0.0,
+        "cooldown": 10.0,
+        "range": 0,
+        "description": "10초마다 가장 강한 적 3초 시간정지 (스턴)"
+      },
+      "active": {
+        "id": "time_keeper_ult_active",
+        "name": "영겁의시간",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 600.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 전체 ATK 600% 마법 데미지 + 4초 시간정지 + 이동속도 40% 감소 8초"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
@@ -64,10 +124,7 @@
   {
     "id": "special_void_emperor",
     "name": "공허의 황제",
-    "families": [
-      "POISON",
-      "FROST"
-    ],
+    "families": ["POISON", "FROST"],
     "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
@@ -83,8 +140,41 @@
       "blockCount": 0
     },
     "behaviorId": "ranged_mage",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "void_emperor_nullify",
+      "name": "공허잠식",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 25.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 적 힐링 효과 50% 감소 + 독 상태 적 받는 피해 25% 증가"
+    },
+    "uniqueAbility": {
+      "id": "void_emperor_ultimate",
+      "name": "공허의심판",
+      "passive": {
+        "id": "void_emperor_passive",
+        "name": "침식",
+        "type": "PASSIVE",
+        "damageType": "MAGIC",
+        "value": 20.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "공격 시 30% 확률로 4초 독 DoT (초당 ATK 20%) + 빙결 시 독 피해 2배"
+      },
+      "active": {
+        "id": "void_emperor_ult_active",
+        "name": "허무의파동",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 1000.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 ATK 1000% 마법 데미지 + 5초 독 DoT + 방어/마저 40% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
@@ -95,9 +185,7 @@
   {
     "id": "special_infernal_titan",
     "name": "지옥의 거신",
-    "families": [
-      "FIRE"
-    ],
+    "families": ["FIRE"],
     "grade": "MYTHIC",
     "role": "TANK",
     "attackRange": "MELEE",
@@ -113,8 +201,41 @@
       "blockCount": 4
     },
     "behaviorId": "tank_blocker",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "infernal_titan_burn",
+      "name": "지옥의화로",
+      "type": "AURA",
+      "damageType": "PHYSICAL",
+      "value": 50.0,
+      "cooldown": 0,
+      "range": 100,
+      "description": "블록된 적에게 초당 ATK 50% 화염 피해 + 아군 탱커 방어력 20% 증가"
+    },
+    "uniqueAbility": {
+      "id": "infernal_titan_ultimate",
+      "name": "지옥폭발",
+      "passive": {
+        "id": "infernal_titan_passive",
+        "name": "용암갑옷",
+        "type": "PASSIVE",
+        "damageType": "PHYSICAL",
+        "value": 20.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "아군 탱커 전체 방어력 20% 증가 + 피격 시 10% 확률로 범위 80 ATK 100% 반사"
+      },
+      "active": {
+        "id": "infernal_titan_ult_active",
+        "name": "자폭",
+        "type": "ACTIVE",
+        "damageType": "PHYSICAL",
+        "value": 800.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 범위 200 적 전체 ATK 800% 물리 데미지 + 5초 화염 DoT + 방어 30% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
@@ -125,13 +246,7 @@
   {
     "id": "special_primordial_chaos",
     "name": "원초의 혼돈",
-    "families": [
-      "FIRE",
-      "FROST",
-      "POISON",
-      "LIGHTNING",
-      "WIND"
-    ],
+    "families": ["FIRE", "FROST", "POISON", "LIGHTNING", "WIND"],
     "grade": "MYTHIC",
     "role": "RANGED_DPS",
     "attackRange": "RANGED",
@@ -147,8 +262,41 @@
       "blockCount": 0
     },
     "behaviorId": "ranged_mage",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "primordial_chaos_shift",
+      "name": "원소변환",
+      "type": "PASSIVE",
+      "damageType": "MAGIC",
+      "value": 30.0,
+      "cooldown": 0,
+      "range": 0,
+      "description": "공격 시 화염/냉기/독/번개/바람 중 랜덤 속성 전환 + 속성별 30% 추가 효과"
+    },
+    "uniqueAbility": {
+      "id": "primordial_chaos_ultimate",
+      "name": "혼돈의종말",
+      "passive": {
+        "id": "primordial_chaos_passive",
+        "name": "혼돈증폭",
+        "type": "AURA",
+        "damageType": "MAGIC",
+        "value": 100.0,
+        "cooldown": 0,
+        "range": 300,
+        "description": "모든 시너지 버프 효과 2배 + 전장 아군 ATK 10% 증가"
+      },
+      "active": {
+        "id": "primordial_chaos_ult_active",
+        "name": "만물귀환",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 1400.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 ATK 1400% 전 속성 데미지 + 3초 스턴 + 모든 디버프 동시 적용"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
@@ -159,10 +307,7 @@
   {
     "id": "special_shadow_monarch",
     "name": "그림자 군주",
-    "families": [
-      "POISON",
-      "WIND"
-    ],
+    "families": ["POISON", "WIND"],
     "grade": "MYTHIC",
     "role": "MELEE_DPS",
     "attackRange": "MELEE",
@@ -178,8 +323,41 @@
       "blockCount": 0
     },
     "behaviorId": "assassin_dash",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "shadow_monarch_stealth",
+      "name": "그림자지배",
+      "type": "AURA",
+      "damageType": "PHYSICAL",
+      "value": 50.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 근접 DPS 아군 치명타 피해 50% 증가 + 처치 시 5초 투명화"
+    },
+    "uniqueAbility": {
+      "id": "shadow_monarch_ultimate",
+      "name": "그림자군단",
+      "passive": {
+        "id": "shadow_monarch_passive",
+        "name": "암습",
+        "type": "PASSIVE",
+        "damageType": "PHYSICAL",
+        "value": 300.0,
+        "cooldown": 0,
+        "range": 0,
+        "description": "투명 상태 첫 공격 ATK 300% 데미지 + 처치 시 ATK 5% 영구 증가 (최대 40%)"
+      },
+      "active": {
+        "id": "shadow_monarch_ult_active",
+        "name": "그림자참수",
+        "type": "ACTIVE",
+        "damageType": "PHYSICAL",
+        "value": 1500.0,
+        "cooldown": 0,
+        "range": 200,
+        "description": "마나 충전 시 전장 적 전체 ATK 1500% 물리 데미지 + 3초 암흑(시야차단) + 방어 50% 감소"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
@@ -190,9 +368,7 @@
   {
     "id": "special_frost_emperor",
     "name": "빙제",
-    "families": [
-      "FROST"
-    ],
+    "families": ["FROST"],
     "grade": "MYTHIC",
     "role": "CONTROLLER",
     "attackRange": "RANGED",
@@ -208,8 +384,41 @@
       "blockCount": 0
     },
     "behaviorId": "controller_cc_ranged",
-    "ability": null,
-    "uniqueAbility": null,
+    "ability": {
+      "id": "frost_emperor_permafrost",
+      "name": "영구동토",
+      "type": "AURA",
+      "damageType": "MAGIC",
+      "value": 15.0,
+      "cooldown": 0,
+      "range": 300,
+      "description": "전장 모든 적 영구 이동속도 15% 감소 + 빙결된 적 받는 피해 30% 증가"
+    },
+    "uniqueAbility": {
+      "id": "frost_emperor_ultimate",
+      "name": "절대빙하",
+      "passive": {
+        "id": "frost_emperor_passive",
+        "name": "빙결지배",
+        "type": "PASSIVE",
+        "damageType": "MAGIC",
+        "value": 0.0,
+        "cooldown": 12.0,
+        "range": 0,
+        "description": "12초마다 가장 밀집한 지점 범위 120 내 적 전체 3초 빙결"
+      },
+      "active": {
+        "id": "frost_emperor_ult_active",
+        "name": "빙하시대",
+        "type": "ACTIVE",
+        "damageType": "MAGIC",
+        "value": 800.0,
+        "cooldown": 0,
+        "range": 250,
+        "description": "마나 충전 시 전장 적 전체 ATK 800% 냉기 데미지 + 4초 빙결 + 이동속도 50% 감소 8초"
+      },
+      "requiredGrade": "MYTHIC"
+    },
     "mergeResultId": null,
     "isSummonable": false,
     "summonWeight": 0,
