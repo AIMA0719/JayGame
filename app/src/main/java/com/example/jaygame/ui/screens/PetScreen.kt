@@ -1,5 +1,6 @@
 package com.example.jaygame.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,12 +45,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.R
 import com.example.jaygame.data.ALL_PETS
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.PET_PULL_10_COST
 import com.example.jaygame.data.PET_PULL_COST
-import com.example.jaygame.data.PetCategory
 import com.example.jaygame.data.PetDef
 import com.example.jaygame.data.PetGrade
 import com.example.jaygame.data.PetProgress
@@ -78,10 +80,17 @@ private val PetTabBg = Color(0xFF0D0D1F)
 
 private fun petGradeColor(grade: PetGrade): Color = Color(grade.colorHex)
 
-private fun petCategoryIcon(category: PetCategory): String = when (category) {
-    PetCategory.ATTACK -> "\u2694\uFE0F"
-    PetCategory.SUPPORT -> "\uD83D\uDE4F"
-    PetCategory.UTILITY -> "\u2699\uFE0F"
+private fun petIconRes(petId: Int): Int = when (petId) {
+    0 -> R.drawable.ic_pet_0
+    1 -> R.drawable.ic_pet_1
+    2 -> R.drawable.ic_pet_2
+    3 -> R.drawable.ic_pet_3
+    4 -> R.drawable.ic_pet_4
+    5 -> R.drawable.ic_pet_5
+    6 -> R.drawable.ic_pet_6
+    7 -> R.drawable.ic_pet_7
+    8 -> R.drawable.ic_pet_8
+    else -> R.drawable.ic_pet_0
 }
 
 @Composable
@@ -314,9 +323,10 @@ private fun PetEquippedSlotsBar(
                     } else if (equippedDef != null) {
                         val progress = gameData.pets.getOrNull(equippedDef.id)
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = petCategoryIcon(equippedDef.category),
-                                fontSize = 20.sp,
+                            Image(
+                                painter = painterResource(petIconRes(equippedDef.id)),
+                                contentDescription = equippedDef.name,
+                                modifier = Modifier.size(24.dp),
                             )
                             Text(
                                 text = equippedDef.name,
@@ -391,7 +401,11 @@ private fun PetGridItem(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(4.dp),
             ) {
-                Text(text = petCategoryIcon(def.category), fontSize = 22.sp)
+                Image(
+                    painter = painterResource(petIconRes(def.id)),
+                    contentDescription = def.name,
+                    modifier = Modifier.size(28.dp),
+                )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = def.name,
@@ -459,7 +473,11 @@ private fun PetDetailPanel(
                     .border(2.dp, gc, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = petCategoryIcon(def.category), fontSize = 26.sp)
+                Image(
+                    painter = painterResource(petIconRes(def.id)),
+                    contentDescription = def.name,
+                    modifier = Modifier.size(32.dp),
+                )
             }
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -483,9 +501,10 @@ private fun PetDetailPanel(
                         Text(text = def.grade.label, fontSize = 10.sp, color = gc, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = petCategoryIcon(def.category),
-                        fontSize = 12.sp,
+                    Image(
+                        painter = painterResource(petIconRes(def.id)),
+                        contentDescription = def.name,
+                        modifier = Modifier.size(16.dp),
                     )
                 }
                 Spacer(modifier = Modifier.height(2.dp))
@@ -701,7 +720,11 @@ private fun PetPullTab(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = petCategoryIcon(def.category), fontSize = 18.sp)
+                            Image(
+                                painter = painterResource(petIconRes(def.id)),
+                                contentDescription = def.name,
+                                modifier = Modifier.size(22.dp),
+                            )
                             Text(
                                 text = def.name,
                                 fontSize = 7.sp,

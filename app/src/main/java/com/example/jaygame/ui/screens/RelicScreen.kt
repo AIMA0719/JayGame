@@ -1,5 +1,6 @@
 package com.example.jaygame.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,7 +39,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
+import com.example.jaygame.R
 import com.example.jaygame.data.ALL_RELICS
 import com.example.jaygame.data.GameData
 import com.example.jaygame.data.RelicGrade
@@ -260,9 +263,10 @@ private fun EquippedSlotsBar(
                         Text(text = "\uD83D\uDD12", fontSize = 18.sp, color = LockColor)
                     } else if (equippedDef != null && equippedProgress != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = relicTypeIcon(equippedDef.type.name),
-                                fontSize = 20.sp,
+                            Image(
+                                painter = painterResource(relicIconRes(equippedDef.id)),
+                                contentDescription = equippedDef.name,
+                                modifier = Modifier.size(24.dp),
                             )
                             Text(
                                 text = equippedDef.name,
@@ -339,9 +343,10 @@ private fun RelicGridItem(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(4.dp),
             ) {
-                Text(
-                    text = relicTypeIcon(def.type.name),
-                    fontSize = 22.sp,
+                Image(
+                    painter = painterResource(relicIconRes(def.id)),
+                    contentDescription = def.name,
+                    modifier = Modifier.size(28.dp),
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -412,7 +417,11 @@ private fun RelicDetailPanel(
                     .border(2.dp, gc, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = relicTypeIcon(def.type.name), fontSize = 26.sp)
+                Image(
+                    painter = painterResource(relicIconRes(def.id)),
+                    contentDescription = def.name,
+                    modifier = Modifier.size(32.dp),
+                )
             }
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -494,11 +503,20 @@ private fun RelicDetailPanel(
     }
 }
 
-private fun relicTypeIcon(typeName: String): String = when (typeName) {
-    "ECONOMY" -> "\uD83D\uDCB0"
-    "COMBAT" -> "\u2694\uFE0F"
-    "UTILITY" -> "\u2699\uFE0F"
-    else -> "\u2B50"
+private fun relicIconRes(relicId: Int): Int = when (relicId) {
+    0 -> R.drawable.ic_relic_0
+    1 -> R.drawable.ic_relic_1
+    2 -> R.drawable.ic_relic_2
+    3 -> R.drawable.ic_relic_3
+    4 -> R.drawable.ic_relic_4
+    5 -> R.drawable.ic_relic_5
+    6 -> R.drawable.ic_relic_6
+    7 -> R.drawable.ic_relic_7
+    8 -> R.drawable.ic_relic_8
+    9 -> R.drawable.ic_relic_9
+    10 -> R.drawable.ic_relic_10
+    11 -> R.drawable.ic_relic_11
+    else -> R.drawable.ic_relic_0
 }
 
 private fun Int.formatNum(): String {

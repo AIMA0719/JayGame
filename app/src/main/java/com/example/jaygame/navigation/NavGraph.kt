@@ -200,6 +200,12 @@ fun NavGraph(
                                     maxStamina = 9_999,
                                     units = allUnits,
                                     unlockedStages = (0 until STAGES.size).toList(),
+                                    playerLevel = 999,
+                                    trophies = 9_999,
+                                    relics = current.relics.map { it.copy(owned = true, grade = 4, level = 10) },
+                                    equippedRelics = current.relics.indices.toList(),
+                                    pets = current.pets.map { it.copy(owned = true, level = 10, cards = 999) },
+                                    equippedPets = current.pets.indices.take(current.equippedPetSlotCount).toList(),
                                 ),
                             )
                             Toast.makeText(context, "★ DEV MODE ★", Toast.LENGTH_SHORT).show()

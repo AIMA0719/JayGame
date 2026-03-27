@@ -1,5 +1,6 @@
 package com.example.jaygame.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,9 +16,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.jaygame.R
 import com.example.jaygame.data.UnitRace
 
 private val DarkBg = Color(0xFF1A1A2E)
@@ -30,6 +33,14 @@ private val SelectedBorder = Color(0xFFFFD700)
 private val UnselectedBorder = Color(0xFF444466)
 private val ConfirmEnabled = Color(0xFF4CAF50)
 private val ConfirmDisabled = Color(0xFF555555)
+
+private fun raceIconRes(race: UnitRace): Int = when (race) {
+    UnitRace.HUMAN -> R.drawable.ic_race_human
+    UnitRace.SPIRIT -> R.drawable.ic_race_spirit
+    UnitRace.ANIMAL -> R.drawable.ic_race_animal
+    UnitRace.ROBOT -> R.drawable.ic_race_robot
+    UnitRace.DEMON -> R.drawable.ic_race_demon
+}
 
 @Composable
 fun RaceDraftDialog(
@@ -88,12 +99,13 @@ fun RaceDraftDialog(
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Race color indicator
-                    Box(
+                    // Race icon
+                    Image(
+                        painter = painterResource(raceIconRes(race)),
+                        contentDescription = race.label,
                         modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(race.color)
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(6.dp)),
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
