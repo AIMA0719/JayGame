@@ -138,6 +138,17 @@ fun BattleScreen(
         }
     }
 
+    // ParticleLOD 프레임 합산: 매 프레임 reset → 각 오버레이 add → commit
+    LaunchedEffect(Unit) {
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { _ ->
+                val speed = BattleBridge.battleSpeed.value
+                ParticleLOD.commitFrame(speed)
+                ParticleLOD.resetFrame()
+            }
+        }
+    }
+
     BackHandler {
         savedSpeed = BattleBridge.battleSpeed.value
         BattleBridge.setBattleSpeed(0f)
@@ -206,6 +217,8 @@ fun BattleScreen(
         // Skill VFX — sibling of the clipped field so effects can extend beyond the field boundary
         SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
 
+        // Skill particle effects — 파티클 레이어 (PNG 위에 동적 파티클)
+        SkillParticleOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
 
         // Boss red vignette overlay (화면 전체)
         if (bossVignetteAlpha > 0.01f) {

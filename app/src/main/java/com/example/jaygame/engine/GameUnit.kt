@@ -25,6 +25,10 @@ class GameUnit {
     var isAttacking = false
     /** 공격 발사 시 ATTACK_ANIM_DURATION→0 감소하는 1회성 애니메이션 타이머 */
     var attackAnimTimer = 0f
+    /** 스킬/궁극기 발동 모션 타이머 (0.4초) */
+    var skillAnimTimer = 0f
+    /** 크리티컬 히트 모션 타이머 (0.2초) */
+    var critAnimTimer = 0f
     /** Combined speed multiplier (group upgrade + synergy) — set by BattleEngine each frame */
     var spdMultiplier = 1f
     /** 통합 강화 ATK 보너스 — BattleEngine이 매 프레임 그룹별로 설정 */
@@ -156,6 +160,8 @@ class GameUnit {
 
     companion object {
         const val ATTACK_ANIM_DURATION = 0.15f
+        const val SKILL_ANIM_DURATION = 0.4f
+        const val CRIT_ANIM_DURATION = 0.2f
         val LEVEL_MULTIPLIERS = floatArrayOf(1f, 1.5f, 2.2f, 3.2f, 4.5f, 6f, 8f)
 
         /**

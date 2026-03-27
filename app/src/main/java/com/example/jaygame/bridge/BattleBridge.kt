@@ -148,6 +148,8 @@ data class UnitPositionData(
     val homeYs: FloatArray = FloatArray(0),
     val stackCounts: IntArray = IntArray(0),
     val buffs: IntArray = IntArray(0),
+    val skillAnimTimers: FloatArray = FloatArray(0),
+    val critAnimTimers: FloatArray = FloatArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -546,11 +548,13 @@ object BattleBridge {
         homeYs: FloatArray = FloatArray(0),
         stackCounts: IntArray = IntArray(0),
         buffs: IntArray = IntArray(0),
+        skillAnimTimers: FloatArray = FloatArray(0),
+        critAnimTimers: FloatArray = FloatArray(0),
     ) {
         _unitPositions.value = UnitPositionData(
             xs, ys, unitDefIds, grades, levels, isAttacking, attackAnimTimers, tileIndices, count, unitFrameCounter.incrementAndGet(),
             blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
-            hps, maxHps, states, homeXs, homeYs, stackCounts, buffs,
+            hps, maxHps, states, homeXs, homeYs, stackCounts, buffs, skillAnimTimers, critAnimTimers,
         )
     }
 

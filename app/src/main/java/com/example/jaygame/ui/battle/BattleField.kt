@@ -69,6 +69,19 @@ private val TankHpBg = Color(0xFF333333)
 private val TankHpBar = Color(0xFF4CAF50)
 private val DashTrailWhite03 = Color.White.copy(alpha = 0.3f)
 
+// ── Skill/Crit animation constants (pre-allocated, GC-free) ──
+private val SkillGoldTint = ColorFilter.tint(
+    Color(0xFFFFDD66), BlendMode.Modulate
+)
+private val CritGoldFlash = ColorFilter.tint(
+    Color(0xFFFFEE88), BlendMode.Modulate
+)
+private val SkillGlowColor = Color(0xFFFFD700).copy(alpha = 0.3f)
+
+// GameUnit.Companion에서 정의된 상수 참조
+private val SKILL_ANIM_DUR get() = com.example.jaygame.engine.GameUnit.SKILL_ANIM_DURATION
+private val CRIT_ANIM_DUR get() = com.example.jaygame.engine.GameUnit.CRIT_ANIM_DURATION
+
 // Star badge colors
 private val StarColor = Color(0xFFFFD700)
 private val StarBgGlow = Color(0xFF1A1A2E).copy(alpha = 0.9f)
@@ -733,12 +746,28 @@ fun BattleField() {
                 }
             }
 
-            // Unit sprite + SSJ aura
+            // Unit sprite + SSJ aura + skill/crit animations
             val bitmap = unitBitmaps[unitDefId]
                 ?: (if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null)
             if (bitmap != null) {
-                val spriteSize = unitSize * 0.85f * finalScale
-                val spriteY = screenY - spriteSize * 0.85f + bounceOffset
+                // ── Skill/Crit animation timers ──
+                val skillTimer = if (i < data.skillAnimTimers.size) data.skillAnimTimers[i] else 0f
+                val critTimer = if (i < data.critAnimTimers.size) data.critAnimTimers[i] else 0f
+
+                // Skill scale pulse: 1.0 → 1.3 → 1.0 (sin curve)
+                val skillPhase = if (skillTimer > 0f) (skillTimer / SKILL_ANIM_DUR).coerceIn(0f, 1f) else 0f
+                val skillScaleBoost = if (skillPhase > 0f) sin(skillPhase * PI.toFloat()) * 0.3f else 0f
+                val skillYOffset = if (skillPhase > 0f) sin(skillPhase * PI.toFloat()) * -10f else 0f
+
+                // Crit scale punch: 1.0 → 1.25 → 1.0 (fast)
+                val critPhase = if (critTimer > 0f) (critTimer / CRIT_ANIM_DUR).coerceIn(0f, 1f) else 0f
+                val critScaleBoost = if (critPhase > 0f) sin(critPhase * PI.toFloat()) * 0.25f else 0f
+                val critShakeX = if (critPhase > 0f) sin(critPhase * 40f) * 3f else 0f
+
+                // Combined scale
+                val animScale = 1f + skillScaleBoost + critScaleBoost
+                val spriteSize = unitSize * 0.85f * finalScale * animScale
+                val spriteY = screenY - spriteSize * 0.85f + bounceOffset + skillYOffset
                 val spriteCenterY = spriteY + spriteSize * 0.5f
 
                 // ── SSJ Aura: 등급별 타오르는 오라 (스프라이트 뒤에 그림) ──
@@ -746,17 +775,50 @@ fun BattleField() {
                     drawSsjAura(grade, screenX, spriteCenterY, spriteSize, t, unitDefId)
                 }
 
-                drawImage(
-                    image = bitmap,
-                    dstOffset = androidx.compose.ui.unit.IntOffset(
-                        (screenX - spriteSize / 2).toInt(),
-                        spriteY.toInt(),
-                    ),
-                    dstSize = androidx.compose.ui.unit.IntSize(
-                        spriteSize.toInt(),
-                        spriteSize.toInt(),
-                    ),
+                // Skill glow circle (behind sprite)
+                if (skillPhase > 0f) {
+                    val glowAlpha = sin(skillPhase * PI.toFloat()) * 0.4f
+                    drawCircle(
+                        color = SkillGlowColor.copy(alpha = glowAlpha),
+                        radius = spriteSize * 0.8f,
+                        center = Offset(screenX, spriteCenterY),
+                    )
+                }
+
+                // ColorFilter: skill > crit > none (Modulate 블렌딩으로 원본 색상 유지)
+                val spriteColorFilter: ColorFilter? = when {
+                    skillPhase > 0f -> SkillGoldTint
+                    critPhase > 0f -> CritGoldFlash
+                    else -> null
+                }
+
+                // Apply rotation (attack + crit shake) + draw
+                val totalRotation = attackRotation * (180f / PI.toFloat()) + // radians to degrees
+                    if (critPhase > 0f) sin(critPhase * 30f) * 2f else 0f
+                val spritePivot = Offset(screenX + critShakeX, spriteCenterY)
+                val dstOff = IntOffset(
+                    (screenX - spriteSize / 2 + critShakeX).toInt(),
+                    spriteY.toInt(),
                 )
+                val dstSz = IntSize(spriteSize.toInt(), spriteSize.toInt())
+
+                if (totalRotation != 0f) {
+                    rotate(degrees = totalRotation, pivot = spritePivot) {
+                        drawImage(
+                            image = bitmap,
+                            dstOffset = dstOff,
+                            dstSize = dstSz,
+                            colorFilter = spriteColorFilter,
+                        )
+                    }
+                } else {
+                    drawImage(
+                        image = bitmap,
+                        dstOffset = dstOff,
+                        dstSize = dstSz,
+                        colorFilter = spriteColorFilter,
+                    )
+                }
             }
 
             // ── Level badge: Stars instead of number ──

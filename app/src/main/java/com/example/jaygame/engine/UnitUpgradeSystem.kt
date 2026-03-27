@@ -20,7 +20,7 @@ object UnitUpgradeSystem {
     const val ATK_PER_LEVEL = 0.10f
     const val GROUP_COUNT = 4
 
-    private val BASE_COSTS = intArrayOf(15, 35, 70, 100)
+    private val BASE_COSTS = intArrayOf(30, 70, 140, 200)
     private val COST_GROWTH = floatArrayOf(1.25f, 1.28f, 1.30f, 1.35f)
 
     fun gradeToGroup(grade: Int): Int = when (grade) {

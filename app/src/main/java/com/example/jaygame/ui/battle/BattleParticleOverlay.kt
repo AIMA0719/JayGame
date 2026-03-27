@@ -107,8 +107,8 @@ fun BattleParticleOverlay() {
         return null
     }
 
-    // Update LOD based on current active particle count
-    ParticleLOD.updateLOD(activeCount.value)
+    // 합산 LOD: 자신의 파티클 수를 등록 (commitFrame은 BattleScreen에서 호출)
+    ParticleLOD.addParticleCount(activeCount.value)
 
     // Detect enemy deaths -> spawn soul particles flying to SP bar (bottom center)
     val curEnemyCount = enemies.count

@@ -13,6 +13,9 @@ object ParticleLOD {
     var currentLevel: Int = 0
         private set
 
+    @Volatile
+    private var frameParticleCount: Int = 0
+
     /**
      * Returns true if the particle at the given index should be skipped
      * based on the current LOD level.
@@ -23,6 +26,21 @@ object ParticleLOD {
             2 -> index % 3 != 0       // keep only every 3rd
             else -> false             // full quality
         }
+    }
+
+    /** 각 오버레이에서 호출: 해당 프레임의 활성 파티클 수를 합산. */
+    fun addParticleCount(count: Int) {
+        frameParticleCount += count
+    }
+
+    /** 프레임 시작 시 합산 리셋. */
+    fun resetFrame() {
+        frameParticleCount = 0
+    }
+
+    /** 프레임 끝에 합산된 카운트로 LOD 갱신. */
+    fun commitFrame(battleSpeed: Float = 2f) {
+        updateLOD(frameParticleCount, battleSpeed)
     }
 
     /**

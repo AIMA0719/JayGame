@@ -198,6 +198,8 @@ class BattleEngine(
     private val unitHomeYBuf = FloatArray(MAX_UNITS)
     private val unitStackCountBuf = IntArray(MAX_UNITS)
     private val unitBuffBuf = IntArray(MAX_UNITS)
+    private val unitSkillAnimBuf = FloatArray(MAX_UNITS)
+    private val unitCritAnimBuf = FloatArray(MAX_UNITS)
 
     private val projSrcXBuf = FloatArray(MAX_PROJECTILES)
     private val projSrcYBuf = FloatArray(MAX_PROJECTILES)
@@ -657,6 +659,8 @@ class BattleEngine(
                     findNearestEnemy(pos, range)
                 }
                 if (unit.attackAnimTimer > 0f) unit.attackAnimTimer = (unit.attackAnimTimer - dt).coerceAtLeast(0f)
+                if (unit.skillAnimTimer > 0f) unit.skillAnimTimer = (unit.skillAnimTimer - dt).coerceAtLeast(0f)
+                if (unit.critAnimTimer > 0f) unit.critAnimTimer = (unit.critAnimTimer - dt).coerceAtLeast(0f)
                 // Clamp position — tanks in MOVING/BLOCKING can go to the enemy path area
                 val isTankChasing = unit.state == UnitState.MOVING || unit.state == UnitState.BLOCKING
                 if (isTankChasing) {
@@ -868,6 +872,7 @@ class BattleEngine(
 
         val abilityCritBonus = AbilityEngine.getCritBonus(unit.activeAbility)
         val isCrit = Math.random() < (0.05 + upgradeCritRate + relicCritChance + abilityCritBonus)
+        if (isCrit) unit.critAnimTimer = GameUnit.CRIT_ANIM_DURATION
         val critMultiplier = 2f + relicCritDmg
         val isMagic = unit.damageType == DamageType.MAGIC
         val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
@@ -1345,6 +1350,8 @@ class BattleEngine(
                 if (u.buffs.hasBuff(BuffType.Shield)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_SHIELD
                 if (u.buffs.hasBuff(BuffType.DefUp)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_DEF_UP
                 unitBuffBuf[ui] = ubits
+                unitSkillAnimBuf[ui] = u.skillAnimTimer
+                unitCritAnimBuf[ui] = u.critAnimTimer
                 ui++
             }
         }
@@ -1352,6 +1359,7 @@ class BattleEngine(
             unitXBuf, unitYBuf, unitDefIdBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui, unitAttackAnimBuf,
             unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
             unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf, unitBuffBuf,
+            unitSkillAnimBuf, unitCritAnimBuf,
         )
 
         // Projectiles — reuse pre-allocated buffers

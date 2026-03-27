@@ -13,8 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -35,6 +39,7 @@ import kotlin.math.sin
 private val HpBarBg = Color.Black.copy(alpha = 0.6f)
 private val HpBarBorder = Color.White.copy(alpha = 0.3f)
 private val HpBarBorderStroke = Stroke(width = 1f)
+private val BossAuraStroke = Stroke(width = 2f)
 private val BossAuraRed = Color(0xFFFF2222).copy(alpha = 0.15f)
 private val BossGlowRed = Color(0xFFFF4444).copy(alpha = 0.25f)
 private val BossGlowRedBright = Color(0xFFFF6666).copy(alpha = 0.4f)
@@ -65,6 +70,25 @@ private val HpBarColors = Array(11) { i ->
 private fun hpBarColor(clampedHp: Float): Color {
     val idx = (clampedHp * 10f).toInt().coerceIn(0, 10)
     return HpBarColors[idx]
+}
+
+// ── Hit/Die animation color filters (pre-allocated, GC-free) ──
+private val HitWhiteFlash = ColorFilter.tint(
+    Color(0xFFFFFFFF).copy(alpha = 0.7f), BlendMode.SrcAtop
+)
+private val HitRedTint = ColorFilter.tint(
+    Color(0xFFFF4444).copy(alpha = 0.5f), BlendMode.SrcAtop
+)
+private val DieRedTints = Array(11) { i ->
+    ColorFilter.tint(Color(0xFFFF2222).copy(alpha = i / 10f * 0.7f), BlendMode.SrcAtop)
+}
+
+/** 죽은 몬스터 스프라이트 페이드아웃 추적 (0.5초) */
+internal class DyingEnemy(
+    val x: Float, val y: Float, val type: Int,
+    var timer: Float = DURATION,
+) {
+    companion object { const val DURATION = 0.5f }
 }
 
 /** Death effect particle data */
@@ -104,6 +128,26 @@ fun EnemyOverlay() {
 
     val bossBitmap = remember { decodeScaledBitmap(context, R.drawable.ic_enemy_boss, 128) }
 
+    // 스프라이트 시트 애니메이터 (assets/enemies/ 에 시트가 있으면 사용, 없으면 null → 정적 fallback)
+    val enemyAnimators = remember {
+        mapOf(
+            0 to decodeAssetSpriteSheet(context, "enemies/enemy_0_sheet.png", 96, 96, 4, 4),
+            1 to decodeAssetSpriteSheet(context, "enemies/enemy_1_sheet.png", 96, 96, 4, 4),
+            2 to decodeAssetSpriteSheet(context, "enemies/enemy_2_sheet.png", 96, 96, 4, 4),
+            3 to decodeAssetSpriteSheet(context, "enemies/enemy_3_sheet.png", 96, 96, 4, 4),
+            4 to decodeAssetSpriteSheet(context, "enemies/enemy_4_sheet.png", 96, 96, 4, 4),
+            5 to decodeAssetSpriteSheet(context, "enemies/enemy_5_sheet.png", 96, 96, 4, 4),
+            6 to decodeAssetSpriteSheet(context, "enemies/enemy_6_sheet.png", 96, 96, 4, 4),
+            99 to decodeAssetSpriteSheet(context, "enemies/enemy_boss_sheet.png", 128, 128, 6, 4),
+        )
+    }
+
+    // Per-enemy animation state — pre-allocated pool (256 max, GC-free)
+    val animStates = remember { Array(256) { EnemyAnimState() } }
+
+    // Battle speed for animation & LOD
+    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
+
     // Pre-load VFX sprite bitmaps from assets/fx/
     val fxBitmaps = remember {
         listOf("fx_slow", "fx_dot_fire", "fx_dot_poison", "fx_armor_break",
@@ -132,6 +176,9 @@ fun EnemyOverlay() {
     val prevEnemyYs = remember { mutableStateOf(FloatArray(0)) }
     val prevEnemyTypes = remember { mutableStateOf(IntArray(0)) }
 
+    // Dying enemies (sprite fade-out after leaving active list)
+    val dyingEnemies = remember { mutableStateOf(listOf<DyingEnemy>()) }
+
     // Death effects
     val deathEffects = remember { mutableStateOf(listOf<DeathEffect>()) }
 
@@ -146,7 +193,15 @@ fun EnemyOverlay() {
                 val sx = smoothXs.value
                 val sy = smoothYs.value
 
+                // 배속 가져오기
+                val speed = BattleBridge.battleSpeed.value
+
                 if (data.count != sx.size) {
+                    // Enemy count changed — reset animation states for new indices
+                    for (ai in 0 until data.count.coerceAtMost(256)) {
+                        animStates[ai].reset()
+                    }
+
                     // Enemy count changed — detect deaths
                     if (data.count < prevEnemyCount.value && prevEnemyCount.value > 0) {
                         // Find which enemies disappeared (simple: add death effects at old positions
@@ -183,6 +238,11 @@ fun EnemyOverlay() {
                         }
                         if (newDeaths.isNotEmpty()) {
                             deathEffects.value = deathEffects.value + newDeaths
+                            // 죽는 몬스터 스프라이트 페이드아웃 추가
+                            val newDying = newDeaths.map { de ->
+                                DyingEnemy(x = de.x, y = de.y, type = de.type)
+                            }
+                            dyingEnemies.value = dyingEnemies.value + newDying
                         }
                     }
 
@@ -226,6 +286,23 @@ fun EnemyOverlay() {
                     hitFlashTimers.value = newFlash
                     smoothHpRatios.value = newSmoothHp
                     prevHpRatios.value = data.hpRatios.copyOf(data.count)
+
+                    // 스프라이트 시트 애니메이션 상태 업데이트 (8x 배속 이상이면 스킵)
+                    if (speed < 8f) {
+                        for (ai in 0 until data.count.coerceAtMost(256)) {
+                            val anim = animStates[ai]
+                            val flash = if (ai < newFlash.size) newFlash[ai] else 0f
+                            // 상태 전이: hit > walk (die는 death detection에서 처리)
+                            if (flash > 0f && anim.state != SpriteSheetAnimator.STATE_DIE) {
+                                anim.transition(SpriteSheetAnimator.STATE_HIT)
+                            } else if (anim.state == SpriteSheetAnimator.STATE_HIT && flash <= 0f) {
+                                anim.transition(SpriteSheetAnimator.STATE_WALK)
+                            }
+                            val type = if (ai < data.types.size) data.types[ai] else 0
+                            val maxF = if (type == 99) 6 else 4
+                            anim.advance(dt, maxF, speed)
+                        }
+                    }
                 }
 
                 // Save for death detection
@@ -244,6 +321,16 @@ fun EnemyOverlay() {
                         if (newTimer <= 0f) null else de.copy(timer = newTimer)
                     }
                     deathEffects.value = updated
+                }
+
+                // Update dying enemy sprite fade-outs
+                val dying = dyingEnemies.value
+                if (dying.isNotEmpty()) {
+                    val updatedDying = dying.mapNotNull { de ->
+                        de.timer -= dt
+                        if (de.timer <= 0f) null else de
+                    }
+                    dyingEnemies.value = updatedDying
                 }
             }
         }
@@ -277,8 +364,22 @@ fun EnemyOverlay() {
             }
             val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
-            // ── Walking Wobble ──
-            val wobbleOffsetX = sin(t * 8f + i * 1.3f) * 1.5f
+            val bSpeed = battleSpeed
+
+            // ── WALK animation: wobble + bounce + tilt ──
+            val wobbleOffsetX: Float
+            val wobbleOffsetY: Float
+            val wobbleRotation: Float
+            if (bSpeed < 8f) {
+                val speedMul = bSpeed.coerceAtMost(4f)
+                val phase = t * 8f + i * 1.3f
+                wobbleOffsetX = sin(phase) * 2.5f * speedMul
+                val bounceAmp = if (isBoss) 4.5f else 3f
+                wobbleOffsetY = sin(t * 6f + i * 1.5f) * bounceAmp * speedMul
+                wobbleRotation = sin(phase) * 3f
+            } else {
+                wobbleOffsetX = 0f; wobbleOffsetY = 0f; wobbleRotation = 0f
+            }
 
             // ── Boss aura ──
             if (isBoss) {
@@ -293,42 +394,79 @@ fun EnemyOverlay() {
                     radius = auraR * 0.7f,
                     center = Offset(screenX, screenY),
                 )
-                // Pulsing red glow ring
                 val ringAlpha = 0.2f + sin(t * 4f) * 0.15f
                 drawCircle(
                     color = BossGlowRedBright.copy(alpha = ringAlpha),
                     radius = auraR,
                     center = Offset(screenX, screenY),
-                    style = Stroke(width = 2f),
+                    style = BossAuraStroke,
                 )
             }
 
-            // ── Hit reaction: shrink + red outline ──
+            // ── HIT animation: squash/stretch + tint + knockback ──
             val flashTimer = if (i < flashTimers.size) flashTimers[i] else 0f
-            val hitScale = if (flashTimer > 0f) {
+            val hitScaleX: Float
+            val hitScaleY: Float
+            val hitKnockbackX: Float
+            val hitColorFilter: ColorFilter?
+            if (flashTimer > 0f) {
                 val t01 = (flashTimer / 0.12f).coerceIn(0f, 1f)
-                1f - t01 * 0.15f  // shrink up to 15%
-            } else 1f
-            val drawSize = spriteSize * hitScale
-
-            // Draw enemy sprite with wobble + hit shrink
-            if (bitmap != null) {
-                drawImage(
-                    image = bitmap,
-                    dstOffset = androidx.compose.ui.unit.IntOffset(
-                        (screenX - drawSize / 2 + wobbleOffsetX).toInt(),
-                        (screenY - drawSize / 2).toInt(),
-                    ),
-                    dstSize = androidx.compose.ui.unit.IntSize(drawSize.toInt(), drawSize.toInt()),
-                )
+                hitScaleX = 1f + t01 * 0.15f   // 1.15 at impact → 1.0
+                hitScaleY = 1f - t01 * 0.15f   // 0.85 at impact → 1.0
+                hitKnockbackX = t01 * 3f
+                hitColorFilter = if (flashTimer > 0.09f) HitWhiteFlash else HitRedTint
             } else {
-                // Fallback: colored circle
-                val color = EnemyColors[type % EnemyColors.size]
-                drawCircle(
-                    color = color,
-                    radius = drawSize / 2,
-                    center = Offset(screenX + wobbleOffsetX, screenY),
-                )
+                hitScaleX = 1f; hitScaleY = 1f; hitKnockbackX = 0f; hitColorFilter = null
+            }
+
+            // ── Draw enemy sprite with transforms ──
+            val finalX = screenX + wobbleOffsetX + hitKnockbackX
+            val finalY = screenY + wobbleOffsetY
+            val drawSize = spriteSize
+            val pivot = Offset(finalX, finalY)
+            val dstOff = IntOffset(
+                (finalX - drawSize / 2).toInt(),
+                (finalY - drawSize / 2).toInt(),
+            )
+            val dstSz = IntSize(drawSize.toInt(), drawSize.toInt())
+
+            val animator = enemyAnimators[type]
+
+            if (bSpeed >= 8f) {
+                // 8x: static draw, no transforms
+                bitmap?.let {
+                    drawImage(image = it, dstOffset = dstOff, dstSize = dstSz)
+                }
+            } else {
+                rotate(degrees = wobbleRotation, pivot = pivot) {
+                    scale(scaleX = hitScaleX, scaleY = hitScaleY, pivot = pivot) {
+                        if (animator != null && i < 256) {
+                            val anim = animStates[i]
+                            drawImage(
+                                image = animator.sheet,
+                                srcOffset = animator.srcOffset(anim.state, anim.frame),
+                                srcSize = animator.srcSize(),
+                                dstOffset = dstOff,
+                                dstSize = dstSz,
+                                colorFilter = hitColorFilter,
+                            )
+                        } else if (bitmap != null) {
+                            drawImage(
+                                image = bitmap,
+                                dstOffset = dstOff,
+                                dstSize = dstSz,
+                                colorFilter = hitColorFilter,
+                            )
+                        } else {
+                            val color = EnemyColors[type % EnemyColors.size]
+                            drawCircle(
+                                color = color,
+                                radius = drawSize / 2,
+                                center = pivot,
+                            )
+                        }
+                    }
+                }
             }
 
 
@@ -483,6 +621,52 @@ fun EnemyOverlay() {
                         dstSize = IntSize(s, s),
                         alpha = 0.8f,
                     )
+                }
+            }
+        }
+
+        // ── Dying enemy sprite fade-out ──
+        val dyingList = dyingEnemies.value
+        for (de in dyingList) {
+            val progress = 1f - (de.timer / DyingEnemy.DURATION) // 0 → 1
+            val dx = de.x * w
+            val dy = de.y * h
+            val deType = de.type
+            val deIsBoss = deType == 99
+
+            val pathWidth = w * (70f / 720f)
+            val deSpriteSize = when {
+                deIsBoss -> pathWidth * 1.955f
+                deType == 6 -> pathWidth * 1.615f
+                else -> pathWidth * 1.36f
+            }
+
+            val deAlpha = (1f - progress).coerceIn(0f, 1f)
+            val deScale = 1f - progress * 0.5f
+            val fallY = dy + progress * progress * 40f
+            val deRotation = progress * 15f
+            val tintIdx = (progress * 10f).toInt().coerceIn(0, 10)
+            val deTint = DieRedTints[tintIdx]
+
+            val deBitmap = if (deIsBoss) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
+            val dePivot = Offset(dx, fallY)
+            val deOff = IntOffset(
+                (dx - deSpriteSize / 2).toInt(),
+                (fallY - deSpriteSize / 2).toInt(),
+            )
+            val deSz = IntSize(deSpriteSize.toInt(), deSpriteSize.toInt())
+
+            rotate(degrees = deRotation, pivot = dePivot) {
+                scale(scaleX = deScale, scaleY = deScale, pivot = dePivot) {
+                    deBitmap?.let {
+                        drawImage(
+                            image = it,
+                            dstOffset = deOff,
+                            dstSize = deSz,
+                            alpha = deAlpha,
+                            colorFilter = deTint,
+                        )
+                    }
                 }
             }
         }
