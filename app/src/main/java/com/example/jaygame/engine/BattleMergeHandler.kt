@@ -14,16 +14,12 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         val existingUnit = engine.grid.getUnit(tileIndex) ?: return
         if (existingUnit.unitCategory == UnitCategory.SPECIAL) return
 
-        // 1) 레시피 체크 우선
-        if (tryExecuteRecipeCraft()) return
-
-        // 2) 수동 합성: 같은 유닛 3개 소모 → 다음 등급
+        // 일반 합성만 실행 (레시피는 별도 "조합법" 버튼으로만 가능)
         tryMergeSlot(tileIndex)
     }
 
-    /** 모든 합성 가능 슬롯에서 자동으로 3개씩 소모하여 합성 */
+    /** 모든 합성 가능 슬롯에서 자동으로 3개씩 소모하여 합성 (레시피 제외) */
     fun requestMergeAll() {
-        tryExecuteRecipeCraft()
         // 합성이 그리드를 변경하므로 매 합성 후 재스캔
         var safety = 50 // 무한루프 방지
         var merged = true

@@ -85,7 +85,7 @@ data class GameData(
     val unlockedProfiles: Set<Int> = setOf(0),
     // 튜토리얼
     val tutorialCompleted: Boolean = false,
-    // 행운석 (신화 레시피 합성 재화)
+    // 조합석 (신화 레시피 합성 재화)
     val luckyStones: Int = 0,
     // 시간 조작 감지용
     val lastKnownSystemTime: Long = System.currentTimeMillis(),

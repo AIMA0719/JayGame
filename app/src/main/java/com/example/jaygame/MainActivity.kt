@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
         val effectivePity = data.unitPullPity
         BattleBridge.updateUnitPullPity(effectivePity)
         BattleBridge.setTutorialMode(!data.tutorialCompleted)
+        BattleBridge.setEquippedPets(data.equippedPets)
 
         val maxWaves = dungeonDef?.waveCount ?: stage.maxWaves
         val effectiveDifficulty = if (dungeonDef != null) {

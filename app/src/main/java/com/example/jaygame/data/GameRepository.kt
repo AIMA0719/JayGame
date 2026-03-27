@@ -223,7 +223,7 @@ class GameRepository(context: Context) {
             // tutorial
             root.put("tutorialCompleted", data.tutorialCompleted)
 
-            // 행운석
+            // 조합석
             root.put("luckyStones", data.luckyStones)
 
             // 시간 조작 감지
@@ -456,7 +456,7 @@ class GameRepository(context: Context) {
             // tutorial
             val tutorialCompleted = root.optBoolean("tutorialCompleted", false)
 
-            // 행운석
+            // 조합석
             val luckyStones = root.optInt("luckyStones", 0)
 
             // 시간 조작 감지

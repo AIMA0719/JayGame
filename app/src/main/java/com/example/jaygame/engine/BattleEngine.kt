@@ -72,8 +72,9 @@ class BattleEngine(
     private val probabilityEngine = DefaultProbabilityEngine()
     var currentPity: Int = initialPity.coerceIn(0, 100); private set
 
-    // 행운석 — 신화 레시피 합성에 소모
+    // 조합석 — 신화 레시피 합성에 소모
     var luckyStones: Int = gameData?.luckyStones ?: 0; internal set
+    private var lastPushedLuckyStones: Int = -1
 
     val economy = BattleEconomy(this)
     val mergeHandler = BattleMergeHandler(this)
@@ -192,6 +193,7 @@ class BattleEngine(
     private val unitStateBuf = Array(MAX_UNITS) { UnitState.IDLE }
     private val unitHomeXBuf = FloatArray(MAX_UNITS)
     private val unitHomeYBuf = FloatArray(MAX_UNITS)
+    private val unitRangeBuf = FloatArray(MAX_UNITS)
     private val unitStackCountBuf = IntArray(MAX_UNITS)
     private val unitBuffBuf = IntArray(MAX_UNITS)
     private val unitSkillAnimBuf = FloatArray(MAX_UNITS)
@@ -320,6 +322,12 @@ class BattleEngine(
                         is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
                         is BattleBridge.BattleCommand.BuyBlueprint -> requestBuyBlueprint(cmd.blueprintId, cmd.cost.toFloat())
                         is BattleBridge.BattleCommand.BattleUpgrade -> applyBattleUpgrade(cmd.upgradeType, cmd.level, cmd.cost)
+                        is BattleBridge.BattleCommand.BuyLuckyStone -> {
+                            if (sp >= cmd.cost) {
+                                sp -= cmd.cost
+                                luckyStones++
+                            }
+                        }
                     }
                 }
 
@@ -413,11 +421,6 @@ class BattleEngine(
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
                     BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
-
-                    // 30초 이내 빠른 처치 보너스: 행운석 +1
-                    if (waveSystem.isFastKill) {
-                        luckyStones++
-                    }
 
                     if (waveSystem.isLastWave) {
                         state = State.Victory
@@ -1140,6 +1143,7 @@ class BattleEngine(
                 unitStateBuf[ui] = u.state
                 unitHomeXBuf[ui] = u.homePosition.x / W
                 unitHomeYBuf[ui] = u.homePosition.y / H
+                unitRangeBuf[ui] = u.range
                 unitStackCountBuf[ui] = grid.getStackCount(u.tileIndex)
                 var ubits = 0
                 if (u.buffs.hasBuff(BuffType.AtkUp)) ubits = ubits or com.example.jaygame.bridge.UNIT_BUFF_ATK_UP
@@ -1156,7 +1160,7 @@ class BattleEngine(
             unitXBuf, unitYBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui, unitAttackAnimBuf,
             unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
             unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf, unitBuffBuf,
-            unitSkillAnimBuf, unitCritAnimBuf,
+            unitSkillAnimBuf, unitCritAnimBuf, unitRangeBuf,
         )
 
         // Projectiles — reuse pre-allocated buffers
@@ -1175,6 +1179,11 @@ class BattleEngine(
             }
         }
         BattleBridge.updateProjectiles(projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf, projTypeBuf, pi, projFamilyBuf, projGradeBuf)
+
+        if (luckyStones != lastPushedLuckyStones) {
+            lastPushedLuckyStones = luckyStones
+            BattleBridge.updateLuckyStones(luckyStones)
+        }
 
         // Grid state — reuse pre-allocated buffers (slot-based)
         if (gridPushTimer >= 0.1f) {

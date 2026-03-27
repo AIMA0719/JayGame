@@ -9,7 +9,7 @@ data class HiddenRecipe(
     val ingredients: List<RecipeSlot>,
     val resultId: String,
     var discovered: Boolean = false,
-    val luckyStonesCost: Int = 1,  // 행운석 소모량 (신화 레시피 합성 시 필요)
+    val luckyStonesCost: Int = 1,  // 조합석 소모량 (신화 레시피 합성 시 필요)
 )
 
 data class RecipeSlot(
@@ -87,7 +87,7 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
             }
         }
         for (recipe in recipes) {
-            // 행운석 부족 시 해당 레시피 스킵
+            // 조합석 부족 시 해당 레시피 스킵
             if (availableLuckyStones < recipe.luckyStonesCost) continue
             val matched = findMatchingUnitsForRecipe(recipe, allUnits)
             if (matched != null) return recipe to matched

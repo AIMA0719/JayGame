@@ -28,7 +28,9 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,9 +68,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.bridge.BattleResultData
 import com.example.jaygame.data.STAGES
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.ResultScreen
@@ -259,6 +264,9 @@ fun BattleScreen(
                 onUpgradeClick = { showUpgradeSheet = true },
             )
         }
+
+        // Layer 2.5: Pet overlay (floating pets)
+        PetBattleOverlay()
 
         // Layer 3: Popups
         UnitDetailPopup()
@@ -1137,6 +1145,161 @@ private fun LevelUpOverlay() {
             }
             if (!hasActive) break
             androidx.compose.runtime.withFrameNanos { }
+        }
+    }
+}
+
+// ── Pet Battle Overlay: 장착된 펫 표시 (둥실둥실 + 클릭 다이얼로그) ──
+
+@Composable
+fun PetBattleOverlay() {
+    val equippedPetIds by BattleBridge.equippedPetIds.collectAsState()
+    if (equippedPetIds.isEmpty()) return
+
+    val context = LocalContext.current
+    var selectedPetId by remember { mutableStateOf<Int?>(null) }
+
+    // 둥실둥실 애니메이션
+    val infiniteTransition = rememberInfiniteTransition(label = "petFloat")
+    val floatOffset by infiniteTransition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "petFloatOffset",
+    )
+
+    val petBitmaps = remember(equippedPetIds) {
+        equippedPetIds.associateWith { petId ->
+            try {
+                ContextCompat.getDrawable(context, com.example.jaygame.ui.screens.petIconRes(petId))
+                    ?.toBitmap(96, 96)
+                    ?.asImageBitmap()
+            } catch (_: Exception) { null }
+        }
+    }
+
+    // 화면 우측 상단에 세로로 배치
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 80.dp, end = 8.dp),
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            equippedPetIds.forEachIndexed { index, petId ->
+                val pet = com.example.jaygame.data.ALL_PETS.find { it.id == petId } ?: return@forEachIndexed
+                val petFloat = floatOffset * if (index % 2 == 0) 1f else -1f
+                val gradeColor = Color(pet.grade.colorHex)
+
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .offset { IntOffset(0, petFloat.toInt()) }
+                        .background(gradeColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { selectedPetId = petId },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val bitmap = petBitmaps[petId]
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = pet.name,
+                            modifier = Modifier.size(42.dp),
+                        )
+                    } else {
+                        Text(
+                            text = pet.name.take(1),
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // 펫 스킬 다이얼로그
+    selectedPetId?.let { petId ->
+        PetSkillDialog(petId = petId, onDismiss = { selectedPetId = null })
+    }
+}
+
+@Composable
+private fun PetSkillDialog(petId: Int, onDismiss: () -> Unit) {
+    val pet = remember(petId) { com.example.jaygame.data.ALL_PETS.find { it.id == petId } } ?: return
+    val gradeColor = Color(pet.grade.colorHex)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1A1A2E))
+                .padding(20.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // 펫 이름 + 등급
+                Text(
+                    text = pet.name,
+                    color = gradeColor,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = pet.grade.label,
+                    color = gradeColor.copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                )
+
+                HorizontalDivider(color = gradeColor.copy(alpha = 0.3f))
+
+                // 스킬 이름
+                Text(
+                    text = pet.skillName,
+                    color = Color(0xFFFFD700),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                // 스킬 설명
+                Text(
+                    text = pet.skillDescription,
+                    color = Color(0xFFCCCCCC),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                )
+
+                // 타입 + 쿨다운
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    val typeText = when (pet.category) {
+                        com.example.jaygame.data.PetCategory.ATTACK -> "공격"
+                        com.example.jaygame.data.PetCategory.SUPPORT -> "지원"
+                        com.example.jaygame.data.PetCategory.UTILITY -> "유틸"
+                    }
+                    Text(text = typeText, color = Color(0xFF90A4AE), fontSize = 12.sp)
+                    if (pet.isPassive) {
+                        Text(text = "패시브", color = Color(0xFF81C784), fontSize = 12.sp)
+                    } else {
+                        Text(text = "쿨타임 ${pet.cooldown.toInt()}초", color = Color(0xFF90A4AE), fontSize = 12.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                NeonButton(text = "닫기", onClick = onDismiss)
+            }
         }
     }
 }

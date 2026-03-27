@@ -1306,6 +1306,12 @@ fun BattleBottomHud(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
+                // Lucky stones display
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("\uD83D\uDC8E", fontSize = 14.sp)
+                Spacer(modifier = Modifier.width(2.dp))
+                val luckyStones by BattleBridge.luckyStones.collectAsState()
+                Text("$luckyStones", color = Color(0xFF88DDFF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
 
             // 조합 (우) — 일괄판매 대칭

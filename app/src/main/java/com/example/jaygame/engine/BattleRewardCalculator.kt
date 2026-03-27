@@ -113,7 +113,7 @@ object BattleRewardCalculator {
             }
         } else afterRelicData.pets
 
-        // 행운석 — 배틀 중 소모된 행운석 반영
+        // 조합석 — 배틀 중 소모된 조합석 반영
         val finalLuckyStones = engine?.luckyStones ?: current.luckyStones
 
         return afterRelicData.copy(

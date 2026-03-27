@@ -1066,10 +1066,10 @@ private fun HiddenUnitCard(
                             )
                         }
                     }
-                    // 행운석 비용 표시
+                    // 조합석 비용 표시
                     if (recipe.luckyStonesCost > 0) {
                         Text(
-                            text = "행운석 x${recipe.luckyStonesCost}",
+                            text = "조합석 x${recipe.luckyStonesCost}",
                             color = Color(0xFFFFD700),
                             fontSize = 7.sp,
                             fontWeight = FontWeight.Bold,

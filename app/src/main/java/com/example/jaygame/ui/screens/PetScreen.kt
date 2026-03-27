@@ -80,7 +80,7 @@ private val PetTabBg = Color(0xFF0D0D1F)
 
 private fun petGradeColor(grade: PetGrade): Color = Color(grade.colorHex)
 
-private fun petIconRes(petId: Int): Int = when (petId) {
+fun petIconRes(petId: Int): Int = when (petId) {
     0 -> R.drawable.ic_pet_0
     1 -> R.drawable.ic_pet_1
     2 -> R.drawable.ic_pet_2

@@ -106,6 +106,8 @@ private val MoveHighlightBorder = Color(0xFFFFD700).copy(alpha = 0.6f)
 private val MoveHighlightStroke = Stroke(width = 2f)
 private val MoveSourceFill = Color(0xFF00D4FF).copy(alpha = 0.3f)
 private val MoveSourceBorder = Color(0xFF00D4FF).copy(alpha = 0.7f)
+private val MoveRangeCircleColor = Color(0xFF00D4FF).copy(alpha = 0.2f)
+private val MoveRangeCircleBorder = Color(0xFF00D4FF).copy(alpha = 0.5f)
 
 // Pre-allocated strokes for per-unit draw loop (avoid GC)
 private val ThinStroke1f = Stroke(width = 1f)
@@ -409,6 +411,31 @@ fun BattleField() {
             highlightSlot(moveModeTile, MoveSourceFill, MoveSourceBorder)
             for (slot in validMoveTargets.indices) {
                 if (validMoveTargets[slot]) highlightSlot(slot, MoveHighlightFill, MoveHighlightBorder)
+            }
+
+            // ── Move mode: 선택된 유닛의 공격 범위 원 표시 ──
+            val uData = unitPositions
+            for (i in 0 until uData.count) {
+                if (uData.tileIndices[i] == moveModeTile && i < uData.ranges.size) {
+                    val unitRange = uData.ranges[i]
+                    if (unitRange > 0f) {
+                        val rangeScreen = (unitRange / Grid.CANVAS_W) * w
+                        val cx = uData.xs[i] * w
+                        val cy = uData.ys[i] * h
+                        drawCircle(
+                            color = MoveRangeCircleColor,
+                            radius = rangeScreen,
+                            center = Offset(cx, cy),
+                        )
+                        drawCircle(
+                            color = MoveRangeCircleBorder,
+                            radius = rangeScreen,
+                            center = Offset(cx, cy),
+                            style = MoveHighlightStroke,
+                        )
+                    }
+                    break
+                }
             }
         }
 

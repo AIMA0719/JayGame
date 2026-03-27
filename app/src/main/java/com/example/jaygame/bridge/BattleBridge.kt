@@ -149,6 +149,7 @@ data class UnitPositionData(
     val buffs: IntArray = IntArray(0),
     val skillAnimTimers: FloatArray = FloatArray(0),
     val critAnimTimers: FloatArray = FloatArray(0),
+    val ranges: FloatArray = FloatArray(0), // 실제 사거리 (게임 좌표계 px)
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -270,6 +271,7 @@ object BattleBridge {
         object RecipeCraft : BattleCommand()
         data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
+        data class BuyLuckyStone(val cost: Int) : BattleCommand()
     }
 
     /** Drain all pending commands — called by the game loop on its own thread. */
@@ -357,6 +359,12 @@ object BattleBridge {
     fun setDungeonMode(dungeonId: Int) { _dungeonId.value = dungeonId }
     fun clearDungeonMode() { _dungeonId.value = -1 }
     val isDungeonMode: Boolean get() = _dungeonId.value >= 0
+
+    /** 장착된 펫 ID 목록 (배틀 시작 시 설정) */
+    private val _equippedPetIds = MutableStateFlow<List<Int>>(emptyList())
+    val equippedPetIds: StateFlow<List<Int>> = _equippedPetIds.asStateFlow()
+
+    fun setEquippedPets(petIds: List<Int>) { _equippedPetIds.value = petIds }
 
     /** 선택된 타일 인덱스 (-1 = 없음) */
     private val _selectedTile = MutableStateFlow(-1)
@@ -545,11 +553,12 @@ object BattleBridge {
         buffs: IntArray = IntArray(0),
         skillAnimTimers: FloatArray = FloatArray(0),
         critAnimTimers: FloatArray = FloatArray(0),
+        ranges: FloatArray = FloatArray(0),
     ) {
         _unitPositions.value = UnitPositionData(
             xs, ys, grades, levels, isAttacking, attackAnimTimers, tileIndices, count, unitFrameCounter.incrementAndGet(),
             blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
-            hps, maxHps, states, homeXs, homeYs, stackCounts, buffs, skillAnimTimers, critAnimTimers,
+            hps, maxHps, states, homeXs, homeYs, stackCounts, buffs, skillAnimTimers, critAnimTimers, ranges,
         )
     }
 
@@ -869,9 +878,12 @@ object BattleBridge {
         _unitPullPity.value = 0
         zoneFrameCounter.set(0)
         _zoneData.value = ZoneData()
+        _equippedPetIds.value = emptyList()
         // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
+        // equippedPetIds is reset here and re-set by MainActivity.onCreate()
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _groupUpgradeLevels.value = IntArray(com.example.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 }
+        _luckyStones.value = 0
         _debugMode.value = false
         commandQueue.clear()
     }
@@ -943,6 +955,18 @@ object BattleBridge {
 
     fun requestBuyBlueprint(blueprintId: String, cost: Int) {
         commandQueue.add(BattleCommand.BuyBlueprint(blueprintId, cost))
+    }
+
+    // ── Lucky Stones ─────────────────────────────────────
+
+    private val _luckyStones = MutableStateFlow(0)
+    val luckyStones: StateFlow<Int> = _luckyStones.asStateFlow()
+
+    @JvmStatic
+    fun updateLuckyStones(count: Int) { _luckyStones.value = count }
+
+    fun requestBuyLuckyStone(cost: Int) {
+        commandQueue.add(BattleCommand.BuyLuckyStone(cost))
     }
 
     // ── Battle Upgrades (글로벌 버프) ─────────────────────────────────────
