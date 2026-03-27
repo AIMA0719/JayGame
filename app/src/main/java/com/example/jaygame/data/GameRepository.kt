@@ -2,6 +2,7 @@ package com.example.jaygame.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
@@ -43,8 +44,15 @@ class GameRepository(context: Context) {
     private fun load(): GameData {
         val jsonStr = prefs.getString("save_data", null) ?: return GameData()
         return try {
-            deserialize(jsonStr)
+            val data = deserialize(jsonStr)
+            if (!jsonStr.contains("\"hmac\"")) {
+                save(data) // 구 포맷 → HMAC으로 마이그레이션
+            }
+            data
         } catch (e: Exception) {
+            Log.e("GameRepository", "Failed to load save data, backup stored", e)
+            // HMAC 실패/파싱 오류 시 복구 가능하도록 백업
+            try { prefs.edit().putString("save_data_backup", jsonStr).apply() } catch (_: Exception) {}
             GameData()
         }
     }
@@ -53,6 +61,7 @@ class GameRepository(context: Context) {
         /**
          * FNV-1a 32-bit hash, matching the C++ SaveSystem checksum.
          */
+        @Deprecated("Use SaveKeyStore.hmacSha256 instead")
         fun fnv1aHash(data: String): Long {
             var hash = 0x811c9dc5L
             for (b in data.toByteArray(Charsets.UTF_8)) {
@@ -217,11 +226,13 @@ class GameRepository(context: Context) {
             // 행운석
             root.put("luckyStones", data.luckyStones)
 
+            // 시간 조작 감지
+            root.put("lastKnownSystemTime", data.lastKnownSystemTime)
 
-            // Compute checksum on the JSON without checksum field
-            val payload = root.toString()
-            val checksum = fnv1aHash(payload)
-            root.put("checksum", checksum)
+            // HMAC-SHA256 integrity
+            val canonical = SaveKeyStore.canonicalize(root)
+            val hmac = SaveKeyStore.hmacSha256(canonical)
+            root.put("hmac", hmac)
 
             return root.toString()
         }
@@ -229,22 +240,23 @@ class GameRepository(context: Context) {
         fun deserialize(jsonStr: String): GameData {
             val root = JSONObject(jsonStr)
 
-            // Verify checksum if present (warning only — JSONObject.toString()
-            // does not guarantee key ordering across Android versions, so a
-            // mismatch is expected after OS upgrades / library changes).
-            if (root.has("checksum")) {
-                val savedChecksum = root.getLong("checksum")
+            // Verify integrity
+            val savedHmac = root.optString("hmac", "")
+            if (savedHmac.isNotEmpty()) {
+                // HMAC-SHA256 verification
                 val copy = JSONObject(jsonStr)
-                copy.remove("checksum")
-                val computed = fnv1aHash(copy.toString())
-                if (computed != savedChecksum) {
-                    android.util.Log.w(
-                        "GameRepository",
-                        "Save-data checksum mismatch (expected=$savedChecksum, computed=$computed). " +
-                                "Proceeding with loaded data."
-                    )
+                copy.remove("hmac")
+                val canonical = SaveKeyStore.canonicalize(copy)
+                val computed = SaveKeyStore.hmacSha256(canonical)
+                if (computed != savedHmac) {
+                    Log.e("GameRepository", "HMAC mismatch — save data rejected")
+                    return GameData()
                 }
+            } else if (root.has("checksum")) {
+                // Legacy FNV-1a save — accept for migration, will re-save with HMAC
+                Log.i("GameRepository", "Migrating legacy save to HMAC-SHA256")
             }
+            // If neither — fresh install, proceed
 
             val gold = root.optInt("gold", 500)
             val diamonds = root.optInt("diamonds", 0)
@@ -447,6 +459,9 @@ class GameRepository(context: Context) {
             // 행운석
             val luckyStones = root.optInt("luckyStones", 0)
 
+            // 시간 조작 감지
+            val lastKnownSystemTime = root.optLong("lastKnownSystemTime", 0L)
+
             return GameData(
                 gold = gold,
                 diamonds = diamonds,
@@ -500,6 +515,7 @@ class GameRepository(context: Context) {
                 unlockedProfiles = unlockedProfiles,
                 tutorialCompleted = tutorialCompleted,
                 luckyStones = luckyStones,
+                lastKnownSystemTime = lastKnownSystemTime,
             )
         }
     }

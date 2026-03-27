@@ -87,6 +87,8 @@ data class GameData(
     val tutorialCompleted: Boolean = false,
     // 행운석 (신화 레시피 합성 재화)
     val luckyStones: Int = 0,
+    // 시간 조작 감지용
+    val lastKnownSystemTime: Long = System.currentTimeMillis(),
 ) {
     val equippedPetSlotCount: Int get() = if (trophies >= 2000) 2 else 1
     val equippedSlotCount: Int get() = when {

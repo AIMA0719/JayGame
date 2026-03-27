@@ -37,7 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
@@ -96,8 +96,9 @@ fun MergeEffectOverlay() {
     val effect by BattleBridge.mergeEffect.collectAsState()
     val data = effect ?: return
 
-    val unitDef = UNIT_DEFS_MAP[data.resultUnitId]
-    val grade = if (data.resultUnitId >= 0) com.example.jaygame.data.unitGradeOf(data.resultUnitId) else -1
+    val bp = if (data.resultBlueprintId.isNotEmpty() && BlueprintRegistry.isReady)
+        BlueprintRegistry.instance.findById(data.resultBlueprintId) else null
+    val grade = bp?.grade?.ordinal ?: -1
     val gradeColor = GradeColors.getOrElse(grade) { Color.White }
     val gradeName = GradeNames.getOrElse(grade) { "" }
 
@@ -528,17 +529,18 @@ fun MergeEffectOverlay() {
                 }
 
                 // Unit icon
-                if (unitDef != null) {
+                if (bp != null) {
+                    val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
                     Image(
-                        painter = painterResource(id = unitDef.iconRes),
-                        contentDescription = unitDef.name,
+                        painter = painterResource(id = iconRes),
+                        contentDescription = bp.name,
                         modifier = Modifier.size(56.dp),
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // Grade + unit name (legacy or blueprint)
-                val unitName = unitDef?.name
+                // Grade + unit name (blueprint)
+                val unitName = bp?.name
                     ?: if (data.resultBlueprintId.isNotEmpty()) blueprintDisplayName(data.resultBlueprintId) else null
                 Text(
                     text = "$gradeName ${unitName ?: ""}",

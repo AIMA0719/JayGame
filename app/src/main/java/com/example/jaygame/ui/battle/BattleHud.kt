@@ -715,7 +715,7 @@ private fun RecipeSlotChip(slot: RecipeSlot) {
 fun UnitCardStrip(modifier: Modifier = Modifier) {
     val gridState by BattleBridge.gridState.collectAsState()
     val activeUnits = remember(gridState) {
-        gridState.filter { it.unitDefId >= 0 || it.blueprintId.isNotEmpty() }
+        gridState.filter { it.blueprintId.isNotEmpty() }
     }
     if (activeUnits.isEmpty()) return
 
@@ -1247,7 +1247,7 @@ fun BattleBottomHud(
     var unitCount = 0
     var canMerge = false
     for (tile in gridState) {
-        val occupied = tile.unitDefId >= 0 || tile.blueprintId.isNotEmpty()
+        val occupied = tile.blueprintId.isNotEmpty()
         if (occupied) unitCount++
         if (tile.canMerge) canMerge = true
     }

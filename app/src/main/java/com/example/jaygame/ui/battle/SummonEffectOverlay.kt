@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
-import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
@@ -87,7 +87,8 @@ fun SummonEffectOverlay() {
     val summonResult by BattleBridge.summonResult.collectAsState()
     val data = summonResult ?: return
 
-    val unitDef = UNIT_DEFS_MAP[data.unitDefId]
+    val bp = if (data.blueprintId.isNotEmpty() && BlueprintRegistry.isReady)
+        BlueprintRegistry.instance.findById(data.blueprintId) else null
     val grade = data.grade
 
     // Auto-dismiss: longer for higher grades
@@ -814,13 +815,14 @@ fun SummonEffectOverlay() {
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            if (unitDef != null) {
+            if (bp != null) {
                 // Icon with bounce effect
                 val bounceScale = if (isLegendPlus) 0.15f else 0.1f
                 val bounceOffset = (iconBounce - 0.5f) * (if (isLegendPlus) 10f else 6f)
+                val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
                 Image(
-                    painter = painterResource(id = unitDef.iconRes),
-                    contentDescription = unitDef.name,
+                    painter = painterResource(id = iconRes),
+                    contentDescription = bp.name,
                     modifier = Modifier
                         .size(cardIconSize)
                         .graphicsLayer {
@@ -841,7 +843,7 @@ fun SummonEffectOverlay() {
             )
 
             // Unit name
-            val unitName = unitDef?.name
+            val unitName = bp?.name
                 ?: if (data.blueprintId.isNotEmpty()) blueprintDisplayName(data.blueprintId) else null
             if (unitName != null) {
                 Spacer(modifier = Modifier.height(4.dp))

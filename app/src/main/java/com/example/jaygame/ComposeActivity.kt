@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.jaygame.audio.BgmManager
 import com.example.jaygame.audio.SfxManager
 import com.example.jaygame.bridge.BattleBridge
+import com.example.jaygame.data.TimeGuard
 import com.example.jaygame.navigation.NavGraph
 import com.example.jaygame.ui.components.RaceDraftDialog
 import com.example.jaygame.ui.screens.SplashScreen
@@ -163,6 +164,7 @@ class ComposeActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        TimeGuard.onSessionStart()
         if (::appVm.isInitialized) {
             appVm.onResume()
         }

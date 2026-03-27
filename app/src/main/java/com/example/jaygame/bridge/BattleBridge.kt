@@ -126,7 +126,6 @@ data class MeleeHitEvent(
 data class UnitPositionData(
     val xs: FloatArray = FloatArray(0),
     val ys: FloatArray = FloatArray(0),
-    @Deprecated("Use blueprintIds instead") val unitDefIds: IntArray = IntArray(0),
     val grades: IntArray = IntArray(0),
     val levels: IntArray = IntArray(0),
     val isAttacking: BooleanArray = BooleanArray(0),
@@ -177,9 +176,7 @@ data class BattleResultData(
  * 그리드 타일 상태 (18 slots, 3×6 grid)
  */
 data class GridTileState(
-    @Deprecated("Use blueprintId instead") val unitDefId: Int = -1,    // -1 = empty
     val grade: Int = -1,        // 0=Common, 1=Rare, 2=Hero, 3=Legend, 4=Mythic
-    @Deprecated("Use families instead") val family: Int = -1,       // 0=Fire, 1=Frost, 2=Poison, 3=Lightning, 4=Support, 5=Wind
     val canMerge: Boolean = false,
     val level: Int = 0,
     // Blueprint-system fields (Task 18)
@@ -271,7 +268,6 @@ object BattleBridge {
         ) : BattleCommand()
         object MergeAll : BattleCommand()
         object RecipeCraft : BattleCommand()
-        data class BuyUnit(val unitDefId: Int, val cost: Int) : BattleCommand()
         data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
     }
@@ -436,7 +432,6 @@ object BattleBridge {
 
     /** 소환 결과 데이터 */
     data class SummonResult(
-        @Deprecated("Use blueprintId instead") val unitDefId: Int,
         val grade: Int,
         val blueprintId: String = "",
     )
@@ -445,7 +440,7 @@ object BattleBridge {
     val summonResult: StateFlow<SummonResult?> = _summonResult.asStateFlow()
 
     /** 머지 이펙트 (타일 인덱스, lucky 여부, 결과 유닛 ID) */
-    data class MergeEffect(val tileIndex: Int, val isLucky: Boolean, val resultUnitId: Int = -1, val resultBlueprintId: String = "")
+    data class MergeEffect(val tileIndex: Int, val isLucky: Boolean, val resultBlueprintId: String = "")
     private val _mergeEffect = MutableStateFlow<MergeEffect?>(null)
     val mergeEffect: StateFlow<MergeEffect?> = _mergeEffect.asStateFlow()
 
@@ -532,7 +527,7 @@ object BattleBridge {
 
     @JvmStatic
     fun updateUnitPositions(
-        xs: FloatArray, ys: FloatArray, unitDefIds: IntArray,
+        xs: FloatArray, ys: FloatArray,
         grades: IntArray, levels: IntArray, isAttacking: BooleanArray,
         tileIndices: IntArray, count: Int, attackAnimTimers: FloatArray = FloatArray(0),
         blueprintIds: Array<String> = emptyArray(),
@@ -552,7 +547,7 @@ object BattleBridge {
         critAnimTimers: FloatArray = FloatArray(0),
     ) {
         _unitPositions.value = UnitPositionData(
-            xs, ys, unitDefIds, grades, levels, isAttacking, attackAnimTimers, tileIndices, count, unitFrameCounter.incrementAndGet(),
+            xs, ys, grades, levels, isAttacking, attackAnimTimers, tileIndices, count, unitFrameCounter.incrementAndGet(),
             blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
             hps, maxHps, states, homeXs, homeYs, stackCounts, buffs, skillAnimTimers, critAnimTimers,
         )
@@ -595,18 +590,16 @@ object BattleBridge {
 
     @JvmStatic
     fun updateGridState(
-        unitIds: IntArray, grades: IntArray, families: IntArray,
+        grades: IntArray,
         canMerge: BooleanArray, levels: IntArray,
         blueprintIds: Array<String> = emptyArray(),
         familiesList: Array<List<UnitFamily>> = emptyArray(),
         roles: Array<UnitRole> = emptyArray(),
     ) {
-        val count = unitIds.size.coerceAtMost(GRID_TOTAL)
+        val count = grades.size.coerceAtMost(GRID_TOTAL)
         val tiles = List(count) { i ->
             GridTileState(
-                unitDefId = unitIds[i],
                 grade = grades[i],
-                family = families[i],
                 canMerge = canMerge[i],
                 level = levels[i],
                 blueprintId = blueprintIds.getOrElse(i) { "" },
@@ -618,13 +611,13 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun onSummonResult(unitDefId: Int, grade: Int, blueprintId: String = "") {
-        _summonResult.value = SummonResult(unitDefId, grade, blueprintId)
+    fun onSummonResult(grade: Int, blueprintId: String = "") {
+        _summonResult.value = SummonResult(grade, blueprintId)
     }
 
     @JvmStatic
-    fun onMergeComplete(tileIndex: Int, isLucky: Boolean, resultUnitId: Int, resultBlueprintId: String = "") {
-        _mergeEffect.value = MergeEffect(tileIndex, isLucky, resultUnitId, resultBlueprintId)
+    fun onMergeComplete(tileIndex: Int, isLucky: Boolean, resultBlueprintId: String = "") {
+        _mergeEffect.value = MergeEffect(tileIndex, isLucky, resultBlueprintId)
     }
 
     fun clearSummonResult() {
@@ -947,10 +940,6 @@ object BattleBridge {
     }
 
     // ── Buy Unit ────────────────────────────────────────────
-
-    fun requestBuyUnit(unitDefId: Int, cost: Int) {
-        commandQueue.add(BattleCommand.BuyUnit(unitDefId, cost))
-    }
 
     fun requestBuyBlueprint(blueprintId: String, cost: Int) {
         commandQueue.add(BattleCommand.BuyBlueprint(blueprintId, cost))

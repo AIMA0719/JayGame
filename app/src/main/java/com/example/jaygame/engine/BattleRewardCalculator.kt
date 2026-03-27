@@ -83,7 +83,7 @@ object BattleRewardCalculator {
         // Single-type win detection
         val singleTypeWin = engine?.let { eng ->
             val families = mutableSetOf<Int>()
-            eng.units.forEach { u -> if (u.alive) families.add(u.family) }
+            eng.units.forEach { u -> if (u.alive) families.add(u.familyOrdinal) }
             families.size == 1 && families.firstOrNull()?.let { it >= 0 } == true
         } ?: false
 

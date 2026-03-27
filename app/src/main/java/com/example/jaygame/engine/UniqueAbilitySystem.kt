@@ -52,7 +52,7 @@ object UniqueAbilitySystem {
             return  // skip legacy family-based init
         }
 
-        val vfxType = resolveVfxType(unit.family, unit.grade)
+        val vfxType = resolveVfxType(unit.familyOrdinal, unit.grade)
         if (vfxType < 0) return
 
         unit.uniqueAbilityType = vfxType
@@ -119,7 +119,7 @@ object UniqueAbilitySystem {
      * Handle passive triggers (called when unit is attacking).
      */
     private fun handlePassive(unit: GameUnit, dt: Float, enemies: List<Enemy>) {
-        val vfx = resolveVfxTypeEnum(unit.family, unit.grade) ?: return
+        val vfx = resolveVfxTypeEnum(unit.familyOrdinal, unit.grade) ?: return
         val nx = unit.position.x / W
         val ny = unit.position.y / H
 
@@ -220,7 +220,7 @@ object UniqueAbilitySystem {
      */
     private fun activateAbility(unit: GameUnit, enemies: List<Enemy>) {
         SfxManager.play(SoundEvent.SkillActivate, 0.8f)
-        val vfx = resolveVfxTypeEnum(unit.family, unit.grade) ?: return
+        val vfx = resolveVfxTypeEnum(unit.familyOrdinal, unit.grade) ?: return
         val nx = unit.position.x / W
         val ny = unit.position.y / H
         val gradeScale = DamageCalculator.gradeMultiplier(unit.grade)
@@ -472,7 +472,7 @@ object UniqueAbilitySystem {
                 x = x, y = y,
                 radius = radius,
                 grade = unit.grade,
-                family = unit.family,
+                family = unit.familyOrdinal,
                 duration = duration,
                 abilityId = unit.blueprintId,
             )
@@ -494,7 +494,7 @@ object UniqueAbilitySystem {
     private fun emitSecondaryFamilyPassive(unit: GameUnit, nx: Float, ny: Float) {
         if (unit.families.size < 2) return
         val secondaryFamily = unit.families[1].ordinal
-        if (secondaryFamily == unit.family) return
+        if (secondaryFamily == unit.familyOrdinal) return
         val secondaryVfx = resolveVfxTypeEnum(secondaryFamily, unit.grade) ?: return
         // Emit a smaller, shorter version of the secondary family effect
         unit.passiveCounter.let { counter ->
@@ -511,7 +511,7 @@ object UniqueAbilitySystem {
     private fun emitSecondaryFamilyActive(unit: GameUnit, enemies: List<Enemy>) {
         if (unit.families.size < 2) return
         val secondaryFamily = unit.families[1].ordinal
-        if (secondaryFamily == unit.family) return
+        if (secondaryFamily == unit.familyOrdinal) return
         val secondaryVfx = resolveVfxTypeEnum(secondaryFamily, unit.grade) ?: return
         val nx = unit.position.x / W
         val ny = unit.position.y / H

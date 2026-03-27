@@ -15,7 +15,7 @@ import androidx.core.graphics.drawable.toBitmap
 import com.example.jaygame.R
 import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.STAGES
-import com.example.jaygame.data.UNIT_DEFS_MAP
+import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.engine.Grid
 import com.example.jaygame.ui.theme.*
 import androidx.compose.ui.unit.IntOffset
@@ -172,13 +172,6 @@ fun BattleField() {
     val validMoveTargets by BattleBridge.validMoveTargets.collectAsState()
     val context = LocalContext.current
 
-    // Legacy unit bitmaps (keyed by unitDefId)
-    val unitBitmaps = remember {
-        UNIT_DEFS_MAP.mapValues { (_, def) ->
-            ContextCompat.getDrawable(context, def.iconRes)?.toBitmap(128, 128)?.asImageBitmap()
-        }
-    }
-
     // Blueprint bitmaps — blueprintId별 아이콘 매핑 (blueprintIconRes 공유)
     val blueprintBitmapCache = remember {
         val cache = mutableMapOf<String, ImageBitmap?>()
@@ -308,8 +301,6 @@ fun BattleField() {
                     pGrades[tile] = data.grades[i]
                     pFamilies[tile] = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
                         data.familiesList[i].first().ordinal
-                    } else if (i < data.unitDefIds.size) {
-                        com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
                     } else {
                         0
                     }
@@ -438,7 +429,7 @@ fun BattleField() {
 
         for (i in 0 until data.count) {
             if (i >= data.xs.size || i >= data.ys.size || i >= data.grades.size ||
-                i >= data.tileIndices.size || i >= data.unitDefIds.size || i >= data.levels.size) continue
+                i >= data.tileIndices.size || i >= data.levels.size) continue
             val baseScreenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
             val baseScreenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
             val grade = data.grades[i]
@@ -457,13 +448,13 @@ fun BattleField() {
             val family = if (i < data.familiesList.size && data.familiesList[i].isNotEmpty()) {
                 data.familiesList[i].first().ordinal
             } else {
-                com.example.jaygame.data.unitFamilyOf(data.unitDefIds[i])
+                0
             }
-            val unitDefId = data.unitDefIds[i]
+            val animSeed = if (i < data.blueprintIds.size) data.blueprintIds[i].hashCode() else i
             val level = data.levels[i]
 
             // ── G3: Breathing scale (slow sine 0.97-1.03, skip for low grade in high-count) ──
-            val breathScale = if (skipMicro) 1f else 1f + sin(t * 1.8f + unitDefId * 0.3f) * 0.03f
+            val breathScale = if (skipMicro) 1f else 1f + sin(t * 1.8f + animSeed * 0.3f) * 0.03f
 
             // ── Attack anim timer (ATTACK_ANIM_DURATION→0 감소, 공격 발사 시 리셋) ──
             val attackAnimTimer = if (i < data.attackAnimTimers.size) data.attackAnimTimers[i] else 0f
@@ -517,8 +508,8 @@ fun BattleField() {
             if (grade >= 4) {
                 val auraColor = MythicAuraGold
                 val auraStroke = MythicAuraStroke
-                val auraPulseAlpha = (0.35f + sin(t * 3f + unitDefId * 0.4f) * 0.2f).coerceIn(0.15f, 0.55f)
-                val auraRadius = unitSize * (0.55f + sin(t * 2f + unitDefId * 0.3f) * 0.05f)
+                val auraPulseAlpha = (0.35f + sin(t * 3f + animSeed * 0.4f) * 0.2f).coerceIn(0.15f, 0.55f)
+                val auraRadius = unitSize * (0.55f + sin(t * 2f + animSeed * 0.3f) * 0.05f)
 
                 // Outer glow fill
                 drawCircle(
@@ -538,7 +529,7 @@ fun BattleField() {
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
             if (family == 4 && grade >= 2 && (!highUnitCount || grade >= 3)) {
                 val auraRadiusScreen = (45f / Grid.CANVAS_W) * w
-                val auraPulse = 0.08f + sin(t * 2f + unitDefId * 0.5f) * 0.04f
+                val auraPulse = 0.08f + sin(t * 2f + animSeed * 0.5f) * 0.04f
                 // Layered circles instead of Brush.radialGradient to avoid per-frame allocation
                 drawCircle(
                     color = FamilyAuraColors[4].copy(alpha = auraPulse * 0.5f),
@@ -581,7 +572,7 @@ fun BattleField() {
                 pedestalRx = pedestalRx,
                 pedestalRy = pedestalRy,
                 t = t,
-                unitDefId = unitDefId,
+                unitDefId = animSeed,
             )
 
             // Pedestal glow (grade + family blend)
@@ -663,8 +654,8 @@ fun BattleField() {
                     0 -> { // Fire: rising ember particles
                         val emberCount = if (highUnitCount) 2 else (1 + grade).coerceAtMost(4)
                         for (e in 0 until emberCount) {
-                            val emberPhase = (t * 0.8f + e * 0.5f + unitDefId * 0.17f) % 1f
-                            val emberX = screenX + sin(t * 1.5f + e * 2.3f + unitDefId * 0.3f) * unitSize * 0.2f
+                            val emberPhase = (t * 0.8f + e * 0.5f + animSeed * 0.17f) % 1f
+                            val emberX = screenX + sin(t * 1.5f + e * 2.3f + animSeed * 0.3f) * unitSize * 0.2f
                             val emberY = screenY - unitSize * 0.2f - emberPhase * unitSize * 0.5f
                             val emberAlpha = sin(emberPhase * PI.toFloat()) * 0.4f
                             drawCircle(
@@ -677,7 +668,7 @@ fun BattleField() {
                     1 -> { // Frost: gentle snowflake drift
                         val snowCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
                         for (s in 0 until snowCount) {
-                            val snowPhase = (t * 0.5f + s * 0.6f + unitDefId * 0.13f) % 1f
+                            val snowPhase = (t * 0.5f + s * 0.6f + animSeed * 0.13f) % 1f
                             val drift = sin(t * 1.2f + s * 1.7f) * unitSize * 0.15f
                             val snowX = screenX + drift
                             val snowY = screenY - unitSize * 0.5f + snowPhase * unitSize * 0.3f
@@ -692,8 +683,8 @@ fun BattleField() {
                     2 -> { // Poison: dripping droplets
                         val dripCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
                         for (d in 0 until dripCount) {
-                            val dripPhase = (t * 0.6f + d * 0.7f + unitDefId * 0.19f) % 1f
-                            val dripX = screenX + sin(d * 2.7f + unitDefId * 0.2f) * unitSize * 0.15f
+                            val dripPhase = (t * 0.6f + d * 0.7f + animSeed * 0.19f) % 1f
+                            val dripX = screenX + sin(d * 2.7f + animSeed * 0.2f) * unitSize * 0.15f
                             val dripY = screenY - unitSize * 0.1f + dripPhase * unitSize * 0.25f
                             val dripAlpha = sin(dripPhase * PI.toFloat()) * 0.35f
                             drawCircle(
@@ -704,10 +695,10 @@ fun BattleField() {
                         }
                     }
                     3 -> { // Lightning: occasional spark flickers
-                        val sparkPhase = (t * 2f + unitDefId * 0.31f) % 1f
+                        val sparkPhase = (t * 2f + animSeed * 0.31f) % 1f
                         if (sparkPhase < 0.15f) { // Brief flicker
                             val sparkAlpha = (0.15f - sparkPhase) / 0.15f * 0.5f
-                            val sparkAngle = sin(t * 7f + unitDefId * 0.5f) * PI.toFloat()
+                            val sparkAngle = sin(t * 7f + animSeed * 0.5f) * PI.toFloat()
                             val sparkLen = unitSize * 0.2f
                             drawLine(
                                 color = LightSparkColor.copy(alpha = sparkAlpha),
@@ -721,7 +712,7 @@ fun BattleField() {
                         }
                     }
                     4 -> { // Support: soft pulsing halo
-                        val haloPulse = 0.12f + sin(t * 1.5f + unitDefId * 0.4f) * 0.06f
+                        val haloPulse = 0.12f + sin(t * 1.5f + animSeed * 0.4f) * 0.06f
                         drawCircle(
                             color = SupportGlowColor.copy(alpha = haloPulse),
                             radius = unitSize * 0.4f,
@@ -731,7 +722,7 @@ fun BattleField() {
                     5 -> { // Wind: gentle breeze drift (frost 스타일 + 바람 색상)
                         val breezeCount = if (highUnitCount) 1 else (1 + grade / 2).coerceAtMost(3)
                         for (s in 0 until breezeCount) {
-                            val breezePhase = (t * 0.5f + s * 0.6f + unitDefId * 0.13f) % 1f
+                            val breezePhase = (t * 0.5f + s * 0.6f + animSeed * 0.13f) % 1f
                             val drift = sin(t * 1.2f + s * 1.7f) * unitSize * 0.15f
                             val breezeX = screenX + drift
                             val breezeY = screenY - unitSize * 0.5f + breezePhase * unitSize * 0.3f
@@ -747,8 +738,7 @@ fun BattleField() {
             }
 
             // Unit sprite + SSJ aura + skill/crit animations
-            val bitmap = unitBitmaps[unitDefId]
-                ?: (if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null)
+            val bitmap = if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null
             if (bitmap != null) {
                 // ── Skill/Crit animation timers ──
                 val skillTimer = if (i < data.skillAnimTimers.size) data.skillAnimTimers[i] else 0f
@@ -772,7 +762,7 @@ fun BattleField() {
 
                 // ── SSJ Aura: 등급별 타오르는 오라 (스프라이트 뒤에 그림) ──
                 if (grade >= 1 && !highUnitCount) {
-                    drawSsjAura(grade, screenX, spriteCenterY, spriteSize, t, unitDefId)
+                    drawSsjAura(grade, screenX, spriteCenterY, spriteSize, t, animSeed)
                 }
 
                 // Skill glow circle (behind sprite)

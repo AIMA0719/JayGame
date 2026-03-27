@@ -59,7 +59,7 @@ fun BuyUnitSheet(
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
-    val gridFull = gridState.all { it.unitDefId >= 0 || it.blueprintId.isNotEmpty() }
+    val gridFull = gridState.all { it.blueprintId.isNotEmpty() }
 
     var confirmUnit by remember { mutableStateOf<UnitBlueprint?>(null) }
     val buyableUnits = remember { getBuyableBlueprints() }

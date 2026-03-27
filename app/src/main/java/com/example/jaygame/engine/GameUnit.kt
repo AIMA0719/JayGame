@@ -8,11 +8,7 @@ import kotlin.math.sin
 
 class GameUnit {
     var alive = false
-    @Deprecated("Use blueprintId instead")
-    var unitDefId = -1
     var grade = 0
-    @Deprecated("Use families instead")
-    var family = 0
     var level = 1
     var tileIndex = -1
     var position = Vec2()
@@ -42,6 +38,8 @@ class GameUnit {
     // ── New Strategy-pattern fields (Task 4) ──
     var blueprintId: String = ""
     var families: List<UnitFamily> = emptyList()
+    /** Legacy family ordinal derived from families list (for VFX / damage calc compatibility) */
+    val familyOrdinal: Int get() = families.firstOrNull()?.ordinal ?: 0
     var role: UnitRole = UnitRole.RANGED_DPS
     var attackRange: AttackRange = AttackRange.RANGED
     var damageType: DamageType = DamageType.PHYSICAL
@@ -78,9 +76,9 @@ class GameUnit {
     fun initFromBlueprint(bp: UnitBlueprint) {
         blueprintId = bp.id
         race = bp.race
-        family = raceToFamily(bp.race)
+        val legacyFamily = raceToFamily(bp.race)
         families = bp.families.ifEmpty {
-            listOf(com.example.jaygame.data.UnitFamily.entries[family])
+            listOf(com.example.jaygame.data.UnitFamily.entries[legacyFamily])
         }
         grade = bp.grade.ordinal
         role = bp.role
@@ -98,42 +96,6 @@ class GameUnit {
         blockCount = bp.stats.blockCount
         state = UnitState.IDLE
         alive = true
-    }
-
-    @Deprecated("Use initFromBlueprint instead")
-    fun init(
-        unitDefId: Int, grade: Int, family: Int, level: Int,
-        tileIndex: Int, homePos: Vec2,
-        baseATK: Float, atkSpeed: Float, range: Float,
-        abilityType: Int, abilityValue: Float,
-    ) {
-        this.alive = true
-        this.unitDefId = unitDefId
-        this.grade = grade
-        this.family = family
-        this.level = level
-        this.tileIndex = tileIndex
-        this.position = homePos.copy()
-        this.homePosition = homePos.copy()
-        this.baseATK = baseATK
-        this.atkSpeed = atkSpeed
-        this.range = range
-        this.abilityType = abilityType
-        this.abilityValue = abilityValue
-        this.isAttacking = false
-        this.attackAnimTimer = 0f
-        this.attackCooldown = 0f
-        this.buffs.clear()
-        this.passiveCounter = 0
-        this.moveSpeed = when (family) {
-            0 -> 110f
-            1 -> 55f
-            2 -> 75f
-            3 -> 65f
-            4 -> 90f
-            5 -> 100f   // Wind: fast
-            else -> 75f
-        }
     }
 
     fun update(dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
@@ -229,6 +191,8 @@ class GameUnit {
         alive = false
         currentTarget = null
         attackAnimTimer = 0f
+        skillAnimTimer = 0f
+        critAnimTimer = 0f
         buffs.clear()
         uniqueAbilityType = -1
         passiveCounter = 0

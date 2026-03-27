@@ -1,4 +1,3 @@
-@file:Suppress("DEPRECATION")
 package com.example.jaygame.engine
 
 import android.util.Log
@@ -8,11 +7,6 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.data.DungeonDef
 import com.example.jaygame.data.UnitRace
 import com.example.jaygame.data.GameData
-// TODO(Task18): Remove these legacy imports once requestMerge/requestBuyUnit
-//  are fully migrated to blueprint-based paths (tryMergeBlueprint, etc.)
-import com.example.jaygame.data.UNIT_DEFS
-import com.example.jaygame.data.unitFamilyOf
-import com.example.jaygame.data.unitGradeOf
 import com.example.jaygame.engine.behavior.BehaviorFactory
 import com.example.jaygame.engine.behavior.BehaviorRegistration
 import com.example.jaygame.engine.math.GameRect
@@ -79,7 +73,10 @@ class BattleEngine(
     var currentPity: Int = initialPity.coerceIn(0, 100); private set
 
     // 행운석 — 신화 레시피 합성에 소모
-    var luckyStones: Int = gameData?.luckyStones ?: 0; private set
+    var luckyStones: Int = gameData?.luckyStones ?: 0; internal set
+
+    val economy = BattleEconomy(this)
+    val mergeHandler = BattleMergeHandler(this)
 
     val enemies = ObjectPool(MAX_ENEMIES, { Enemy() }) { it.reset() }
     val units = ObjectPool(MAX_UNITS, { GameUnit() }) { it.reset() }
@@ -92,7 +89,7 @@ class BattleEngine(
     private val auraTicks = FloatArray(MAX_UNITS)
 
     /** 배틀 코인 — 적 처치/웨이브 클리어로 획득, 소환/강화에 사용 */
-    var sp = 50f; private set
+    var sp = 50f; internal set
     var summonCost = BASE_SUMMON_COST; private set
     private var summonCount = 0  // 소환 횟수 (비용 증가 추적)
     var elapsedTime = 0f; private set
@@ -101,7 +98,7 @@ class BattleEngine(
     private var isBossRound = false
 
     private var killCount = 0
-    private var mergeCount = 0
+    internal var mergeCount = 0
     private var lastAttackSfxTime = 0L
     private var lastDeathSfxTime = 0L
 
@@ -140,7 +137,7 @@ class BattleEngine(
     private var mergeableTilesCache: Set<Int> = emptySet()
     private var mergeableDirty = true
 
-    private fun invalidateMergeCache() { mergeableDirty = true }
+    internal fun invalidateMergeCache() { mergeableDirty = true }
 
     private fun getMergeableTiles(): Set<Int> {
         if (mergeableDirty) {
@@ -179,7 +176,6 @@ class BattleEngine(
 
     private val unitXBuf = FloatArray(MAX_UNITS)
     private val unitYBuf = FloatArray(MAX_UNITS)
-    private val unitDefIdBuf = IntArray(MAX_UNITS)
     private val unitGradeBuf = IntArray(MAX_UNITS)
     private val unitLevelBuf = IntArray(MAX_UNITS)
     private val unitAttackingBuf = BooleanArray(MAX_UNITS)
@@ -209,9 +205,7 @@ class BattleEngine(
     private val projFamilyBuf = IntArray(MAX_PROJECTILES)
     private val projGradeBuf = IntArray(MAX_PROJECTILES)
 
-    private val gridIdBuf = IntArray(Grid.TOTAL)
     private val gridGradeBuf = IntArray(Grid.TOTAL)
-    private val gridFamilyBuf = IntArray(Grid.TOTAL)
     private val gridCanMergeBuf = BooleanArray(Grid.TOTAL)
     private val gridLevelBuf = IntArray(Grid.TOTAL)
     private val gridBlueprintIdBuf = Array(Grid.TOTAL) { "" }
@@ -315,16 +309,15 @@ class BattleEngine(
                 for (cmd in BattleBridge.drainCommands()) {
                     when (cmd) {
                         is BattleBridge.BattleCommand.Summon -> requestSummonBlueprint()
-                        is BattleBridge.BattleCommand.Merge -> requestMerge(cmd.tileIndex)
-                        is BattleBridge.BattleCommand.MergeAll -> requestMergeAll()
-                        is BattleBridge.BattleCommand.Sell -> requestSell(cmd.tileIndex)
-                        is BattleBridge.BattleCommand.SellAllSlot -> requestSellAllSlot(cmd.tileIndex)
-                        is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(requestBulkSell(cmd.grade))
+                        is BattleBridge.BattleCommand.Merge -> mergeHandler.requestMerge(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.MergeAll -> mergeHandler.requestMergeAll()
+                        is BattleBridge.BattleCommand.Sell -> economy.requestSell(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.SellAllSlot -> economy.requestSellAllSlot(cmd.tileIndex)
+                        is BattleBridge.BattleCommand.BulkSell -> cmd.result.complete(economy.requestBulkSell(cmd.grade))
                         is BattleBridge.BattleCommand.GroupUpgrade -> requestGroupUpgrade(cmd.groupIndex)
-                        is BattleBridge.BattleCommand.RecipeCraft -> requestRecipeCraft()
+                        is BattleBridge.BattleCommand.RecipeCraft -> mergeHandler.requestRecipeCraft()
                         is BattleBridge.BattleCommand.Swap -> requestSwap(cmd.from, cmd.to)
                         is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
-                        is BattleBridge.BattleCommand.BuyUnit -> requestBuyUnit(cmd.unitDefId, cmd.cost.toFloat())
                         is BattleBridge.BattleCommand.BuyBlueprint -> requestBuyBlueprint(cmd.blueprintId, cmd.cost.toFloat())
                         is BattleBridge.BattleCommand.BattleUpgrade -> applyBattleUpgrade(cmd.upgradeType, cmd.level, cmd.cost)
                     }
@@ -699,9 +692,9 @@ class BattleEngine(
                         else -> 1f                                                       // no crit
                     }
 
-                    val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
+                    val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.familyOrdinal] ?: 0) * 0.05f
                     val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
-                    val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
+                    val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.familyOrdinal, target.type)
                     val behBossMult = if (target.isBoss) synergyBossDmgMult else 1f
                     val boostedDamage = result.damage * critBoost *
                         upgradeAtkMult * synergyAtkMult * (1f + relicAtkBonus) *
@@ -716,7 +709,7 @@ class BattleEngine(
                         val ny = target.position.y / H
                         BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
                         val angle = atan2(target.position.y - unit.position.y, target.position.x - unit.position.x)
-                        BattleBridge.onMeleeHit(nx, ny, unit.family.coerceIn(0, 5), boostedCrit, angle)
+                        BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), boostedCrit, angle)
                         tryPlayAttackSfx(boostedCrit)
                     } else {
                         // Projectile — melee slash uses fast projectile, ranged uses normal
@@ -732,7 +725,7 @@ class BattleEngine(
                                 sourceUnitId = unit.tileIndex,
                                 abilityType = unit.abilityType,
                                 abilityValue = unit.abilityValue,
-                                grade = unit.grade, family = unit.family,
+                                grade = unit.grade, family = unit.familyOrdinal,
                                 attackerRange = unit.range,
                             )
                         }
@@ -875,9 +868,9 @@ class BattleEngine(
         if (isCrit) unit.critAnimTimer = GameUnit.CRIT_ANIM_DURATION
         val critMultiplier = 2f + relicCritDmg
         val isMagic = unit.damageType == DamageType.MAGIC
-        val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.family] ?: 0) * 0.05f
+        val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.familyOrdinal] ?: 0) * 0.05f
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
-        val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.family, target.type)
+        val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.familyOrdinal, target.type)
         val bossMult = if (target.isBoss) synergyBossDmgMult else 1f
         val baseAtk = unit.effectiveATK() * upgradeAtkMult * synergyAtkMult * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
@@ -895,7 +888,7 @@ class BattleEngine(
                 target.position.y - unit.position.y,
                 target.position.x - unit.position.x,
             )
-            BattleBridge.onMeleeHit(nx, ny, unit.family.coerceIn(0, 5), isCrit, angle)
+            BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), isCrit, angle)
             tryPlayAttackSfx(isCrit)
             applyAbilityOnHit(unit.tileIndex, target)
         } else {
@@ -909,7 +902,7 @@ class BattleEngine(
                 sourceUnitId = unit.tileIndex,
                 abilityType = unit.abilityType,
                 abilityValue = unit.abilityValue,
-                grade = unit.grade, family = unit.family,
+                grade = unit.grade, family = unit.familyOrdinal,
                 attackerRange = unit.range,
             )
         }
@@ -976,7 +969,6 @@ class BattleEngine(
             selected.grade >= UnitGrade.RARE   -> SfxManager.play(SoundEvent.SummonRare)
         }
         BattleBridge.onSummonResult(
-            unitDefId = -1,
             grade = selected.grade.ordinal,
             blueprintId = selected.id,
         )
@@ -997,7 +989,7 @@ class BattleEngine(
 
     /** Acquire a unit from pool, init from blueprint. Does NOT place on grid.
      *  Position is set by grid.placeUnit() → slotCenter(). */
-    private fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
+    internal fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
         val unit = units.acquire() ?: return null
         unit.initFromBlueprint(bp)
         unit.race = bp.race
@@ -1011,62 +1003,7 @@ class BattleEngine(
     }
 
 
-    fun requestMerge(tileIndex: Int) {
-        val existingUnit = grid.getUnit(tileIndex) ?: return
-        if (existingUnit.unitCategory == UnitCategory.SPECIAL) return
-
-        // 1) 레시피 체크 우선
-        if (tryExecuteRecipeCraft()) return
-
-        // 2) 수동 합성: 같은 유닛 3개 소모 → 다음 등급
-        tryMergeSlot(tileIndex)
-    }
-
-    /** 모든 합성 가능 슬롯에서 자동으로 3개씩 소모하여 합성 */
-    private fun requestMergeAll() {
-        tryExecuteRecipeCraft()
-        // 합성이 그리드를 변경하므로 매 합성 후 재스캔
-        var safety = 50 // 무한루프 방지
-        var merged = true
-        while (merged && safety-- > 0) {
-            merged = false
-            for (i in 0 until Grid.SLOT_COUNT) {
-                if (grid.getStackCount(i) >= Grid.MERGE_COST) {
-                    if (tryMergeSlot(i)) {
-                        merged = true
-                        break // 그리드 변경됨, 처음부터 재스캔
-                    }
-                }
-            }
-        }
-    }
-
-    /** 레시피 조합 요청 — 필드 전체 스캔하여 완성 가능한 레시피 합성 */
-    fun requestRecipeCraft() {
-        tryExecuteRecipeCraft()
-    }
-
-    /** 필드에서 완성 가능한 레시피를 찾아 합성 실행. 성공 시 true 반환. */
-    private fun tryExecuteRecipeCraft(): Boolean {
-        if (!RecipeSystem.isReady) return false
-        val (recipe, consumedTiles) = RecipeSystem.instance.findMatchingRecipeOnGrid(grid, luckyStones) ?: return false
-        val resultBp = RecipeSystem.instance.completeRecipe(
-            recipe, consumedTiles.mapNotNull { grid.getUnit(it) }
-        ) ?: return false
-
-        luckyStones = (luckyStones - recipe.luckyStonesCost).coerceAtLeast(0)
-        val placeTile = consumedTiles.first()
-        consumedTiles.forEach { i ->
-            val u = grid.removeUnit(i)
-            if (u != null) units.release(u)
-        }
-        val unit = spawnFromBlueprint(resultBp) ?: return false
-        grid.placeUnit(placeTile, unit)
-        invalidateMergeCache()
-        mergeCount++
-        BattleBridge.onMergeComplete(placeTile, true, -1, unit.blueprintId)
-        return true
-    }
+    // Merge methods delegated to mergeHandler
 
     /** 등급 그룹 통합 강화 요청 — 코인 소모하여 해당 그룹의 모든 유닛 ATK/속도 업그레이드 */
     fun requestGroupUpgrade(groupIndex: Int) {
@@ -1082,92 +1019,9 @@ class BattleEngine(
         BattleBridge.updateGroupUpgradeLevels(groupUpgradeLevels.copyOf())
     }
 
-    private fun sellUnit(u: GameUnit) {
-        sp += SELL_BASE + u.grade * SELL_PER_GRADE
-        units.release(u)
-    }
+    // Sell methods delegated to economy
 
-    fun requestSell(tileIndex: Int) {
-        val unit = grid.removeUnit(tileIndex) ?: return
-        sellUnit(unit)
-        invalidateMergeCache()
-    }
-
-    fun requestSellAllSlot(tileIndex: Int) {
-        val removed = grid.removeAllFromSlot(tileIndex)
-        if (removed.isEmpty()) return
-        removed.forEach { sellUnit(it) }
-        invalidateMergeCache()
-    }
-
-    fun requestBulkSell(grade: Int): Int {
-        var count = 0
-        for (i in 0 until Grid.SLOT_COUNT) {
-            val representative = grid.getUnit(i) ?: continue
-            if (representative.grade == grade) {
-                val removed = grid.removeAllFromSlot(i)
-                removed.forEach { sellUnit(it); count++ }
-            }
-        }
-        if (count > 0) invalidateMergeCache()
-        return count
-    }
-
-    /** 수동 합성 — 슬롯에서 같은 유닛 3개 소모 → 다음 등급 랜덤 유닛. 성공 시 true. */
-    private fun tryMergeSlot(slotIndex: Int): Boolean {
-        if (grid.getStackCount(slotIndex) < Grid.MERGE_COST) return false
-        val representative = grid.getUnit(slotIndex) ?: return false
-        val race = representative.race
-
-        // 3개 소모 (앞에서부터) — 소모된 유닛에서 등급 판정
-        val consumed = grid.removeUnits(slotIndex, Grid.MERGE_COST)
-        if (consumed.size < Grid.MERGE_COST) {
-            // 롤백: 소모된 유닛 다시 배치
-            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
-            return false
-        }
-
-        val maxGrade = consumed.maxOf { UnitGrade.entries.getOrElse(it.grade) { UnitGrade.COMMON } }
-
-        val mergeResult = MergeSystem.determineMergeResult(race, maxGrade, blueprintRegistry, BattleBridge.selectedRaces.value)
-        if (mergeResult == null) {
-            // 합성 불가 — 롤백
-            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
-            return false
-        }
-        val resultBp = blueprintRegistry.findById(mergeResult.resultBlueprintId)
-        if (resultBp == null) {
-            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
-            return false
-        }
-
-        // 풀에서 결과 유닛 스폰 — 실패 시 소모 유닛 복원
-        val resultUnit = spawnFromBlueprint(resultBp)
-        if (resultUnit == null) {
-            consumed.forEach { u -> grid.placeUnit(slotIndex, u) }
-            return false
-        }
-
-        consumed.forEach { u -> this.units.release(u) }
-
-        val stackSlot = grid.findStackableSlot(resultBp.id)
-        var actualSlot = when {
-            stackSlot >= 0 -> stackSlot
-            grid.getStackCount(slotIndex) == 0 -> slotIndex
-            else -> grid.findEmpty().takeIf { it >= 0 } ?: slotIndex
-        }
-        if (!grid.placeUnit(actualSlot, resultUnit)) {
-            val fallback = grid.findEmpty()
-            if (fallback >= 0) { grid.placeUnit(fallback, resultUnit); actualSlot = fallback }
-            else this.units.release(resultUnit)
-        }
-
-        invalidateMergeCache()
-        mergeCount++
-        SfxManager.play(if (mergeResult.isLucky) SoundEvent.MergeLucky else SoundEvent.Merge)
-        BattleBridge.onMergeComplete(actualSlot, mergeResult.isLucky, -1, resultUnit.blueprintId)
-        return true
-    }
+    // tryMergeSlot delegated to mergeHandler
 
     fun requestSwap(from: Int, to: Int) {
         // 슬롯 전체 스택을 한 묶음으로 이동
@@ -1187,55 +1041,6 @@ class BattleEngine(
         return result
     }
 
-    fun requestBuyUnit(unitDefId: Int, cost: Float) {
-        if (sp < cost) return
-
-        // Try blueprint-based init first (preferred path)
-        val def = UNIT_DEFS.find { it.id == unitDefId }
-        val familyEnum = def?.family ?: com.example.jaygame.data.UnitFamily.entries.getOrElse(unitFamilyOf(unitDefId)) { com.example.jaygame.data.UnitFamily.FIRE }
-        val gradeOrdinal = unitGradeOf(unitDefId)
-        val gradeEnum = UnitGrade.entries.getOrElse(gradeOrdinal) { UnitGrade.COMMON }
-        val bp = blueprintRegistry.all().find { it.grade == gradeEnum && familyEnum in it.families }
-
-        // Find target slot: try stacking by same unit first, then empty slot
-        val bpId = bp?.id
-        var targetSlot = if (bpId != null) grid.findStackableSlot(bpId) else -1
-        if (targetSlot < 0) {
-            targetSlot = grid.findEmpty()
-            if (targetSlot < 0) return  // No available slot
-        }
-
-        val unit: GameUnit
-        if (bp != null) {
-            unit = spawnFromBlueprint(bp) ?: return
-        } else if (def != null) {
-            // Fallback: legacy init — position will be set by grid.placeUnit()
-            unit = units.acquire() ?: return
-            val family = unitFamilyOf(unitDefId)
-            unit.init(
-                unitDefId = unitDefId, grade = gradeOrdinal, family = family, level = 1,
-                tileIndex = targetSlot, homePos = Grid.FIELD_CENTER.copy(),
-                baseATK = def.baseATK.toFloat(), atkSpeed = def.baseSpeed,
-                range = def.range * upgradeRangeMult,
-                abilityType = 0, abilityValue = 0f,
-            )
-            unit.families = listOf(familyEnum)
-            unit.role = inferRole(familyEnum)
-            UniqueAbilitySystem.initUnit(unit)
-        } else {
-            return
-        }
-
-        sp -= cost
-        grid.placeUnit(targetSlot, unit)
-        invalidateMergeCache()
-        BattleBridge.onSummonResult(
-            unitDefId = if (bp != null) -1 else unitDefId,
-            grade = gradeOrdinal,
-            blueprintId = bp?.id ?: "",
-        )
-    }
-
     fun requestBuyBlueprint(blueprintId: String, cost: Float) {
         if (sp < cost) return
         val bp = blueprintRegistry.findById(blueprintId) ?: return
@@ -1251,16 +1056,9 @@ class BattleEngine(
         grid.placeUnit(targetSlot, unit)
         invalidateMergeCache()
         BattleBridge.onSummonResult(
-            unitDefId = -1,
             grade = bp.grade.ordinal,
             blueprintId = bp.id,
         )
-    }
-
-    private fun inferRole(family: com.example.jaygame.data.UnitFamily): UnitRole = when (family) {
-        com.example.jaygame.data.UnitFamily.SUPPORT -> UnitRole.SUPPORT
-        com.example.jaygame.data.UnitFamily.WIND -> UnitRole.CONTROLLER
-        else -> UnitRole.RANGED_DPS
     }
 
     fun applyBattleUpgrade(type: Int, level: Int, cost: Float) {
@@ -1326,7 +1124,6 @@ class BattleEngine(
             if (ui < uCount) {
                 unitXBuf[ui] = u.position.x / W
                 unitYBuf[ui] = u.position.y / H
-                unitDefIdBuf[ui] = u.unitDefId
                 unitGradeBuf[ui] = u.grade
                 unitLevelBuf[ui] = u.level
                 unitAttackingBuf[ui] = u.isAttacking
@@ -1356,7 +1153,7 @@ class BattleEngine(
             }
         }
         BattleBridge.updateUnitPositions(
-            unitXBuf, unitYBuf, unitDefIdBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui, unitAttackAnimBuf,
+            unitXBuf, unitYBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui, unitAttackAnimBuf,
             unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
             unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf, unitBuffBuf,
             unitSkillAnimBuf, unitCritAnimBuf,
@@ -1386,9 +1183,7 @@ class BattleEngine(
             for (i in 0 until Grid.SLOT_COUNT) {
                 val u = grid.getUnit(i)
                 if (u != null) {
-                    gridIdBuf[i] = u.unitDefId
                     gridGradeBuf[i] = u.grade
-                    gridFamilyBuf[i] = u.family
                     // canMerge = 등급/카테고리까지 고려한 합성 가능 여부
                     gridCanMergeBuf[i] = i in mergeableTiles
                     gridLevelBuf[i] = grid.getStackCount(i)  // Show stack count as level for UI
@@ -1396,9 +1191,7 @@ class BattleEngine(
                     gridFamiliesListBuf[i] = u.families
                     gridRoleBuf[i] = u.role
                 } else {
-                    gridIdBuf[i] = -1
                     gridGradeBuf[i] = 0
-                    gridFamilyBuf[i] = 0
                     gridCanMergeBuf[i] = false
                     gridLevelBuf[i] = 0
                     gridBlueprintIdBuf[i] = ""
@@ -1406,7 +1199,7 @@ class BattleEngine(
                     gridRoleBuf[i] = UnitRole.RANGED_DPS
                 }
             }
-            BattleBridge.updateGridState(gridIdBuf, gridGradeBuf, gridFamilyBuf, gridCanMergeBuf, gridLevelBuf, gridBlueprintIdBuf, gridFamiliesListBuf, gridRoleBuf)
+            BattleBridge.updateGridState(gridGradeBuf, gridCanMergeBuf, gridLevelBuf, gridBlueprintIdBuf, gridFamiliesListBuf, gridRoleBuf)
         }
     }
 
