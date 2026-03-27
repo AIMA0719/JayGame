@@ -22,6 +22,9 @@ import com.example.jaygame.data.UnitRace
 
 private val DarkBg = Color(0xFF1A1A2E)
 private val CardBg = Color(0xFF16213E)
+/** 배틀 시작 전 선택할 종족 수 — 이 값만 바꾸면 전체 반영 */
+private const val MAX_DRAFT_RACES = 2
+
 private val AccentGold = Color(0xFFFFD700)
 private val SelectedBorder = Color(0xFFFFD700)
 private val UnselectedBorder = Color(0xFF444466)
@@ -55,7 +58,7 @@ fun RaceDraftDialog(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "전투에 사용할 종족 3개를 선택하세요",
+                text = "전투에 사용할 종족 ${MAX_DRAFT_RACES}개를 선택하세요",
                 color = Color.White.copy(alpha = 0.7f),
                 fontSize = 13.sp,
             )
@@ -76,7 +79,7 @@ fun RaceDraftDialog(
                         .clickable {
                             selected = if (isSelected) {
                                 selected - race
-                            } else if (selected.size < 3) {
+                            } else if (selected.size < MAX_DRAFT_RACES) {
                                 selected + race
                             } else {
                                 selected
@@ -115,15 +118,15 @@ fun RaceDraftDialog(
 
             // Selected count
             Text(
-                text = "${selected.size} / 3",
-                color = if (selected.size == 3) AccentGold else Color.White.copy(alpha = 0.5f),
+                text = "${selected.size} / $MAX_DRAFT_RACES",
+                color = if (selected.size == MAX_DRAFT_RACES) AccentGold else Color.White.copy(alpha = 0.5f),
                 fontSize = 14.sp,
             )
 
             Spacer(Modifier.height(12.dp))
 
             // Confirm button
-            val canConfirm = selected.size == 3
+            val canConfirm = selected.size == MAX_DRAFT_RACES
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

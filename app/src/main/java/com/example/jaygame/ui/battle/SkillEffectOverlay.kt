@@ -218,8 +218,7 @@ fun SkillEffectOverlay(
                     image = bmp,
                     dstOffset = IntOffset((cx - s / 2f).toInt(), (cy - s / 2f).toInt()),
                     dstSize = IntSize(s, s),
-                    alpha = fadeAlpha * 0.85f,
-                    blendMode = BlendMode.Screen,
+                    alpha = fadeAlpha,
                 )
             }
         }

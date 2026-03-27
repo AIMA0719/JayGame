@@ -761,9 +761,7 @@ fun BattleField() {
                 val spriteCenterY = spriteY + spriteSize * 0.5f
 
                 // ── SSJ Aura: 등급별 타오르는 오라 (스프라이트 뒤에 그림) ──
-                if (grade >= 1 && !highUnitCount) {
-                    drawSsjAura(grade, screenX, spriteCenterY, spriteSize, t, animSeed)
-                }
+                // SSJ Aura 비활성화
 
                 // Skill glow circle (behind sprite)
                 if (skillPhase > 0f) {

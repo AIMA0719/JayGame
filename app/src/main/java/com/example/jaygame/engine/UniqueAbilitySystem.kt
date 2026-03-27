@@ -133,7 +133,7 @@ object UniqueAbilitySystem {
                 if (unit.passiveCounter % 3 == 0) { // every 3rd attack
                     val target = unit.currentTarget ?: return
                     val tx = target.position.x / W
-                    val ty = target.position.y / H
+                    val ty = target.position.y / H - 0.025f
                     emitVfx(vfx, tx, ty, 0.05f, unit, 3f)
                     // Create actual damage zone
                     val zone = zonePool?.acquire() ?: return
@@ -163,7 +163,7 @@ object UniqueAbilitySystem {
                 if (unit.passiveCounter % 10 == 0) {
                     val target = unit.currentTarget ?: return
                     val tx = target.position.x / W
-                    val ty = target.position.y / H
+                    val ty = target.position.y / H - 0.025f
                     emitVfx(vfx, tx, ty, 0.04f, unit, 1.5f)
                 }
             }
@@ -174,7 +174,7 @@ object UniqueAbilitySystem {
                 if (unit.passiveCounter % 5 == 0) {
                     val target = unit.currentTarget ?: return
                     val tx = target.position.x / W
-                    val ty = target.position.y / H
+                    val ty = target.position.y / H - 0.025f
                     emitVfx(vfx, tx, ty, 0.08f, unit, 1.5f)
                     // Bonus damage on overcharged hit
                     target.takeDamage(unit.effectiveATK() * 1f) // 200% total (100% normal + 100% bonus)
@@ -196,7 +196,7 @@ object UniqueAbilitySystem {
                 if (unit.passiveCounter % 4 == 0 && Math.random() < 0.25) {
                     val target = unit.currentTarget ?: return
                     val tx = target.position.x / W
-                    val ty = target.position.y / H
+                    val ty = target.position.y / H - 0.025f
                     emitVfx(vfx, tx, ty, 0.06f, unit, 2f)
                     // Create wind zone with slow
                     val zone = zonePool?.acquire() ?: return
@@ -231,13 +231,12 @@ object UniqueAbilitySystem {
         // Find best target position (densest enemies or strongest)
         val targetEnemy = enemies.maxByOrNull { it.maxHp } ?: return
         val tx = targetEnemy.position.x / W
-        val ty = targetEnemy.position.y / H
+        val ty = targetEnemy.position.y / H - 0.025f // 몹 몸통 중앙으로 보정
 
         when (vfx) {
             // ── Fire ──
             // N2: Inferno — Firestorm Meteor: AoE meteor strike
             SkillVfxType.FIRESTORM_METEOR -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.15f, unit, 3f)
                 val atk = unit.effectiveATK() * gradeScale
                 for (e in enemies) {
@@ -252,7 +251,6 @@ object UniqueAbilitySystem {
             }
             // N3: Volcano King — Volcanic Eruption: summon volcano zone
             SkillVfxType.VOLCANIC_ERUPTION -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.15f, unit, 8f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
@@ -268,7 +266,6 @@ object UniqueAbilitySystem {
             // ── Frost ──
             // O1: Frost Nova
             SkillVfxType.FROST_NOVA -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.12f, unit, 2.5f)
                 for (e in enemies) {
                     if (!e.alive) continue
@@ -306,7 +303,6 @@ object UniqueAbilitySystem {
             // ── Poison ──
             // P1: Plague — Poison Cloud
             SkillVfxType.POISON_CLOUD -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.08f, unit, 5f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
@@ -322,7 +318,6 @@ object UniqueAbilitySystem {
             }
             // P2: Corrosive — Acid Spray: cone AoE + defense reduction
             SkillVfxType.ACID_SPRAY -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.15f, unit, 3f)
                 val atk = unit.effectiveATK()
                 for (e in enemies) {
@@ -337,7 +332,6 @@ object UniqueAbilitySystem {
             }
             // P3: Hecate — Toxic Domain: poison swamp
             SkillVfxType.TOXIC_DOMAIN -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.15f, unit, 10f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
@@ -354,7 +348,6 @@ object UniqueAbilitySystem {
             // ── Lightning ──
             // Q1: Thunder — Lightning Strike
             SkillVfxType.LIGHTNING_STRIKE -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.12f, unit, 2f)
                 targetEnemy.takeDamage(unit.effectiveATK() * 2.5f)
                 targetEnemy.buffs.addBuff(BuffType.Slow, 0.5f, 1.5f)
@@ -362,7 +355,6 @@ object UniqueAbilitySystem {
             }
             // Q2: Storm — Static Field: chain lightning
             SkillVfxType.STATIC_FIELD -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.15f, unit, 4f)
                 val atk = unit.effectiveATK()
                 var chainDmg = atk * 1.8f
@@ -420,7 +412,6 @@ object UniqueAbilitySystem {
             // ── Wind ──
             // S1: Cyclone — Pull & damage
             SkillVfxType.CYCLONE_PULL -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.08f, unit, 3f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
@@ -436,7 +427,6 @@ object UniqueAbilitySystem {
             }
             // S2: Typhoon — Eye of Storm zone
             SkillVfxType.EYE_OF_STORM -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.18f, unit, 6f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
@@ -452,7 +442,6 @@ object UniqueAbilitySystem {
             }
             // S3: Sky Lord — Vacuum Slash: line AoE
             SkillVfxType.VACUUM_SLASH -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 1.5f)
                 emitVfx(vfx, tx, ty, 0.25f, unit, 3f)
                 val atk = unit.effectiveATK()
                 for (e in enemies) {
@@ -630,16 +619,11 @@ object UniqueAbilitySystem {
             if (hitTarget == null || enemy.maxHp > hitTarget!!.maxHp) hitTarget = enemy
         }
 
-        // PNG 이펙트: 유닛 본인 위치, 그리드 1칸 크기
-        val nx = unit.position.x / 720f
-        val ny = unit.position.y / 1280f
-        emitVfx(SkillVfxType.VOLCANIC_ERUPTION, nx, ny, UNIT_VFX_RADIUS, unit, 2f)
-
-        // 타격 파티클: 맞은 적 위치
+        // 타격 이펙트: 맞은 적 위치에만 표시 (유닛 그리드에는 안 보임)
         if (hitTarget != null) {
             val htx = hitTarget!!.position.x / 720f
-            val hty = hitTarget!!.position.y / 1280f
-            emitVfx(SkillVfxType.VOLCANIC_ERUPTION, htx, hty, 0.1f, unit, 1.5f)
+            val hty = hitTarget!!.position.y / 1280f - 0.025f
+            emitVfx(SkillVfxType.VOLCANIC_ERUPTION, htx, hty, 0.1f, unit, 2f)
         }
 
         unit.mana = 0f

@@ -458,7 +458,8 @@ private fun spawnParticle(
 internal fun updateSkillParticles(
     pool: Array<SkillParticle>,
     emitters: Array<SkillEmitter>,
-    dt: Float,
+    realDt: Float,
+    gameDt: Float,
     battleSpeed: Float,
 ): Int {
     // 배속별 방출 계수: 1x=100%, 2x=75%, 4x=50%, 8x=30%
@@ -469,10 +470,10 @@ internal fun updateSkillParticles(
         else -> 1f
     }
 
-    // Update emitters
+    // Update emitters — life는 실제 시간 (배속 무관, 최소 1.5초 보장)
     for (e in emitters) {
         if (!e.active) continue
-        e.life -= dt
+        e.life -= realDt
         if (e.life <= 0f) { e.reset(); continue }
 
         when (e.pattern) {
@@ -487,7 +488,7 @@ internal fun updateSkillParticles(
                 }
             }
             EMIT_CONTINUOUS, EMIT_CONE -> {
-                e.emitAccum += e.emitRate * emitMult * dt
+                e.emitAccum += e.emitRate * emitMult * realDt
                 while (e.emitAccum >= 1f) {
                     e.emitAccum -= 1f
                     val phase = Random.nextFloat() * 2f * PI.toFloat()
@@ -495,7 +496,7 @@ internal fun updateSkillParticles(
                 }
             }
             EMIT_RING -> {
-                e.emitAccum += e.emitRate * emitMult * dt
+                e.emitAccum += e.emitRate * emitMult * realDt
                 val progress = 1f - (e.life / e.maxLife)
                 while (e.emitAccum >= 1f) {
                     e.emitAccum -= 1f
@@ -504,8 +505,8 @@ internal fun updateSkillParticles(
                 }
             }
             EMIT_SPIRAL -> {
-                e.spiralPhase += dt * 8f // spiral rotation speed
-                e.emitAccum += e.emitRate * emitMult * dt
+                e.spiralPhase += realDt * 8f
+                e.emitAccum += e.emitRate * emitMult * realDt
                 while (e.emitAccum >= 1f) {
                     e.emitAccum -= 1f
                     if (!spawnParticle(pool, e, e.spiralPhase)) break
@@ -514,17 +515,17 @@ internal fun updateSkillParticles(
         }
     }
 
-    // Update particles
+    // Update particles — 실제 시간 기반 (배속 무관)
     var activeCount = 0
     for (p in pool) {
         if (!p.alive) continue
-        p.life -= dt
+        p.life -= realDt
         if (p.life <= 0f) { p.alive = false; continue }
 
-        p.vx += p.ax * dt
-        p.vy += p.ay * dt + p.gravity * dt
-        p.x += p.vx * dt
-        p.y += p.vy * dt
+        p.vx += p.ax * realDt
+        p.vy += p.ay * realDt + p.gravity * realDt
+        p.x += p.vx * realDt
+        p.y += p.vy * realDt
         activeCount++
     }
     return activeCount
@@ -1046,8 +1047,9 @@ fun SkillParticleOverlay(
                 val speed = BattleBridge.battleSpeed.value
                 if (speed <= 0f) return@withFrameNanos // paused
 
-                val dt = 1f / 60f * speed
-                val count = updateSkillParticles(particlePool, emitterPool, dt, speed)
+                val realDt = 1f / 60f // 실제 시간 (이미터 life용, 배속 무관)
+                val gameDt = realDt * speed // 게임 시간 (파티클 물리용)
+                val count = updateSkillParticles(particlePool, emitterPool, realDt, gameDt, speed)
                 activeCount.intValue = count
 
                 // Report to LOD (aggregate)
