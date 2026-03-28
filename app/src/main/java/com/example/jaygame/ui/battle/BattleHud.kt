@@ -239,7 +239,17 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    if (isBoss) {
+                    val isWaveDelay = battle.state == 0 && battle.waveDelayRemaining > 0f
+                    if (isWaveDelay) {
+                        // 웨이브 시작 전 카운트다운
+                        val delaySec = kotlin.math.ceil(battle.waveDelayRemaining).toInt().coerceAtLeast(0)
+                        Text(
+                            text = "00:%02d".format(delaySec),
+                            color = Color(0xFFFFAA00),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    } else if (isBoss) {
                         // 보스 웨이브: 60초 카운트다운
                         val waveSec = battle.waveTimeRemaining.toInt().coerceAtLeast(0)
                         val waveTimeColor = when {

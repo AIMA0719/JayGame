@@ -18,20 +18,11 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         tryMergeSlot(tileIndex)
     }
 
-    /** 모든 합성 가능 슬롯에서 자동으로 3개씩 소모하여 합성 (레시피 제외) */
+    /** 합성 가능 슬롯에서 1회만 합성 (버튼 1번 = 1회 합성) */
     fun requestMergeAll() {
-        // 합성이 그리드를 변경하므로 매 합성 후 재스캔
-        var safety = 50 // 무한루프 방지
-        var merged = true
-        while (merged && safety-- > 0) {
-            merged = false
-            for (i in 0 until Grid.SLOT_COUNT) {
-                if (engine.grid.getStackCount(i) >= Grid.MERGE_COST) {
-                    if (tryMergeSlot(i)) {
-                        merged = true
-                        break // 그리드 변경됨, 처음부터 재스캔
-                    }
-                }
+        for (i in 0 until Grid.SLOT_COUNT) {
+            if (engine.grid.getStackCount(i) >= Grid.MERGE_COST) {
+                if (tryMergeSlot(i)) return
             }
         }
     }
@@ -45,21 +36,76 @@ class BattleMergeHandler(private val engine: BattleEngine) {
     fun tryExecuteRecipeCraft(): Boolean {
         if (!RecipeSystem.isReady) return false
         val (recipe, consumedTiles) = RecipeSystem.instance.findMatchingRecipeOnGrid(engine.grid, engine.luckyStones) ?: return false
+
+        // 매칭된 유닛들을 미리 수집 (각 타일에서 1개씩, 중복 타일은 순서대로 제거)
+        val unitsToConsume = mutableListOf<Pair<Int, GameUnit>>() // (tileIndex, unit)
+        val removeCountPerTile = mutableMapOf<Int, Int>()
+        for (tileIdx in consumedTiles) {
+            val alreadyTaken = removeCountPerTile.getOrDefault(tileIdx, 0)
+            val slotUnits = engine.grid.getUnitsInSlot(tileIdx)
+            if (alreadyTaken >= slotUnits.size) return false // 슬롯에 유닛 부족
+            unitsToConsume.add(tileIdx to slotUnits[alreadyTaken])
+            removeCountPerTile[tileIdx] = alreadyTaken + 1
+        }
+
+        // 레시피 검증 (실제 유닛 리스트로)
         val resultBp = RecipeSystem.instance.completeRecipe(
-            recipe, consumedTiles.mapNotNull { engine.grid.getUnit(it) }
+            recipe, unitsToConsume.map { it.second }
         ) ?: return false
 
-        engine.luckyStones = (engine.luckyStones - recipe.luckyStonesCost).coerceAtLeast(0)
-        val placeTile = consumedTiles.first()
-        consumedTiles.forEach { i ->
-            val u = engine.grid.removeUnit(i)
-            if (u != null) engine.units.release(u)
+        // ── 배치 가능 여부 사전 검증 (재료 소모 전) ──
+        // 소모 후 빈 슬롯이 생기는지, 또는 이미 빈 슬롯이 있는지,
+        // 또는 같은 blueprintId 유닛이 이미 있어서 스택 가능한지 확인
+        val willFreeSlot = removeCountPerTile.any { (tileIdx, count) ->
+            engine.grid.getStackCount(tileIdx) <= count
         }
-        val unit = engine.spawnFromBlueprint(resultBp) ?: return false
-        engine.grid.placeUnit(placeTile, unit)
+        val hasEmptySlot = engine.grid.findEmpty() >= 0
+        val hasStackableSlot = engine.grid.findStackableSlot(resultBp.id) >= 0
+        if (!willFreeSlot && !hasEmptySlot && !hasStackableSlot) {
+            // 결과 유닛을 놓을 자리가 없음 — 재료 소모하지 않고 중단
+            return false
+        }
+
+        // 결과 유닛 먼저 스폰 — 실패 시 아무것도 소모하지 않음
+        val resultUnit = engine.spawnFromBlueprint(resultBp) ?: return false
+
+        // 모든 준비 완료 — 이제 소모 실행
+        engine.luckyStones = (engine.luckyStones - recipe.luckyStonesCost).coerceAtLeast(0)
+
+        // 타일별 제거 횟수에 따라 유닛 제거
+        for ((tileIdx, count) in removeCountPerTile) {
+            repeat(count) {
+                val u = engine.grid.removeUnit(tileIdx)
+                if (u != null) engine.units.release(u)
+            }
+        }
+
+        // 배치: 같은 유닛 스택 > 비어있는 소모 타일 > 빈 슬롯
+        val stackSlot = engine.grid.findStackableSlot(resultBp.id)
+        val placeTile = when {
+            stackSlot >= 0 -> stackSlot
+            else -> consumedTiles.firstOrNull { engine.grid.getStackCount(it) == 0 }
+                ?: engine.grid.findEmpty().takeIf { it >= 0 }
+                ?: consumedTiles.first()
+        }
+
+        if (!engine.grid.placeUnit(placeTile, resultUnit)) {
+            val fallback = engine.grid.findEmpty()
+            if (fallback >= 0) {
+                engine.grid.placeUnit(fallback, resultUnit)
+                engine.invalidateMergeCache()
+                engine.mergeCount++
+                BattleBridge.onMergeComplete(fallback, true, resultUnit.blueprintId)
+                return true
+            }
+            // 사전 검증을 통과했으므로 여기 도달은 불가하지만 안전장치
+            engine.units.release(resultUnit)
+            return false
+        }
+
         engine.invalidateMergeCache()
         engine.mergeCount++
-        BattleBridge.onMergeComplete(placeTile, true, unit.blueprintId)
+        BattleBridge.onMergeComplete(placeTile, true, resultUnit.blueprintId)
         return true
     }
 
@@ -72,7 +118,6 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         // 3개 소모 (앞에서부터) — 소모된 유닛에서 등급 판정
         val consumed = engine.grid.removeUnits(slotIndex, Grid.MERGE_COST)
         if (consumed.size < Grid.MERGE_COST) {
-            // 롤백: 소모된 유닛 다시 배치
             consumed.forEach { u -> engine.grid.placeUnit(slotIndex, u) }
             return false
         }
@@ -81,12 +126,21 @@ class BattleMergeHandler(private val engine: BattleEngine) {
 
         val mergeResult = MergeSystem.determineMergeResult(race, maxGrade, engine.blueprintRegistry, BattleBridge.selectedRaces.value)
         if (mergeResult == null) {
-            // 합성 불가 — 롤백
             consumed.forEach { u -> engine.grid.placeUnit(slotIndex, u) }
             return false
         }
         val resultBp = engine.blueprintRegistry.findById(mergeResult.resultBlueprintId)
         if (resultBp == null) {
+            consumed.forEach { u -> engine.grid.placeUnit(slotIndex, u) }
+            return false
+        }
+
+        // ── 배치 가능 여부 사전 검증 (consumed는 이미 grid에서 제거된 상태) ──
+        val slotBecameEmpty = engine.grid.getStackCount(slotIndex) == 0
+        val canStack = engine.grid.findStackableSlot(resultBp.id) >= 0
+        val hasEmpty = slotBecameEmpty || engine.grid.findEmpty() >= 0
+        if (!canStack && !hasEmpty) {
+            // 놓을 자리 없음 — 롤백
             consumed.forEach { u -> engine.grid.placeUnit(slotIndex, u) }
             return false
         }
@@ -98,18 +152,19 @@ class BattleMergeHandler(private val engine: BattleEngine) {
             return false
         }
 
+        // 배치가 보장됨 — 이제 소모 확정
         consumed.forEach { u -> engine.units.release(u) }
 
         val stackSlot = engine.grid.findStackableSlot(resultBp.id)
         var actualSlot = when {
             stackSlot >= 0 -> stackSlot
-            engine.grid.getStackCount(slotIndex) == 0 -> slotIndex
-            else -> engine.grid.findEmpty().takeIf { it >= 0 } ?: slotIndex
+            slotBecameEmpty -> slotIndex
+            else -> engine.grid.findEmpty()
         }
-        if (!engine.grid.placeUnit(actualSlot, resultUnit)) {
+        if (actualSlot < 0 || !engine.grid.placeUnit(actualSlot, resultUnit)) {
             val fallback = engine.grid.findEmpty()
             if (fallback >= 0) { engine.grid.placeUnit(fallback, resultUnit); actualSlot = fallback }
-            else engine.units.release(resultUnit)
+            else { engine.units.release(resultUnit); return false }
         }
 
         engine.invalidateMergeCache()

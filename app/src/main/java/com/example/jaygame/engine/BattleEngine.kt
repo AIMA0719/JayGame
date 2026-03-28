@@ -1088,6 +1088,7 @@ class BattleEngine(
             (DEFEAT_ENEMY_COUNT - enemies.activeCount).coerceAtLeast(0), DEFEAT_ENEMY_COUNT,
             sp, elapsedTime, state.ordinal, summonCost,
             enemies.activeCount, if (isBossRound) 1 else 0, waveSystem.timeRemaining, waveSystem.waveElapsed,
+            waveDelayRemaining = if (state == State.WaveDelay) waveDelayTimer else 0f,
         )
 
         // Enemy positions + buff bitmasks — reuse pre-allocated buffers

@@ -33,6 +33,7 @@ data class BattleState(
     val waveTimeRemaining: Float = 0f,
     val waveElapsed: Float = 0f,
     val maxUnitSlots: Int = 18,
+    val waveDelayRemaining: Float = 0f,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -43,7 +44,8 @@ data class BattleState(
                 state == other.state && summonCost == other.summonCost &&
                 enemyCount == other.enemyCount && maxEnemyCount == other.maxEnemyCount &&
                 isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining &&
-                waveElapsed == other.waveElapsed && maxUnitSlots == other.maxUnitSlots
+                waveElapsed == other.waveElapsed && maxUnitSlots == other.maxUnitSlots &&
+                waveDelayRemaining == other.waveDelayRemaining
     }
     override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + waveElapsed.toBits() + if (isBossRound) 1 else 0
 }
@@ -460,6 +462,7 @@ object BattleBridge {
         state: Int, summonCost: Int,
         enemyCount: Int, isBossRound: Int, waveTimeRemaining: Float,
         waveElapsed: Float = 0f,
+        waveDelayRemaining: Float = 0f,
     ) {
         _state.value = BattleState(
             currentWave = wave,
@@ -475,6 +478,7 @@ object BattleBridge {
             waveTimeRemaining = waveTimeRemaining,
             waveElapsed = waveElapsed,
             maxUnitSlots = engine?.maxUnitSlots ?: 50,
+            waveDelayRemaining = waveDelayRemaining,
         )
 
         // Clear visual effects on wave end
@@ -879,6 +883,10 @@ object BattleBridge {
         zoneFrameCounter.set(0)
         _zoneData.value = ZoneData()
         _equippedPetIds.value = emptyList()
+        // lifecycle pause 상태 초기화 — 이전 배틀의 pauseByLifecycle이 남아있으면
+        // onResume에서 speed를 0f로 덮어쓰는 버그 발생
+        pausedByLifecycle = false
+        speedBeforeLifecyclePause = 0f
         // Note: stageId, difficulty, battleSpeed, dungeonId are preserved — set by ComposeActivity before launch
         // equippedPetIds is reset here and re-set by MainActivity.onCreate()
         _battleUpgradeLevels.value = IntArray(5) { 0 }
