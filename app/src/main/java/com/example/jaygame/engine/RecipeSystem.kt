@@ -56,8 +56,8 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
                 if (recipe.ingredients.isNotEmpty()) {
                     recipes.add(recipe)
                 }
-            } catch (_: IllegalArgumentException) {
-                // Skip recipes with invalid enum values in JSON
+            } catch (e: IllegalArgumentException) {
+                android.util.Log.w("RecipeSystem", "Skipping recipe at index $i: ${e.message}")
             }
         }
     }

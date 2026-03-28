@@ -106,7 +106,7 @@ class ShopViewModel(private val repository: GameRepository) : ViewModel(), Conta
     }
 
     fun claimSeasonTier(tier: Int, goldReward: Int, diamondReward: Int, cardReward: Int) = intent {
-        val d = state.gameData
+        val d = repository.gameData.value // 최신 데이터로 중복 수령 방지
         if (d.seasonTier >= tier && d.seasonClaimedTier + 1 == tier) {
             var updated = d.copy(
                 gold = d.gold + goldReward,
@@ -122,7 +122,7 @@ class ShopViewModel(private val repository: GameRepository) : ViewModel(), Conta
     }
 
     fun claimAllSeasonTiers(rewards: List<Triple<Int, Int, Int>>, toTier: Int) = intent {
-        val d = state.gameData
+        val d = repository.gameData.value // 최신 데이터로 중복 수령 방지
         if (d.seasonClaimedTier >= toTier) return@intent
         var totalGold = 0
         var totalDiamonds = 0

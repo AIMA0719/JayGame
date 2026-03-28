@@ -164,7 +164,12 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         if (actualSlot < 0 || !engine.grid.placeUnit(actualSlot, resultUnit)) {
             val fallback = engine.grid.findEmpty()
             if (fallback >= 0) { engine.grid.placeUnit(fallback, resultUnit); actualSlot = fallback }
-            else { engine.units.release(resultUnit); return false }
+            else {
+                // 사전 검증을 통과했으므로 도달 불가하지만 안전장치
+                android.util.Log.e("BattleMergeHandler", "Merge placement failed after pre-check — unit lost (blueprintId=${resultBp.id})")
+                engine.units.release(resultUnit)
+                return false
+            }
         }
 
         engine.invalidateMergeCache()

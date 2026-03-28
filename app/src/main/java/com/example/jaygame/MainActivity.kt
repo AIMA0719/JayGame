@@ -38,18 +38,19 @@ class MainActivity : ComponentActivity() {
         RecipeSystem.initialize(applicationContext)
         val repository = (application as JayGameApplication).repository
 
-        // Preserve stageId/difficulty/speed set by ComposeActivity, then reset battle state
+        // Preserve stageId/difficulty/dungeon set by ComposeActivity, then reset battle state
         val stageId = BattleBridge.stageId.value
         val difficulty = BattleBridge.difficulty.value
+        val dungeonId = BattleBridge.dungeonId.value
         BattleBridge.reset()
         BattleBridge.setStageId(stageId)
         BattleBridge.setDifficulty(difficulty)
+        if (dungeonId >= 0) BattleBridge.setDungeonMode(dungeonId)
         SfxManager.init(this)
 
         // Create and start Kotlin battle engine
         val stage = STAGES.getOrNull(stageId) ?: STAGES[0]
         val data = repository.gameData.value
-        val dungeonId = BattleBridge.dungeonId.value
         val dungeonDef = if (dungeonId >= 0) ALL_DUNGEONS.getOrNull(dungeonId) else null
 
         // Apply gameplay settings
@@ -148,12 +149,13 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         BattleBridge.pauseByLifecycle()
-        BgmManager.stop()
+        BgmManager.pause()
     }
 
     override fun onResume() {
         super.onResume()
         BattleBridge.resumeFromLifecycle()
+        BgmManager.resume()
     }
 
     override fun onDestroy() {

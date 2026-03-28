@@ -155,6 +155,7 @@ class BattleEngine(
 
     // PERF-03: Pre-allocated dead/scratch lists (cleared each frame instead of re-created)
     private val deadEnemies = ArrayList<Enemy>(64)
+    private val phoenixReleased = HashSet<Enemy>(32)
     private val deadProjectiles = ArrayList<Projectile>(32)
     private val deadZones = ArrayList<ZoneEffect>(8)
 
@@ -390,7 +391,7 @@ class BattleEngine(
                         val aliveList = mutableListOf<Enemy>()
                         enemies.forEach { if (it.alive) aliveList.add(it) }
                         val toRemove = (aliveList.size - safeCount).coerceAtLeast(0)
-                        aliveList.shuffled().take(toRemove).forEach { it.alive = false; enemies.release(it) }
+                        aliveList.shuffled().take(toRemove).forEach { it.alive = false; phoenixReleased.add(it); enemies.release(it) }
                         BattleBridge.onPhoenixRevive()
                     } else {
                         state = State.Defeat
@@ -560,7 +561,8 @@ class BattleEngine(
             }
         }
         deadEnemies.clear()
-        enemies.forEach { if (!it.alive) deadEnemies.add(it) }
+        enemies.forEach { if (!it.alive && it !in phoenixReleased) deadEnemies.add(it) }
+        phoenixReleased.clear()
         deadEnemies.forEach { dead ->
             val deathX = dead.position.x / W
             val deathY = dead.position.y / H
@@ -1092,10 +1094,9 @@ class BattleEngine(
         )
 
         // Enemy positions + buff bitmasks — reuse pre-allocated buffers
-        val eCount = enemies.activeCount
         var ei = 0
         enemies.forEach { e ->
-            if (ei < eCount) {
+            if (ei < enemyXBuf.size) {
                 enemyXBuf[ei] = e.position.x / W
                 enemyYBuf[ei] = e.position.y / H
                 enemyTypeBuf[ei] = e.type
@@ -1122,10 +1123,9 @@ class BattleEngine(
         BattleBridge.updateEnemyPositions(enemyXBuf, enemyYBuf, enemyTypeBuf, enemyHpBuf, enemyBuffBuf, ei)
 
         // Unit positions — reuse pre-allocated buffers
-        val uCount = units.activeCount
         var ui = 0
         units.forEach { u ->
-            if (ui < uCount) {
+            if (ui < unitXBuf.size) {
                 unitXBuf[ui] = u.position.x / W
                 unitYBuf[ui] = u.position.y / H
                 unitGradeBuf[ui] = u.grade
@@ -1165,10 +1165,9 @@ class BattleEngine(
         )
 
         // Projectiles — reuse pre-allocated buffers
-        val pCount = projectiles.activeCount
         var pi = 0
         projectiles.forEach { p ->
-            if (pi < pCount) {
+            if (pi < projSrcXBuf.size) {
                 projSrcXBuf[pi] = p.sourcePos.x / W
                 projSrcYBuf[pi] = p.sourcePos.y / H
                 projDstXBuf[pi] = p.position.x / W

@@ -45,7 +45,7 @@ fun DamageNumberOverlay() {
     ) {
         if (containerSize.width > 0) {
             events.forEach { event ->
-                key(event.timestamp) {
+                key(event.id) {
                     AnimatedDamageNumber(
                         event = event,
                         containerWidth = containerSize.width,

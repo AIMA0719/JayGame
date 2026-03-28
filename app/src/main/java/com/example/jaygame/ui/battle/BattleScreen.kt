@@ -143,7 +143,7 @@ fun BattleScreen(
         }
     }
 
-    // ParticleLOD 프레임 합산: 매 프레임 reset → 각 오버레이 add → commit
+    // ParticleLOD: commit(이전 프레임 add 누적값으로 LOD 계산) → reset(새 프레임 카운트 시작) → 오버레이 Canvas에서 add
     LaunchedEffect(Unit) {
         while (true) {
             androidx.compose.runtime.withFrameNanos { _ ->

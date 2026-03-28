@@ -18,12 +18,12 @@ object StaminaManager {
             )
         }
         val elapsed = now - data.lastStaminaRegenTime
-        val regenCount = (elapsed / REGEN_INTERVAL_MS).toInt()
+        val regenCount = (elapsed / REGEN_INTERVAL_MS).coerceAtMost(data.maxStamina.toLong()).toInt()
         if (regenCount <= 0) return data.copy(lastKnownSystemTime = now)
         val newStamina = (data.stamina + regenCount).coerceAtMost(data.maxStamina)
         return data.copy(
             stamina = newStamina,
-            lastStaminaRegenTime = data.lastStaminaRegenTime + regenCount * REGEN_INTERVAL_MS,
+            lastStaminaRegenTime = data.lastStaminaRegenTime + regenCount.toLong() * REGEN_INTERVAL_MS,
             lastKnownSystemTime = now,
         )
     }

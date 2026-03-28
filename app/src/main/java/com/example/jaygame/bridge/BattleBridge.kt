@@ -114,7 +114,13 @@ data class DamageEvent(
     val damage: Int,
     val isCrit: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
-)
+    val id: Long = nextDamageEventId(),
+) {
+    companion object {
+        private val counter = java.util.concurrent.atomic.AtomicLong(0)
+        fun nextDamageEventId(): Long = counter.incrementAndGet()
+    }
+}
 
 data class MeleeHitEvent(
     val x: Float,       // normalized 0-1
@@ -523,7 +529,11 @@ object BattleBridge {
 
     @JvmStatic
     fun updateEnemyPositions(xs: FloatArray, ys: FloatArray, types: IntArray, hpRatios: FloatArray, buffs: IntArray, count: Int) {
-        _enemyPositions.value = EnemyPositionData(xs, ys, types, hpRatios, buffs, count, enemyFrameCounter.incrementAndGet())
+        // 엔진 pre-allocated 버퍼를 복사 — UI 스레드에서 읽는 동안 엔진이 덮어쓰는 것 방지
+        _enemyPositions.value = EnemyPositionData(
+            xs.copyOf(count), ys.copyOf(count), types.copyOf(count),
+            hpRatios.copyOf(count), buffs.copyOf(count), count, enemyFrameCounter.incrementAndGet(),
+        )
     }
 
     @JvmStatic
@@ -534,7 +544,10 @@ object BattleBridge {
         families: IntArray = IntArray(0),
         grades: IntArray = IntArray(0),
     ) {
-        _projectiles.value = ProjectileData(srcXs, srcYs, dstXs, dstYs, types, families, grades, count, projFrameCounter.incrementAndGet())
+        _projectiles.value = ProjectileData(
+            srcXs.copyOf(count), srcYs.copyOf(count), dstXs.copyOf(count), dstYs.copyOf(count),
+            types.copyOf(count), families.copyOf(count), grades.copyOf(count), count, projFrameCounter.incrementAndGet(),
+        )
     }
 
     @JvmStatic
@@ -559,10 +572,18 @@ object BattleBridge {
         critAnimTimers: FloatArray = FloatArray(0),
         ranges: FloatArray = FloatArray(0),
     ) {
+        // 엔진 pre-allocated 버퍼를 복사 — UI 스레드에서 읽는 동안 엔진이 덮어쓰는 것 방지
         _unitPositions.value = UnitPositionData(
-            xs, ys, grades, levels, isAttacking, attackAnimTimers, tileIndices, count, unitFrameCounter.incrementAndGet(),
-            blueprintIds, familiesList, roles, attackRanges, damageTypes, unitCategories,
-            hps, maxHps, states, homeXs, homeYs, stackCounts, buffs, skillAnimTimers, critAnimTimers, ranges,
+            xs.copyOf(count), ys.copyOf(count), grades.copyOf(count), levels.copyOf(count),
+            isAttacking.copyOf(count), attackAnimTimers.copyOf(count), tileIndices.copyOf(count),
+            count, unitFrameCounter.incrementAndGet(),
+            blueprintIds.copyOfRange(0, count), familiesList.copyOfRange(0, count),
+            roles.copyOfRange(0, count), attackRanges.copyOfRange(0, count),
+            damageTypes.copyOfRange(0, count), unitCategories.copyOfRange(0, count),
+            hps.copyOf(count), maxHps.copyOf(count), states.copyOfRange(0, count),
+            homeXs.copyOf(count), homeYs.copyOf(count), stackCounts.copyOf(count),
+            buffs.copyOf(count), skillAnimTimers.copyOf(count), critAnimTimers.copyOf(count),
+            ranges.copyOf(count),
         )
     }
 

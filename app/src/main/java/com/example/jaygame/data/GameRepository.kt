@@ -20,9 +20,9 @@ class GameRepository(context: Context) {
     }
 
     fun save(data: GameData) {
+        _gameData.value = data  // UI 즉시 반영
         val json = serialize(data)
         prefs.edit().putString("save_data", json).apply()
-        _gameData.value = data
     }
 
     fun saveDiscoveredRecipes(ids: Set<String>) {
@@ -58,19 +58,6 @@ class GameRepository(context: Context) {
     }
 
     companion object {
-        /**
-         * FNV-1a 32-bit hash, matching the C++ SaveSystem checksum.
-         */
-        @Deprecated("Use SaveKeyStore.hmacSha256 instead")
-        fun fnv1aHash(data: String): Long {
-            var hash = 0x811c9dc5L
-            for (b in data.toByteArray(Charsets.UTF_8)) {
-                hash = hash xor (b.toLong() and 0xFF)
-                hash = (hash * 0x01000193L) and 0xFFFFFFFFL
-            }
-            return hash
-        }
-
         fun serialize(data: GameData): String {
             val root = JSONObject()
 

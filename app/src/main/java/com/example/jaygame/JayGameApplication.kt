@@ -2,6 +2,7 @@ package com.example.jaygame
 
 import android.app.Application
 import com.example.jaygame.data.GameRepository
+import com.example.jaygame.data.TimeGuard
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.RecipeSystem
 
@@ -12,6 +13,7 @@ class JayGameApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
+        TimeGuard.onSessionStart()
         BlueprintRegistry.initialize(this)
         RecipeSystem.initialize(this)
         repository = GameRepository(this)

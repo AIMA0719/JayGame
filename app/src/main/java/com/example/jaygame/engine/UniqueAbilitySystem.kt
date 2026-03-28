@@ -136,7 +136,8 @@ object UniqueAbilitySystem {
                     val ty = target.position.y / H - 0.025f
                     emitVfx(vfx, tx, ty, 0.05f, unit, 3f)
                     // Create actual damage zone
-                    val zone = zonePool?.acquire() ?: return
+                    val zone = zonePool?.acquire()
+                    if (zone == null) { android.util.Log.w("UniqueAbility", "Zone pool exhausted — ultimate skipped"); return }
                     zone.init(
                         pos = target.position.copy(),
                         radius = 60f, duration = 3f,
@@ -199,7 +200,8 @@ object UniqueAbilitySystem {
                     val ty = target.position.y / H - 0.025f
                     emitVfx(vfx, tx, ty, 0.06f, unit, 2f)
                     // Create wind zone with slow
-                    val zone = zonePool?.acquire() ?: return
+                    val zone = zonePool?.acquire()
+                    if (zone == null) { android.util.Log.w("UniqueAbility", "Zone pool exhausted — ultimate skipped"); return }
                     zone.init(
                         pos = target.position.copy(),
                         radius = 50f, duration = 2f,
