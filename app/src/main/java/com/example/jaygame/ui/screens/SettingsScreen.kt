@@ -446,12 +446,11 @@ private fun SettingsGameplay(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    listOf(2f to "x1", 4f to "x2", 8f to "x4").forEach { (speed, label) ->
+                    listOf(2f to "x1", 4f to "x2").forEach { (speed, label) ->
                         val isSelected = data.defaultBattleSpeed == speed
                         val color = when (speed) {
-                            4f -> Gold
-                            8f -> NeonRed
-                            else -> LightText
+                            4f -> Color(0xFFFFD700)   // 골드
+                            else -> Color(0xFF4FC3F7)  // 밝은 파랑
                         }
                         NeonButton(
                             text = label,

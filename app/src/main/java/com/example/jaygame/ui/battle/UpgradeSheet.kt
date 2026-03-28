@@ -34,11 +34,19 @@ import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.*
 
+// 그룹별 그라데이션 색상 (왼→오)
+private val groupGradientColors = arrayOf(
+    Color(0xFF9ca3af) to Color(0xFF60a5fa),  // 일반 → 희귀
+    Color(0xFFc084fc) to Color(0xFFfb923c),  // 영웅 → 전설
+    Color(0xFFfbbf24) to Color(0xFFf59e0b),  // 신화 (같은 톤 그라데이션)
+    Color(0xFFef4444) to Color(0xFFef4444),  // 불멸 (단색)
+)
+// 라벨/버튼용 대표 색상
 private val groupColors = arrayOf(
-    Color(0xFF42A5F5),  // 일반/희귀
-    Color(0xFFFF9800),  // 영웅/전설
-    Color(0xFFE040FB),  // 신화
-    Color(0xFFFF1744),  // 불멸
+    Color(0xFF60a5fa),  // 일반/희귀 → 희귀색
+    Color(0xFFfb923c),  // 영웅/전설 → 전설색
+    Color(0xFFfbbf24),  // 신화
+    Color(0xFFef4444),  // 불멸
 )
 private val groupLabels = arrayOf("일반/희귀", "영웅/전설", "신화", "불멸")
 private val groupIcons = arrayOf("⚔️", "🛡️", "👑", "💀")
@@ -179,6 +187,7 @@ private fun GroupUpgradeRow(
     onClick: () -> Unit,
 ) {
     val color = groupColors[group]
+    val (gradStart, gradEnd) = groupGradientColors[group]
     val atkPercent = (UnitUpgradeSystem.getTotalAtkBonus(currentLevel) * 100).toInt()
     val spdPercent = (UnitUpgradeSystem.getTotalSpdBonus(currentLevel) * 100).toInt()
 
@@ -189,8 +198,8 @@ private fun GroupUpgradeRow(
             .background(
                 Brush.horizontalGradient(
                     listOf(
-                        color.copy(alpha = 0.15f),
-                        Color(0xFF1A1025).copy(alpha = 0.6f),
+                        gradStart.copy(alpha = 0.18f),
+                        gradEnd.copy(alpha = 0.18f),
                     )
                 )
             )
@@ -210,6 +219,9 @@ private fun GroupUpgradeRow(
                         color = color,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
+                        style = androidx.compose.ui.text.TextStyle(
+                            brush = Brush.horizontalGradient(listOf(gradStart, gradEnd)),
+                        ),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(

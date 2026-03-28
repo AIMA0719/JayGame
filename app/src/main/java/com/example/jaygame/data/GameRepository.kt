@@ -324,8 +324,12 @@ class GameRepository(context: Context) {
             val musicEnabled = (settings?.optInt("musicEnabled", 1) ?: 1) != 0
             val hapticEnabled = (settings?.optInt("hapticEnabled", 1) ?: 1) != 0
             val defaultBattleSpeed = (settings?.optDouble("defaultBattleSpeed", 2.0)?.toFloat() ?: 2f).let {
-                // 기존 1f 저장값 마이그레이션 → 새 기본 2f
-                if (it < 2f) it * 2f else it
+                // 기존 1f 저장값 마이그레이션 → 새 기본 2f, 8f(x4 제거) → 4f로 클램프
+                when {
+                    it < 2f -> it * 2f
+                    it > 4f -> 4f
+                    else -> it
+                }
             }
             val showDamageNumbers = (settings?.optInt("showDamageNumbers", 1) ?: 1) != 0
             val healthBarMode = settings?.optInt("healthBarMode", 0) ?: 0

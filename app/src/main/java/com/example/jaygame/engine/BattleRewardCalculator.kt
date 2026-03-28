@@ -113,9 +113,6 @@ object BattleRewardCalculator {
             }
         } else afterRelicData.pets
 
-        // 조합석 — 배틀 중 소모된 조합석 반영
-        val finalLuckyStones = engine?.luckyStones ?: current.luckyStones
-
         return afterRelicData.copy(
             gold = afterRelicData.gold + finalGold + starBonusGold,
             trophies = if (isDungeon) afterRelicData.trophies else (afterRelicData.trophies + battleResult.trophyChange).coerceAtLeast(0),
@@ -136,7 +133,7 @@ object BattleRewardCalculator {
             dungeonClears = dungeonClears,
             pets = finalPets,
             tutorialCompleted = true,
-            luckyStones = finalLuckyStones,
+            luckyStones = 0,
         )
     }
 }

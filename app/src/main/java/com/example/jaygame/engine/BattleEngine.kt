@@ -72,8 +72,8 @@ class BattleEngine(
     private val probabilityEngine = DefaultProbabilityEngine()
     var currentPity: Int = initialPity.coerceIn(0, 100); private set
 
-    // 조합석 — 신화 레시피 합성에 소모
-    var luckyStones: Int = gameData?.luckyStones ?: 0; internal set
+    // 조합석 — 배틀 중 구매/소모, 배틀 종료 시 리셋
+    var luckyStones: Int = 0; internal set
     private var lastPushedLuckyStones: Int = -1
 
     val economy = BattleEconomy(this)

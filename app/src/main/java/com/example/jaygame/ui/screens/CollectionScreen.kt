@@ -511,62 +511,75 @@ private fun CollectionBlueprintCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .heightIn(min = 140.dp)
-            .background(bgColor, CardShape)
-            .border(1.dp, if (owned) borderColor else dimBorderColor, CardShape)
+            .background(if (owned) bgColor else Color(0xFF111122), CardShape)
+            .border(1.dp, if (owned) borderColor else DimText.copy(alpha = 0.3f), CardShape)
             .clickable(onClick = onClick)
             .padding(8.dp),
     ) {
-        // Unit icon — no clip, no extra Box layers
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier
-                .size(44.dp)
-                .background(DarkSurface, IconShape)
-                .padding(4.dp),
-            alpha = if (owned) 1f else 0.15f,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Name
-        Text(
-            text = blueprint.name,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-            color = if (owned) LightText else DimNameColor,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        // Grade label
-        Text(
-            text = gradeLabel,
-            fontSize = 9.sp,
-            color = if (owned) borderColor else dimBorderColor,
-            textAlign = TextAlign.Center,
-        )
-
-        // Range + ATK (simplified — no Row, no dot Box)
-        Text(
-            text = if (owned) {
-                "${if (isMelee) "근" else "원"} ${blueprint.stats.baseATK.toInt()}"
-            } else {
-                if (isMelee) "근" else "원"
-            },
-            fontSize = 8.sp,
-            fontWeight = if (owned) FontWeight.Bold else FontWeight.Normal,
-            color = if (owned) GoldDim else DimSubText,
-            textAlign = TextAlign.Center,
-        )
-
-        // Stars for owned
         if (owned) {
+            // Unit icon
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(DarkSurface, IconShape)
+                    .padding(4.dp),
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Name
+            Text(
+                text = blueprint.name,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = LightText,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            // Grade label
+            Text(
+                text = gradeLabel,
+                fontSize = 9.sp,
+                color = borderColor,
+                textAlign = TextAlign.Center,
+            )
+
+            // Range + ATK
+            Text(
+                text = "${if (isMelee) "근" else "원"} ${blueprint.stats.baseATK.toInt()}",
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                color = GoldDim,
+                textAlign = TextAlign.Center,
+            )
+
+            // Stars
             Text(
                 text = buildStarString(level),
                 fontSize = 9.sp,
                 color = Gold,
+                textAlign = TextAlign.Center,
+            )
+        } else {
+            // 미보유: 자물쇠 + 등급만 표시
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "\uD83D\uDD12", fontSize = 24.sp, color = DimText)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "???",
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = DimText,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = gradeLabel,
+                fontSize = 9.sp,
+                color = dimBorderColor,
                 textAlign = TextAlign.Center,
             )
         }
