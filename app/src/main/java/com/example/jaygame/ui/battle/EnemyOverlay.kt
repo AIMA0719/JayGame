@@ -298,15 +298,20 @@ fun EnemyOverlay() {
                         for (ai in 0 until data.count.coerceAtMost(256)) {
                             val anim = animStates[ai]
                             val flash = if (ai < newFlash.size) newFlash[ai] else 0f
-                            // 상태 전이: hit > walk (die는 death detection에서 처리)
-                            if (flash > 0f && anim.state != SpriteSheetAnimator.STATE_DIE) {
-                                anim.transition(SpriteSheetAnimator.STATE_HIT)
-                            } else if (anim.state == SpriteSheetAnimator.STATE_HIT && flash <= 0f) {
-                                anim.transition(SpriteSheetAnimator.STATE_WALK)
+                            val buffBits = if (ai < data.buffs.size) data.buffs[ai] else 0
+                            val isStunned = buffBits and BUFF_BIT_STUN != 0
+                            // 상태 전이: hit > stun(idle) > walk
+                            when {
+                                flash > 0f && anim.state != SpriteSheetAnimator.STATE_DIE ->
+                                    anim.transition(SpriteSheetAnimator.STATE_HIT)
+                                anim.state == SpriteSheetAnimator.STATE_HIT && flash <= 0f ->
+                                    anim.transition(if (isStunned) SpriteSheetAnimator.STATE_IDLE else SpriteSheetAnimator.STATE_WALK)
+                                isStunned && anim.state == SpriteSheetAnimator.STATE_WALK ->
+                                    anim.transition(SpriteSheetAnimator.STATE_IDLE)
+                                !isStunned && anim.state == SpriteSheetAnimator.STATE_IDLE ->
+                                    anim.transition(SpriteSheetAnimator.STATE_WALK)
                             }
-                            val type = if (ai < data.types.size) data.types[ai] else 0
-                            val maxF = 8
-                            anim.advance(dt, maxF, speed)
+                            anim.advance(dt, 8, speed)
                         }
                     }
                 }
