@@ -457,6 +457,9 @@ object UniqueAbilitySystem {
     }
 
     private fun emitVfx(type: SkillVfxType, x: Float, y: Float, radius: Float, unit: GameUnit, duration: Float) {
+        // Hero(grade2)는 passiveAbilityId, Legend+(grade3+)는 blueprintId 우선
+        val id = if (unit.grade <= 2 && unit.passiveAbilityId.isNotEmpty())
+            unit.passiveAbilityId else unit.blueprintId
         BattleBridge.emitSkillEvent(
             SkillEvent(
                 type = type,
@@ -465,7 +468,7 @@ object UniqueAbilitySystem {
                 grade = unit.grade,
                 family = unit.familyOrdinal,
                 duration = duration,
-                abilityId = unit.blueprintId,
+                abilityId = id,
             )
         )
     }

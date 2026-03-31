@@ -99,6 +99,8 @@ class GameRepository(context: Context) {
             settings.put("defaultBattleSpeed", data.defaultBattleSpeed.toDouble())
             settings.put("showDamageNumbers", if (data.showDamageNumbers) 1 else 0)
             settings.put("healthBarMode", data.healthBarMode)
+            settings.put("effectQuality", data.effectQuality)
+            settings.put("autoWaveStart", if (data.autoWaveStart) 1 else 0)
             root.put("settings", settings)
 
             // dailyLogin
@@ -320,6 +322,8 @@ class GameRepository(context: Context) {
             }
             val showDamageNumbers = (settings?.optInt("showDamageNumbers", 1) ?: 1) != 0
             val healthBarMode = settings?.optInt("healthBarMode", 0) ?: 0
+            val effectQuality = settings?.optInt("effectQuality", 1) ?: 1
+            val autoWaveStart = (settings?.optInt("autoWaveStart", 0) ?: 0) != 0
             // dailyLogin
             val dailyLogin = root.optJSONObject("dailyLogin")
             val lastLoginDate = dailyLogin?.optString("lastLoginDate", "") ?: ""
@@ -475,6 +479,8 @@ class GameRepository(context: Context) {
                 defaultBattleSpeed = defaultBattleSpeed,
                 showDamageNumbers = showDamageNumbers,
                 healthBarMode = healthBarMode,
+                effectQuality = effectQuality,
+                autoWaveStart = autoWaveStart,
                 lastLoginDate = lastLoginDate,
                 loginStreak = loginStreak,
                 lastClaimedDay = lastClaimedDay,

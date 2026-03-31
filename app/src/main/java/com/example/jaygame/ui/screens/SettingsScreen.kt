@@ -514,6 +514,100 @@ private fun SettingsGameplay(
             }
         }
 
+        // ── 이펙트 품질 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("이펙트 품질", fontSize = 14.sp, color = LightText, fontWeight = FontWeight.Bold)
+                Text("파티클 효과 렌더링 수준 (저사양 기기에서 '저' 권장)", fontSize = 11.sp, color = SubText)
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(0 to "저", 1 to "중", 2 to "고").forEach { (quality, label) ->
+                        val isSelected = data.effectQuality == quality
+                        val color = when (quality) {
+                            2 -> Gold
+                            1 -> NeonCyan
+                            else -> NeonGreen
+                        }
+                        NeonButton(
+                            text = label,
+                            onClick = { onUpdate(data.copy(effectQuality = quality)) },
+                            modifier = Modifier.weight(1f),
+                            fontSize = 13.sp,
+                            accentColor = if (isSelected) color else SubText,
+                            accentColorDark = if (isSelected) color.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── 자동 웨이브 시작 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("자동 웨이브 시작", fontSize = 14.sp, color = LightText)
+                    Text("웨이브 간 대기 시간 스킵", fontSize = 11.sp, color = SubText)
+                }
+                NeonButton(
+                    text = if (data.autoWaveStart) "ON" else "OFF",
+                    onClick = { onUpdate(data.copy(autoWaveStart = !data.autoWaveStart)) },
+                    accentColor = if (data.autoWaveStart) NeonGreen else NeonRed,
+                    accentColorDark = if (data.autoWaveStart) NeonGreen.copy(alpha = 0.6f) else NeonRedDark,
+                    modifier = Modifier
+                        .width(72.dp)
+                        .height(34.dp),
+                    fontSize = 13.sp,
+                )
+            }
+        }
+
+        // ── 소환 확률 정보 ──
+        GameCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("소환 확률", fontSize = 14.sp, color = LightText, fontWeight = FontWeight.Bold)
+                Text("유닛 소환 시 등급별 출현 확률", fontSize = 11.sp, color = SubText)
+                Spacer(Modifier.height(4.dp))
+
+                val rates = listOf(
+                    "일반" to "60%" to Color(0xFF9E9E9E),
+                    "희귀" to "25%" to Color(0xFF42A5F5),
+                    "영웅" to "12%" to Color(0xFFAB47BC),
+                    "전설" to "3%" to Color(0xFFFFD700),
+                )
+                rates.forEach { (pair, color) ->
+                    val (grade, rate) = pair
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(grade, fontSize = 12.sp, color = color)
+                        Text(rate, fontSize = 12.sp, color = color, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+                Text("천장 시스템", fontSize = 13.sp, color = Gold, fontWeight = FontWeight.Bold)
+                Text("• 30회 이후: 영웅 확률 2배 (24%)", fontSize = 11.sp, color = SubText)
+                Text("• 영웅 이상 획득 시 천장 초기화", fontSize = 11.sp, color = SubText)
+                Text("• 100회 소환 시 전설 확정", fontSize = 11.sp, color = SubText)
+
+                Spacer(Modifier.height(6.dp))
+                Text("현재 천장: ${data.unitPullPity} / 100", fontSize = 12.sp, color = NeonCyan, fontWeight = FontWeight.Bold)
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -911,8 +1005,8 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 icon = "\uD83D\uDD2E",
                 title = "합성은 어떻게 하나요?",
             ) {
-                FaqBullet("같은 유닛을 드래그하여 한 슬롯에 중첩합니다 (최대 3개)")
-                FaqBullet("3개 중첩 시 자동 합성 → 상위 등급 유닛 1개")
+                FaqBullet("같은 유닛을 드래그하여 한 슬롯에 무제한 중첩합니다")
+                FaqBullet("조합 버튼을 눌러 수동 합성 → 같은 유닛 3개 소모 → 상위 등급 유닛 1개")
                 FaqBullet("전설이 일반 합성 최상위 (신화는 레시피 전용)")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("행운 합성")
@@ -950,24 +1044,22 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqKeyValue("Lv.15", "ATK +10% + 공속 +10%")
             }
 
-            // ── 시너지 ──
+            // ── 종족 드래프트 시너지 ──
             FaqSection(
                 index = 4,
                 expanded = expandedSection == 4,
                 onToggle = { expandedSection = if (expandedSection == 4) -1 else 4 },
                 icon = "\uD83D\uDD25",
-                title = "패밀리 시너지란?",
+                title = "종족 시너지란?",
             ) {
-                FaqBullet("같은 패밀리 유닛을 3개 이상 배치하면 시너지가 발동됩니다")
-                FaqBullet("4개 이상이면 강화 시너지 + 특수 효과가 추가됩니다")
+                FaqBullet("전투 시작 전 드래프트에서 선택한 종족의 시너지가 자동 적용됩니다")
                 Spacer(Modifier.height(4.dp))
-                FaqSubTitle("패밀리별 보너스")
-                FaqKeyValue("화염", "공격력 +8/15% · DoT 지속↑")
-                FaqKeyValue("냉기", "공속 +6/12% · 둔화 +30%")
-                FaqKeyValue("독", "공격력 +8/14% · 사망 시 독 전파")
-                FaqKeyValue("번개", "공속 +8/15% · 체인 +1")
-                FaqKeyValue("보조", "사거리 +6/12%")
-                FaqKeyValue("바람", "공격력 +6/10% · 사거리 +5/10%")
+                FaqSubTitle("종족별 시너지 보너스")
+                FaqKeyValue("인간", "공격력 +10%")
+                FaqKeyValue("정령", "공격속도 +10%")
+                FaqKeyValue("동물", "코인 획득 +20%")
+                FaqKeyValue("로봇", "행운 합성 확률 +5%")
+                FaqKeyValue("악마", "보스 데미지 +15%")
             }
 
             // ── 유닛 조작 ──
@@ -985,30 +1077,11 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqBullet("그리드 밖 또는 이동 불가 슬롯을 탭하면 선택이 해제됩니다")
             }
 
-            // ── 역할 시너지 ──
+            // ── 웨이브 & 보스 ──
             FaqSection(
                 index = 6,
                 expanded = expandedSection == 6,
                 onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
-                icon = "\uD83D\uDEE1\uFE0F",
-                title = "역할 시너지란?",
-            ) {
-                FaqBullet("같은 역할의 유닛을 2개 이상 배치하면 역할 시너지가 발동됩니다")
-                FaqBullet("패밀리 시너지와 별도로 중복 적용됩니다")
-                Spacer(Modifier.height(4.dp))
-                FaqSubTitle("역할별 보너스 (2/3/4+ 개수)")
-                FaqKeyValue("탱커", "블록 시간 +20% → +블록 수 +1 → 도발 효과")
-                FaqKeyValue("근딜", "돌진 데미지 +15% → +쿨타임 -20% → 즉시 재돌진")
-                FaqKeyValue("원딜", "사거리 +10% → +치명타 +5% → 관통 2회")
-                FaqKeyValue("서포터", "버프 범위 +15% → 버프 중첩 → 전체 미니힐")
-                FaqKeyValue("컨트롤러", "CC 확률 +10% → +CC 지속 +25% → CC 면역 관통")
-            }
-
-            // ── 웨이브 & 보스 ──
-            FaqSection(
-                index = 7,
-                expanded = expandedSection == 7,
-                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
                 icon = "\uD83D\uDC79",
                 title = "웨이브와 보스는 어떻게 되나요?",
             ) {
@@ -1028,9 +1101,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 데미지 공식 ──
             FaqSection(
-                index = 8,
-                expanded = expandedSection == 8,
-                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
+                index = 7,
+                expanded = expandedSection == 7,
+                onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
                 icon = "\uD83D\uDCA5",
                 title = "데미지는 어떻게 계산되나요?",
             ) {
@@ -1052,9 +1125,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 유물 ──
             FaqSection(
-                index = 9,
-                expanded = expandedSection == 9,
-                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
+                index = 8,
+                expanded = expandedSection == 8,
+                onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
                 icon = "\uD83D\uDC8E",
                 title = "유물은 어떻게 얻나요?",
             ) {
@@ -1078,9 +1151,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 도감 ──
             FaqSection(
-                index = 10,
-                expanded = expandedSection == 10,
-                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
+                index = 9,
+                expanded = expandedSection == 9,
+                onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
                 icon = "\uD83D\uDCD6",
                 title = "도감은 무엇인가요?",
             ) {
@@ -1100,9 +1173,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 펫 ──
             FaqSection(
-                index = 11,
-                expanded = expandedSection == 11,
-                onToggle = { expandedSection = if (expandedSection == 11) -1 else 11 },
+                index = 10,
+                expanded = expandedSection == 10,
+                onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
                 icon = "\uD83D\uDC3E",
                 title = "펫은 어떻게 얻나요?",
             ) {
@@ -1126,9 +1199,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 던전 ──
             FaqSection(
-                index = 12,
-                expanded = expandedSection == 12,
-                onToggle = { expandedSection = if (expandedSection == 12) -1 else 12 },
+                index = 11,
+                expanded = expandedSection == 11,
+                onToggle = { expandedSection = if (expandedSection == 11) -1 else 11 },
                 icon = "\uD83C\uDFF0",
                 title = "던전은 어떻게 들어가나요?",
             ) {
@@ -1145,9 +1218,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 스태미나 ──
             FaqSection(
-                index = 13,
-                expanded = expandedSection == 13,
-                onToggle = { expandedSection = if (expandedSection == 13) -1 else 13 },
+                index = 12,
+                expanded = expandedSection == 12,
+                onToggle = { expandedSection = if (expandedSection == 12) -1 else 12 },
                 icon = "\u26A1",
                 title = "스태미나는 어떻게 충전되나요?",
             ) {
@@ -1165,9 +1238,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 오프라인 보상 ──
             FaqSection(
-                index = 14,
-                expanded = expandedSection == 14,
-                onToggle = { expandedSection = if (expandedSection == 14) -1 else 14 },
+                index = 13,
+                expanded = expandedSection == 13,
+                onToggle = { expandedSection = if (expandedSection == 13) -1 else 13 },
                 icon = "\uD83C\uDF19",
                 title = "오프라인 보상이 있나요?",
             ) {
@@ -1179,9 +1252,9 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 시즌패스 & 랭크 ──
             FaqSection(
-                index = 15,
-                expanded = expandedSection == 15,
-                onToggle = { expandedSection = if (expandedSection == 15) -1 else 15 },
+                index = 14,
+                expanded = expandedSection == 14,
+                onToggle = { expandedSection = if (expandedSection == 14) -1 else 14 },
                 icon = "\uD83C\uDFC6",
                 title = "시즌패스와 랭크는?",
             ) {

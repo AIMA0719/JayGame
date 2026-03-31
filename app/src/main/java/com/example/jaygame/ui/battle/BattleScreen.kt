@@ -222,9 +222,6 @@ fun BattleScreen(
         // Skill VFX — sibling of the clipped field so effects can extend beyond the field boundary
         SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
 
-        // Skill particle effects — 파티클 레이어 (PNG 위에 동적 파티클)
-        SkillParticleOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
-
         // Boss red vignette overlay (화면 전체)
         if (bossVignetteAlpha > 0.01f) {
             Canvas(modifier = Modifier.fillMaxSize()) {

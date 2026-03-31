@@ -1,5 +1,7 @@
 package com.example.jaygame.ui.components
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,15 +10,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.util.Log
+import androidx.compose.ui.draw.drawWithContent
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.jaygame.data.UnitFamily
 import com.example.jaygame.data.UnitRace
 import com.example.jaygame.engine.BlueprintRegistry
@@ -152,3 +164,46 @@ fun UnitStatRow(label: String, value: String, valueColor: Color, modifier: Modif
 // ── Blueprint name helper ──
 fun blueprintDisplayName(blueprintId: String): String? =
     BlueprintRegistry.instance.findById(blueprintId)?.name
+
+/**
+ * painterResource 기반 아이콘 — Android 프레임워크 리소스 캐시 사용.
+ */
+@Composable
+fun CachedIcon(
+    @DrawableRes resId: Int,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 30.dp,
+) {
+    Image(
+        painter = painterResource(id = resId),
+        contentDescription = contentDescription,
+        modifier = modifier.size(iconSize),
+    )
+}
+
+/**
+ * Lottie 에셋 애니메이션 — 반복되는 3줄 패턴을 1줄로 축약.
+ */
+@Composable
+fun LottieAsset(
+    asset: String,
+    modifier: Modifier = Modifier,
+    iterations: Int = 1,
+) {
+    val result = rememberLottieComposition(LottieCompositionSpec.Asset(asset))
+    val composition = result.value
+    if (result.isFailure || composition == null) return
+    val progress by animateLottieCompositionAsState(composition, iterations = iterations)
+    LottieAnimation(
+        composition,
+        progress = { progress },
+        modifier = modifier.drawWithContent {
+            try {
+                drawContent()
+            } catch (e: Exception) {
+                Log.w("LottieAsset", "Draw failed for $asset: ${e.message}")
+            }
+        },
+    )
+}

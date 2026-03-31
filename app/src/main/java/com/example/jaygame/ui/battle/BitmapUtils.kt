@@ -25,11 +25,33 @@ fun decodeScaledBitmap(context: Context, @DrawableRes resId: Int, size: Int): Im
     }
 }
 
-/** assets/fx/ 폴더에서 PNG를 디코드하여 ImageBitmap 반환. */
+/** fx_anim/manifest.json 엔트리 */
+data class AnimSheetInfo(val frames: Int, val cellW: Int = 128, val cellH: Int = 128)
+
+/** fx_anim/manifest.json을 파싱하여 애니메이션 시트 정보 맵 반환 */
+fun loadAnimManifest(context: Context): Map<String, AnimSheetInfo> {
+    return try {
+        val json = context.assets.open("fx_anim/manifest.json").bufferedReader().readText()
+        val obj = org.json.JSONObject(json)
+        val result = mutableMapOf<String, AnimSheetInfo>()
+        for (key in obj.keys()) {
+            val entry = obj.getJSONObject(key)
+            result[key] = AnimSheetInfo(
+                frames = entry.optInt("frames", 1).coerceAtLeast(1),
+                cellW = entry.optInt("cellW", 128),
+                cellH = entry.optInt("cellH", 128),
+            )
+        }
+        result
+    } catch (_: Exception) { emptyMap() }
+}
+
+/** assets 폴더에서 PNG를 디코드하여 ImageBitmap 반환. inScaled=false로 밀도 스케일링 방지. */
 fun decodeAssetBitmap(context: Context, assetPath: String): ImageBitmap? {
     return try {
         context.assets.open(assetPath).use { stream ->
-            BitmapFactory.decodeStream(stream)?.asImageBitmap()
+            val opts = BitmapFactory.Options().apply { inScaled = false }
+            BitmapFactory.decodeStream(stream, null, opts)?.asImageBitmap()
         }
     } catch (_: Exception) { null }
 }

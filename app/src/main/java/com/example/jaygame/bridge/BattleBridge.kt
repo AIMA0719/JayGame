@@ -307,9 +307,17 @@ object BattleBridge {
     private val _healthBarMode = MutableStateFlow(0) // 0=항상, 1=피격 시만, 2=숨김
     val healthBarMode: StateFlow<Int> = _healthBarMode.asStateFlow()
 
-    fun applyGameplaySettings(showDamage: Boolean, hpBarMode: Int) {
+    private val _effectQuality = MutableStateFlow(1) // 0=저, 1=중, 2=고
+    val effectQuality: StateFlow<Int> = _effectQuality.asStateFlow()
+
+    private val _autoWaveStart = MutableStateFlow(false)
+    val autoWaveStart: StateFlow<Boolean> = _autoWaveStart.asStateFlow()
+
+    fun applyGameplaySettings(showDamage: Boolean, hpBarMode: Int, effectQual: Int = 1, autoWave: Boolean = false) {
         _showDamageNumbers.value = showDamage
         _healthBarMode.value = hpBarMode
+        _effectQuality.value = effectQual
+        _autoWaveStart.value = autoWave
     }
 
     private val _state = MutableStateFlow(BattleState())

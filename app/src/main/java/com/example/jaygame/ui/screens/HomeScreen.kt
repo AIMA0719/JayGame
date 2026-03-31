@@ -1,10 +1,8 @@
 package com.example.jaygame.ui.screens
 
-import android.graphics.BitmapFactory
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +41,7 @@ import com.example.jaygame.ui.components.NeonProgressBar
 import com.example.jaygame.ui.components.ProfileBanner
 import com.example.jaygame.ui.components.StageCardPager
 import com.example.jaygame.ui.theme.*
+import com.example.jaygame.ui.components.LottieAsset
 import com.example.jaygame.ui.viewmodel.HomeViewModel
 import com.example.jaygame.ui.viewmodel.HomeSideEffect
 import org.orbitmvi.orbit.compose.collectAsState
@@ -117,30 +115,21 @@ fun HomeScreen(
         )
     }
 
-    // Pre-load all stage background bitmaps
-    val stageBitmaps = remember {
-        STAGES.mapNotNull { s ->
-            try {
-                val bmp = context.assets.open(s.bgAsset).use { BitmapFactory.decodeStream(it) }
-                if (bmp != null) s.id to bmp.asImageBitmap() else null
-            } catch (_: Exception) { null }
-        }.toMap()
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0A0A1A)),
     ) {
-        // Background image with crossfade
+        // Background image with crossfade — Coil handles caching
         Crossfade(
             targetState = data.currentStageId,
             animationSpec = tween(durationMillis = 500),
             label = "bg",
         ) { stageId ->
-            stageBitmaps[stageId]?.let { bitmap ->
-                Image(
-                    bitmap = bitmap,
+            val stage = STAGES.getOrNull(stageId)
+            if (stage != null) {
+                coil.compose.AsyncImage(
+                    model = "file:///android_asset/${stage.bgAsset}",
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
@@ -362,6 +351,14 @@ private fun NewTitleDialog(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            LottieAsset(
+                asset = "lottie/title_unlock.json",
+                iterations = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+            )
+
             Text(
                 text = "칭호 획득!",
                 fontSize = 20.sp,

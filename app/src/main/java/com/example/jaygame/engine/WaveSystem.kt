@@ -23,7 +23,10 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
     private var currentConfig: WaveConfig = getWaveConfig(0)
 
     companion object {
-        const val BOSS_DURATION = 180f
+        const val BOSS_ENEMY_TYPE = 99
+        const val WAVE_DURATION = 180f      // 일반 웨이브 3분 제한
+        const val BOSS_DURATION = 180f      // 보스 웨이브 3분 제한
+        private val MID_GAME_TYPE_POOL = intArrayOf(0, 1, 2, 3, 4, 6, 7, 8, 9)
         const val FAST_KILL_THRESHOLD = 30f // 30초 이내 클리어 시 보너스
     }
 
@@ -54,15 +57,12 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         val isBoss = forceBoss || (w + 1) % 10 == 0
         val isMiniBoss = !forceBoss && (w + 1) % 5 == 0 && !isBoss
 
-        // 6 regular types (0-4, 6) + type 5 (miniboss)
+        // 11 regular types (0-10) + boss uses type 10
         val enemyType = when {
-            isBoss -> 4
+            isBoss -> 10
             isMiniBoss -> 5
-            w >= 30 -> {
-                val cycle = w % 6
-                if (cycle <= 4) cycle else 6
-            }
-            w >= 20 && w % 5 == 0 -> 6  // 드래곤: w=20,25 (표시 웨이브 21,26)
+            w >= 40 -> w % 11                       // 후반: 전체 타입 순환
+            w >= 20 -> MID_GAME_TYPE_POOL[w % MID_GAME_TYPE_POOL.size]
             w % 4 == 1 -> 1
             w % 4 == 2 -> 2
             w % 4 == 3 -> 3
@@ -125,7 +125,7 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         spawnedCount = 0
         spawnTimer = 0f
         waveElapsed = 0f
-        waveTimer = if (currentConfig.isBoss) BOSS_DURATION else Float.MAX_VALUE
+        waveTimer = if (currentConfig.isBoss) BOSS_DURATION else WAVE_DURATION
         waveComplete = false
     }
 
@@ -134,13 +134,11 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         if (waveComplete) return 0
 
         waveElapsed += dt
+        waveTimer -= dt
 
-        if (currentConfig.isBoss) {
-            waveTimer -= dt
-            if (waveTimer <= 0f) {
-                waveComplete = true
-                return 0
-            }
+        if (waveTimer <= 0f) {
+            waveComplete = true
+            return 0
         }
 
         // Spawn enemies until count reached

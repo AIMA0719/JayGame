@@ -9,7 +9,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import com.example.jaygame.ui.components.CachedIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +50,7 @@ import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
+import com.example.jaygame.ui.components.LottieAsset
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -195,6 +195,13 @@ fun SummonEffectOverlay() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
+        if (isHeroPlus) {
+            LottieAsset(
+                asset = "lottie/summon_burst.json",
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
         // Background dim
         val dimAlpha = when {
             grade >= 4 -> 0.6f
@@ -820,11 +827,11 @@ fun SummonEffectOverlay() {
                 val bounceScale = if (isLegendPlus) 0.15f else 0.1f
                 val bounceOffset = (iconBounce - 0.5f) * (if (isLegendPlus) 10f else 6f)
                 val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
-                Image(
-                    painter = painterResource(id = iconRes),
+                CachedIcon(
+                    resId = iconRes,
                     contentDescription = bp.name,
+                    iconSize = cardIconSize,
                     modifier = Modifier
-                        .size(cardIconSize)
                         .graphicsLayer {
                             translationY = bounceOffset
                             scaleX = 1f + (iconBounce - 0.5f) * bounceScale

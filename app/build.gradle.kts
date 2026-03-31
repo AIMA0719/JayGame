@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.coil.compose)
+    implementation(libs.lottie.compose)
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)
     implementation(libs.orbit.compose)

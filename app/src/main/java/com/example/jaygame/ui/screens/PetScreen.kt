@@ -1,6 +1,5 @@
 package com.example.jaygame.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.data.ALL_PETS
@@ -57,6 +55,7 @@ import com.example.jaygame.data.PetGrade
 import com.example.jaygame.data.PetProgress
 import com.example.jaygame.data.petCardsRequired
 import com.example.jaygame.data.petUpgradeCost
+import com.example.jaygame.ui.components.CachedIcon
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DimText
 import com.example.jaygame.ui.theme.DiamondBlue
@@ -323,10 +322,10 @@ private fun PetEquippedSlotsBar(
                     } else if (equippedDef != null) {
                         val progress = gameData.pets.getOrNull(equippedDef.id)
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(petIconRes(equippedDef.id)),
+                            CachedIcon(
+                                resId = petIconRes(equippedDef.id),
                                 contentDescription = equippedDef.name,
-                                modifier = Modifier.size(24.dp),
+                                iconSize = 24.dp,
                             )
                             Text(
                                 text = equippedDef.name,
@@ -401,10 +400,10 @@ private fun PetGridItem(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(4.dp),
             ) {
-                Image(
-                    painter = painterResource(petIconRes(def.id)),
+                CachedIcon(
+                    resId = petIconRes(def.id),
                     contentDescription = def.name,
-                    modifier = Modifier.size(28.dp),
+                    iconSize = 28.dp,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -473,10 +472,10 @@ private fun PetDetailPanel(
                     .border(2.dp, gc, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Image(
-                    painter = painterResource(petIconRes(def.id)),
+                CachedIcon(
+                    resId = petIconRes(def.id),
                     contentDescription = def.name,
-                    modifier = Modifier.size(32.dp),
+                    iconSize = 32.dp,
                 )
             }
 
@@ -501,10 +500,10 @@ private fun PetDetailPanel(
                         Text(text = def.grade.label, fontSize = 10.sp, color = gc, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Image(
-                        painter = painterResource(petIconRes(def.id)),
+                    CachedIcon(
+                        resId = petIconRes(def.id),
                         contentDescription = def.name,
-                        modifier = Modifier.size(16.dp),
+                        iconSize = 16.dp,
                     )
                 }
                 Spacer(modifier = Modifier.height(2.dp))
@@ -720,10 +719,10 @@ private fun PetPullTab(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(petIconRes(def.id)),
+                            CachedIcon(
+                                resId = petIconRes(def.id),
                                 contentDescription = def.name,
-                                modifier = Modifier.size(22.dp),
+                                iconSize = 22.dp,
                             )
                             Text(
                                 text = def.name,

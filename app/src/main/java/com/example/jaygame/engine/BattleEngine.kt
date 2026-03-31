@@ -33,6 +33,8 @@ class BattleEngine(
         const val DEFEAT_ENEMY_COUNT = 100
         const val COIN_PER_KILL = 2
         const val COIN_PER_ELITE_KILL = 6
+        const val COIN_PER_BOSS_BASE = 60f
+        const val COIN_PER_BOSS_PER_WAVE = 2f
         const val BASE_SUMMON_COST = 10
         const val SUMMON_COST_INCREMENT = 5
         const val MAX_SUMMON_COST = 60
@@ -48,6 +50,7 @@ class BattleEngine(
     var state = State.WaveDelay; private set
 
     val maxUnitSlots: Int = Grid.SLOT_COUNT  // 18 slots (3×6 grid)
+    private val diffCoinMult: Float = when (difficulty) { 1 -> 1.5f; 2 -> 2.5f; else -> 1f }
 
     var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
     val petSystem = PetBattleSystem().also { ps -> gameData?.let { ps.init(it) } }
@@ -295,6 +298,10 @@ class BattleEngine(
 
         // Wire relic bonuses into subsystems
         MergeSystem.luckyMergeBonus = (relicManager?.totalLuckyMergeBonus() ?: 0f) + synergyLuckyMerge
+        // 이펙트 품질 설정 반영
+        com.example.jaygame.ui.battle.ParticleLOD.userQuality = BattleBridge.effectQuality.value
+        // 자동 웨이브 시작이면 초기 딜레이도 스킵
+        if (BattleBridge.autoWaveStart.value) waveDelayTimer = 0f
         validateLayout()
         validatePathSpeedUniformity()
         job = scope.launch(Dispatchers.Default) {
@@ -399,26 +406,23 @@ class BattleEngine(
                     }
                 }
 
-                // 일반 웨이브: 전멸로만 클리어
+                // 일반 웨이브: 전멸 or 5분 타임아웃으로 클리어
                 if (!waveSystem.waveComplete && waveSystem.allSpawned && enemies.activeCount == 0) {
                     waveSystem.forceComplete()
                 }
 
-                // 보스 타임아웃 → 즉시 패배
-                if (isBossRound && waveSystem.waveComplete) {
-                    var bossAlive = false
-                    enemies.forEach { if (it.alive) bossAlive = true }
-                    if (bossAlive) {
-                        state = State.Defeat
-                        onBattleEnd(false)
-                        return
-                    }
+                // 보스 타임아웃 → 즉시 패배 (보스가 살아있으면)
+                if (isBossRound && waveSystem.waveComplete && enemies.activeCount > 0) {
+                    state = State.Defeat
+                    onBattleEnd(false)
+                    return
                 }
 
-                // 웨이브 클리어 → 보상 지급 및 다음 웨이브
+                // 웨이브 클리어 → 보상 지급 및 다음 웨이브 (타임아웃 시 잔존 적 유지)
                 if (waveSystem.waveComplete) {
                     SfxManager.play(SoundEvent.WaveClear, 0.8f)
-                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * synergyCoinMult
+        
+                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * diffCoinMult * synergyCoinMult
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
                     BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
@@ -428,7 +432,7 @@ class BattleEngine(
                         onBattleEnd(true)
                     } else {
                         waveSystem.advanceWave()
-                        waveDelayTimer = WAVE_DELAY
+                        waveDelayTimer = if (BattleBridge.autoWaveStart.value) 0f else WAVE_DELAY
                         state = State.WaveDelay
                     }
                 }
@@ -567,6 +571,7 @@ class BattleEngine(
             val deathX = dead.position.x / W
             val deathY = dead.position.y / H
 
+            val wasBoss = dead.isBoss
             val wasElite = dead.maxHp > waveSystem.getWaveConfig(waveSystem.currentWave).hp * 1.5f
 
             // Hell difficulty: enemy death enrages nearby enemies (+15% speed permanently)
@@ -605,8 +610,14 @@ class BattleEngine(
                 SfxManager.play(SoundEvent.EnemyDeath, 0.5f)
                 lastDeathSfxTime = now
             }
-            // 코인 획득: 적 처치 시 (ANIMAL 시너지: +20%)
-            sp += (if (wasElite) COIN_PER_ELITE_KILL.toFloat() else COIN_PER_KILL.toFloat()) * synergyCoinMult
+            // 코인 획득: 적 처치 시 (보스 60+wave×2, 엘리트 6, 일반 2) × 난이도 × 시너지
+
+            val killCoin = when {
+                wasBoss -> COIN_PER_BOSS_BASE + waveSystem.currentWave * COIN_PER_BOSS_PER_WAVE
+                wasElite -> COIN_PER_ELITE_KILL.toFloat()
+                else -> COIN_PER_KILL.toFloat()
+            }
+            sp += killCoin * diffCoinMult * synergyCoinMult
             val eliteGoldMult = if (wasElite) 3f else 1f
             val killGold = (eliteGoldMult * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
             BattleBridge.onGoldPickup(deathX, deathY, killGold)
@@ -1099,7 +1110,7 @@ class BattleEngine(
             if (ei < enemyXBuf.size) {
                 enemyXBuf[ei] = e.position.x / W
                 enemyYBuf[ei] = e.position.y / H
-                enemyTypeBuf[ei] = e.type
+                enemyTypeBuf[ei] = if (e.isBoss) WaveSystem.BOSS_ENEMY_TYPE else e.type
                 enemyHpBuf[ei] = e.hpRatio
                 // Build buff bitmask from enemy buff container
                 var bits = 0

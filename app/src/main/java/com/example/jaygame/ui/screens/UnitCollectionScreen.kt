@@ -67,6 +67,7 @@ import com.example.jaygame.engine.UnitCategory
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.engine.UnitRole
 import com.example.jaygame.ui.components.BEHAVIOR_LABELS
+import com.example.jaygame.ui.components.CachedIcon
 import com.example.jaygame.ui.components.FAMILY_ICONS
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.GameFilterChip
@@ -511,10 +512,9 @@ private fun CodexBlueprintCard(
                 .background(gradeGlowBg)
                 .border(1.5.dp, gradeGlowBorder, CircleShape),
         ) {
-            Image(
-                painter = painterResource(id = iconRes),
+            CachedIcon(
+                resId = iconRes,
                 contentDescription = blueprint.name,
-                modifier = Modifier.size(30.dp),
             )
         }
 
@@ -627,10 +627,10 @@ private fun BlueprintDetailDialog(
                         .background(gradeColor.copy(alpha = 0.15f))
                         .border(2.dp, gradeColor.copy(alpha = 0.6f), CircleShape),
                 ) {
-                    Image(
-                        painter = painterResource(id = iconRes),
+                    CachedIcon(
+                        resId = iconRes,
                         contentDescription = blueprint.name,
-                        modifier = Modifier.size(56.dp),
+                        iconSize = 56.dp,
                     )
                 }
 

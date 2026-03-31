@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
         BattleBridge.applyGameplaySettings(
             showDamage = data.showDamageNumbers,
             hpBarMode = data.healthBarMode,
+            effectQual = data.effectQuality,
+            autoWave = data.autoWaveStart,
         )
         val effectivePity = data.unitPullPity
         BattleBridge.updateUnitPullPity(effectivePity)

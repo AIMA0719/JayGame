@@ -5,7 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import com.example.jaygame.ui.components.CachedIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +41,7 @@ import com.example.jaygame.ui.components.blueprintDisplayName
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.Gold
 import com.example.jaygame.ui.theme.NeonCyan
+import com.example.jaygame.ui.components.LottieAsset
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -226,6 +226,13 @@ fun MergeEffectOverlay() {
                 scaleY = zoomPunch.value,
             )
     ) {
+
+        if (data.isLucky) {
+            LottieAsset(
+                asset = "lottie/victory_celebration.json",
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
 
         // ── Lucky: Full-screen golden flash (double-pulse) ──
         val flashA = goldenFlashAlpha.value
@@ -531,10 +538,10 @@ fun MergeEffectOverlay() {
                 // Unit icon
                 if (bp != null) {
                     val iconRes = com.example.jaygame.ui.screens.blueprintIconRes(bp)
-                    Image(
-                        painter = painterResource(id = iconRes),
+                    CachedIcon(
+                        resId = iconRes,
                         contentDescription = bp.name,
-                        modifier = Modifier.size(56.dp),
+                        iconSize = 56.dp,
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                 }

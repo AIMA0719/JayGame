@@ -59,6 +59,8 @@ data class GameData(
     val defaultBattleSpeed: Float = 2f,   // 2(x1), 4(x2), 8(x4)
     val showDamageNumbers: Boolean = true,
     val healthBarMode: Int = 0,           // 0=항상, 1=피격 시만, 2=숨김
+    val effectQuality: Int = 1,           // 0=저, 1=중, 2=고
+    val autoWaveStart: Boolean = false,   // true=웨이브 간 대기 스킵
     // 가스
     val gas: Int = 0,
     // 패밀리 영구 업그레이드

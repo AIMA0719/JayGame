@@ -3,7 +3,7 @@ package com.example.jaygame.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.Image
+import com.example.jaygame.ui.components.CachedIcon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,11 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.ui.viewmodel.CollectionViewModel
@@ -518,11 +518,11 @@ private fun CollectionBlueprintCard(
     ) {
         if (owned) {
             // Unit icon
-            Image(
-                painter = painterResource(id = iconRes),
+            CachedIcon(
+                resId = iconRes,
                 contentDescription = null,
+                iconSize = 44.dp,
                 modifier = Modifier
-                    .size(44.dp)
                     .background(DarkSurface, IconShape)
                     .padding(4.dp),
             )
@@ -679,10 +679,10 @@ private fun CollectionBlueprintDetailSheet(
                         .border(1.5.dp, blueprint.grade.color.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Image(
-                        painter = painterResource(id = iconRes),
+                    CachedIcon(
+                        resId = iconRes,
                         contentDescription = blueprint.name,
-                        modifier = Modifier.size(42.dp),
+                        iconSize = 42.dp,
                     )
                 }
 

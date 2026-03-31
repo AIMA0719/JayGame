@@ -265,11 +265,15 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
                             fontWeight = FontWeight.ExtraBold,
                         )
                     } else {
-                        // 일반 웨이브: 경과 시간 카운트업
-                        val elapsed = battle.waveElapsed.toInt().coerceAtLeast(0)
-                        val timerColor = if (elapsed < 30) NeonGreen else Color.White
+                        // 일반 웨이브: 5분 카운트다운
+                        val waveSec = battle.waveTimeRemaining.toInt().coerceAtLeast(0)
+                        val timerColor = when {
+                            waveSec < 30 -> NeonRed
+                            waveSec < 60 -> Color(0xFFFF8800)
+                            else -> Color.White
+                        }
                         Text(
-                            text = "%02d:%02d".format(elapsed / 60, elapsed % 60),
+                            text = "%d:%02d".format(waveSec / 60, waveSec % 60),
                             color = timerColor,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,

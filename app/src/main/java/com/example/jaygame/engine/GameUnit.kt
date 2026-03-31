@@ -37,6 +37,7 @@ class GameUnit {
 
     // ── New Strategy-pattern fields (Task 4) ──
     var blueprintId: String = ""
+    var passiveAbilityId: String = ""  // 패시브 VFX 매핑용 (ability.id 우선, uniqueAbility.passive.id 폴백)
     var families: List<UnitFamily> = emptyList()
     /** Legacy family ordinal derived from families list (for VFX / damage calc compatibility) */
     val familyOrdinal: Int get() = families.firstOrNull()?.ordinal ?: 0
@@ -75,6 +76,7 @@ class GameUnit {
     // ── New blueprint-based init (Task 4) ──
     fun initFromBlueprint(bp: UnitBlueprint) {
         blueprintId = bp.id
+        passiveAbilityId = bp.ability?.id ?: bp.uniqueAbility?.passive?.id ?: ""
         race = bp.race
         val legacyFamily = raceToFamily(bp.race)
         families = bp.families.ifEmpty {
@@ -169,6 +171,7 @@ class GameUnit {
         fieldController = null
         state = UnitState.IDLE
         blueprintId = ""
+        passiveAbilityId = ""
         families = emptyList()
         role = UnitRole.RANGED_DPS
         attackRange = AttackRange.RANGED

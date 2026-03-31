@@ -118,12 +118,14 @@ fun EnemyOverlay() {
 
     // Pre-load enemy bitmaps (PNG from drawable-xxhdpi, fallback to vector XML)
     val enemyBitmaps = remember {
-        mapOf(
-            0 to R.drawable.ic_enemy_0, 1 to R.drawable.ic_enemy_1,
-            2 to R.drawable.ic_enemy_2, 3 to R.drawable.ic_enemy_3,
-            4 to R.drawable.ic_enemy_4, 5 to R.drawable.ic_enemy_5,
-            6 to R.drawable.ic_enemy_6, 99 to R.drawable.ic_enemy_boss,
-        ).mapValues { (_, resId) -> decodeScaledBitmap(context, resId, 96) }
+        val baseRes = intArrayOf(
+            R.drawable.ic_enemy_0, R.drawable.ic_enemy_1, R.drawable.ic_enemy_2,
+            R.drawable.ic_enemy_3, R.drawable.ic_enemy_4, R.drawable.ic_enemy_5,
+            R.drawable.ic_enemy_6,
+        )
+        // 타입 0~10 + 보스(99) — drawable 없는 7~10은 기존 리소스 순환
+        (0..10).associate { i -> i to decodeScaledBitmap(context, baseRes[i % baseRes.size], 96) } +
+            (com.example.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE to decodeScaledBitmap(context, R.drawable.ic_enemy_boss, 96))
     }
 
     val bossBitmap = remember { decodeScaledBitmap(context, R.drawable.ic_enemy_boss, 128) }
@@ -131,14 +133,18 @@ fun EnemyOverlay() {
     // 스프라이트 시트 애니메이터 (assets/enemies/ 에 시트가 있으면 사용, 없으면 null → 정적 fallback)
     val enemyAnimators = remember {
         mapOf(
-            0 to decodeAssetSpriteSheet(context, "enemies/enemy_0_sheet.png", 96, 96, 4, 4),
-            1 to decodeAssetSpriteSheet(context, "enemies/enemy_1_sheet.png", 96, 96, 4, 4),
-            2 to decodeAssetSpriteSheet(context, "enemies/enemy_2_sheet.png", 96, 96, 4, 4),
-            3 to decodeAssetSpriteSheet(context, "enemies/enemy_3_sheet.png", 96, 96, 4, 4),
-            4 to decodeAssetSpriteSheet(context, "enemies/enemy_4_sheet.png", 96, 96, 4, 4),
-            5 to decodeAssetSpriteSheet(context, "enemies/enemy_5_sheet.png", 96, 96, 4, 4),
-            6 to decodeAssetSpriteSheet(context, "enemies/enemy_6_sheet.png", 96, 96, 4, 4),
-            99 to decodeAssetSpriteSheet(context, "enemies/enemy_boss_sheet.png", 128, 128, 6, 4),
+            0 to decodeAssetSpriteSheet(context, "enemies/enemy_0_sheet.png", 96, 96, 8, 4),
+            1 to decodeAssetSpriteSheet(context, "enemies/enemy_1_sheet.png", 96, 96, 8, 4),
+            2 to decodeAssetSpriteSheet(context, "enemies/enemy_2_sheet.png", 96, 96, 8, 4),
+            3 to decodeAssetSpriteSheet(context, "enemies/enemy_3_sheet.png", 96, 96, 8, 4),
+            4 to decodeAssetSpriteSheet(context, "enemies/enemy_4_sheet.png", 96, 96, 8, 4),
+            5 to decodeAssetSpriteSheet(context, "enemies/enemy_5_sheet.png", 96, 96, 8, 4),
+            6 to decodeAssetSpriteSheet(context, "enemies/enemy_6_sheet.png", 96, 96, 8, 4),
+            7 to decodeAssetSpriteSheet(context, "enemies/enemy_7_sheet.png", 96, 96, 8, 4),
+            8 to decodeAssetSpriteSheet(context, "enemies/enemy_8_sheet.png", 96, 96, 8, 4),
+            9 to decodeAssetSpriteSheet(context, "enemies/enemy_9_sheet.png", 96, 96, 8, 4),
+            10 to decodeAssetSpriteSheet(context, "enemies/enemy_10_sheet.png", 96, 96, 8, 4),
+            99 to decodeAssetSpriteSheet(context, "enemies/enemy_boss_sheet.png", 128, 128, 8, 4),
         )
     }
 
@@ -299,7 +305,7 @@ fun EnemyOverlay() {
                                 anim.transition(SpriteSheetAnimator.STATE_WALK)
                             }
                             val type = if (ai < data.types.size) data.types[ai] else 0
-                            val maxF = if (type == 99) 6 else 4
+                            val maxF = 8
                             anim.advance(dt, maxF, speed)
                         }
                     }
@@ -353,7 +359,7 @@ fun EnemyOverlay() {
             val screenY = if (useSmooth) syArr[i] * h else data.ys[i] * h
             val type = data.types[i]
             val hpRatio = if (i < sHp.size) sHp[i] else data.hpRatios[i]
-            val isBoss = type == 99
+            val isBoss = type == com.example.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE
 
             // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
             val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
@@ -632,7 +638,7 @@ fun EnemyOverlay() {
             val dx = de.x * w
             val dy = de.y * h
             val deType = de.type
-            val deIsBoss = deType == 99
+            val deIsBoss = deType == com.example.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE
 
             val pathWidth = w * (70f / 720f)
             val deSpriteSize = when {

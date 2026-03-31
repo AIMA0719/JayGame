@@ -1,6 +1,5 @@
 package com.example.jaygame.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.example.jaygame.R
 import com.example.jaygame.data.ALL_RELICS
@@ -47,6 +45,7 @@ import com.example.jaygame.data.GameData
 import com.example.jaygame.data.RelicGrade
 import com.example.jaygame.data.RelicProgress
 import com.example.jaygame.data.relicUpgradeCost
+import com.example.jaygame.ui.components.CachedIcon
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.theme.DeepDark
@@ -263,10 +262,10 @@ private fun EquippedSlotsBar(
                         Text(text = "\uD83D\uDD12", fontSize = 18.sp, color = LockColor)
                     } else if (equippedDef != null && equippedProgress != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(relicIconRes(equippedDef.id)),
+                            CachedIcon(
+                                resId = relicIconRes(equippedDef.id),
                                 contentDescription = equippedDef.name,
-                                modifier = Modifier.size(24.dp),
+                                iconSize = 24.dp,
                             )
                             Text(
                                 text = equippedDef.name,
@@ -343,10 +342,10 @@ private fun RelicGridItem(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(4.dp),
             ) {
-                Image(
-                    painter = painterResource(relicIconRes(def.id)),
+                CachedIcon(
+                    resId = relicIconRes(def.id),
                     contentDescription = def.name,
-                    modifier = Modifier.size(28.dp),
+                    iconSize = 28.dp,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -417,10 +416,10 @@ private fun RelicDetailPanel(
                     .border(2.dp, gc, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Image(
-                    painter = painterResource(relicIconRes(def.id)),
+                CachedIcon(
+                    resId = relicIconRes(def.id),
                     contentDescription = def.name,
-                    modifier = Modifier.size(32.dp),
+                    iconSize = 32.dp,
                 )
             }
 

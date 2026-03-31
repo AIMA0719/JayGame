@@ -1,6 +1,5 @@
 package com.example.jaygame.ui.battle
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,6 +39,7 @@ import com.example.jaygame.bridge.BattleBridge
 import com.example.jaygame.engine.BlueprintRegistry
 import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.engine.UnitGrade
+import com.example.jaygame.ui.components.CachedIcon
 import com.example.jaygame.ui.components.GameCard
 import com.example.jaygame.ui.components.NeonButton
 import com.example.jaygame.ui.screens.blueprintIconRes
@@ -108,10 +107,10 @@ fun BuyUnitSheet(
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Image(
-                        painter = painterResource(id = displayIcon),
+                    CachedIcon(
+                        resId = displayIcon,
                         contentDescription = bp.name,
-                        modifier = Modifier.size(56.dp),
+                        iconSize = 56.dp,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -275,10 +274,10 @@ private fun BuyBlueprintCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Image(
-                painter = painterResource(id = displayIcon),
+            CachedIcon(
+                resId = displayIcon,
                 contentDescription = bp.name,
-                modifier = Modifier.size(40.dp),
+                iconSize = 40.dp,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

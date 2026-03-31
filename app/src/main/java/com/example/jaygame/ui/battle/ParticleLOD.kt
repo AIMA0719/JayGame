@@ -43,11 +43,17 @@ object ParticleLOD {
         updateLOD(frameParticleCount, battleSpeed)
     }
 
+    /** 사용자 이펙트 품질 설정 (0=저, 1=중, 2=고). BattleBridge.effectQuality에서 반영. */
+    var userQuality: Int = 1
+
     /**
      * Update LOD level based on the total active particle count across all overlays.
      * Call this once per frame with the aggregate particle count.
      */
     fun updateLOD(particleCount: Int, battleSpeed: Float = 2f) {
+        // 사용자 설정이 '저'이면 항상 최소 파티클
+        if (userQuality == 0) { currentLevel = 2; return }
+
         // At higher battle speeds, reduce particle thresholds for better perf
         val speedFactor = when {
             battleSpeed >= 8f -> 0.25f
@@ -55,8 +61,10 @@ object ParticleLOD {
             battleSpeed >= 2f -> 0.75f
             else -> 1f
         }
-        val highThreshold = (500 * speedFactor).toInt()
-        val midThreshold = (200 * speedFactor).toInt()
+        // 사용자 설정이 '중'이면 임계값 절반
+        val qualityFactor = if (userQuality == 1) 0.6f else 1f
+        val highThreshold = (500 * speedFactor * qualityFactor).toInt()
+        val midThreshold = (200 * speedFactor * qualityFactor).toInt()
         currentLevel = when {
             particleCount > highThreshold -> 2
             particleCount > midThreshold -> 1

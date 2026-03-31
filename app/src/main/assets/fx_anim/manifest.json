@@ -1,0 +1,512 @@
+{
+  "anim_sp_epic_exp_orange": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_epic_exp_yellow": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_absorb": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_atkup": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_death": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_defup": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_haste": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_heal": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_poison": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_impact_violet": {
+    "frames": 6,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 6
+  },
+  "anim_sp_sparkle_blue": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_sparkle_green": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sp_light_burst": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_magic8": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_flamelash": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_firespin": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_brightfire": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_fire": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_nebula": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_vortex": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_phantom": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_sunburn": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_felspell": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_fpe_midnight": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_anima": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_charged": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_constellation": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_fire": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_eldenring": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_electric": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_fastfire": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_hyperspeed": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_magma": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_tentacles": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_vortex": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_wheel": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_hd_worm": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_lightning_skill1": {
+    "frames": 4,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 4
+  },
+  "anim_lightning_skill2": {
+    "frames": 4,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 4
+  },
+  "anim_lightning_skill3": {
+    "frames": 5,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 5
+  },
+  "anim_lightning_skill4": {
+    "frames": 5,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 5
+  },
+  "anim_lightning_skill5": {
+    "frames": 4,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 4
+  },
+  "anim_lightning_skill6": {
+    "frames": 8,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 8
+  },
+  "anim_frost_skill1": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_frost_skill2": {
+    "frames": 9,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 9
+  },
+  "anim_frost_skill3": {
+    "frames": 11,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 11
+  },
+  "anim_exp_circle": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_fire": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_blue_circle": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_blue_oval": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_gas": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_gas_circle": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_two_colors": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_exp_nuclear": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_lp_pipo-mapeffect013a-front": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_lp_pipo-mapeffect013a": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_lp_pipo-mapeffect013b-front": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_lp_pipo-mapeffect013b": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_lp_pipo-mapeffect013c-front": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_lp_pipo-mapeffect013c": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_spm_fx1_splatter_small_red": {
+    "frames": 6,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 6
+  },
+  "anim_spm_fx2_electric_burst_large_violet": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_spm_fx2_impact_shock_large_brown": {
+    "frames": 7,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 7
+  },
+  "anim_pipoya_pipo-mapeffect021_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-mapeffect022_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-mapeffect023_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-mapeffect024_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-mapeffect025_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-nazoobj01a_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-nazoobj02a_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_pipoya_pipo-nazoobj03a_480": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sfx2a_1": {
+    "frames": 4,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 4
+  },
+  "anim_sfx3a_1": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sfx3a_2": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sfx3b_1": {
+    "frames": 8,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 8
+  },
+  "anim_sfx3b_3": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sfx3b_4": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  },
+  "anim_sfx3d_1": {
+    "frames": 4,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 4
+  },
+  "anim_sfx3d_2": {
+    "frames": 10,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 10
+  },
+  "anim_sfx3e_1": {
+    "frames": 4,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 4
+  },
+  "anim_sfx3e_2": {
+    "frames": 8,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 8
+  },
+  "anim_sfx5a_v1_1": {
+    "frames": 6,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 6
+  },
+  "anim_sfx5a_v2_1": {
+    "frames": 6,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 6
+  },
+  "anim_sfx5a_v3_1": {
+    "frames": 6,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 6
+  },
+  "anim_hd_explosion": {
+    "frames": 12,
+    "cellW": 128,
+    "cellH": 128,
+    "cols": 12
+  }
+}

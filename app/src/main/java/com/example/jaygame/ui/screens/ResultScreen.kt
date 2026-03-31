@@ -13,7 +13,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -58,10 +56,9 @@ import com.example.jaygame.ui.theme.NeonCyan
 import com.example.jaygame.ui.theme.NeonGreen
 import com.example.jaygame.ui.theme.NeonRed
 import com.example.jaygame.ui.theme.SubText
+import com.example.jaygame.ui.components.LottieAsset
 import com.example.jaygame.ui.theme.TrophyAmber
 import kotlinx.coroutines.delay
-import kotlin.math.sin
-import kotlin.random.Random
 
 // Pre-allocated Color constants
 private val StarGold = Color(0xFFFFD700)
@@ -81,11 +78,6 @@ private val RewardCardBg = Color(0xFF2A1F15)
 private val RewardCardBorder = Color(0xFF5A4430)
 private val ButtonNeutralColor = Color(0xFF5A5A5A)
 private val ButtonNeutralDark = Color(0xFF3A3A3A)
-private val ConfettiColors = listOf(
-    Color(0xFFFF4444), Color(0xFFFFDD00), Color(0xFF44FF44),
-    Color(0xFF44DDFF), Color(0xFFDD44FF), Color(0xFFFF8800),
-)
-
 @Composable
 fun ResultScreen(
     victory: Boolean,
@@ -392,9 +384,20 @@ fun ResultScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // H4: Confetti overlay for new record
+        // Lottie confetti + celebration overlay for victory
+        if (victory) {
+            LottieAsset(
+                asset = "lottie/victory_celebration.json",
+                iterations = 3,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         if (showNewRecord && victory) {
-            ConfettiOverlay()
+            LottieAsset(
+                asset = "lottie/confetti.json",
+                iterations = Int.MAX_VALUE,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -449,62 +452,6 @@ private fun NewRecordBanner() {
 }
 
 /**
- * H4: Confetti particles around the screen
- */
-@Composable
-private fun ConfettiOverlay() {
-    data class Particle(
-        val x: Float,
-        val y: Float,
-        val speedX: Float,
-        val speedY: Float,
-        val color: Color,
-        val size: Float,
-    )
-
-    val particles = remember {
-        List(40) {
-            Particle(
-                x = Random.nextFloat(),
-                y = Random.nextFloat() * -1f, // start above screen
-                speedX = (Random.nextFloat() - 0.5f) * 0.3f,
-                speedY = Random.nextFloat() * 0.5f + 0.3f,
-                color = ConfettiColors[Random.nextInt(ConfettiColors.size)],
-                size = Random.nextFloat() * 6f + 3f,
-            )
-        }
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "confetti")
-    val time by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 10000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "confettiTime",
-    )
-
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        for (p in particles) {
-            val rawY = (p.y + p.speedY * time) % 1.5f
-            val y = rawY * h
-            val x = (p.x + p.speedX * time * 0.5f + sin(time * 3f + p.x * 10f) * 0.03f)
-            val xPos = ((x % 1f) + 1f) % 1f * w
-            val wobble = sin(time * 5f + p.x * 20f) * p.size * 0.5f
-            drawCircle(
-                color = p.color.copy(alpha = 0.8f),
-                radius = p.size + wobble,
-                center = Offset(xPos, y),
-            )
-        }
-    }
-}
-
-/**
  * H2: Reward card wrapper with background box
  */
 @Composable
@@ -513,23 +460,31 @@ private fun RewardCard(
     label: String,
     color: Color,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = RewardCardBg,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+    Box {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = RewardCardBg,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(text = icon, fontSize = 18.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = color,
             )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(text = icon, fontSize = 18.sp)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = label,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            color = color,
+        }
+        LottieAsset(
+            asset = "lottie/reward_shine.json",
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer(alpha = 0.5f),
         )
     }
 }
