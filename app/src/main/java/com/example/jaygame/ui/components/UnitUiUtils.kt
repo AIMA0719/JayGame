@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.util.Log
@@ -56,14 +59,31 @@ val RACE_ICON_RES: Map<UnitRace, Int> = mapOf(
     UnitRace.DEMON to R.drawable.ic_race_demon,
 )
 
-@Deprecated("Use RACE_ICON_RES instead")
-val RACE_ICONS: Map<UnitRace, String> = mapOf(
-    UnitRace.HUMAN to "",
-    UnitRace.ANIMAL to "",
-    UnitRace.DEMON to "",
-    UnitRace.SPIRIT to "",
-    UnitRace.ROBOT to "",
-)
+/** 종족 아이콘(PNG) + 라벨 텍스트 Row */
+@Composable
+fun RaceIconLabel(
+    race: UnitRace,
+    iconSize: Dp = 14.dp,
+    fontSize: TextUnit = 10.sp,
+    color: Color = race.color,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        RACE_ICON_RES[race]?.let { resId ->
+            Image(
+                painter = androidx.compose.ui.res.painterResource(id = resId),
+                contentDescription = null,
+                modifier = Modifier.size(iconSize),
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+        }
+        Text(
+            text = race.label,
+            color = color,
+            fontSize = fontSize,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
 
 // ── Role icon labels (deprecated — kept for compatibility) ──
 @Deprecated("Use RACE_LABELS instead")
@@ -85,7 +105,7 @@ val BEHAVIOR_LABELS: Map<String, String> = mapOf(
 )
 
 // ── Family emoji icons (deprecated — kept for compatibility) ──
-@Deprecated("Use RACE_ICONS instead")
+@Deprecated("Use RACE_ICON_RES instead")
 val FAMILY_ICONS: Map<UnitFamily, String> = mapOf(
     UnitFamily.FIRE to "\uD83D\uDD25",
     UnitFamily.FROST to "\u2744\uFE0F",

@@ -73,6 +73,7 @@ import com.example.jaygame.engine.UnitBlueprint
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.ui.components.GameFilterChip
 import com.example.jaygame.ui.components.RACE_ICON_RES
+import com.example.jaygame.ui.components.RaceIconLabel
 import com.example.jaygame.ui.components.RACE_LABELS
 import com.example.jaygame.ui.components.GradeBgCommon
 import com.example.jaygame.ui.components.GradeBgAncient
@@ -417,22 +418,11 @@ private fun HeroCollectionTab(
                                     else selectedRaces + race
                                 },
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (raceRes != null) {
-                                        Image(
-                                            painter = painterResource(id = raceRes),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                    }
-                                    Text(
-                                        text = race.label,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (selected) Color.White else SubText,
-                                    )
-                                }
+                                RaceIconLabel(
+                                    race = race,
+                                    fontSize = 11.sp,
+                                    color = if (selected) Color.White else SubText,
+                                )
                             }
                         }
                     }
@@ -737,33 +727,13 @@ private fun CollectionBlueprintDetailSheet(
                         overflow = TextOverflow.Ellipsis,
                     )
                     // Race badge inline
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 3.dp),
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 3.dp)
+                            .background(blueprint.race.color.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp),
                     ) {
-                        val raceRes = RACE_ICON_RES[blueprint.race]
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .background(blueprint.race.color.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 2.dp),
-                        ) {
-                            if (raceRes != null) {
-                                Image(
-                                    painter = painterResource(id = raceRes),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                            }
-                            Text(
-                                text = blueprint.race.label,
-                                color = blueprint.race.color,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
+                        RaceIconLabel(race = blueprint.race)
                     }
                 }
             }

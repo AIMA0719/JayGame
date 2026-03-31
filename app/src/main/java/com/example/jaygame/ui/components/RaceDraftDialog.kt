@@ -34,13 +34,7 @@ private val UnselectedBorder = Color(0xFF444466)
 private val ConfirmEnabled = Color(0xFF4CAF50)
 private val ConfirmDisabled = Color(0xFF555555)
 
-private fun raceIconRes(race: UnitRace): Int = when (race) {
-    UnitRace.HUMAN -> R.drawable.ic_race_human
-    UnitRace.SPIRIT -> R.drawable.ic_race_spirit
-    UnitRace.ANIMAL -> R.drawable.ic_race_animal
-    UnitRace.ROBOT -> R.drawable.ic_race_robot
-    UnitRace.DEMON -> R.drawable.ic_race_demon
-}
+private fun raceIconRes(race: UnitRace): Int = RACE_ICON_RES.getValue(race)
 
 @Composable
 fun RaceDraftDialog(
