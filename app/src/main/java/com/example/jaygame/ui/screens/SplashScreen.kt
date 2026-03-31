@@ -34,7 +34,6 @@ import com.example.jaygame.ui.theme.DarkGold
 import com.example.jaygame.ui.theme.DarkNavy
 import com.example.jaygame.ui.theme.DeepDark
 import com.example.jaygame.ui.theme.Gold
-import com.example.jaygame.ui.components.LottieAsset
 import kotlinx.coroutines.launch
 
 private val LightGold = Color(0xFFE8C97A)
@@ -118,14 +117,5 @@ fun SplashScreen() {
             }
         }
 
-        LottieAsset(
-            asset = "lottie/loading_spinner.json",
-            iterations = Int.MAX_VALUE,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp)
-                .height(60.dp)
-                .alpha(fadeAnim.value),
-        )
     }
 }
