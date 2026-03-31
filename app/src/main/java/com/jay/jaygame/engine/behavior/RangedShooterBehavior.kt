@@ -65,13 +65,7 @@ class RangedShooterBehavior(
     }
 
     override fun onTakeDamage(unit: GameUnit, damage: Float, isMagic: Boolean) {
-        val resist = if (isMagic) unit.magicResist else unit.defense
-        val reduction = resist / (resist + 100f)
-        unit.hp -= damage * (1f - reduction)
-        if (unit.hp <= 0f) {
-            unit.alive = false
-            unit.state = UnitState.DEAD
-        }
+        unit.applyDamage(damage, isMagic)
     }
 
     override fun reset() {

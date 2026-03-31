@@ -88,7 +88,7 @@ class TankBlockerBehavior : UnitBehavior {
             UnitState.RESPAWNING -> {
                 respawnTimer -= dt
                 if (respawnTimer <= 0f) {
-                    unit.hp = unit.maxHp
+                    unit.healToFull()
                     unit.alive = true
                     // Return to home position
                     unit.position.x = unit.homePosition.x

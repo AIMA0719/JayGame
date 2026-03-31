@@ -3,8 +3,6 @@ package com.jay.jaygame.engine
 import com.jay.jaygame.data.UnitFamily
 import com.jay.jaygame.data.UnitRace
 import com.jay.jaygame.engine.math.Vec2
-import kotlin.math.cos
-import kotlin.math.sin
 
 class GameUnit {
     var alive = false
@@ -56,7 +54,9 @@ class GameUnit {
     var state: UnitState = UnitState.IDLE
 
     // ── 마나/궁극기 필드 ──
-    var mana: Float = 0f                // 현재 마나 (0~maxMana)
+    /** 현재 마나 — 항상 0..maxMana 범위로 클램프 */
+    var mana: Float = 0f
+        set(value) { field = value.coerceIn(0f, maxMana) }
     var maxMana: Float = 100f           // 최대 마나
     var manaPerHit: Float = 0f          // 공격 시 마나 획득량
     var hasUltimate: Boolean = false    // 궁극기 보유 여부
@@ -152,8 +152,35 @@ class GameUnit {
     /** 공격 성공 시 마나 축적 (전설/신화 궁극기용) */
     fun chargeMana() {
         if (hasUltimate && manaPerHit > 0f) {
-            mana = (mana + manaPerHit).coerceAtMost(maxMana)
+            mana += manaPerHit  // setter가 0..maxMana 클램프 처리
         }
+    }
+
+    /** 마나 리셋 (궁극기 발동 후) */
+    fun resetMana() {
+        mana = 0f
+    }
+
+    /**
+     * 방어력 적용 후 데미지를 받고, HP가 0 이하가 되면 사망 처리.
+     * @return true if the unit died from this damage
+     */
+    fun applyDamage(rawDamage: Float, isMagic: Boolean): Boolean {
+        val resist = if (isMagic) magicResist else defense
+        val reduction = resist / (resist + 100f)
+        hp -= rawDamage * (1f - reduction)
+        if (hp <= 0f) {
+            hp = 0f
+            alive = false
+            state = UnitState.DEAD
+            return true
+        }
+        return false
+    }
+
+    /** HP를 최대치로 회복 */
+    fun healToFull() {
+        hp = maxHp
     }
 
     fun effectiveATK(): Float {

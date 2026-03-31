@@ -23,6 +23,7 @@ class BattleEngine(
     gameData: GameData? = null,
     initialPity: Int = 0,
 ) {
+    // region Constants & Companion
     companion object {
         const val W = 720f
         const val H = 1280f
@@ -64,6 +65,9 @@ class BattleEngine(
         const val SHIELDED_COOLDOWN_DURATION = 5f
     }
 
+    // endregion
+
+    // region Core State
     enum class State { WaveDelay, Playing, Victory, Defeat }
     var state = State.WaveDelay; private set
 
@@ -297,6 +301,9 @@ class BattleEngine(
 
     private var job: Job? = null
 
+    // endregion
+
+    // region Game Loop
     fun start(scope: CoroutineScope) {
         // Reinitialize wave system for dungeon mode
         if (isDungeonMode && dungeonDef != null) {
@@ -459,6 +466,9 @@ class BattleEngine(
         gridPushTimer += dt
     }
 
+    // endregion
+
+    // region Per-Frame Updates (spawning, enemies, units, projectiles, zones, pets)
     private fun updateSpawning(dt: Float) {
         val toSpawn = waveSystem.update(dt)
         val config = waveSystem.getWaveConfig(waveSystem.currentWave)
@@ -957,7 +967,9 @@ class BattleEngine(
         return nearest
     }
 
-    // ── Player Actions ──
+    // endregion
+
+    // region Player Actions
 
     fun requestSummonBlueprint(gradeOverride: UnitGrade? = null) {
         if (sp < summonCost) return
@@ -1108,7 +1120,9 @@ class BattleEngine(
         }
     }
 
-    // ── Push State to Compose ──
+    // endregion
+
+    // region State Sync (Engine → Compose)
 
     private fun pushStateToCompose() {
         syncBattleState()
@@ -1268,6 +1282,9 @@ class BattleEngine(
         }
     }
 
+    // endregion
+
+    // region Battle End & Validation
     private fun onBattleEnd(victory: Boolean) {
         SfxManager.play(if (victory) SoundEvent.Victory else SoundEvent.Defeat)
         val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
@@ -1350,4 +1367,5 @@ class BattleEngine(
                     "This is expected for paths with corner interpolation points.")
         }
     }
+    // endregion
 }

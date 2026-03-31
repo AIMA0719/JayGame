@@ -31,7 +31,7 @@ object UniqueAbilitySystem {
         // Always reset ability fields first (GameUnit pool recycling safety)
         unit.uniqueAbilityType = -1
         unit.passiveCounter = 0
-        unit.mana = 0f
+        unit.resetMana()
         unit.manaPerHit = 0f
         unit.hasUltimate = false
 
@@ -64,7 +64,7 @@ object UniqueAbilitySystem {
                 unit.hasUltimate = true
                 unit.manaPerHit = if (unit.grade >= 4) 6f else 9f  // 신화: 느리게 충전, 강한 궁극기
                 unit.maxMana = 100f
-                unit.mana = 0f
+                unit.resetMana()
             }
             else -> {
                 // 고대: 패시브 (기존 방식 유지)
@@ -107,7 +107,7 @@ object UniqueAbilitySystem {
                         activateBlueprintUltimate(unit, enemies, spatialHash, allUnits)
                     } else {
                         activateAbility(unit, enemies)
-                        unit.mana = 0f  // 마나 리셋
+                        unit.resetMana()  // 마나 리셋
                     }
                 }
             }
@@ -631,6 +631,6 @@ object UniqueAbilitySystem {
             emitVfx(SkillVfxType.VOLCANIC_ERUPTION, htx, hty, 0.1f, unit, 2f)
         }
 
-        unit.mana = 0f
+        unit.resetMana()
     }
 }
