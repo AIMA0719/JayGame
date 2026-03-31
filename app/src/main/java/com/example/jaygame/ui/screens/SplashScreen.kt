@@ -117,5 +117,14 @@ fun SplashScreen() {
             }
         }
 
+        com.example.jaygame.ui.components.LottieAsset(
+            asset = "lottie/loading_spinner.json",
+            iterations = Int.MAX_VALUE,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+                .height(60.dp)
+                .alpha(fadeAnim.value),
+        )
     }
 }
