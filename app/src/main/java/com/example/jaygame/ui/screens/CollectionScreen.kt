@@ -72,7 +72,6 @@ import com.example.jaygame.engine.UnitBlueprint
 
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.ui.components.GameFilterChip
-import com.example.jaygame.ui.components.RACE_ICON_RES
 import com.example.jaygame.ui.components.RaceIconLabel
 import com.example.jaygame.ui.components.RACE_LABELS
 import com.example.jaygame.ui.components.GradeBgCommon
@@ -410,7 +409,6 @@ private fun HeroCollectionTab(
                         Spacer(modifier = Modifier.width(2.dp))
                         UnitRace.entries.forEach { race ->
                             val selected = race in selectedRaces
-                            val raceRes = RACE_ICON_RES[race]
                             GameFilterChip(
                                 selected = selected,
                                 onClick = {

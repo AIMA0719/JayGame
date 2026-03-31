@@ -70,7 +70,7 @@ fun RaceIconLabel(
     Row(verticalAlignment = Alignment.CenterVertically) {
         RACE_ICON_RES[race]?.let { resId ->
             Image(
-                painter = androidx.compose.ui.res.painterResource(id = resId),
+                painter = painterResource(id = resId),
                 contentDescription = null,
                 modifier = Modifier.size(iconSize),
             )
