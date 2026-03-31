@@ -654,7 +654,6 @@ fun EnemyOverlay() {
             val tintIdx = (progress * 10f).toInt().coerceIn(0, 10)
             val deTint = DieRedTints[tintIdx]
 
-            val deBitmap = if (deIsBoss) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
             val dePivot = Offset(dx, fallY)
             val deOff = IntOffset(
                 (dx - deSpriteSize / 2).toInt(),
@@ -662,16 +661,34 @@ fun EnemyOverlay() {
             )
             val deSz = IntSize(deSpriteSize.toInt(), deSpriteSize.toInt())
 
+            // 스프라이트 시트 die 애니메이션 우선, 없으면 정적 PNG fallback
+            val deAnimator = enemyAnimators[deType]
             rotate(degrees = deRotation, pivot = dePivot) {
                 scale(scaleX = deScale, scaleY = deScale, pivot = dePivot) {
-                    deBitmap?.let {
+                    if (deAnimator != null) {
+                        val dieFrames = deAnimator.frameCount()
+                        val frameIdx = (progress * dieFrames).toInt().coerceIn(0, dieFrames - 1)
+                        val srcOff = deAnimator.srcOffset(SpriteSheetAnimator.STATE_DIE, frameIdx)
                         drawImage(
-                            image = it,
+                            image = deAnimator.sheet,
+                            srcOffset = srcOff,
+                            srcSize = deAnimator.srcSize(),
                             dstOffset = deOff,
                             dstSize = deSz,
                             alpha = deAlpha,
                             colorFilter = deTint,
                         )
+                    } else {
+                        val deBitmap = if (deIsBoss) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
+                        deBitmap?.let {
+                            drawImage(
+                                image = it,
+                                dstOffset = deOff,
+                                dstSize = deSz,
+                                alpha = deAlpha,
+                                colorFilter = deTint,
+                            )
+                        }
                     }
                 }
             }
