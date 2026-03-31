@@ -740,7 +740,7 @@ private fun CollectionBlueprintDetailSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // ── Stats: ATK + Speed (compact) ──
+            // ── Stats: ATK + Speed ──
             val statSectionBg = Color.White.copy(alpha = 0.04f)
             Column(
                 modifier = Modifier
@@ -748,13 +748,11 @@ private fun CollectionBlueprintDetailSheet(
                     .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(statSectionBg)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    UnitStatRow("공격력", fmt.format(calculatedATK), Gold, Modifier.weight(1f))
-                    UnitStatRow("공속", baseSpeedStr, LightText, Modifier.weight(1f))
-                }
+                UnitStatRow("공격력", fmt.format(calculatedATK), Gold)
+                UnitStatRow("공속", baseSpeedStr, LightText)
             }
 
             // ── Description (compact) ──
@@ -849,18 +847,17 @@ private fun CollectionBlueprintDetailSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (owned) {
-                    // Level info
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Lv.$level ${buildStarString(level)}",
-                            fontSize = 13.sp,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = Gold,
                         )
                         if (upgradeCost != null) {
                             Text(
                                 text = "카드 ${progress?.cards ?: 0}/${upgradeCost.first}",
-                                fontSize = 11.sp,
+                                fontSize = 13.sp,
                                 color = if ((progress?.cards ?: 0) >= upgradeCost.first) PositiveGreen else SubText,
                             )
                         }
@@ -871,8 +868,8 @@ private fun CollectionBlueprintDetailSheet(
                             text = "MAX",
                             onClick = {},
                             enabled = false,
-                            modifier = Modifier.width(64.dp),
-                            fontSize = 12.sp,
+                            modifier = Modifier.width(100.dp).height(40.dp),
+                            fontSize = 13.sp,
                             accentColor = DimText,
                             accentColorDark = DimText,
                         )
@@ -881,7 +878,7 @@ private fun CollectionBlueprintDetailSheet(
                         NeonButton(
                             onClick = onUpgrade,
                             enabled = canUpgrade,
-                            modifier = Modifier.width(100.dp),
+                            modifier = Modifier.width(100.dp).height(40.dp),
                             accentColor = NeonGreen,
                             accentColorDark = NeonGreen.copy(alpha = 0.5f),
                         ) {
@@ -890,13 +887,13 @@ private fun CollectionBlueprintDetailSheet(
                                     painter = painterResource(id = R.drawable.ic_gold),
                                     contentDescription = null,
                                     tint = Color.Unspecified,
-                                    modifier = Modifier.size(13.dp),
+                                    modifier = Modifier.size(14.dp),
                                 )
-                                Spacer(modifier = Modifier.width(3.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = fmt.format(goldCost),
+                                    text = "(${fmt.format(goldCost)}) 강화",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
+                                    fontSize = 13.sp,
                                     color = LightText,
                                 )
                             }
@@ -908,7 +905,8 @@ private fun CollectionBlueprintDetailSheet(
                         text = "미보유",
                         onClick = {},
                         enabled = false,
-                        modifier = Modifier.width(100.dp),
+                        modifier = Modifier.width(100.dp).height(40.dp),
+                        fontSize = 13.sp,
                         accentColor = DimText,
                         accentColorDark = DimText,
                     )
@@ -917,7 +915,8 @@ private fun CollectionBlueprintDetailSheet(
                 NeonButton(
                     text = "닫기",
                     onClick = onDismiss,
-                    modifier = Modifier.width(72.dp),
+                    modifier = Modifier.width(100.dp).height(40.dp),
+                    fontSize = 13.sp,
                     accentColor = SubText,
                     accentColorDark = DimText,
                 )
