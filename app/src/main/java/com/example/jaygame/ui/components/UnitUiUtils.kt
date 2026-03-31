@@ -1,6 +1,7 @@
 package com.example.jaygame.ui.components
 
 import androidx.annotation.DrawableRes
+import com.example.jaygame.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,13 +47,22 @@ val RACE_LABELS: Map<UnitRace, String> = mapOf(
     UnitRace.ROBOT to "로봇",
 )
 
-// ── Race icons ──
+// ── Race icons (drawable resource) ──
+val RACE_ICON_RES: Map<UnitRace, Int> = mapOf(
+    UnitRace.HUMAN to R.drawable.ic_race_human,
+    UnitRace.SPIRIT to R.drawable.ic_race_spirit,
+    UnitRace.ANIMAL to R.drawable.ic_race_animal,
+    UnitRace.ROBOT to R.drawable.ic_race_robot,
+    UnitRace.DEMON to R.drawable.ic_race_demon,
+)
+
+@Deprecated("Use RACE_ICON_RES instead")
 val RACE_ICONS: Map<UnitRace, String> = mapOf(
-    UnitRace.HUMAN to "🧑",
-    UnitRace.ANIMAL to "🐾",
-    UnitRace.DEMON to "😈",
-    UnitRace.SPIRIT to "✨",
-    UnitRace.ROBOT to "🤖",
+    UnitRace.HUMAN to "",
+    UnitRace.ANIMAL to "",
+    UnitRace.DEMON to "",
+    UnitRace.SPIRIT to "",
+    UnitRace.ROBOT to "",
 )
 
 // ── Role icon labels (deprecated — kept for compatibility) ──
@@ -115,11 +125,13 @@ enum class SortMode(val label: String) {
 // ── Shared filter chip composable ──
 @Composable
 fun GameFilterChip(
-    label: String,
+    label: String = "",
     selected: Boolean,
     onClick: () -> Unit,
+    content: @Composable (() -> Unit)? = null,
 ) {
     Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(if (selected) ChipSelectedBg else ChipUnselectedBg)
@@ -131,13 +143,17 @@ fun GameFilterChip(
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
-        Text(
-            text = label,
-            color = if (selected) Gold else SubText,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
-        )
+        if (content != null) {
+            content()
+        } else {
+            Text(
+                text = label,
+                color = if (selected) Gold else SubText,
+                fontSize = 11.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+            )
+        }
     }
 }
 

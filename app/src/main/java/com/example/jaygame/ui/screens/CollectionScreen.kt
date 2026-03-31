@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import com.example.jaygame.ui.components.CachedIcon
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,7 +72,7 @@ import com.example.jaygame.engine.UnitBlueprint
 
 import com.example.jaygame.engine.UnitGrade
 import com.example.jaygame.ui.components.GameFilterChip
-import com.example.jaygame.ui.components.RACE_ICONS
+import com.example.jaygame.ui.components.RACE_ICON_RES
 import com.example.jaygame.ui.components.RACE_LABELS
 import com.example.jaygame.ui.components.GradeBgCommon
 import com.example.jaygame.ui.components.GradeBgAncient
@@ -407,16 +408,32 @@ private fun HeroCollectionTab(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         UnitRace.entries.forEach { race ->
-                            val icon = RACE_ICONS[race] ?: ""
                             val selected = race in selectedRaces
+                            val raceRes = RACE_ICON_RES[race]
                             GameFilterChip(
-                                label = "$icon${race.label}",
                                 selected = selected,
                                 onClick = {
                                     selectedRaces = if (selected) selectedRaces - race
                                     else selectedRaces + race
                                 },
-                            )
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (raceRes != null) {
+                                        Image(
+                                            painter = painterResource(id = raceRes),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                    }
+                                    Text(
+                                        text = race.label,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selected) Color.White else SubText,
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -722,18 +739,31 @@ private fun CollectionBlueprintDetailSheet(
                     // Race badge inline
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 3.dp),
                     ) {
-                        val raceIcon = RACE_ICONS[blueprint.race] ?: ""
-                        Text(
-                            text = "$raceIcon${blueprint.race.label}",
-                            color = blueprint.race.color,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
+                        val raceRes = RACE_ICON_RES[blueprint.race]
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .background(blueprint.race.color.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 1.dp),
-                        )
+                                .padding(horizontal = 5.dp, vertical = 2.dp),
+                        ) {
+                            if (raceRes != null) {
+                                Image(
+                                    painter = painterResource(id = raceRes),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                            }
+                            Text(
+                                text = blueprint.race.label,
+                                color = blueprint.race.color,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }
