@@ -37,6 +37,7 @@ import com.jay.jaygame.ui.viewmodel.*
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import android.widget.Toast
+import com.jay.jaygame.audio.BgmManager
 
 @Composable
 fun NavGraph(
@@ -66,6 +67,19 @@ fun NavGraph(
     val showBottomBar = currentRoute in listOf(
         Routes.HOME, Routes.COLLECTION, Routes.SHOP, Routes.SETTINGS,
     )
+
+    // 화면별 BGM 전환
+    val musicEnabled = (context.applicationContext as JayGameApplication).repository.gameData.collectAsState()
+    LaunchedEffect(currentRoute, musicEnabled.value.musicEnabled) {
+        if (!musicEnabled.value.musicEnabled) return@LaunchedEffect
+        val bgmAsset = when (currentRoute) {
+            Routes.COLLECTION, Routes.UNIT_CODEX -> "audio/collection_bgm.mp3"
+            Routes.SHOP -> "audio/shop_bgm.mp3"
+            Routes.DUNGEON -> "audio/dungeon_bgm.mp3"
+            else -> "audio/home_bgm.mp3"
+        }
+        BgmManager.play(context, bgmAsset)
+    }
 
     Column(modifier = modifier
         .background(DeepDark)

@@ -128,10 +128,19 @@ class BattleEngine(
     private var lastAttackSfxTime = 0L
     private var lastDeathSfxTime = 0L
 
-    private fun tryPlayAttackSfx(isCrit: Boolean) {
+    private fun tryPlayAttackSfx(isCrit: Boolean, attackRange: AttackRange = AttackRange.MELEE, damageType: DamageType = DamageType.PHYSICAL) {
         val now = System.currentTimeMillis()
         if (now - lastAttackSfxTime > 200) {
-            SfxManager.play(if (isCrit) SoundEvent.CriticalHit else SoundEvent.Attack, 0.4f)
+            if (isCrit) {
+                SfxManager.play(SoundEvent.CriticalHit, 0.5f)
+            } else {
+                val event = when {
+                    attackRange == AttackRange.MELEE -> SoundEvent.AttackMelee
+                    damageType == DamageType.MAGIC   -> SoundEvent.AttackMagic
+                    else                             -> SoundEvent.AttackRanged
+                }
+                SfxManager.play(event, 0.4f)
+            }
             lastAttackSfxTime = now
         }
     }
@@ -753,7 +762,7 @@ class BattleEngine(
                         BattleBridge.onDamageDealt(nx, ny, finalDmg.toInt(), boostedCrit)
                         val angle = atan2(target.position.y - unit.position.y, target.position.x - unit.position.x)
                         BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), boostedCrit, angle)
-                        tryPlayAttackSfx(boostedCrit)
+                        tryPlayAttackSfx(boostedCrit, unit.attackRange, unit.damageType)
                     } else {
                         // Projectile — melee slash uses fast projectile, ranged uses normal
                         val isSlash = unit.attackRange == AttackRange.MELEE
@@ -823,7 +832,10 @@ class BattleEngine(
                 if (proj.speed >= 800f) {
                     val angle = atan2(target.position.y - proj.sourcePos.y, target.position.x - proj.sourcePos.x)
                     BattleBridge.onMeleeHit(nx, ny, proj.family.coerceIn(0, 5), proj.isCrit, angle)
-                    tryPlayAttackSfx(proj.isCrit)
+                    tryPlayAttackSfx(proj.isCrit, AttackRange.MELEE, if (proj.isMagic) DamageType.MAGIC else DamageType.PHYSICAL)
+                } else {
+                    // 원거리 투사체 히트 사운드
+                    tryPlayAttackSfx(proj.isCrit, AttackRange.RANGED, if (proj.isMagic) DamageType.MAGIC else DamageType.PHYSICAL)
                 }
             }
             if (!proj.alive) deadProjectiles.add(proj)
@@ -932,7 +944,7 @@ class BattleEngine(
                 target.position.x - unit.position.x,
             )
             BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), isCrit, angle)
-            tryPlayAttackSfx(isCrit)
+            tryPlayAttackSfx(isCrit, unit.attackRange, unit.damageType)
             applyAbilityOnHit(unit.tileIndex, target)
         } else {
             // 원거리: 투사체 발사

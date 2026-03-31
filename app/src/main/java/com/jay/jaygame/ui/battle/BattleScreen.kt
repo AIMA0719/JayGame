@@ -1,6 +1,7 @@
 package com.jay.jaygame.ui.battle
 
 import com.jay.jaygame.R
+import com.jay.jaygame.audio.BgmManager
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
@@ -121,6 +122,34 @@ fun BattleScreen(
         pulse
     } else 0f
 
+    // 보스 웨이브 BGM 전환
+    val prevBossState = remember { mutableStateOf(false) }
+    LaunchedEffect(isBoss, bgmEnabled) {
+        if (!bgmEnabled) return@LaunchedEffect
+        if (isBoss && !prevBossState.value) {
+            BgmManager.play(context, "audio/battle_boss.mp3")
+        } else if (!isBoss && prevBossState.value) {
+            // 보스 웨이브 종료 → 스테이지 BGM 복귀
+            val bgmAsset = when (stageId) {
+                1 -> "audio/battle_jungle.mp3"
+                2 -> "audio/battle_desert.mp3"
+                3 -> "audio/battle_glacier.mp3"
+                4 -> "audio/battle_volcano.mp3"
+                5 -> "audio/battle_abyss.mp3"
+                else -> "audio/battle_plains.mp3"
+            }
+            BgmManager.play(context, bgmAsset)
+        }
+        prevBossState.value = isBoss
+    }
+
+    // 승리/패배 BGM 전환
+    LaunchedEffect(result) {
+        if (result != null && bgmEnabled) {
+            val bgm = if (result.victory) "audio/victory_bgm.mp3" else "audio/defeat_bgm.mp3"
+            BgmManager.play(context, bgm, loop = false)
+        }
+    }
 
     // Load background image from assets
     val bgAssetName = remember(stageId) {
