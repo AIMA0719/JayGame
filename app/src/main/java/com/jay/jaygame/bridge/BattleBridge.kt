@@ -240,6 +240,51 @@ data class LevelUpEvent(
     val timestamp: Long = System.currentTimeMillis(),
 )
 
+/** Batched parameters for [BattleBridge.updateState]. */
+data class BattleStateUpdate(
+    val wave: Int,
+    val maxWaves: Int,
+    val hp: Int,
+    val maxHp: Int,
+    val sp: Float,
+    val elapsed: Float,
+    val state: Int,
+    val summonCost: Int,
+    val enemyCount: Int,
+    val isBossRound: Int,
+    val waveTimeRemaining: Float,
+    val waveElapsed: Float = 0f,
+    val waveDelayRemaining: Float = 0f,
+)
+
+/** Batched parameters for [BattleBridge.updateUnitPositions]. */
+data class UnitPositionBatch(
+    val xs: FloatArray,
+    val ys: FloatArray,
+    val grades: IntArray,
+    val levels: IntArray,
+    val isAttacking: BooleanArray,
+    val tileIndices: IntArray,
+    val count: Int,
+    val attackAnimTimers: FloatArray = FloatArray(0),
+    val blueprintIds: Array<String> = emptyArray(),
+    val familiesList: Array<List<UnitFamily>> = emptyArray(),
+    val roles: Array<UnitRole> = emptyArray(),
+    val attackRanges: Array<AttackRange> = emptyArray(),
+    val damageTypes: Array<DamageType> = emptyArray(),
+    val unitCategories: Array<UnitCategory> = emptyArray(),
+    val hps: FloatArray = FloatArray(0),
+    val maxHps: FloatArray = FloatArray(0),
+    val states: Array<UnitState> = emptyArray(),
+    val homeXs: FloatArray = FloatArray(0),
+    val homeYs: FloatArray = FloatArray(0),
+    val stackCounts: IntArray = IntArray(0),
+    val buffs: IntArray = IntArray(0),
+    val skillAnimTimers: FloatArray = FloatArray(0),
+    val critAnimTimers: FloatArray = FloatArray(0),
+    val ranges: FloatArray = FloatArray(0),
+)
+
 object BattleBridge {
     private val enemyFrameCounter = AtomicLong(0)
     private val projFrameCounter = AtomicLong(0)
@@ -469,34 +514,26 @@ object BattleBridge {
     val mergeEffect: StateFlow<MergeEffect?> = _mergeEffect.asStateFlow()
 
     @JvmStatic
-    fun updateState(
-        wave: Int, maxWaves: Int,
-        hp: Int, maxHp: Int,
-        sp: Float, elapsed: Float,
-        state: Int, summonCost: Int,
-        enemyCount: Int, isBossRound: Int, waveTimeRemaining: Float,
-        waveElapsed: Float = 0f,
-        waveDelayRemaining: Float = 0f,
-    ) {
+    fun updateState(update: BattleStateUpdate) {
         _state.value = BattleState(
-            currentWave = wave,
-            maxWaves = maxWaves,
-            playerHP = hp,
-            maxHP = maxHp,
-            sp = sp,
-            elapsedTime = elapsed,
-            state = state,
-            summonCost = summonCost,
-            enemyCount = enemyCount,
-            isBossRound = isBossRound != 0,
-            waveTimeRemaining = waveTimeRemaining,
-            waveElapsed = waveElapsed,
+            currentWave = update.wave,
+            maxWaves = update.maxWaves,
+            playerHP = update.hp,
+            maxHP = update.maxHp,
+            sp = update.sp,
+            elapsedTime = update.elapsed,
+            state = update.state,
+            summonCost = update.summonCost,
+            enemyCount = update.enemyCount,
+            isBossRound = update.isBossRound != 0,
+            waveTimeRemaining = update.waveTimeRemaining,
+            waveElapsed = update.waveElapsed,
             maxUnitSlots = engine?.maxUnitSlots ?: 50,
-            waveDelayRemaining = waveDelayRemaining,
+            waveDelayRemaining = update.waveDelayRemaining,
         )
 
         // Clear visual effects on wave end
-        if (state == 0 || state == 2 || state == 3) {
+        if (update.state == 0 || update.state == 2 || update.state == 3) {
             _damageEvents.value = emptyList()
         }
     }
@@ -559,39 +596,20 @@ object BattleBridge {
     }
 
     @JvmStatic
-    fun updateUnitPositions(
-        xs: FloatArray, ys: FloatArray,
-        grades: IntArray, levels: IntArray, isAttacking: BooleanArray,
-        tileIndices: IntArray, count: Int, attackAnimTimers: FloatArray = FloatArray(0),
-        blueprintIds: Array<String> = emptyArray(),
-        familiesList: Array<List<UnitFamily>> = emptyArray(),
-        roles: Array<UnitRole> = emptyArray(),
-        attackRanges: Array<AttackRange> = emptyArray(),
-        damageTypes: Array<DamageType> = emptyArray(),
-        unitCategories: Array<UnitCategory> = emptyArray(),
-        hps: FloatArray = FloatArray(0),
-        maxHps: FloatArray = FloatArray(0),
-        states: Array<UnitState> = emptyArray(),
-        homeXs: FloatArray = FloatArray(0),
-        homeYs: FloatArray = FloatArray(0),
-        stackCounts: IntArray = IntArray(0),
-        buffs: IntArray = IntArray(0),
-        skillAnimTimers: FloatArray = FloatArray(0),
-        critAnimTimers: FloatArray = FloatArray(0),
-        ranges: FloatArray = FloatArray(0),
-    ) {
+    fun updateUnitPositions(batch: UnitPositionBatch) {
+        val count = batch.count
         // 엔진 pre-allocated 버퍼를 복사 — UI 스레드에서 읽는 동안 엔진이 덮어쓰는 것 방지
         _unitPositions.value = UnitPositionData(
-            xs.copyOf(count), ys.copyOf(count), grades.copyOf(count), levels.copyOf(count),
-            isAttacking.copyOf(count), attackAnimTimers.copyOf(count), tileIndices.copyOf(count),
+            batch.xs.copyOf(count), batch.ys.copyOf(count), batch.grades.copyOf(count), batch.levels.copyOf(count),
+            batch.isAttacking.copyOf(count), batch.attackAnimTimers.copyOf(count), batch.tileIndices.copyOf(count),
             count, unitFrameCounter.incrementAndGet(),
-            blueprintIds.copyOfRange(0, count), familiesList.copyOfRange(0, count),
-            roles.copyOfRange(0, count), attackRanges.copyOfRange(0, count),
-            damageTypes.copyOfRange(0, count), unitCategories.copyOfRange(0, count),
-            hps.copyOf(count), maxHps.copyOf(count), states.copyOfRange(0, count),
-            homeXs.copyOf(count), homeYs.copyOf(count), stackCounts.copyOf(count),
-            buffs.copyOf(count), skillAnimTimers.copyOf(count), critAnimTimers.copyOf(count),
-            ranges.copyOf(count),
+            batch.blueprintIds.copyOfRange(0, count), batch.familiesList.copyOfRange(0, count),
+            batch.roles.copyOfRange(0, count), batch.attackRanges.copyOfRange(0, count),
+            batch.damageTypes.copyOfRange(0, count), batch.unitCategories.copyOfRange(0, count),
+            batch.hps.copyOf(count), batch.maxHps.copyOf(count), batch.states.copyOfRange(0, count),
+            batch.homeXs.copyOf(count), batch.homeYs.copyOf(count), batch.stackCounts.copyOf(count),
+            batch.buffs.copyOf(count), batch.skillAnimTimers.copyOf(count), batch.critAnimTimers.copyOf(count),
+            batch.ranges.copyOf(count),
         )
     }
 

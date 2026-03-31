@@ -174,16 +174,22 @@ fun BattleField() {
     val validMoveTargets by BattleBridge.validMoveTargets.collectAsState()
     val context = LocalContext.current
 
-    // Blueprint bitmaps — blueprintId별 아이콘 매핑 (blueprintIconRes 공유)
-    val blueprintBitmapCache = remember {
-        val cache = mutableMapOf<String, ImageBitmap?>()
-        if (!com.jay.jaygame.engine.BlueprintRegistry.isReady) return@remember cache
-        val registry = com.jay.jaygame.engine.BlueprintRegistry.instance
-        for (bp in registry.all()) {
-            val resId = com.jay.jaygame.ui.screens.blueprintIconRes(bp)
-            cache[bp.id] = ContextCompat.getDrawable(context, resId)?.toBitmap(128, 128)?.asImageBitmap()
+    // Blueprint bitmaps — lazy 로딩 캐시 (배틀에 등장하는 유닛만 디코딩, ~107개 중 10~20개만 사용)
+    val blueprintBitmapCache = remember { mutableMapOf<String, ImageBitmap?>() }
+    // Resolve bitmap lazily — decodes only on first access per blueprintId
+    val resolveBlueprintBitmap: (String) -> ImageBitmap? = remember(context) {
+        { bpId: String ->
+            blueprintBitmapCache.getOrPut(bpId) {
+                if (!com.jay.jaygame.engine.BlueprintRegistry.isReady) null
+                else {
+                    val bp = com.jay.jaygame.engine.BlueprintRegistry.instance.findById(bpId)
+                    if (bp != null) {
+                        val resId = com.jay.jaygame.ui.screens.blueprintIconRes(bp)
+                        ContextCompat.getDrawable(context, resId)?.toBitmap(128, 128)?.asImageBitmap()
+                    } else null
+                }
+            }
         }
-        cache
     }
 
     // 유닛 버프 스프라이트 (공격력/속도/방어/실드)
@@ -765,7 +771,7 @@ fun BattleField() {
             }
 
             // Unit sprite + SSJ aura + skill/crit animations
-            val bitmap = if (i < data.blueprintIds.size) blueprintBitmapCache[data.blueprintIds[i]] else null
+            val bitmap = if (i < data.blueprintIds.size) resolveBlueprintBitmap(data.blueprintIds[i]) else null
             if (bitmap != null) {
                 // ── Skill/Crit animation timers ──
                 val skillTimer = if (i < data.skillAnimTimers.size) data.skillAnimTimers[i] else 0f

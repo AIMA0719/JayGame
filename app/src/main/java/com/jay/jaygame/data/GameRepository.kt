@@ -8,6 +8,12 @@ import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Boolean → 0/1 int for JSON serialization (matches legacy format) */
+private fun JSONObject.putBool(key: String, value: Boolean) { put(key, if (value) 1 else 0) }
+
+/** Iterable → JSONArray shorthand */
+private fun <T> Iterable<T>.toJSONArray(): JSONArray = JSONArray().also { arr -> forEach { arr.put(it) } }
+
 class GameRepository(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("jaygame_save", Context.MODE_PRIVATE)
@@ -71,7 +77,7 @@ class GameRepository(context: Context) {
             val unitsObj = JSONObject()
             for ((blueprintId, u) in data.units) {
                 val obj = JSONObject()
-                obj.put("owned", if (u.owned) 1 else 0)
+                obj.putBool("owned", u.owned)
                 obj.put("cards", u.cards)
                 obj.put("level", u.level)
                 unitsObj.put(blueprintId, obj)
@@ -87,20 +93,20 @@ class GameRepository(context: Context) {
             stats.put("totalGoldEarned", data.totalGoldEarned)
             stats.put("highestWave", data.highestWave)
             stats.put("maxUnitLevel", data.maxUnitLevel)
-            stats.put("wonWithoutDamage", if (data.wonWithoutDamage) 1 else 0)
-            stats.put("wonWithSingleType", if (data.wonWithSingleType) 1 else 0)
+            stats.putBool("wonWithoutDamage", data.wonWithoutDamage)
+            stats.putBool("wonWithSingleType", data.wonWithSingleType)
             root.put("stats", stats)
 
             // settings — booleans as 0/1 ints
             val settings = JSONObject()
-            settings.put("soundEnabled", if (data.soundEnabled) 1 else 0)
-            settings.put("musicEnabled", if (data.musicEnabled) 1 else 0)
-            settings.put("hapticEnabled", if (data.hapticEnabled) 1 else 0)
+            settings.putBool("soundEnabled", data.soundEnabled)
+            settings.putBool("musicEnabled", data.musicEnabled)
+            settings.putBool("hapticEnabled", data.hapticEnabled)
             settings.put("defaultBattleSpeed", data.defaultBattleSpeed.toDouble())
-            settings.put("showDamageNumbers", if (data.showDamageNumbers) 1 else 0)
+            settings.putBool("showDamageNumbers", data.showDamageNumbers)
             settings.put("healthBarMode", data.healthBarMode)
             settings.put("effectQuality", data.effectQuality)
-            settings.put("autoWaveStart", if (data.autoWaveStart) 1 else 0)
+            settings.putBool("autoWaveStart", data.autoWaveStart)
             root.put("settings", settings)
 
             // dailyLogin
@@ -127,12 +133,8 @@ class GameRepository(context: Context) {
             // stage
             val stageObj = JSONObject()
             stageObj.put("currentStageId", data.currentStageId)
-            val unlockedArr = JSONArray()
-            for (s in data.unlockedStages) unlockedArr.put(s)
-            stageObj.put("unlockedStages", unlockedArr)
-            val bestArr = JSONArray()
-            for (b in data.stageBestWaves) bestArr.put(b)
-            stageObj.put("stageBestWaves", bestArr)
+            stageObj.put("unlockedStages", data.unlockedStages.toJSONArray())
+            stageObj.put("stageBestWaves", data.stageBestWaves.toJSONArray())
             root.put("stageData", stageObj)
 
             // difficulty
@@ -152,9 +154,7 @@ class GameRepository(context: Context) {
             root.put("lastFreePullTime", data.lastFreePullTime)
 
             // claimedAchievements
-            val claimedArr = JSONArray()
-            for (id in data.claimedAchievements) claimedArr.put(id)
-            root.put("claimedAchievements", claimedArr)
+            root.put("claimedAchievements", data.claimedAchievements.toJSONArray())
 
             root.put("saveVersion", 3)
 
@@ -165,30 +165,26 @@ class GameRepository(context: Context) {
                 rObj.put("relicId", r.relicId)
                 rObj.put("grade", r.grade)
                 rObj.put("level", r.level)
-                rObj.put("owned", if (r.owned) 1 else 0)
+                rObj.putBool("owned", r.owned)
                 relicsArr.put(rObj)
             }
             root.put("relics", relicsArr)
 
-            val eqArr = JSONArray()
-            for (id in data.equippedRelics) eqArr.put(id)
-            root.put("equippedRelics", eqArr)
+            root.put("equippedRelics", data.equippedRelics.toJSONArray())
 
             // pets
             val petsArr = JSONArray()
             for (p in data.pets) {
                 val pObj = JSONObject()
                 pObj.put("petId", p.petId)
-                pObj.put("owned", if (p.owned) 1 else 0)
+                pObj.putBool("owned", p.owned)
                 pObj.put("cards", p.cards)
                 pObj.put("level", p.level)
                 petsArr.put(pObj)
             }
             root.put("pets", petsArr)
 
-            val eqPetsArr = JSONArray()
-            for (id in data.equippedPets) eqPetsArr.put(id)
-            root.put("equippedPets", eqPetsArr)
+            root.put("equippedPets", data.equippedPets.toJSONArray())
 
             root.put("petPullPity", data.petPullPity)
 
@@ -205,9 +201,7 @@ class GameRepository(context: Context) {
 
             // profile
             root.put("selectedProfileId", data.selectedProfileId)
-            val unlockedProfilesArr = JSONArray()
-            for (id in data.unlockedProfiles) unlockedProfilesArr.put(id)
-            root.put("unlockedProfiles", unlockedProfilesArr)
+            root.put("unlockedProfiles", data.unlockedProfiles.toJSONArray())
 
             // tutorial
             root.put("tutorialCompleted", data.tutorialCompleted)

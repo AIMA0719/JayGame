@@ -44,6 +44,24 @@ class BattleEngine(
         const val SELL_PER_GRADE = 8f
         const val MAX_ZONE_RENDER = 32
         const val WAVE_DELAY = 3f
+
+        // Elite enemy multipliers (relative to base wave config)
+        const val ELITE_HP_MULT = 2f
+        const val ELITE_SPEED_MULT = 1.1f
+        const val ELITE_ARMOR_MULT = 1.5f
+        const val ELITE_MAGIC_RESIST_MULT = 1.3f
+        const val ELITE_CC_RESIST_BONUS = 0.1f
+
+        // Boss modifier thresholds
+        const val BERSERKER_HP_THRESHOLD = 0.5f
+        const val SPLITTER_HP_THRESHOLD = 0.5f
+        const val COMMANDER_SHIELD_RATIO = 0.02f
+        const val REGEN_HEAL_RATIO = 0.05f
+        const val REGEN_INTERVAL = 10f
+        const val BERSERKER_SPEED_MULT = 1.5f
+        const val SWIFT_SPEED_MULT = 2f
+        const val SHIELDED_ACTIVE_DURATION = 3f
+        const val SHIELDED_COOLDOWN_DURATION = 5f
     }
 
     enum class State { WaveDelay, Playing, Victory, Defeat }
@@ -302,7 +320,6 @@ class BattleEngine(
         com.jay.jaygame.ui.battle.ParticleLOD.userQuality = BattleBridge.effectQuality.value
         // 자동 웨이브 시작이면 초기 딜레이도 스킵
         if (BattleBridge.autoWaveStart.value) waveDelayTimer = 0f
-        validateLayout()
         validatePathSpeedUniformity()
         job = scope.launch(Dispatchers.Default) {
             var lastTime = System.nanoTime()
@@ -449,12 +466,12 @@ class BattleEngine(
             val enemy = enemies.acquire() ?: return
             val isElite = config.eliteChance > 0f && Math.random() < config.eliteChance
             enemy.init(
-                hp = config.hp * (if (isElite) 2f else 1f),
-                speed = config.speed * (if (isElite) 1.1f else 1f),
-                armor = config.armor * (if (isElite) 1.5f else 1f),
-                magicResist = config.magicResist * (if (isElite) 1.3f else 1f),
+                hp = config.hp * (if (isElite) ELITE_HP_MULT else 1f),
+                speed = config.speed * (if (isElite) ELITE_SPEED_MULT else 1f),
+                armor = config.armor * (if (isElite) ELITE_ARMOR_MULT else 1f),
+                magicResist = config.magicResist * (if (isElite) ELITE_MAGIC_RESIST_MULT else 1f),
                 type = config.enemyType, startPos = enemyPath.first().copy(),
-                ccResistance = config.ccResistance + if (isElite) 0.1f else 0f,
+                ccResistance = config.ccResistance + if (isElite) ELITE_CC_RESIST_BONUS else 0f,
             )
             // High difficulty: elite enemies get regeneration
             if (isElite && difficulty >= 1) {
@@ -472,11 +489,11 @@ class BattleEngine(
                 }
                 enemy.bossModifier = modifier
                 if (modifier == BossModifier.SWIFT) {
-                    enemy.baseSpeed *= 2f
+                    enemy.baseSpeed *= SWIFT_SPEED_MULT
                     enemy.speed = enemy.baseSpeed
                 }
                 if (modifier == BossModifier.SHIELDED) {
-                    enemy.shieldTimer = 5f // Start with shield down
+                    enemy.shieldTimer = SHIELDED_COOLDOWN_DURATION // Start with shield down
                     enemy.shieldActive = false
                 }
                 enemy.applyBossModifierFlags()
@@ -504,7 +521,7 @@ class BattleEngine(
                     )
                     spatialHash.query(cmdRect).forEach { nearby ->
                         if (nearby !== enemy && nearby.alive && !nearby.buffs.hasBuff(BuffType.Shield)) {
-                            nearby.buffs.addBuff(BuffType.Shield, nearby.maxHp * 0.02f, 2f)
+                            nearby.buffs.addBuff(BuffType.Shield, nearby.maxHp * COMMANDER_SHIELD_RATIO, 2f)
                         }
                     }
                 }
@@ -512,20 +529,20 @@ class BattleEngine(
                 BossModifier.REGENERATION -> {
                     enemy.regenTimer -= dt
                     if (enemy.regenTimer <= 0f) {
-                        enemy.hp = (enemy.hp + enemy.maxHp * 0.05f).coerceAtMost(enemy.maxHp)
-                        enemy.regenTimer = 10f
+                        enemy.hp = (enemy.hp + enemy.maxHp * REGEN_HEAL_RATIO).coerceAtMost(enemy.maxHp)
+                        enemy.regenTimer = REGEN_INTERVAL
                     }
                 }
                 // BERSERKER: triple attack speed (move speed) below 50% HP
                 BossModifier.BERSERKER -> {
-                    if (!enemy.berserkerActivated && enemy.hpRatio < 0.5f) {
+                    if (!enemy.berserkerActivated && enemy.hpRatio < BERSERKER_HP_THRESHOLD) {
                         enemy.berserkerActivated = true
-                        enemy.speed = enemy.baseSpeed * 1.5f // Faster movement in berserk
+                        enemy.speed = enemy.baseSpeed * BERSERKER_SPEED_MULT // Faster movement in berserk
                     }
                 }
                 // SPLITTER: spawn 2 mini-bosses at 50% HP
                 BossModifier.SPLITTER -> {
-                    if (!enemy.splitterTriggered && enemy.hpRatio < 0.5f) {
+                    if (!enemy.splitterTriggered && enemy.hpRatio < SPLITTER_HP_THRESHOLD) {
                         enemy.splitterTriggered = true
                         splitQueue.add(enemy)
                     }
@@ -535,7 +552,7 @@ class BattleEngine(
                     enemy.shieldTimer -= dt
                     if (enemy.shieldTimer <= 0f) {
                         enemy.shieldActive = !enemy.shieldActive
-                        enemy.shieldTimer = if (enemy.shieldActive) 3f else 5f
+                        enemy.shieldTimer = if (enemy.shieldActive) SHIELDED_ACTIVE_DURATION else SHIELDED_COOLDOWN_DURATION
                     }
                 }
                 else -> {}
@@ -1094,17 +1111,40 @@ class BattleEngine(
     // ── Push State to Compose ──
 
     private fun pushStateToCompose() {
-        val mergeable = getMergeableTiles()
+        syncBattleState()
+        syncEnemyPositions()
+        syncUnitPositions()
+        syncProjectiles()
 
+        if (luckyStones != lastPushedLuckyStones) {
+            lastPushedLuckyStones = luckyStones
+            BattleBridge.updateLuckyStones(luckyStones)
+        }
+
+        syncGridState()
+    }
+
+    private fun syncBattleState() {
         BattleBridge.updateState(
-            waveSystem.currentWave + 1, maxWaves,
-            (DEFEAT_ENEMY_COUNT - enemies.activeCount).coerceAtLeast(0), DEFEAT_ENEMY_COUNT,
-            sp, elapsedTime, state.ordinal, summonCost,
-            enemies.activeCount, if (isBossRound) 1 else 0, waveSystem.timeRemaining, waveSystem.waveElapsed,
-            waveDelayRemaining = if (state == State.WaveDelay) waveDelayTimer else 0f,
+            com.jay.jaygame.bridge.BattleStateUpdate(
+                wave = waveSystem.currentWave + 1,
+                maxWaves = maxWaves,
+                hp = (DEFEAT_ENEMY_COUNT - enemies.activeCount).coerceAtLeast(0),
+                maxHp = DEFEAT_ENEMY_COUNT,
+                sp = sp,
+                elapsed = elapsedTime,
+                state = state.ordinal,
+                summonCost = summonCost,
+                enemyCount = enemies.activeCount,
+                isBossRound = if (isBossRound) 1 else 0,
+                waveTimeRemaining = waveSystem.timeRemaining,
+                waveElapsed = waveSystem.waveElapsed,
+                waveDelayRemaining = if (state == State.WaveDelay) waveDelayTimer else 0f,
+            )
         )
+    }
 
-        // Enemy positions + buff bitmasks — reuse pre-allocated buffers
+    private fun syncEnemyPositions() {
         var ei = 0
         enemies.forEach { e ->
             if (ei < enemyXBuf.size) {
@@ -1132,8 +1172,9 @@ class BattleEngine(
             }
         }
         BattleBridge.updateEnemyPositions(enemyXBuf, enemyYBuf, enemyTypeBuf, enemyHpBuf, enemyBuffBuf, ei)
+    }
 
-        // Unit positions — reuse pre-allocated buffers
+    private fun syncUnitPositions() {
         var ui = 0
         units.forEach { u ->
             if (ui < unitXBuf.size) {
@@ -1169,13 +1210,21 @@ class BattleEngine(
             }
         }
         BattleBridge.updateUnitPositions(
-            unitXBuf, unitYBuf, unitGradeBuf, unitLevelBuf, unitAttackingBuf, unitTileBuf, ui, unitAttackAnimBuf,
-            unitBlueprintIdBuf, unitFamiliesListBuf, unitRoleBuf, unitAttackRangeBuf, unitDamageTypeBuf, unitCategoryBuf,
-            unitHpBuf, unitMaxHpBuf, unitStateBuf, unitHomeXBuf, unitHomeYBuf, unitStackCountBuf, unitBuffBuf,
-            unitSkillAnimBuf, unitCritAnimBuf, unitRangeBuf,
+            com.jay.jaygame.bridge.UnitPositionBatch(
+                xs = unitXBuf, ys = unitYBuf, grades = unitGradeBuf, levels = unitLevelBuf,
+                isAttacking = unitAttackingBuf, tileIndices = unitTileBuf, count = ui,
+                attackAnimTimers = unitAttackAnimBuf, blueprintIds = unitBlueprintIdBuf,
+                familiesList = unitFamiliesListBuf, roles = unitRoleBuf, attackRanges = unitAttackRangeBuf,
+                damageTypes = unitDamageTypeBuf, unitCategories = unitCategoryBuf,
+                hps = unitHpBuf, maxHps = unitMaxHpBuf, states = unitStateBuf,
+                homeXs = unitHomeXBuf, homeYs = unitHomeYBuf, stackCounts = unitStackCountBuf,
+                buffs = unitBuffBuf, skillAnimTimers = unitSkillAnimBuf, critAnimTimers = unitCritAnimBuf,
+                ranges = unitRangeBuf,
+            )
         )
+    }
 
-        // Projectiles — reuse pre-allocated buffers
+    private fun syncProjectiles() {
         var pi = 0
         projectiles.forEach { p ->
             if (pi < projSrcXBuf.size) {
@@ -1190,13 +1239,9 @@ class BattleEngine(
             }
         }
         BattleBridge.updateProjectiles(projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf, projTypeBuf, pi, projFamilyBuf, projGradeBuf)
+    }
 
-        if (luckyStones != lastPushedLuckyStones) {
-            lastPushedLuckyStones = luckyStones
-            BattleBridge.updateLuckyStones(luckyStones)
-        }
-
-        // Grid state — reuse pre-allocated buffers (slot-based)
+    private fun syncGridState() {
         if (gridPushTimer >= 0.1f) {
             gridPushTimer = 0f
             val mergeableTiles = getMergeableTiles()
@@ -1256,14 +1301,6 @@ class BattleEngine(
             relicDropId = relicDrop?.first ?: -1,
             relicDropGrade = relicDrop?.second?.ordinal ?: -1,
         )
-    }
-
-    // ── Z17: Unit Position vs Path Overlap Validation ──
-
-    private fun validateLayout() {
-        val tag = "BattleLayout"
-        // Free-form placement — units are clamped to field bounds by GameUnit.update()
-        Log.i(tag, "Z17: Free-form layout — unit positions clamped by field bounds")
     }
 
     // ── Z18: Path Speed Uniformity Validation ──
