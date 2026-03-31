@@ -39,10 +39,6 @@ import kotlin.math.sin
 private val HpBarBg = Color.Black.copy(alpha = 0.6f)
 private val HpBarBorder = Color.White.copy(alpha = 0.3f)
 private val HpBarBorderStroke = Stroke(width = 1f)
-private val BossAuraStroke = Stroke(width = 2f)
-private val BossAuraRed = Color(0xFFFF2222).copy(alpha = 0.15f)
-private val BossGlowRed = Color(0xFFFF4444).copy(alpha = 0.25f)
-private val BossGlowRedBright = Color(0xFFFF6666).copy(alpha = 0.4f)
 private val EnemyColors = arrayOf(
     Color(0xFFFF6B35), Color(0xFF64B5F6), Color(0xFF81C784),
     Color(0xFFFFD54F), Color(0xFFCE93D8), Color(0xFF43A047),
@@ -390,28 +386,6 @@ fun EnemyOverlay() {
                 wobbleRotation = sin(phase) * 3f
             } else {
                 wobbleOffsetX = 0f; wobbleOffsetY = 0f; wobbleRotation = 0f
-            }
-
-            // ── Boss aura ──
-            if (isBoss) {
-                val auraR = spriteSize * 0.9f + sin(t * 3f) * 6f
-                drawCircle(
-                    color = BossAuraRed,
-                    radius = auraR,
-                    center = Offset(screenX, screenY),
-                )
-                drawCircle(
-                    color = BossGlowRed,
-                    radius = auraR * 0.7f,
-                    center = Offset(screenX, screenY),
-                )
-                val ringAlpha = 0.2f + sin(t * 4f) * 0.15f
-                drawCircle(
-                    color = BossGlowRedBright.copy(alpha = ringAlpha),
-                    radius = auraR,
-                    center = Offset(screenX, screenY),
-                    style = BossAuraStroke,
-                )
             }
 
             // ── HIT animation: squash/stretch + tint + knockback ──
