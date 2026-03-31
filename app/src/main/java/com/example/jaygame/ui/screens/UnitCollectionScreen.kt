@@ -603,7 +603,7 @@ private fun BlueprintDetailDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Grade bar
@@ -738,8 +738,8 @@ private fun BlueprintDetailDialog(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.White.copy(alpha = 0.05f))
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     UnitStatRow("체력", "${blueprint.stats.hp.toInt()}", Color(0xFF81C784))
                     UnitStatRow("공격력", "${blueprint.stats.baseATK.toInt()}", Color(0xFFFF8A80))
@@ -876,27 +876,27 @@ private fun BlueprintDetailDialog(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color.White.copy(alpha = 0.05f))
-                                .padding(10.dp),
+                                .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Lv.${progress.level}" + if (progress.level >= 10) " (MAX)" else "",
                                     color = if (progress.level >= 10) Gold else LightText,
-                                    fontSize = 13.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                 )
                                 if (progress.level < 10) {
                                     Text(
                                         text = "카드: ${progress.cards} / $cardsNeeded",
                                         color = if (canLevelUp) NeonGreen else SubText,
-                                        fontSize = 11.sp,
+                                        fontSize = 13.sp,
                                     )
                                 }
                             }
                             if (progress.level < 10) {
                                 NeonButton(
-                                    text = "레벨업",
+                                    text = "($cardsNeeded) 강화",
                                     onClick = {
                                         if (canLevelUp) {
                                             val updatedUnits = data.units.toMutableMap()
@@ -915,9 +915,9 @@ private fun BlueprintDetailDialog(
                                     },
                                     enabled = canLevelUp,
                                     modifier = Modifier
-                                        .width(72.dp)
-                                        .height(32.dp),
-                                    fontSize = 12.sp,
+                                        .width(100.dp)
+                                        .height(40.dp),
+                                    fontSize = 13.sp,
                                     accentColor = if (canLevelUp) NeonGreen else DimText,
                                     accentColorDark = if (canLevelUp) NeonGreen.copy(alpha = 0.5f) else DimText.copy(alpha = 0.5f),
                                 )
@@ -931,7 +931,8 @@ private fun BlueprintDetailDialog(
                 NeonButton(
                     text = "닫기",
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth().height(38.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    fontSize = 14.sp,
                     accentColor = SubText,
                     accentColorDark = DimText,
                 )
