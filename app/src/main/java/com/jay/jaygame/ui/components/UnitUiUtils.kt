@@ -29,9 +29,17 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.util.Log
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.drawWithContent
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.airbnb.lottie.LottieDrawable
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieCancellationBehavior
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.jay.jaygame.data.UnitFamily
@@ -232,7 +240,37 @@ fun LottieAsset(
     val result = rememberLottieComposition(LottieCompositionSpec.Asset(asset))
     val composition = result.value
     if (result.isFailure || composition == null) return
-    val progress by animateLottieCompositionAsState(composition, iterations = iterations)
+    // 빌드 단계 NPE 사전 검증 — Lottie 6.x의 PolystarContent/RepeaterContent null 버그
+    val isValid = remember(composition) {
+        try {
+            LottieDrawable().apply { this.composition = composition }.clearComposition()
+            true
+        } catch (e: Exception) {
+            Log.w("LottieAsset", "Invalid composition for $asset: ${e.message}")
+            false
+        }
+    }
+    if (!isValid) return
+    // 백그라운드→포그라운드 전환 시 렌더 트리 NPE 방지
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val isResumed = remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> isResumed.value = true
+                Lifecycle.Event.ON_PAUSE -> isResumed.value = false
+                else -> {}
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val progress by animateLottieCompositionAsState(
+        composition,
+        iterations = iterations,
+        isPlaying = isResumed.value,
+        cancellationBehavior = LottieCancellationBehavior.OnIterationFinish,
+    )
     LottieAnimation(
         composition,
         progress = { progress },
