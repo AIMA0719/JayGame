@@ -1,4 +1,6 @@
-=== JayGame Audio Credits ===
+=== JayGame Credits ===
+
+── Audio ──
 
 Home BGM: "Ravi de te revoir" (Main Menu OST)
   By: YannZ (https://yziango.itch.io)
@@ -17,8 +19,11 @@ Battle BGM (Jungle): "Battle Theme B for RPG"
 
 Battle BGM (Desert): "Desert Battle Theme"
   By: antonioraymond71
-  License: GPL 2.0
+  License: GPL 2.0 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
   Source: https://opengameart.org/content/desert-battle-theme
+  Note: This audio file is distributed under the terms of the GNU General
+        Public License v2.0. The complete license text is available at the
+        URL above. This asset is used as-is without modification.
 
 Battle BGM (Glacier): "Battle Theme"
   By: Wolfgang_
@@ -34,3 +39,37 @@ Battle BGM (Abyss): "Boss Battle Theme"
   By: CleytonKauffman (CleytonRX)
   License: CC0 (Public Domain)
   Source: https://opengameart.org/content/boss-battle-theme
+
+── Graphics ──
+
+Android Robot:
+  By: Google Inc.
+  License: CC-BY 3.0
+  Source: https://developer.android.com/distribute/marketing-tools/brand-guidelines
+
+── Fonts ──
+
+Noto Sans KR:
+  By: Google Fonts
+  License: SIL Open Font License 1.1
+  Source: https://fonts.google.com/noto/specimen/Noto+Sans+KR
+
+Medieval Sharp:
+  By: Google Fonts (wmk69)
+  License: SIL Open Font License 1.1
+  Source: https://fonts.google.com/specimen/MedievalSharp
+  Note: medieval_regular.ttf / medieval_bold.ttf
+
+── Animations ──
+
+Lottie animation files are custom-created for this project.
+
+── Open Source Libraries ──
+
+Jetpack Compose — Copyright Google LLC — Apache License 2.0
+AndroidX (Core, AppCompat, Lifecycle, Navigation) — Copyright Google LLC — Apache License 2.0
+Material Components for Android — Copyright Google LLC — Apache License 2.0
+Kotlin / Kotlinx Coroutines — Copyright JetBrains s.r.o. — Apache License 2.0
+Orbit MVI — Copyright Babylon Health — Apache License 2.0
+Coil (Image Loading) — Copyright Coil Contributors — Apache License 2.0
+Lottie for Android — Copyright Airbnb Inc. — Apache License 2.0

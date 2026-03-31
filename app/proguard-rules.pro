@@ -1,21 +1,54 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ── JayGame ProGuard Rules ──
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ── Preserve line numbers for crash reporting ──
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ── Strip debug/verbose/info logs in release ──
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+    public static int i(...);
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ── Kotlin ──
+-dontwarn kotlin.**
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+
+# ── Compose ──
+-dontwarn androidx.compose.**
+-keep class androidx.compose.** { *; }
+
+# ── Orbit MVI ──
+-dontwarn org.orbitmvi.**
+-keep class org.orbitmvi.orbit.** { *; }
+
+# ── Coil ──
+-dontwarn coil.**
+-keep class coil.** { *; }
+
+# ── Lottie ──
+-dontwarn com.airbnb.lottie.**
+-keep class com.airbnb.lottie.** { *; }
+
+# ── Game data models (JSON serialization) ──
+-keep class com.jay.jaygame.data.GameData { *; }
+-keep class com.jay.jaygame.data.GameData$* { *; }
+-keep class com.jay.jaygame.engine.UnitGrade { *; }
+-keep class com.jay.jaygame.engine.UnitFamily { *; }
+-keep class com.jay.jaygame.engine.UnitRole { *; }
+-keep class com.jay.jaygame.engine.AttackRange { *; }
+-keep class com.jay.jaygame.engine.DamageType { *; }
+-keep class com.jay.jaygame.data.UnitRace { *; }
+
+# ── SaveKeyStore (HMAC integrity) ──
+-keep class com.jay.jaygame.data.SaveKeyStore { *; }
+
+# ── Enums used in JSON ──
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}

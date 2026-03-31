@@ -16,3 +16,18 @@
 local.properties
 .kotlin/
 UnRAR.exe
+
+# Signing keys
+*.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
+secrets.properties
+
+# Google services
+google-services.json
+
+# Environment
+.env
+.env.*
