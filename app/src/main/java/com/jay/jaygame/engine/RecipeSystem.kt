@@ -77,22 +77,31 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
         }
     }
 
+    private fun collectGridUnits(grid: Grid): MutableList<Pair<Int, GameUnit>> {
+        val allUnits = mutableListOf<Pair<Int, GameUnit>>()
+        for (i in 0 until Grid.TOTAL) {
+            for (u in grid.getUnitsInSlot(i)) allUnits.add(i to u)
+        }
+        return allUnits
+    }
+
     /** 필드의 모든 유닛에서 완성 가능한 레시피와 매칭 유닛 인덱스를 반환 */
     fun findMatchingRecipeOnGrid(grid: Grid, availableLuckyStones: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
-        val allUnits = mutableListOf<Pair<Int, GameUnit>>() // (tileIndex, unit)
-        for (i in 0 until Grid.TOTAL) {
-            // 스택의 모든 유닛을 개별 candidate로 등록 (같은 슬롯에서 여러 개 매칭 가능)
-            for (u in grid.getUnitsInSlot(i)) {
-                allUnits.add(i to u)
-            }
-        }
+        val allUnits = collectGridUnits(grid)
         for (recipe in recipes) {
-            // 조합석 부족 시 해당 레시피 스킵
             if (availableLuckyStones < recipe.luckyStonesCost) continue
             val matched = findMatchingUnitsForRecipe(recipe, allUnits)
             if (matched != null) return recipe to matched
         }
         return null
+    }
+
+    /** 특정 레시피 ID로 필드에서 매칭하여 합성 시도 */
+    fun findSpecificRecipeOnGrid(recipeId: String, grid: Grid, availableLuckyStones: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
+        val recipe = recipes.find { it.id == recipeId } ?: return null
+        if (availableLuckyStones < recipe.luckyStonesCost) return null
+        val matched = findMatchingUnitsForRecipe(recipe, collectGridUnits(grid)) ?: return null
+        return recipe to matched
     }
 
     /** 특정 레시피에 매칭되는 유닛의 tileIndex 리스트 반환. 매칭 실패 시 null */

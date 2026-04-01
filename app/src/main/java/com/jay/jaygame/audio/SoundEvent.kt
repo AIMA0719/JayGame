@@ -26,4 +26,5 @@ enum class SoundEvent {
     GoldPickup,
     LevelUp,
     SkillActivate,
+    RoguelikeCardReveal,
 }

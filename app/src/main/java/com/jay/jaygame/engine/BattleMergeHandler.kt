@@ -27,15 +27,19 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         }
     }
 
-    /** 레시피 조합 요청 — 필드 전체 스캔하여 완성 가능한 레시피 합성 */
-    fun requestRecipeCraft() {
-        tryExecuteRecipeCraft()
+    /** 레시피 조합 요청 — 특정 레시피 ID가 있으면 해당 레시피만 시도 */
+    fun requestRecipeCraft(recipeId: String? = null) {
+        tryExecuteRecipeCraft(recipeId)
     }
 
     /** 필드에서 완성 가능한 레시피를 찾아 합성 실행. 성공 시 true 반환. */
-    fun tryExecuteRecipeCraft(): Boolean {
+    fun tryExecuteRecipeCraft(targetRecipeId: String? = null): Boolean {
         if (!RecipeSystem.isReady) return false
-        val (recipe, consumedTiles) = RecipeSystem.instance.findMatchingRecipeOnGrid(engine.grid, engine.luckyStones) ?: return false
+        val (recipe, consumedTiles) = if (targetRecipeId != null) {
+            RecipeSystem.instance.findSpecificRecipeOnGrid(targetRecipeId, engine.grid, engine.luckyStones)
+        } else {
+            RecipeSystem.instance.findMatchingRecipeOnGrid(engine.grid, engine.luckyStones)
+        } ?: return false
 
         // 매칭된 유닛들을 미리 수집 (각 타일에서 1개씩, 중복 타일은 순서대로 제거)
         val unitsToConsume = mutableListOf<Pair<Int, GameUnit>>() // (tileIndex, unit)

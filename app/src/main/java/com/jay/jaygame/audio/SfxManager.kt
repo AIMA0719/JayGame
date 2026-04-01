@@ -50,6 +50,7 @@ object SfxManager {
         SoundEvent.GoldPickup    to "sfx/gold_pickup.ogg",
         SoundEvent.LevelUp       to "sfx/level_up.ogg",
         SoundEvent.SkillActivate to "sfx/skill_activate.ogg",
+        SoundEvent.RoguelikeCardReveal to "sfx/summon.ogg",
     )
 
     /** Initialise the SoundPool and preload all registered assets. */

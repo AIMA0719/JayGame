@@ -14,6 +14,7 @@ class GameUnit {
     var baseATK = 0f
     var atkSpeed = 0f
     var range = 0f
+    var baseRange = 0f
     var abilityType = 0
     var abilityValue = 0f
     var isAttacking = false
@@ -32,6 +33,9 @@ class GameUnit {
     // ── Unique ability fields (M4) ──
     var uniqueAbilityType = -1       // index into UniqueAbilitySystem types, -1 = none
     var passiveCounter = 0           // generic counter for passive triggers (e.g., hit count)
+    var bpPassiveTimer = 0f          // blueprint passive cooldown timer
+    var permanentAtkBonus = 0f       // 영구 ATK 증가 (처치 시 누적)
+    var bpPassiveId: String = ""     // 캐시된 uniqueAbility.passive.id (매 프레임 lookup 방지)
 
     // ── New Strategy-pattern fields (Task 4) ──
     var blueprintId: String = ""
@@ -92,6 +96,7 @@ class GameUnit {
         baseATK = bp.stats.baseATK
         atkSpeed = bp.stats.baseSpeed
         range = bp.stats.range
+        baseRange = bp.stats.range
         defense = bp.stats.defense
         magicResist = bp.stats.magicResist
         moveSpeed = bp.stats.moveSpeed
@@ -150,9 +155,9 @@ class GameUnit {
     }
 
     /** 공격 성공 시 마나 축적 (전설/신화 궁극기용) */
-    fun chargeMana() {
+    fun chargeMana(bonusMult: Float = 1f) {
         if (hasUltimate && manaPerHit > 0f) {
-            mana += manaPerHit  // setter가 0..maxMana 클램프 처리
+            mana += manaPerHit * bonusMult  // setter가 0..maxMana 클램프 처리
         }
     }
 
@@ -185,7 +190,7 @@ class GameUnit {
 
     fun effectiveATK(): Float {
         val levelMult = LEVEL_MULTIPLIERS.getOrElse(level - 1) { 1f }
-        return baseATK * levelMult * buffs.getAtkMultiplier() * (1f + groupAtkBonus)
+        return baseATK * levelMult * buffs.getAtkMultiplier() * (1f + groupAtkBonus + permanentAtkBonus)
     }
 
     fun projectileVisualType(): Int = race.ordinal * 2 + if (damageType == DamageType.MAGIC) 1 else 0
@@ -212,6 +217,7 @@ class GameUnit {
         moveSpeed = 75f
         blockCount = 0
         groupAtkBonus = 0f
+        baseRange = 0f
 
         // Legacy ability fields (pool reuse 시 잔존 방지)
         abilityType = 0
@@ -226,6 +232,9 @@ class GameUnit {
         buffs.clear()
         uniqueAbilityType = -1
         passiveCounter = 0
+        bpPassiveTimer = 0f
+        permanentAtkBonus = 0f
+        bpPassiveId = ""
 
         // Reset AbilityEngine fields
         activeAbility = null

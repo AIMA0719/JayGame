@@ -176,7 +176,10 @@ private data class RecipeDisplayInfo(
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
 
 @Composable
-fun BattleTopHud(onPauseClick: () -> Unit = {}) {
+fun BattleTopHud(
+    activeRoguelikeBuffs: List<com.jay.jaygame.engine.ActiveRoguelikeBuff> = emptyList(),
+    onPauseClick: () -> Unit = {},
+) {
     val battle by BattleBridge.state.collectAsState()
     val battleSpeed by BattleBridge.battleSpeed.collectAsState()
     val isBoss = battle.isBossRound
@@ -359,6 +362,16 @@ fun BattleTopHud(onPauseClick: () -> Unit = {}) {
             }
         }
 
+        // Top-left: roguelike buffs
+        if (activeRoguelikeBuffs.isNotEmpty()) {
+            RoguelikeBuffHud(
+                activeBuffs = activeRoguelikeBuffs,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 8.dp, top = 4.dp),
+            )
+        }
+
         // Top-right: menu button only
         Box(
             modifier = Modifier
@@ -452,7 +465,11 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
         }.sortedByDescending { it.fieldMatchCount }
     }
 
-    val hasReadyRecipe = recipeInfos.any { it.readyOnField }
+    val readyRecipes = recipeInfos.filter { it.readyOnField }
+    val hasReadyRecipe = readyRecipes.isNotEmpty()
+    var selectedRecipeId by remember(readyRecipes) {
+        mutableStateOf(readyRecipes.firstOrNull()?.recipe?.id)
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -515,7 +532,12 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.height(320.dp),
                     ) {
                         items(recipeInfos) { info ->
-                            RecipeCard(info.recipe, info.resultBlueprint, info.fieldMatchCount, info.totalIngredients)
+                            RecipeCard(
+                                info.recipe, info.resultBlueprint,
+                                info.fieldMatchCount, info.totalIngredients,
+                                isSelected = info.readyOnField && info.recipe.id == selectedRecipeId,
+                                onClick = if (info.readyOnField) {{ selectedRecipeId = info.recipe.id }} else null,
+                            )
                         }
                     }
                 }
@@ -534,8 +556,8 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                                 RoundedCornerShape(12.dp),
                             )
                             .then(
-                                if (hasReadyRecipe) Modifier.clickable {
-                                    BattleBridge.requestRecipeCraft()
+                                if (hasReadyRecipe && selectedRecipeId != null) Modifier.clickable {
+                                    BattleBridge.requestRecipeCraft(selectedRecipeId)
                                     onDismiss()
                                 } else Modifier
                             )
@@ -561,10 +583,13 @@ private fun RecipeCard(
     resultBlueprint: UnitBlueprint?,
     fieldMatchCount: Int,
     totalIngredients: Int,
+    isSelected: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
     val readyOnField = fieldMatchCount >= totalIngredients
     val hasPartial = fieldMatchCount > 0
     val borderColor = when {
+        isSelected -> Color(0xFF00E676)
         readyOnField -> GoldBright.copy(alpha = 0.8f)
         hasPartial -> RecipeAvailableGlow.copy(alpha = 0.4f)
         else -> RecipeCardBorder
@@ -576,8 +601,9 @@ private fun RecipeCard(
             .fillMaxWidth()
             .graphicsLayer { alpha = cardAlpha }
             .clip(RoundedCornerShape(12.dp))
-            .background(RecipeCardBg)
-            .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
+            .background(if (isSelected) RecipeCardBg.copy(alpha = 1f) else RecipeCardBg)
+            .border(if (isSelected) 2.5.dp else 1.5.dp, borderColor, RoundedCornerShape(12.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(12.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

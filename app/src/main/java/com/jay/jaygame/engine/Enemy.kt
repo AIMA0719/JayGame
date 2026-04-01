@@ -10,6 +10,7 @@ class Enemy {
     var speed = 0f
     var baseSpeed = 0f
     var armor = 0f
+    var baseArmor = 0f
     var magicResist = 0f
     var type = 0
     var pathIndex = 0
@@ -34,6 +35,8 @@ class Enemy {
 
     /** Convenience property: true when bossModifier is non-null */
     val isBoss: Boolean get() = bossModifier != null
+    /** 엘리트 여부 — 스폰 시 설정 */
+    var isElite: Boolean = false
 
     /** Boss modifier — null for non-boss enemies */
     var bossModifier: BossModifier? = null
@@ -53,6 +56,7 @@ class Enemy {
         this.speed = speed
         this.baseSpeed = speed
         this.armor = armor
+        this.baseArmor = armor
         this.magicResist = magicResist
         this.type = type
         this.position = startPos.copy()
@@ -158,6 +162,7 @@ class Enemy {
 
     fun reset() {
         alive = false
+        isElite = false
         buffs.clear()
         recentHitFlags = 0
         recentHitTimer = 0f

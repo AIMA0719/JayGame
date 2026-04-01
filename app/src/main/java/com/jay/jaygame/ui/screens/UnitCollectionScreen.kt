@@ -896,7 +896,7 @@ private fun BlueprintDetailDialog(
                             }
                             if (progress.level < 10) {
                                 NeonButton(
-                                    text = "($cardsNeeded) 강화",
+                                    text = "($cardsNeeded)",
                                     onClick = {
                                         if (canLevelUp) {
                                             val updatedUnits = data.units.toMutableMap()

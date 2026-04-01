@@ -235,7 +235,7 @@ object AbilityEngine {
 
             // ── HUMAN MYTHIC ──
             "emperor_domain" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
-                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.CoinBonus(3)))
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true)))
 
             "judge_verdict" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.20f, r, isMagic,
                 listOf(AbilityEffect.ArmorBreak(1f, 3f), AbilityEffect.MagicResistBreak(1f, 3f)))
@@ -262,7 +262,7 @@ object AbilityEngine {
                 listOf(AbilityEffect.SelfAtkBuff(v / 100f, 5f, 1), AbilityEffect.SelfSpdBuff(v / 100f, 5f)))
 
             "guardian_x_shield" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
-                listOf(AbilityEffect.SpdBuff(0.10f, 1f, true)))
+                listOf(AbilityEffect.SpdBuff(0.10f, 1f, true), AbilityEffect.Slow(0.15f, 1f)))
 
             // ── DEMON MYTHIC ──
             "demon_king_terror" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
@@ -270,7 +270,7 @@ object AbilityEngine {
 
             // ── HUMAN IMMORTAL ──
             "god_emperor_domain" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
-                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.15f, 1f, true), AbilityEffect.CoinBonus(5)))
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.15f, 1f, true)))
 
             // ── SPIRIT IMMORTAL ──
             "yggdrasil_life" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
@@ -278,7 +278,7 @@ object AbilityEngine {
 
             // ── ANIMAL IMMORTAL ──
             "four_beasts_domain" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
-                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.20f, 1f, true)))
+                listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true), AbilityEffect.SpdBuff(0.20f, 1f, true), AbilityEffect.Slow(0.20f, 1f)))
 
             // ── NEW SPIRIT ──
             "earth_power" -> makeAbility(id, trigger, AbilityPrimitive.NTH_ATTACK, cd, 1f, 80f, isMagic,
@@ -603,6 +603,13 @@ object AbilityEngine {
                 }
                 is AbilityEffect.ArmorBreak -> applyEnemyDebuffInRange(unit, spatialHash, ability.range) { enemy ->
                     enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
+                }
+                // MR 감소 — BuffSystem에 별도 MR debuff 타입 없으므로 ArmorBreak로 통합
+                is AbilityEffect.MagicResistBreak -> applyEnemyDebuffInRange(unit, spatialHash, ability.range) { enemy ->
+                    enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
+                }
+                is AbilityEffect.DoT -> applyEnemyDebuffInRange(unit, spatialHash, ability.range) { enemy ->
+                    enemy.buffs.addBuff(BuffType.DoT, unit.effectiveATK() * effect.atkPercentPerTick, effect.duration, unit.tileIndex)
                 }
                 else -> {}
             }

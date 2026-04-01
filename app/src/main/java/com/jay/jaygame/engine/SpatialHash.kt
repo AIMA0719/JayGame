@@ -20,13 +20,16 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
         }
     }
 
-    fun query(rect: GameRect): List<T> {
+    fun query(rect: GameRect): List<T> = query(rect.x, rect.y, rect.right, rect.bottom)
+
+    /** Allocation-free query using raw float bounds (left, top, right, bottom). */
+    fun query(left: Float, top: Float, right: Float, bottom: Float): List<T> {
         val result = mutableListOf<T>()
         val seen = HashSet<T>()
-        val minCX = (rect.x / cellSize).toInt()
-        val minCY = (rect.y / cellSize).toInt()
-        val maxCX = (rect.right / cellSize).toInt()
-        val maxCY = (rect.bottom / cellSize).toInt()
+        val minCX = (left / cellSize).toInt()
+        val minCY = (top / cellSize).toInt()
+        val maxCX = (right / cellSize).toInt()
+        val maxCY = (bottom / cellSize).toInt()
         for (cy in minCY..maxCY) {
             for (cx in minCX..maxCX) {
                 val key = (cx.toLong() shl 32) or (cy.toLong() and 0xFFFFFFFFL)

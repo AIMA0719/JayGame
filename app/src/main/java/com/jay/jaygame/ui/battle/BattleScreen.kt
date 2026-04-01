@@ -96,6 +96,9 @@ fun BattleScreen(
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
     val context = LocalContext.current
 
+    val roguelikeChoices by BattleBridge.roguelikeChoices.collectAsState()
+    val activeRoguelikeBuffs by BattleBridge.activeRoguelikeBuffs.collectAsState()
+
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var savedSpeed by remember { mutableFloatStateOf(2f) }
@@ -278,11 +281,14 @@ fun BattleScreen(
                 .windowInsetsPadding(WindowInsets.displayCutout),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            BattleTopHud(onPauseClick = {
-                savedSpeed = BattleBridge.battleSpeed.value
-                BattleBridge.setBattleSpeed(0f)
-                showMenuDialog = true
-            })
+            BattleTopHud(
+                activeRoguelikeBuffs = activeRoguelikeBuffs,
+                onPauseClick = {
+                    savedSpeed = BattleBridge.battleSpeed.value
+                    BattleBridge.setBattleSpeed(0f)
+                    showMenuDialog = true
+                },
+            )
             Spacer(modifier = Modifier.weight(1f))
             BattleBottomHud(
                 onBulkSellClick = { showBulkSellDialog = true },
@@ -308,6 +314,17 @@ fun BattleScreen(
         }
         if (showUpgradeSheet) {
             UpgradeSheet(onDismiss = { showUpgradeSheet = false })
+        }
+
+        // 로그라이크 강화 선택 다이얼로그
+        roguelikeChoices?.let { choices ->
+            RoguelikeBuffDialog(
+                choices = choices,
+                activeBuffs = activeRoguelikeBuffs,
+                onSelect = { index ->
+                    BattleBridge.requestSelectRoguelikeBuff(index)
+                },
+            )
         }
 
         // Layer 4: Result screen with A3 transition
@@ -343,12 +360,7 @@ fun BattleScreen(
             BattleMenuDialog(
                 onDismiss = {
                     showMenuDialog = false
-                    // Resume: if user changed speed in menu, use that; otherwise restore saved
-                    val menuSpeed = BattleBridge.battleSpeed.value
-                    if (menuSpeed == 0f) {
-                        BattleBridge.setBattleSpeed(savedSpeed)
-                    }
-                    // else user already set a new speed via menu controls
+                    BattleBridge.setBattleSpeed(savedSpeed)
                 },
                 onQuitClick = {
                     showMenuDialog = false
@@ -358,6 +370,8 @@ fun BattleScreen(
                 sfxEnabled = sfxEnabled,
                 onToggleBgm = onToggleBgm,
                 onToggleSfx = onToggleSfx,
+                currentSpeed = savedSpeed,
+                onSpeedChange = { speed -> savedSpeed = speed },
             )
         }
 
@@ -738,8 +752,9 @@ private fun BattleMenuDialog(
     sfxEnabled: Boolean,
     onToggleBgm: () -> Unit,
     onToggleSfx: () -> Unit,
+    currentSpeed: Float = 2f,
+    onSpeedChange: (Float) -> Unit = {},
 ) {
-    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
 
     Box(
         modifier = Modifier
@@ -793,14 +808,14 @@ private fun BattleMenuDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     listOf(2f to "x1", 4f to "x2").forEach { (speed, label) ->
-                        val isSelected = battleSpeed == speed
+                        val isSelected = currentSpeed == speed
                         val color = when (speed) {
                             4f -> MenuSpeedX2Color
                             else -> MenuSpeedX1Color
                         }
                         NeonButton(
                             text = label,
-                            onClick = { BattleBridge.setBattleSpeed(speed) },
+                            onClick = { onSpeedChange(speed) },
                             modifier = Modifier.weight(1f).height(38.dp),
                             accentColor = if (isSelected) color else SubText,
                             accentColorDark = if (isSelected) color.copy(alpha = 0.7f) else DimText,

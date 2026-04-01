@@ -10,6 +10,8 @@ import com.jay.jaygame.engine.Grid
 import com.jay.jaygame.engine.UnitCategory
 import com.jay.jaygame.engine.UnitRole
 import com.jay.jaygame.engine.UnitState
+import com.jay.jaygame.engine.RoguelikeBuff
+import com.jay.jaygame.engine.ActiveRoguelikeBuff
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -321,10 +323,11 @@ object BattleBridge {
             val result: CompletableDeferred<com.jay.jaygame.engine.GambleSystem.GambleResult?>,
         ) : BattleCommand()
         object MergeAll : BattleCommand()
-        object RecipeCraft : BattleCommand()
+        data class RecipeCraft(val recipeId: String? = null) : BattleCommand()
         data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
         data class BuyLuckyStone(val cost: Int) : BattleCommand()
+        data class SelectRoguelikeBuff(val index: Int) : BattleCommand()
     }
 
     /** Drain all pending commands — called by the game loop on its own thread. */
@@ -363,6 +366,29 @@ object BattleBridge {
         _healthBarMode.value = hpBarMode
         _effectQuality.value = effectQual
         _autoWaveStart.value = autoWave
+    }
+
+    // ── 로그라이크 강화 선택 시스템 ──
+    private val _roguelikeChoices = MutableStateFlow<List<RoguelikeBuff>?>(null)
+    val roguelikeChoices: StateFlow<List<RoguelikeBuff>?> = _roguelikeChoices.asStateFlow()
+
+    private val _activeRoguelikeBuffs = MutableStateFlow<List<ActiveRoguelikeBuff>>(emptyList())
+    val activeRoguelikeBuffs: StateFlow<List<ActiveRoguelikeBuff>> = _activeRoguelikeBuffs.asStateFlow()
+
+    fun showRoguelikeChoices(choices: List<RoguelikeBuff>) {
+        _roguelikeChoices.value = choices
+    }
+
+    fun clearRoguelikeChoices() {
+        _roguelikeChoices.value = null
+    }
+
+    fun updateActiveRoguelikeBuffs(buffs: List<ActiveRoguelikeBuff>) {
+        _activeRoguelikeBuffs.value = buffs
+    }
+
+    fun requestSelectRoguelikeBuff(index: Int) {
+        commandQueue.add(BattleCommand.SelectRoguelikeBuff(index))
     }
 
     private val _state = MutableStateFlow(BattleState())
@@ -939,6 +965,8 @@ object BattleBridge {
         _groupUpgradeLevels.value = IntArray(com.jay.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 }
         _luckyStones.value = 0
         _debugMode.value = false
+        _roguelikeChoices.value = null
+        _activeRoguelikeBuffs.value = emptyList()
         commandQueue.clear()
     }
 
@@ -978,8 +1006,8 @@ object BattleBridge {
         return runBlocking { withTimeoutOrNull(100L) { deferred.await() } ?: 0 }
     }
 
-    fun requestRecipeCraft() {
-        commandQueue.add(BattleCommand.RecipeCraft)
+    fun requestRecipeCraft(recipeId: String? = null) {
+        commandQueue.add(BattleCommand.RecipeCraft(recipeId))
     }
 
     fun requestGroupUpgrade(groupIndex: Int) {
