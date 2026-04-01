@@ -31,7 +31,7 @@ val ALL_RELICS: List<RelicDef> = listOf(
 
     // ===== 전투 (Combat) =====
     RelicDef(id = 3, name = "전쟁의 뿔피리", type = RelicType.COMBAT, minGrade = RelicGrade.COMMON,
-        description = "전체 유닛 ATK +{lv}×5%", effectPerLevel = 5f),
+        description = "전체 유닛 공격력 +{lv}×5%", effectPerLevel = 5f),
     RelicDef(id = 4, name = "신속의 부츠", type = RelicType.COMBAT, minGrade = RelicGrade.COMMON,
         description = "전체 유닛 공속 +{lv}×4%", effectPerLevel = 4f),
     RelicDef(id = 5, name = "파멸의 반지", type = RelicType.COMBAT, minGrade = RelicGrade.RARE,

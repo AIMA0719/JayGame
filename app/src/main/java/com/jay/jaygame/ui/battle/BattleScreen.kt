@@ -743,6 +743,7 @@ private fun QuitBattleDialog(
 
 private val MenuSpeedX1Color = Color(0xFF4FC3F7)  // 밝은 파랑
 private val MenuSpeedX2Color = Color(0xFFFFD700)   // 골드
+private val MenuSpeedX3Color = Color(0xFFFF6B6B)   // 레드
 
 @Composable
 private fun BattleMenuDialog(
@@ -807,9 +808,10 @@ private fun BattleMenuDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    listOf(2f to "x1", 4f to "x2").forEach { (speed, label) ->
+                    listOf(2f to "x1", 4f to "x2", 6f to "x3").forEach { (speed, label) ->
                         val isSelected = currentSpeed == speed
                         val color = when (speed) {
+                            6f -> MenuSpeedX3Color
                             4f -> MenuSpeedX2Color
                             else -> MenuSpeedX1Color
                         }

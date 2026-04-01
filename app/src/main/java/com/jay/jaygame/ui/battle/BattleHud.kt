@@ -390,6 +390,7 @@ fun BattleTopHud(
             // Show current speed indicator on menu button
             val speedLabel = when (battleSpeed) {
                 4f -> "x2"
+                6f -> "x3"
                 8f -> "x4"
                 else -> ""
             }
@@ -400,6 +401,7 @@ fun BattleTopHud(
                     fontWeight = FontWeight.ExtraBold,
                     color = when (battleSpeed) {
                         4f -> GoldBright
+                        6f -> Color(0xFFFF6B6B)
                         8f -> Color(0xFFFF6B6B)
                         else -> Color.White
                     },

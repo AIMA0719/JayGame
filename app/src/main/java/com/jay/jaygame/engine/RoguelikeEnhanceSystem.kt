@@ -29,18 +29,18 @@ class RoguelikeEnhanceSystem {
 
     private val buffPool: List<RoguelikeBuff> = listOf(
         // ── 일반 (minWave=0) ──
-        RoguelikeBuff("atk_boost", "공격력 강화", "전체 유닛 ATK +10%", RoguelikeBuffGrade.NORMAL, 0, true),
+        RoguelikeBuff("atk_boost", "공격력 강화", "전체 유닛 공격력 +10%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("spd_boost", "공격속도 강화", "전체 유닛 공속 +8%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("range_boost", "사거리 확장", "전체 유닛 사거리 +10%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("crit_boost", "치명타 확률", "크리율 +5%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("coin_boost", "코인 보너스", "적 처치 코인 +30%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("sell_bonus", "되팔이의 눈", "유닛 판매 가격 +75%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("cc_duration", "속박 강화", "로그라이크 효과 CC 지속시간 +20%", RoguelikeBuffGrade.NORMAL, 0, true),
-        RoguelikeBuff("dot_boost", "맹독 강화", "DoT 데미지 +25%", RoguelikeBuffGrade.NORMAL, 0, true,
+        RoguelikeBuff("dot_boost", "맹독 강화", "지속 피해 +25%", RoguelikeBuffGrade.NORMAL, 0, true,
             requiredRaces = setOf(UnitRace.SPIRIT, UnitRace.ANIMAL, UnitRace.DEMON)),
         // ── 희귀 (minWave=20) ──
         RoguelikeBuff("summon_discount", "소환 할인", "소환 비용 -15%", RoguelikeBuffGrade.RARE, 20, true),
-        RoguelikeBuff("race_atk", "전투 고양", "전체 유닛 ATK +25%", RoguelikeBuffGrade.RARE, 20, true),
+        RoguelikeBuff("race_atk", "전투 고양", "전체 유닛 공격력 +25%", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("splash_dmg", "폭발의 여파", "모든 공격에 범위 피해 20%", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("slow_on_hit", "동결 타격", "공격 시 15% 확률 슬로우", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("chain_lightning", "연쇄 번개", "공격 시 7% 확률 주변 2체 50% 데미지", RoguelikeBuffGrade.RARE, 20, false),
@@ -50,10 +50,10 @@ class RoguelikeEnhanceSystem {
         // ── 영웅 (minWave=40) ──
         RoguelikeBuff("boss_slayer", "보스 킬러", "보스/엘리트 데미지 +40%", RoguelikeBuffGrade.HERO, 40, true),
         RoguelikeBuff("double_merge", "합성 행운", "Lucky merge 확률 +15%", RoguelikeBuffGrade.HERO, 40, true),
-        RoguelikeBuff("mana_surge", "마나 폭주", "manaPerHit +50%", RoguelikeBuffGrade.HERO, 40, true),
+        RoguelikeBuff("mana_surge", "마나 폭주", "마나 충전량 +50%", RoguelikeBuffGrade.HERO, 40, true),
         RoguelikeBuff("execute", "처형자", "적 HP 7% 이하 시 즉사 (보스 제외)", RoguelikeBuffGrade.HERO, 40, false),
         RoguelikeBuff("multishot", "다중 사격", "원거리 유닛 20% 확률 2회 공격", RoguelikeBuffGrade.HERO, 40, false),
-        RoguelikeBuff("berserker", "광전사", "웨이브당 ATK +1% 누적", RoguelikeBuffGrade.HERO, 40, true),
+        RoguelikeBuff("berserker", "광전사", "웨이브당 공격력 +1% 누적", RoguelikeBuffGrade.HERO, 40, true),
     )
 
     /**

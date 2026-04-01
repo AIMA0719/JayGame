@@ -233,7 +233,7 @@ private fun GroupUpgradeRow(
                 // Current bonus stats
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "ATK +${atkPercent}%",
+                        text = "공격력 +${atkPercent}%",
                         color = NeonRed.copy(alpha = 0.9f),
                         fontSize = 10.sp,
                     )

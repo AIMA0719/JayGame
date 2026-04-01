@@ -914,6 +914,7 @@ class BattleEngine(
                     ).forEach { nearby ->
                         if (nearby.alive && nearby !== target) {
                             nearby.takeDamage(splashDmg, proj.isMagic, 0f)
+                            BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, splashDmg.toInt(), false)
                         }
                     }
                 }
@@ -927,6 +928,7 @@ class BattleEngine(
                     ).forEach { nearby ->
                         if (nearby.alive && nearby !== target && chainCount < 2) {
                             nearby.takeDamage(chainDmg, true, 0f)
+                            BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, chainDmg.toInt(), false)
                             chainCount++
                         }
                     }

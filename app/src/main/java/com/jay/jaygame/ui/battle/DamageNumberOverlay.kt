@@ -77,8 +77,10 @@ private fun AnimatedDamageNumber(
     val alpha = (1f - p).coerceIn(0f, 1f)
     val scale = 1f + p * 0.4f
 
+    // HP 바 위에서 시작: 스프라이트 반높이 + HP바 마진만큼 위로
+    val spriteHalf = containerWidth * (70f / 720f) * 1.36f / 2f
     val x = event.x * containerWidth
-    val y = event.y * containerHeight + offsetY
+    val y = event.y * containerHeight - spriteHalf - 12f + offsetY
 
     val density = LocalDensity.current
     val xDp = with(density) { x.toDp() }
@@ -86,7 +88,7 @@ private fun AnimatedDamageNumber(
 
     Text(
         text = "-${event.damage}",
-        color = if (event.isCrit) Color(0xFFFF5252) else Color(0xFFFFD54F),
+        color = if (event.isCrit) Color(0xFFFF5252) else Color(0xFFFFAB40),
         fontSize = if (event.isCrit) 18.sp else 14.sp,
         fontWeight = FontWeight.ExtraBold,
         modifier = Modifier

@@ -1065,7 +1065,7 @@ private fun SettingsFaq(onBack: () -> Unit) {
             ) {
                 FaqBullet("전투 중 강화 버튼을 눌러 등급 그룹별 통합 강화를 할 수 있습니다")
                 FaqBullet("같은 그룹의 모든 유닛에 동일한 보너스가 적용됩니다")
-                FaqBullet("강화당 기본 ATK의 50% 증가 (최대 Lv.15)")
+                FaqBullet("강화당 기본 공격력의 50% 증가 (최대 Lv.15)")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("강화 그룹 (코인, 지수 증가)")
                 FaqKeyValue("일반/희귀", "10코인~ (×1.18/Lv)")
@@ -1073,11 +1073,11 @@ private fun SettingsFaq(onBack: () -> Unit) {
                 FaqKeyValue("신화", "40코인~ (×1.24/Lv)")
                 Spacer(Modifier.height(4.dp))
                 FaqSubTitle("마일스톤 보너스")
-                FaqKeyValue("Lv.3", "ATK +10%")
-                FaqKeyValue("Lv.6", "ATK +15%")
+                FaqKeyValue("Lv.3", "공격력 +10%")
+                FaqKeyValue("Lv.6", "공격력 +15%")
                 FaqKeyValue("Lv.9", "공격속도 +10%")
-                FaqKeyValue("Lv.12", "ATK +15%")
-                FaqKeyValue("Lv.15", "ATK +10% + 공속 +10%")
+                FaqKeyValue("Lv.12", "공격력 +15%")
+                FaqKeyValue("Lv.15", "공격력 +10% + 공속 +10%")
             }
 
             // ── 종족 드래프트 시너지 ──

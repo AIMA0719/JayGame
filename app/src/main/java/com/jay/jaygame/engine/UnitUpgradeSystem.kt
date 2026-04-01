@@ -54,9 +54,9 @@ object UnitUpgradeSystem {
     }
 
     fun nextMilestoneHint(currentLevel: Int): String = when {
-        currentLevel < 5 -> "Lv.5: ATK +5%"
-        currentLevel < 10 -> "Lv.10: ATK +5%, 속도 +5%"
-        currentLevel < 15 -> "Lv.15: ATK +10%, 속도 +5%"
+        currentLevel < 5 -> "Lv.5: 공격력 +5%"
+        currentLevel < 10 -> "Lv.10: 공격력 +5%, 속도 +5%"
+        currentLevel < 15 -> "Lv.15: 공격력 +10%, 속도 +5%"
         else -> "MAX"
     }
 }
