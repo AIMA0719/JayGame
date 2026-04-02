@@ -888,19 +888,20 @@ object BattleBridge {
 
     fun setTutorialMode(enabled: Boolean) { _tutorialMode.value = enabled }
 
-    /** 배속 (2f=x1, 4f=x2) — 내부 기본 2f */
+    /** 배속 (2f=x1, 4f=x2, 6f=x3) — 내부 기본 2f */
     private val _battleSpeed = MutableStateFlow(2f)
     val battleSpeed: StateFlow<Float> = _battleSpeed.asStateFlow()
 
     fun cycleBattleSpeed() {
         _battleSpeed.value = when (_battleSpeed.value) {
             2f -> 4f
+            4f -> 6f
             else -> 2f
         }
     }
 
     fun setBattleSpeed(speed: Float) {
-        _battleSpeed.value = speed.coerceIn(0f, 4f) // 0 = paused
+        _battleSpeed.value = speed.coerceIn(0f, 6f) // 0 = paused
     }
 
     /** 라이프사이클 자동 일시정지 — onPause 시 속도 저장 후 0f, onResume 시 복원 */
