@@ -189,6 +189,59 @@ class BattleEngine(
     internal var roguelikeMultishot = false
     private var pendingRoguelike = false
 
+    /** 로그라이크 ATK 가산 풀: atk_boost + race_atk + berserker + boss_slayer */
+    private fun roguelikeTotalAtk(isBoss: Boolean): Float =
+        roguelikeAtkMult +
+            (if (roguelikeBerserkerBase > 0f) roguelikeBerserkerBase * waveSystem.currentWave / 100f else 0f) +
+            (if (isBoss) roguelikeBossBonus else 0f)
+
+    /** 로그라이크 온힛 효과 공통 적용 (근접/원거리 공용) */
+    private fun applyRoguelikeOnHit(target: Enemy, damage: Float, isMagic: Boolean) {
+        if (!target.alive) return
+        if (roguelikeArmorShred) {
+            val minArmor = target.baseArmor * 0.5f
+            target.armor = maxOf(target.armor * 0.95f, minArmor)
+        }
+        if (roguelikeSlowOnHit && Math.random() < 0.15) {
+            target.buffs.addBuff(BuffType.Slow, 0.3f, 2f * (1f + roguelikeCCDuration))
+        }
+        if (roguelikeDotBoost > 0f) {
+            target.buffs.addBuff(BuffType.DoT, damage * roguelikeDotBoost / 3f, 3f)
+        }
+        if (roguelikeSplash) {
+            val splashRange = 80f
+            val splashDmg = damage * 0.2f
+            spatialHash.query(
+                target.position.x - splashRange, target.position.y - splashRange,
+                target.position.x + splashRange, target.position.y + splashRange,
+            ).forEach { nearby ->
+                if (nearby.alive && nearby !== target) {
+                    nearby.takeDamage(splashDmg, isMagic, 0f)
+                    BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, splashDmg.toInt(), false)
+                }
+            }
+        }
+        if (roguelikeChainLightning && Math.random() < 0.10) {
+            val chainRange = 120f
+            val chainDmg = damage * 0.5f
+            var chainCount = 0
+            spatialHash.query(
+                target.position.x - chainRange, target.position.y - chainRange,
+                target.position.x + chainRange, target.position.y + chainRange,
+            ).forEach { nearby ->
+                if (nearby.alive && nearby !== target && chainCount < 2) {
+                    nearby.takeDamage(chainDmg, true, 0f)
+                    BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, chainDmg.toInt(), false)
+                    chainCount++
+                }
+            }
+        }
+        if (roguelikeExecute && !target.isBoss && target.alive && target.hp <= target.maxHp * 0.07f) {
+            target.hp = 0f
+            target.alive = false
+        }
+    }
+
     private val roguelikeSystem = RoguelikeEnhanceSystem()
     private val activeRoguelikeBuffs = mutableListOf<ActiveRoguelikeBuff>()
 
@@ -411,6 +464,16 @@ class BattleEngine(
                                 BattleBridge.updateActiveRoguelikeBuffs(activeRoguelikeBuffs.toList())
                                 BattleBridge.clearRoguelikeChoices()
                                 pendingRoguelike = false
+                            }
+                        }
+                        is BattleBridge.BattleCommand.RerollRoguelike -> {
+                            if (BattleBridge.roguelikeRerollsLeft.value > 0 && pendingRoguelike) {
+                                BattleBridge.useReroll()
+                                val clearedWave = waveSystem.currentWave + 1
+                                val newChoices = roguelikeSystem.generateChoices(clearedWave, activeRoguelikeBuffs, BattleBridge.selectedRaces.value)
+                                if (newChoices.isNotEmpty()) {
+                                    BattleBridge.showRoguelikeChoices(newChoices)
+                                }
                             }
                         }
                     }
@@ -814,11 +877,10 @@ class BattleEngine(
                     val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.familyOrdinal] ?: 0) * 0.05f
                     val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
                     val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.familyOrdinal, target.type)
-                    val behBossMult = if (target.isBoss) synergyBossDmgMult * (1f + roguelikeBossBonus) else 1f
-                    val behBerserkerMult = if (roguelikeBerserkerBase > 0f) 1f + roguelikeBerserkerBase * waveSystem.currentWave / 100f else 1f
+                    val behBossMult = if (target.isBoss) synergyBossDmgMult else 1f
                     val boostedDamage = result.damage * critBoost *
-                        upgradeAtkMult * synergyAtkMult * roguelikeAtkMult * (1f + relicAtkBonus) *
-                        familyUpgradeBonus * gradeBonus * advantageMult * behBerserkerMult *
+                        upgradeAtkMult * synergyAtkMult * roguelikeTotalAtk(target.isBoss) * (1f + relicAtkBonus) *
+                        familyUpgradeBonus * gradeBonus * advantageMult *
                         (if (result.isMagic) (1f + relicMagicDmg) else 1f) *
                         (if (!result.isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f) *
                         behBossMult
@@ -897,46 +959,8 @@ class BattleEngine(
                 // Data-driven ability on-hit (AbilityEngine)
                 applyAbilityOnHit(proj.sourceUnitId, target)
 
-                // ── 로그라이크 투사체 히트 효과 ──
-                if (roguelikeArmorShred) {
-                    val minArmor = target.baseArmor * 0.5f
-                    target.armor = maxOf(target.armor * 0.95f, minArmor)
-                }
-                if (roguelikeSlowOnHit && Math.random() < 0.15) {
-                    target.buffs.addBuff(BuffType.Slow, 0.3f, 2f * (1f + roguelikeCCDuration))
-                }
-                if (roguelikeSplash) {
-                    val splashRange = 80f
-                    val splashDmg = proj.damage * 0.2f
-                    spatialHash.query(
-                        target.position.x - splashRange, target.position.y - splashRange,
-                        target.position.x + splashRange, target.position.y + splashRange,
-                    ).forEach { nearby ->
-                        if (nearby.alive && nearby !== target) {
-                            nearby.takeDamage(splashDmg, proj.isMagic, 0f)
-                            BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, splashDmg.toInt(), false)
-                        }
-                    }
-                }
-                if (roguelikeChainLightning && Math.random() < 0.07) {
-                    val chainRange = 120f
-                    val chainDmg = proj.damage * 0.5f
-                    var chainCount = 0
-                    spatialHash.query(
-                        target.position.x - chainRange, target.position.y - chainRange,
-                        target.position.x + chainRange, target.position.y + chainRange,
-                    ).forEach { nearby ->
-                        if (nearby.alive && nearby !== target && chainCount < 2) {
-                            nearby.takeDamage(chainDmg, true, 0f)
-                            BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, chainDmg.toInt(), false)
-                            chainCount++
-                        }
-                    }
-                }
-                if (roguelikeExecute && !target.isBoss && target.alive && target.hp <= target.maxHp * 0.07f) {
-                    target.hp = 0f
-                    target.alive = false
-                }
+                // ── 로그라이크 온힛 효과 ──
+                applyRoguelikeOnHit(target, proj.damage, proj.isMagic)
 
                 val nx = target.position.x / W
                 val ny = target.position.y / H
@@ -1016,7 +1040,7 @@ class BattleEngine(
             },
             onDotEnemy = { enemy, dps, duration ->
                 if (enemy.alive) {
-                    enemy.buffs.addBuff(BuffType.DoT, dps * (1f + roguelikeDotBoost), duration)
+                    enemy.buffs.addBuff(BuffType.DoT, dps, duration)
                 }
             },
         )
@@ -1039,9 +1063,8 @@ class BattleEngine(
         val familyUpgradeBonus = 1f + (familyUpgradeLevels[unit.familyOrdinal] ?: 0) * 0.05f
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
         val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.familyOrdinal, target.type)
-        val bossMult = if (target.isBoss) synergyBossDmgMult * (1f + roguelikeBossBonus) else 1f
-        val berserkerMult = if (roguelikeBerserkerBase > 0f) 1f + roguelikeBerserkerBase * waveSystem.currentWave / 100f else 1f
-        val baseAtk = unit.effectiveATK() * upgradeAtkMult * synergyAtkMult * roguelikeAtkMult * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult * berserkerMult
+        val bossMult = if (target.isBoss) synergyBossDmgMult else 1f
+        val baseAtk = unit.effectiveATK() * upgradeAtkMult * synergyAtkMult * roguelikeTotalAtk(target.isBoss) * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
             (if (isMagic) (1f + relicMagicDmg) else 1f) *
             (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f) *
@@ -1060,6 +1083,7 @@ class BattleEngine(
             BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), isCrit, angle)
             tryPlayAttackSfx(isCrit, unit.attackRange, unit.damageType)
             applyAbilityOnHit(unit.tileIndex, target)
+            applyRoguelikeOnHit(target, dmg, isMagic)
         } else {
             // 원거리: 투사체 발사
             val proj = projectiles.acquire() ?: return

@@ -36,14 +36,13 @@ class RoguelikeEnhanceSystem {
         RoguelikeBuff("coin_boost", "코인 보너스", "적 처치 코인 +30%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("sell_bonus", "되팔이의 눈", "유닛 판매 가격 +75%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("cc_duration", "속박 강화", "로그라이크 효과 CC 지속시간 +20%", RoguelikeBuffGrade.NORMAL, 0, true),
-        RoguelikeBuff("dot_boost", "맹독 강화", "지속 피해 +25%", RoguelikeBuffGrade.NORMAL, 0, true,
-            requiredRaces = setOf(UnitRace.SPIRIT, UnitRace.ANIMAL, UnitRace.DEMON)),
+        RoguelikeBuff("dot_boost", "맹독 부여", "공격 시 ATK 15%의 독 피해 (3초)", RoguelikeBuffGrade.NORMAL, 0, true),
         // ── 희귀 (minWave=20) ──
         RoguelikeBuff("summon_discount", "소환 할인", "소환 비용 -15%", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("race_atk", "전투 고양", "전체 유닛 공격력 +25%", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("splash_dmg", "폭발의 여파", "모든 공격에 범위 피해 20%", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("slow_on_hit", "동결 타격", "공격 시 15% 확률 슬로우", RoguelikeBuffGrade.RARE, 20, false),
-        RoguelikeBuff("chain_lightning", "연쇄 번개", "공격 시 7% 확률 주변 2체 50% 데미지", RoguelikeBuffGrade.RARE, 20, false),
+        RoguelikeBuff("chain_lightning", "연쇄 번개", "공격 시 10% 확률 주변 2체 50% 데미지", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("vampiric", "생명력 착취", "적 처치 시 30% 확률 코인 2배", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("armor_shred", "방어구 파쇄", "공격 시 적 방어력 5% 영구 감소", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("summon_upgrade", "소환 축복", "소환 시 7% 확률 1등급 상위", RoguelikeBuffGrade.RARE, 20, false),
@@ -118,11 +117,9 @@ class RoguelikeEnhanceSystem {
             "coin_boost" -> engine.roguelikeCoinMult += 0.30f
             "sell_bonus" -> engine.roguelikeSellBonus += 0.75f
             "cc_duration" -> engine.roguelikeCCDuration += 0.20f
-            "dot_boost" -> engine.roguelikeDotBoost += 0.25f
+            "dot_boost" -> engine.roguelikeDotBoost += 0.15f
             "summon_discount" -> engine.roguelikeSummonDiscount = (engine.roguelikeSummonDiscount + 0.15f).coerceAtMost(0.75f)
-            "race_atk" -> { /* 종족 ATK는 엔진 내부에서 별도 처리 가능 — 현재는 전체 ATK 보너스로 대체 */
-                engine.roguelikeAtkMult += 0.25f
-            }
+            "race_atk" -> engine.roguelikeAtkMult += 0.25f
             "splash_dmg" -> engine.roguelikeSplash = true
             "slow_on_hit" -> engine.roguelikeSlowOnHit = true
             "chain_lightning" -> engine.roguelikeChainLightning = true

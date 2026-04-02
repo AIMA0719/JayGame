@@ -28,10 +28,15 @@ class BuffContainer {
         val effectiveDuration = if (type == BuffType.Slow || type == BuffType.Stun || type == BuffType.Silence) {
             duration * (1f - ccResistance)
         } else duration
-        val existing = buffs.filter { it.type == type }
-        if (existing.size >= 3) {
-            existing.minByOrNull { it.remaining }?.let { buffs.remove(it) }
+        var count = 0
+        var oldest: BuffEntry? = null
+        for (b in buffs) {
+            if (b.type == type) {
+                count++
+                if (oldest == null || b.remaining < oldest!!.remaining) oldest = b
+            }
         }
+        if (count >= 3) oldest?.let { buffs.remove(it) }
         buffs.add(BuffEntry(type, value, effectiveDuration, sourceId))
         if (type == BuffType.Shield) shieldHP += value
     }

@@ -98,6 +98,7 @@ fun BattleScreen(
 
     val roguelikeChoices by BattleBridge.roguelikeChoices.collectAsState()
     val activeRoguelikeBuffs by BattleBridge.activeRoguelikeBuffs.collectAsState()
+    val roguelikeRerollsLeft by BattleBridge.roguelikeRerollsLeft.collectAsState()
 
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
@@ -321,8 +322,12 @@ fun BattleScreen(
             RoguelikeBuffDialog(
                 choices = choices,
                 activeBuffs = activeRoguelikeBuffs,
+                rerollsLeft = roguelikeRerollsLeft,
                 onSelect = { index ->
                     BattleBridge.requestSelectRoguelikeBuff(index)
+                },
+                onReroll = {
+                    BattleBridge.requestRerollRoguelike()
                 },
             )
         }

@@ -56,11 +56,13 @@ private fun gradeColors(grade: RoguelikeBuffGrade): Pair<Color, Color> {
 fun RoguelikeBuffDialog(
     choices: List<RoguelikeBuff>,
     activeBuffs: List<ActiveRoguelikeBuff>,
+    rerollsLeft: Int,
     onSelect: (Int) -> Unit,
+    onReroll: () -> Unit,
 ) {
-    var visibleCount by remember { mutableIntStateOf(0) }
+    var visibleCount by remember(choices) { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(choices) {
         for (i in 1..choices.size) {
             delay(600L)
             visibleCount = i
@@ -145,6 +147,28 @@ fun RoguelikeBuffDialog(
                             )
                         }
                     }
+                }
+            }
+
+            // 리롤 버튼
+            if (rerollsLeft > 0 && visibleCount >= choices.size) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(1.dp, Color(0xFF78909C), RoundedCornerShape(10.dp))
+                        .background(Color(0xFF263238))
+                        .clickable { onReroll() }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "\uD83D\uDD04 다시 뽑기 ($rerollsLeft/${com.jay.jaygame.bridge.BattleBridge.MAX_ROGUELIKE_REROLLS})",
+                        color = Color(0xFFB0BEC5),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
                 }
             }
         }

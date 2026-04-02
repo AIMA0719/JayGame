@@ -288,6 +288,8 @@ data class UnitPositionBatch(
 )
 
 object BattleBridge {
+    const val MAX_ROGUELIKE_REROLLS = 2
+
     private val enemyFrameCounter = AtomicLong(0)
     private val projFrameCounter = AtomicLong(0)
     private val unitFrameCounter = AtomicLong(0)
@@ -328,6 +330,7 @@ object BattleBridge {
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
         data class BuyLuckyStone(val cost: Int) : BattleCommand()
         data class SelectRoguelikeBuff(val index: Int) : BattleCommand()
+        object RerollRoguelike : BattleCommand()
     }
 
     /** Drain all pending commands — called by the game loop on its own thread. */
@@ -375,6 +378,9 @@ object BattleBridge {
     private val _activeRoguelikeBuffs = MutableStateFlow<List<ActiveRoguelikeBuff>>(emptyList())
     val activeRoguelikeBuffs: StateFlow<List<ActiveRoguelikeBuff>> = _activeRoguelikeBuffs.asStateFlow()
 
+    private val _roguelikeRerollsLeft = MutableStateFlow(MAX_ROGUELIKE_REROLLS)
+    val roguelikeRerollsLeft: StateFlow<Int> = _roguelikeRerollsLeft.asStateFlow()
+
     fun showRoguelikeChoices(choices: List<RoguelikeBuff>) {
         _roguelikeChoices.value = choices
     }
@@ -387,8 +393,16 @@ object BattleBridge {
         _activeRoguelikeBuffs.value = buffs
     }
 
+    fun useReroll() {
+        _roguelikeRerollsLeft.value = (_roguelikeRerollsLeft.value - 1).coerceAtLeast(0)
+    }
+
     fun requestSelectRoguelikeBuff(index: Int) {
         commandQueue.add(BattleCommand.SelectRoguelikeBuff(index))
+    }
+
+    fun requestRerollRoguelike() {
+        commandQueue.add(BattleCommand.RerollRoguelike)
     }
 
     private val _state = MutableStateFlow(BattleState())
@@ -967,6 +981,7 @@ object BattleBridge {
         _debugMode.value = false
         _roguelikeChoices.value = null
         _activeRoguelikeBuffs.value = emptyList()
+        _roguelikeRerollsLeft.value = MAX_ROGUELIKE_REROLLS
         commandQueue.clear()
     }
 
