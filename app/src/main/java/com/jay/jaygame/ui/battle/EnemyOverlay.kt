@@ -286,7 +286,7 @@ fun EnemyOverlay() {
                     prevHpRatios.value = oldHp
 
                     // 스프라이트 시트 애니메이션 상태 업데이트 (8x 배속 이상이면 스킵)
-                    if (speed < 8f) {
+                    if (speed < 6f) {
                         for (ai in 0 until data.count.coerceAtMost(256)) {
                             val anim = animStates[ai]
                             val flash = if (ai < flashTimers.size) flashTimers[ai] else 0f
@@ -411,8 +411,8 @@ fun EnemyOverlay() {
 
             val animator = enemyAnimators[type]
 
-            if (bSpeed >= 8f) {
-                // 8x: static draw, no transforms
+            if (bSpeed >= 6f) {
+                // x3: static draw, no transforms
                 bitmap?.let {
                     drawImage(image = it, dstOffset = dstOff, dstSize = dstSz)
                 }

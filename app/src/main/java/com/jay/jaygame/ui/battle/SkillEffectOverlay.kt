@@ -174,7 +174,7 @@ private val UltSpriteMap: Map<String, String> = mapOf(
     "human_legend_01"  to "fx_ult_sword",
     "human_legend_02"  to "fx_ult_wisdom",
     "human_legend_03"  to "fx_ult_divine",
-    "spirit_legend_01" to "fx_ult_cataclysm",
+    "spirit_legend_01" to "fx_aoe_lightning",
     "spirit_legend_02" to "fx_ult_nature",
     "spirit_legend_03" to "fx_skill_abyss_call",       // 어둠현자 궁
     "animal_legend_01" to "fx_ult_dragon",
@@ -350,6 +350,7 @@ fun SkillEffectOverlay(
                 // 궁극기 전용 > 패시브 전용 > 범용 AOE 스프라이트 이름 결정
                 val ultAsset = UltSpriteMap[event.abilityId]
                 val passiveAsset = PassiveVfxMap[event.abilityId]
+                    ?: if (event.abilityId == "storm_king_tempest") "fx_chain_lightning" else null
                 val staticAsset = ultAsset ?: passiveAsset ?: AoeVfxMap[event.type] ?: continue
 
                 val cx = event.x * size.width

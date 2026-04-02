@@ -687,7 +687,7 @@ object UniqueAbilitySystem {
         when (passiveId) {
             // ── 타이머 기반 AoE CC ──
             "guardian_x_passive" -> timedAoECC(unit, dt, spatialHash, 12f, 200f, BuffType.Stun, 1f, 2f)
-            "nexus_passive" -> timedAoECC(unit, dt, spatialHash, 10f, 9999f, BuffType.Stun, 1f, 1.5f)
+            "nexus_passive", "digital_apocalypse_passive" -> timedAoECC(unit, dt, spatialHash, 10f, 9999f, BuffType.Stun, 1f, 1.5f)
 
             // ── 타이머 + 아군 마나 충전 ──
             "yggdrasil_passive" -> {
@@ -708,26 +708,26 @@ object UniqueAbilitySystem {
 
             // ── 공격 카운터 기반 ──
             "emperor_passive" -> handleNthAttackCrit(unit, 5, 3f)
-            "abadon_passive" -> handleNthAttackCrit(unit, 4, 4f)
+            "abadon_passive", "abyss_king_passive" -> handleNthAttackCrit(unit, 4, 4f)
             "god_emperor_passive" -> handleNthAttackCrit(unit, 3, 5f)
-            "chaos_lord_passive" -> handleNthAttackCrit(unit, 3, 4f)
+            "chaos_lord_passive", "world_end_passive" -> handleNthAttackCrit(unit, 3, 4f)
 
             // ── 확률 기반 CC ──
             "frost_demon_passive" -> handleChanceCC(unit, 0.15f, BuffType.Stun, 1f, 3f)
-            "nemesis_passive" -> handleChanceCC(unit, 0.15f, BuffType.Stun, 1f, 2.5f)
+            "nemesis_passive", "extermination_protocol_passive" -> handleChanceCC(unit, 0.15f, BuffType.Stun, 1f, 2.5f)
             "illusionist_passive" -> handleChanceCC(unit, 0.10f, BuffType.Stun, 1f, 3f)
 
             // ── 종족 오라 버프 ──
             "primal_spirit_passive" -> handleRaceAura(unit, dt, allUnits, com.jay.jaygame.data.UnitRace.SPIRIT, 0.15f, 0.10f)
             "demon_king_passive" -> handleRaceAura(unit, dt, allUnits, com.jay.jaygame.data.UnitRace.DEMON, 0.20f)
-            "lucifer_passive" -> handleRaceAura(unit, dt, allUnits, com.jay.jaygame.data.UnitRace.DEMON, 0.20f, 0.15f)
+            "lucifer_passive", "paradise_lost_passive" -> handleRaceAura(unit, dt, allUnits, com.jay.jaygame.data.UnitRace.DEMON, 0.20f, 0.15f)
 
             // ── 보스/엘리트 추가 데미지 ──
             "judge_passive" -> handleBossBonus(unit, 0.15f)
             "haetae_passive" -> handleBossBonus(unit, 0.25f)
 
             // ── on-kill / wave-start 전용 (여기선 no-op) ──
-            "omega_passive", "divine_beast_passive", "kirin_passive" -> {}
+            "omega_passive", "divine_beast_passive", "kirin_passive", "celestial_grace_passive" -> {}
 
             // ── 원소 순환 ──
             "four_beasts_passive" -> {
@@ -765,10 +765,10 @@ object UniqueAbilitySystem {
 
         when (passiveId) {
             "omega_passive" -> addPermanentAtk(unit, 0.05f, 0.50f)
-            "nexus_passive" -> addPermanentAtk(unit, 0.03f, 0.60f)
+            "nexus_passive", "digital_apocalypse_passive" -> addPermanentAtk(unit, 0.03f, 0.60f)
             "demon_king_passive" -> addPermanentAtk(unit, 0.05f, 0.30f)
-            "abadon_passive" -> addPermanentAtk(unit, 0.05f, 0.35f)
-            "chaos_lord_passive" -> addPermanentAtk(unit, 0.05f, 0.40f)
+            "abadon_passive", "abyss_king_passive" -> addPermanentAtk(unit, 0.05f, 0.35f)
+            "chaos_lord_passive", "world_end_passive" -> addPermanentAtk(unit, 0.05f, 0.40f)
             "god_emperor_passive" -> unit.mana += 25f
             "emperor_passive" -> coinBonus += 3f
         }
@@ -785,7 +785,7 @@ object UniqueAbilitySystem {
             when (passiveId) {
                 "divine_beast_passive" -> addCoins(5f)
                 "god_emperor_passive" -> addCoins(5f)
-                "kirin_passive" -> {
+                "kirin_passive", "celestial_grace_passive" -> {
                     addCoins(3f)
                     pickRandomAllies(allUnits, unit, 1).forEach { it.mana += 10f }
                 }
@@ -851,7 +851,11 @@ object UniqueAbilitySystem {
         if (hitTarget != null) {
             val htx = hitTarget!!.position.x / 720f
             val hty = hitTarget!!.position.y / 1280f - 0.025f
-            emitVfx(SkillVfxType.VOLCANIC_ERUPTION, htx, hty, 0.1f, unit, 2f)
+            val ultVfxType = resolveVfxTypeEnum(
+                family = unit.familyOrdinal,
+                grade = unit.grade.coerceAtMost(UnitGrade.MYTHIC.ordinal),
+            ) ?: SkillVfxType.VOLCANIC_ERUPTION
+            emitVfx(ultVfxType, htx, hty, 0.1f, unit, 2f)
         }
 
         unit.resetMana()

@@ -432,32 +432,29 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
     }
 
     // 스택을 개별 유닛으로 펼침 (같은 슬롯에서 여러 재료 매칭 가능)
-    val expandedUnits = remember(occupiedTiles) {
-        occupiedTiles.flatMapIndexed { idx, tile ->
-            val count = tile.level.coerceAtLeast(1) // level = stackCount
-            List(count) { idx to tile }
+    val recipeInfos = remember(allRecipes, occupiedTiles) {
+        val occupiedCounts = IntArray(occupiedTiles.size) { idx ->
+            occupiedTiles[idx].level.coerceAtLeast(1)
         }
-    }
-
-    val recipeInfos = remember(allRecipes, expandedUnits) {
         allRecipes.map { recipe ->
-            // 필드 유닛 기반 재료 충족 수 카운트
-            val used = mutableSetOf<Int>()
+            val remainingCounts = occupiedCounts.copyOf()
             var matchCount = 0
             for (slot in recipe.ingredients) {
-                val found = expandedUnits.indices.any { idx ->
-                    if (idx in used) return@any false
-                    val (_, tile) = expandedUnits[idx]
-                    val match = if (slot.specificUnitId != null) {
+                val matchedIndex = occupiedTiles.indices.firstOrNull { idx ->
+                    if (remainingCounts[idx] <= 0) return@firstOrNull false
+                    val tile = occupiedTiles[idx]
+                    if (slot.specificUnitId != null) {
                         tile.blueprintId == slot.specificUnitId
                     } else {
                         (slot.family == null || slot.family in tile.families) &&
                             (slot.role == null || slot.role == tile.role) &&
                             tile.grade >= slot.minGrade.ordinal
                     }
-                    if (match) { used.add(idx); true } else false
                 }
-                if (found) matchCount++
+                if (matchedIndex != null) {
+                    remainingCounts[matchedIndex]--
+                    matchCount++
+                }
             }
 
             val resultBp = if (BlueprintRegistry.isReady) {
@@ -466,7 +463,6 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
             RecipeDisplayInfo(recipe, resultBp, matchCount, recipe.ingredients.size)
         }.sortedByDescending { it.fieldMatchCount }
     }
-
     val readyRecipes = recipeInfos.filter { it.readyOnField }
     val hasReadyRecipe = readyRecipes.isNotEmpty()
     var selectedRecipeId by remember(readyRecipes) {
@@ -533,7 +529,7 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.height(320.dp),
                     ) {
-                        items(recipeInfos) { info ->
+                        items(items = recipeInfos, key = { it.recipe.id }) { info ->
                             RecipeCard(
                                 info.recipe, info.resultBlueprint,
                                 info.fieldMatchCount, info.totalIngredients,

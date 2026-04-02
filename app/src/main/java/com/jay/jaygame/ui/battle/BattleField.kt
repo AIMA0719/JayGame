@@ -169,6 +169,7 @@ private val GRID_NORM_H = Grid.GRID_H / Grid.CANVAS_H
 @Composable
 fun BattleField() {
     val unitPositions by BattleBridge.unitPositions.collectAsState()
+    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
     val selectedTile by BattleBridge.selectedTile.collectAsState()
     val moveModeTile by BattleBridge.moveModeTile.collectAsState()
     val validMoveTargets by BattleBridge.validMoveTargets.collectAsState()
@@ -458,7 +459,8 @@ fun BattleField() {
         val unitSizeNormal = minOf(cellW, cellH) * 1.1f
         val gridState = BattleBridge.gridState.value
         // PERF: Reduce visual detail when many units exist
-        val highUnitCount = data.count > 50
+        val fastBattleMode = battleSpeed >= 6f
+        val highUnitCount = data.count > 50 || fastBattleMode
 
         for (i in 0 until data.count) {
             if (i >= data.xs.size || i >= data.ys.size || i >= data.grades.size ||
@@ -538,7 +540,7 @@ fun BattleField() {
             val screenY = screenYBase + attackOffsetY
 
             // ── E7: Grade 4 (Mythic) aura ring ──
-            if (grade >= 4) {
+            if (grade >= 4 && !fastBattleMode) {
                 val auraColor = MythicAuraGold
                 val auraStroke = MythicAuraStroke
                 val auraPulseAlpha = (0.35f + sin(t * 3f + animSeed * 0.4f) * 0.2f).coerceIn(0.15f, 0.55f)
@@ -560,7 +562,7 @@ fun BattleField() {
             }
 
             // ── Aura/Shield range circle (Support family=4, or high-grade aura units) ──
-            if (family == 4 && grade >= 2 && (!highUnitCount || grade >= 3)) {
+            if (!fastBattleMode && family == 4 && grade >= 2 && (!highUnitCount || grade >= 3)) {
                 val auraRadiusScreen = (45f / Grid.CANVAS_W) * w
                 val auraPulse = 0.08f + sin(t * 2f + animSeed * 0.5f) * 0.04f
                 // Layered circles instead of Brush.radialGradient to avoid per-frame allocation
@@ -682,7 +684,7 @@ fun BattleField() {
             }
 
             // ── Family-specific idle ambient effects (grade 1+, skip common in high-count) ──
-            if (grade >= 1 && !skipMicro) {
+            if (grade >= 1 && !skipMicro && !fastBattleMode) {
                 when (family) {
                     0 -> { // Fire: rising ember particles
                         val emberCount = if (highUnitCount) 2 else (1 + grade).coerceAtMost(4)
