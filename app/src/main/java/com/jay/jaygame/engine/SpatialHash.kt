@@ -4,6 +4,7 @@ import com.jay.jaygame.engine.math.GameRect
 
 class SpatialHash<T>(private val cellSize: Float = 64f) {
     private val cells = HashMap<Long, MutableList<T>>()
+    private val seenScratch = HashSet<T>()
 
     fun clear() = cells.clear()
 
@@ -22,10 +23,19 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
 
     fun query(rect: GameRect): List<T> = query(rect.x, rect.y, rect.right, rect.bottom)
 
-    /** Allocation-free query using raw float bounds (left, top, right, bottom). */
+    /** Query using raw float bounds (left, top, right, bottom). */
     fun query(left: Float, top: Float, right: Float, bottom: Float): List<T> {
         val result = mutableListOf<T>()
-        val seen = HashSet<T>()
+        forEach(left, top, right, bottom) { result.add(it) }
+        return result
+    }
+
+    /**
+     * Reuses an internal seen-set to avoid per-query allocations on hot battle paths.
+     * SpatialHash is used on the battle thread and remains non-thread-safe.
+     */
+    fun forEach(left: Float, top: Float, right: Float, bottom: Float, action: (T) -> Unit) {
+        seenScratch.clear()
         val minCX = (left / cellSize).toInt()
         val minCY = (top / cellSize).toInt()
         val maxCX = (right / cellSize).toInt()
@@ -33,9 +43,10 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
         for (cy in minCY..maxCY) {
             for (cx in minCX..maxCX) {
                 val key = (cx.toLong() shl 32) or (cy.toLong() and 0xFFFFFFFFL)
-                cells[key]?.forEach { if (seen.add(it)) result.add(it) }
+                cells[key]?.forEach {
+                    if (seenScratch.add(it)) action(it)
+                }
             }
         }
-        return result
     }
 }

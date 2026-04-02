@@ -93,7 +93,7 @@ fun ProjectileOverlay() {
 
     // Load all projectile bitmaps once (pre-scaled to 128×128 for performance)
     val bitmaps = remember {
-        ProjectileResIds.map { resId -> decodeScaledBitmap(context, resId, 128)!! }
+        ProjectileResIds.map { resId -> decodeScaledBitmap(context, resId, 128) }
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "projFx")
@@ -137,17 +137,25 @@ fun ProjectileOverlay() {
 
             // ── Projectile image with rotation & additive blending ──
             rotate(degrees = rotation, pivot = Offset(curX, curY)) {
-                drawImage(
-                    image = bitmap,
-                    srcOffset = IntOffset.Zero,
-                    srcSize = IntSize(bitmap.width, bitmap.height),
-                    dstOffset = IntOffset(
-                        (curX - halfSize).toInt(),
-                        (curY - halfSize).toInt(),
-                    ),
-                    dstSize = IntSize(projSize.toInt(), projSize.toInt()),
-                    blendMode = BlendMode.Screen,
-                )
+                if (bitmap != null) {
+                    drawImage(
+                        image = bitmap,
+                        srcOffset = IntOffset.Zero,
+                        srcSize = IntSize(bitmap.width, bitmap.height),
+                        dstOffset = IntOffset(
+                            (curX - halfSize).toInt(),
+                            (curY - halfSize).toInt(),
+                        ),
+                        dstSize = IntSize(projSize.toInt(), projSize.toInt()),
+                        blendMode = BlendMode.Screen,
+                    )
+                } else {
+                    drawCircle(
+                        color = GlowColors[visualType],
+                        radius = halfSize * 0.7f,
+                        center = Offset(curX, curY),
+                    )
+                }
             }
         }
     }

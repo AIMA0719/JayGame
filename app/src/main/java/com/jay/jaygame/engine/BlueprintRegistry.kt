@@ -14,8 +14,8 @@ class BlueprintRegistry {
         val isReady: Boolean get() = ::instance.isInitialized
 
         @Synchronized
-        fun initialize(context: android.content.Context) {
-            if (::instance.isInitialized) return
+        fun initialize(context: android.content.Context): Boolean {
+            if (::instance.isInitialized) return true
             val registry = BlueprintRegistry()
             try {
                 val blueprintsJson = context.assets.open("units/blueprints.json")
@@ -26,8 +26,14 @@ class BlueprintRegistry {
                 registry.loadFromJson(specialJson)
             } catch (e: Exception) {
                 android.util.Log.e("BlueprintRegistry", "Failed to load blueprints", e)
+                return false
+            }
+            if (registry.count() == 0) {
+                android.util.Log.e("BlueprintRegistry", "Blueprint registry is empty after initialization")
+                return false
             }
             instance = registry
+            return true
         }
     }
 

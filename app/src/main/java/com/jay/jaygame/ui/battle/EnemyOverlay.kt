@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -91,7 +92,6 @@ internal class DyingEnemy(
 internal data class DeathEffect(
     val x: Float, val y: Float, val type: Int,
     var timer: Float = 0.5f,
-    val particles: List<DeathParticle>,
 )
 
 internal data class DeathParticle(
@@ -99,6 +99,22 @@ internal data class DeathParticle(
     val size: Float,
     val colorIdx: Int,
 )
+
+private val DeathParticleTemplate = Array(8) {
+    val angle = it * 0.785f
+    DeathParticle(
+        vx = cos(angle) * (40f + it * 10f),
+        vy = sin(angle) * (40f + it * 10f) - 30f,
+        size = 3f + it % 3,
+        colorIdx = it % 5,
+    )
+}
+
+private fun quantizedEnemyKey(x: Float, y: Float): Int {
+    val qx = (x * 1000f).toInt()
+    val qy = (y * 1000f).toInt()
+    return (qx shl 16) xor (qy and 0xFFFF)
+}
 
 /**
  * Renders all active enemies on a full-screen Canvas overlay.
@@ -179,10 +195,11 @@ fun EnemyOverlay() {
     val prevEnemyTypes = remember { mutableStateOf(IntArray(0)) }
 
     // Dying enemies (sprite fade-out after leaving active list)
-    val dyingEnemies = remember { mutableStateOf(listOf<DyingEnemy>()) }
+    val dyingEnemies = remember { mutableStateListOf<DyingEnemy>() }
 
     // Death effects
-    val deathEffects = remember { mutableStateOf(listOf<DeathEffect>()) }
+    val deathEffects = remember { mutableStateListOf<DeathEffect>() }
+    val currentEnemyPositionKeys = remember { HashSet<Int>(256) }
 
     // Continuously lerp toward target positions at display frame rate
     LaunchedEffect(Unit) {
@@ -208,44 +225,26 @@ fun EnemyOverlay() {
                     if (data.count < prevEnemyCount.value && prevEnemyCount.value > 0) {
                         // Find which enemies disappeared (simple: add death effects at old positions
                         // not found in new data)
-                        val newDeaths = mutableListOf<DeathEffect>()
                         val oldXs = prevEnemyXs.value
                         val oldYs = prevEnemyYs.value
                         val oldTypes = prevEnemyTypes.value
                         val oldCount = prevEnemyCount.value
+                        currentEnemyPositionKeys.clear()
+                        for (ni in 0 until data.count) {
+                            currentEnemyPositionKeys.add(quantizedEnemyKey(data.xs[ni], data.ys[ni]))
+                        }
 
                         for (oi in 0 until oldCount.coerceAtMost(oldXs.size)) {
-                            var found = false
-                            for (ni in 0 until data.count) {
-                                val dx = oldXs[oi] - data.xs[ni]
-                                val dy = oldYs[oi] - data.ys[ni]
-                                if (dx * dx + dy * dy < 0.002f) {
-                                    found = true
-                                    break
-                                }
-                            }
-                            if (!found && newDeaths.size < 5) {
-                                val particles = List(8) {
-                                    val angle = it * 0.785f // ~45 deg
-                                    DeathParticle(
-                                        vx = cos(angle) * (40f + it * 10f),
-                                        vy = sin(angle) * (40f + it * 10f) - 30f,
-                                        size = 3f + it % 3,
-                                        colorIdx = oldTypes.getOrElse(oi) { 0 } % 5,
-                                    )
-                                }
-                                newDeaths.add(DeathEffect(oldXs[oi], oldYs[oi],
-                                    oldTypes.getOrElse(oi) { 0 }, particles = particles))
+                            val key = quantizedEnemyKey(oldXs[oi], oldYs[oi])
+                            if (key !in currentEnemyPositionKeys && deathEffects.size < 5) {
+                                val type = oldTypes.getOrElse(oi) { 0 }
+                                deathEffects.add(DeathEffect(oldXs[oi], oldYs[oi], type))
+                                dyingEnemies.add(DyingEnemy(x = oldXs[oi], y = oldYs[oi], type = type))
                             }
                         }
-                        if (newDeaths.isNotEmpty()) {
-                            deathEffects.value = deathEffects.value + newDeaths
+                        
                             // 죽는 몬스터 스프라이트 페이드아웃 추가
-                            val newDying = newDeaths.map { de ->
-                                DyingEnemy(x = de.x, y = de.y, type = de.type)
-                            }
-                            dyingEnemies.value = dyingEnemies.value + newDying
-                        }
+                        
                     }
 
                     // Snap to new positions
@@ -257,43 +256,40 @@ fun EnemyOverlay() {
                 } else if (data.count > 0) {
                     // Lerp toward target positions
                     val lerpFactor = 0.2f
-                    val newX = FloatArray(data.count)
-                    val newY = FloatArray(data.count)
                     for (i in 0 until data.count) {
-                        newX[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
-                        newY[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
+                        sx[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
+                        sy[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
                     }
-                    smoothXs.value = newX
-                    smoothYs.value = newY
+                    smoothXs.value = sx
+                    smoothYs.value = sy
 
                     // Hit flash detection + HP smooth lerp
                     val oldHp = prevHpRatios.value
-                    val flash = hitFlashTimers.value
+                    val flashTimers = hitFlashTimers.value
                     val sHp = smoothHpRatios.value
-                    val newFlash = FloatArray(data.count)
-                    val newSmoothHp = FloatArray(data.count)
                     for (i in 0 until data.count) {
                         // Detect HP decrease
                         val prevHp = if (i < oldHp.size) oldHp[i] else 1f
                         if (data.hpRatios[i] < prevHp - 0.01f) {
-                            newFlash[i] = 0.12f // flash for 0.12 seconds
+                            flashTimers[i] = 0.12f // flash for 0.12 seconds
                         } else {
-                            newFlash[i] = (if (i < flash.size) flash[i] else 0f) - dt
-                            if (newFlash[i] < 0f) newFlash[i] = 0f
+                            flashTimers[i] = (if (i < flashTimers.size) flashTimers[i] else 0f) - dt
+                            if (flashTimers[i] < 0f) flashTimers[i] = 0f
                         }
                         // Smooth HP bar
                         val curSmooth = if (i < sHp.size) sHp[i] else data.hpRatios[i]
-                        newSmoothHp[i] = curSmooth + (data.hpRatios[i] - curSmooth) * 0.15f
+                        sHp[i] = curSmooth + (data.hpRatios[i] - curSmooth) * 0.15f
+                        oldHp[i] = data.hpRatios[i]
                     }
-                    hitFlashTimers.value = newFlash
-                    smoothHpRatios.value = newSmoothHp
-                    prevHpRatios.value = data.hpRatios.copyOf(data.count)
+                    hitFlashTimers.value = flashTimers
+                    smoothHpRatios.value = sHp
+                    prevHpRatios.value = oldHp
 
                     // 스프라이트 시트 애니메이션 상태 업데이트 (8x 배속 이상이면 스킵)
                     if (speed < 8f) {
                         for (ai in 0 until data.count.coerceAtMost(256)) {
                             val anim = animStates[ai]
-                            val flash = if (ai < newFlash.size) newFlash[ai] else 0f
+                            val flash = if (ai < flashTimers.size) flashTimers[ai] else 0f
                             val buffBits = if (ai < data.buffs.size) data.buffs[ai] else 0
                             val isStunned = buffBits and BUFF_BIT_STUN != 0
                             // 상태 전이: hit > stun(idle) > walk
@@ -321,23 +317,21 @@ fun EnemyOverlay() {
                 }
 
                 // Update death effects
-                val effects = deathEffects.value
-                if (effects.isNotEmpty()) {
-                    val updated = effects.mapNotNull { de ->
-                        val newTimer = de.timer - dt
-                        if (newTimer <= 0f) null else de.copy(timer = newTimer)
+                if (deathEffects.isNotEmpty()) {
+                    for (idx in deathEffects.lastIndex downTo 0) {
+                        val de = deathEffects[idx]
+                        de.timer -= dt
+                        if (de.timer <= 0f) deathEffects.removeAt(idx)
                     }
-                    deathEffects.value = updated
                 }
 
                 // Update dying enemy sprite fade-outs
-                val dying = dyingEnemies.value
-                if (dying.isNotEmpty()) {
-                    val updatedDying = dying.mapNotNull { de ->
+                if (dyingEnemies.isNotEmpty()) {
+                    for (idx in dyingEnemies.lastIndex downTo 0) {
+                        val de = dyingEnemies[idx]
                         de.timer -= dt
-                        if (de.timer <= 0f) null else de
+                        if (de.timer <= 0f) dyingEnemies.removeAt(idx)
                     }
-                    dyingEnemies.value = updatedDying
                 }
             }
         }
@@ -611,7 +605,7 @@ fun EnemyOverlay() {
         }
 
         // ── Dying enemy sprite fade-out ──
-        val dyingList = dyingEnemies.value
+        val dyingList = dyingEnemies
         for (de in dyingList) {
             val progress = 1f - (de.timer / DyingEnemy.DURATION) // 0 → 1
             val dx = de.x * w
@@ -674,7 +668,7 @@ fun EnemyOverlay() {
         }
 
         // ── Death Effects (fx_execute 스프라이트 + 파티클) ──
-        val effects = deathEffects.value
+        val effects = deathEffects
         val executeBmp = fxBitmaps["fx_execute"]
         for (de in effects) {
             val progress = 1f - (de.timer / 0.5f) // 0 -> 1 as timer goes 0.5 -> 0
@@ -694,7 +688,9 @@ fun EnemyOverlay() {
                 )
             }
 
-            for (p in de.particles) {
+            for (template in DeathParticleTemplate) {
+                val colorIdx = de.type % EnemyColors.size
+                val p = template.copy(colorIdx = colorIdx)
                 val px = dx + p.vx * progress
                 val py = dy + p.vy * progress + 20f * progress * progress
                 val pColor = EnemyColors[p.colorIdx % EnemyColors.size]

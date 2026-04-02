@@ -30,8 +30,8 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
 
         /** Must be called AFTER BlueprintRegistry.initialize() */
         @Synchronized
-        fun initialize(context: android.content.Context) {
-            if (::instance.isInitialized) return
+        fun initialize(context: android.content.Context): Boolean {
+            if (::instance.isInitialized) return true
             val system = RecipeSystem(BlueprintRegistry.instance)
             try {
                 val recipesJson = context.assets.open("units/hidden_recipes.json")
@@ -39,8 +39,14 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
                 system.loadRecipes(recipesJson)
             } catch (e: Exception) {
                 android.util.Log.e("RecipeSystem", "Failed to load recipes", e)
+                return false
+            }
+            if (system.recipeCount() == 0) {
+                android.util.Log.e("RecipeSystem", "Recipe system is empty after initialization")
+                return false
             }
             instance = system
+            return true
         }
     }
 
@@ -147,6 +153,8 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
 
     fun isDiscovered(recipeId: String): Boolean = recipeId in discoveredIds
     fun allRecipes(): List<HiddenRecipe> = recipes.toList()
+
+    fun recipeCount(): Int = recipes.size
     fun setDiscoveredIds(ids: Set<String>) {
         discoveredIds.addAll(ids)
         recipes.forEach { if (it.id in discoveredIds) it.discovered = true }

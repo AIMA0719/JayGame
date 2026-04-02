@@ -24,7 +24,7 @@ object AbilitySystem {
                     enemy.position.y - splashRadius,
                     splashRadius * 2, splashRadius * 2,
                 )
-                spatialHash.query(rect).forEach { nearby ->
+                spatialHash.forEach(rect.x, rect.y, rect.right, rect.bottom) { nearby ->
                     if (nearby !== enemy && nearby.alive) {
                         val dist = nearby.position.distanceTo(enemy.position)
                         if (dist <= splashRadius) {
@@ -47,7 +47,7 @@ object AbilitySystem {
                     enemy.position.x - 200f, enemy.position.y - 200f, 400f, 400f,
                 )
                 var chained = 0
-                spatialHash.query(rect).forEach { nearby ->
+                spatialHash.forEach(rect.x, rect.y, rect.right, rect.bottom) { nearby ->
                     if (chained < chainCount && nearby !== enemy && nearby.alive) {
                         nearby.recentHitFlags = nearby.recentHitFlags or 1
                         nearby.recentHitTimer = 0.5f

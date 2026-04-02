@@ -211,10 +211,10 @@ class BattleEngine(
         if (roguelikeSplash) {
             val splashRange = 80f
             val splashDmg = damage * 0.2f
-            spatialHash.query(
+            spatialHash.forEach(
                 target.position.x - splashRange, target.position.y - splashRange,
                 target.position.x + splashRange, target.position.y + splashRange,
-            ).forEach { nearby ->
+            ) { nearby ->
                 if (nearby.alive && nearby !== target) {
                     nearby.takeDamage(splashDmg, isMagic, 0f)
                     BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, splashDmg.toInt(), false)
@@ -225,10 +225,10 @@ class BattleEngine(
             val chainRange = 120f
             val chainDmg = damage * 0.5f
             var chainCount = 0
-            spatialHash.query(
+            spatialHash.forEach(
                 target.position.x - chainRange, target.position.y - chainRange,
                 target.position.x + chainRange, target.position.y + chainRange,
-            ).forEach { nearby ->
+            ) { nearby ->
                 if (nearby.alive && nearby !== target && chainCount < 2) {
                     nearby.takeDamage(chainDmg, true, 0f)
                     BattleBridge.onDamageDealt(nearby.position.x / W, nearby.position.y / H, chainDmg.toInt(), false)
@@ -658,10 +658,10 @@ class BattleEngine(
                     // No runtime buff needed — COMMANDER effect is applied
                     // during enemy spawn by increasing base armor of nearby enemies
                     // Simple implementation: reduce damage taken by nearby enemies via shield buff
-                    spatialHash.query(
+                    spatialHash.forEach(
                         enemy.position.x - 200f, enemy.position.y - 200f,
                         enemy.position.x + 200f, enemy.position.y + 200f,
-                    ).forEach { nearby ->
+                    ) { nearby ->
                         if (nearby !== enemy && nearby.alive && !nearby.buffs.hasBuff(BuffType.Shield)) {
                             nearby.buffs.addBuff(BuffType.Shield, nearby.maxHp * COMMANDER_SHIELD_RATIO, 2f)
                         }
@@ -735,10 +735,10 @@ class BattleEngine(
 
             // Hell difficulty: enemy death enrages nearby enemies (+15% speed permanently)
             if (difficulty >= 2) {
-                spatialHash.query(
+                spatialHash.forEach(
                     dead.position.x - 80f, dead.position.y - 80f,
                     dead.position.x + 80f, dead.position.y + 80f,
-                ).forEach { nearby ->
+                ) { nearby ->
                     if (nearby.alive && nearby !== dead) {
                         nearby.speed = (nearby.speed * 1.15f).coerceAtMost(nearby.baseSpeed * 2f)
                     }
@@ -1104,7 +1104,7 @@ class BattleEngine(
     private fun findNearestEnemy(pos: Vec2, range: Float): Enemy? {
         var nearest: Enemy? = null
         var nearestDist = Float.MAX_VALUE
-        spatialHash.query(pos.x - range, pos.y - range, pos.x + range, pos.y + range).forEach { enemy ->
+        spatialHash.forEach(pos.x - range, pos.y - range, pos.x + range, pos.y + range) { enemy ->
             if (enemy.alive) {
                 val d = enemy.position.distanceSqTo(pos)
                 if (d < nearestDist && d <= range * range) {

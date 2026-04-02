@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -49,6 +51,7 @@ class ComposeActivity : ComponentActivity() {
             JayGameTheme {
                 val app = application as JayGameApplication
                 val initReady by app.initReady.collectAsState(initial = false)
+                val initError by app.initError.collectAsState(initial = null)
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 val splashStartTime = remember { System.currentTimeMillis() }
 
@@ -61,8 +64,15 @@ class ComposeActivity : ComponentActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (showSplash) {
+                    if (showSplash && initError == null) {
                         SplashScreen()
+                    } else if (initError != null) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(text = initError ?: "Initialization failed")
+                        }
                     } else {
                         val factory = gameViewModelFactory()
                         val vm: AppViewModel = viewModel(factory = factory)

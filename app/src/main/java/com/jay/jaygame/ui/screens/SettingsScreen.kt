@@ -434,37 +434,6 @@ private fun SettingsGameplay(
         SubPageHeader(title = "게임플레이", onBack = onBack)
 
         // ── 기본 배속 ──
-        GameCard(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text("기본 배속", fontSize = 14.sp, color = LightText, fontWeight = FontWeight.Bold)
-                Text("전투 시작 시 적용되는 기본 속도", fontSize = 11.sp, color = SubText)
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    listOf(2f to "x1", 4f to "x2").forEach { (speed, label) ->
-                        val isSelected = data.defaultBattleSpeed == speed
-                        val color = when (speed) {
-                            4f -> Color(0xFFFFD700)   // 골드
-                            else -> Color(0xFF4FC3F7)  // 밝은 파랑
-                        }
-                        NeonButton(
-                            text = label,
-                            onClick = { onUpdate(data.copy(defaultBattleSpeed = speed)) },
-                            modifier = Modifier.weight(1f),
-                            fontSize = 14.sp,
-                            accentColor = if (isSelected) color else SubText,
-                            accentColorDark = if (isSelected) color.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
-                        )
-                    }
-                }
-            }
-        }
-
         // ── 데미지 숫자 표시 ──
         GameCard(modifier = Modifier.fillMaxWidth()) {
             Row(

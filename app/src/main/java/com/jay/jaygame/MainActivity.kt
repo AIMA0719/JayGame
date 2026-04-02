@@ -34,8 +34,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        BlueprintRegistry.initialize(applicationContext)
-        RecipeSystem.initialize(applicationContext)
+        if (!BlueprintRegistry.initialize(applicationContext) || !RecipeSystem.initialize(applicationContext)) {
+            finish()
+            return
+        }
         val repository = (application as JayGameApplication).repository
 
         // Preserve stageId/difficulty/dungeon set by ComposeActivity, then reset battle state

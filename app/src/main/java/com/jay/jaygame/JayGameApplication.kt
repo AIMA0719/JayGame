@@ -1,6 +1,7 @@
 package com.jay.jaygame
 
 import android.app.Application
+import android.util.Log
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.memory.MemoryCache
@@ -15,8 +16,15 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class JayGameApplication : Application(), ImageLoaderFactory {
+    companion object {
+        private const val TAG = "JayGameApplication"
+        lateinit var appContext: android.content.Context
+            private set
+    }
+
     @Volatile
     lateinit var repository: GameRepository
         private set
@@ -24,6 +32,8 @@ class JayGameApplication : Application(), ImageLoaderFactory {
     internal val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _initReady = MutableStateFlow(false)
     val initReady: StateFlow<Boolean> = _initReady
+    private val _initError = MutableStateFlow<String?>(null)
+    val initError: StateFlow<String?> = _initError
 
     override fun onCreate() {
         super.onCreate()
@@ -31,12 +41,18 @@ class JayGameApplication : Application(), ImageLoaderFactory {
         TimeGuard.onSessionStart()
         SfxManager.initAsync(this, appScope)
         appScope.launch {
-            BlueprintRegistry.initialize(this@JayGameApplication)
-            val recipeJob = launch { RecipeSystem.initialize(this@JayGameApplication) }
-            val repoJob = launch(Dispatchers.IO) { repository = GameRepository(this@JayGameApplication) }
-            recipeJob.join()
-            repoJob.join()
-            _initReady.value = true
+            _initReady.value = false
+            _initError.value = null
+            runCatching {
+                check(BlueprintRegistry.initialize(this@JayGameApplication)) { "Blueprint initialization failed" }
+                check(RecipeSystem.initialize(this@JayGameApplication)) { "Recipe initialization failed" }
+                repository = withContext(Dispatchers.IO) { GameRepository(this@JayGameApplication) }
+            }.onSuccess {
+                _initReady.value = true
+            }.onFailure { error ->
+                Log.e(TAG, "App initialization failed", error)
+                _initError.value = error.message ?: "Initialization failed"
+            }
         }
     }
 
@@ -48,10 +64,5 @@ class JayGameApplication : Application(), ImageLoaderFactory {
                     .build()
             }
             .build()
-    }
-
-    companion object {
-        lateinit var appContext: android.content.Context
-            private set
     }
 }

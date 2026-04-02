@@ -294,6 +294,57 @@ object BattleBridge {
     private val projFrameCounter = AtomicLong(0)
     private val unitFrameCounter = AtomicLong(0)
 
+    private class EnemySnapshotBuffer(
+        var xs: FloatArray = FloatArray(0),
+        var ys: FloatArray = FloatArray(0),
+        var types: IntArray = IntArray(0),
+        var hpRatios: FloatArray = FloatArray(0),
+        var buffs: IntArray = IntArray(0),
+    )
+
+    private class ProjectileSnapshotBuffer(
+        var srcXs: FloatArray = FloatArray(0),
+        var srcYs: FloatArray = FloatArray(0),
+        var dstXs: FloatArray = FloatArray(0),
+        var dstYs: FloatArray = FloatArray(0),
+        var types: IntArray = IntArray(0),
+        var families: IntArray = IntArray(0),
+        var grades: IntArray = IntArray(0),
+    )
+
+    private class UnitSnapshotBuffer(
+        var xs: FloatArray = FloatArray(0),
+        var ys: FloatArray = FloatArray(0),
+        var grades: IntArray = IntArray(0),
+        var levels: IntArray = IntArray(0),
+        var isAttacking: BooleanArray = BooleanArray(0),
+        var attackAnimTimers: FloatArray = FloatArray(0),
+        var tileIndices: IntArray = IntArray(0),
+        var blueprintIds: Array<String> = emptyArray(),
+        var familiesList: Array<List<UnitFamily>> = emptyArray(),
+        var roles: Array<UnitRole> = emptyArray(),
+        var attackRanges: Array<AttackRange> = emptyArray(),
+        var damageTypes: Array<DamageType> = emptyArray(),
+        var unitCategories: Array<UnitCategory> = emptyArray(),
+        var hps: FloatArray = FloatArray(0),
+        var maxHps: FloatArray = FloatArray(0),
+        var states: Array<UnitState> = emptyArray(),
+        var homeXs: FloatArray = FloatArray(0),
+        var homeYs: FloatArray = FloatArray(0),
+        var stackCounts: IntArray = IntArray(0),
+        var buffs: IntArray = IntArray(0),
+        var skillAnimTimers: FloatArray = FloatArray(0),
+        var critAnimTimers: FloatArray = FloatArray(0),
+        var ranges: FloatArray = FloatArray(0),
+    )
+
+    private val enemySnapshotBuffers = arrayOf(EnemySnapshotBuffer(), EnemySnapshotBuffer())
+    private val projectileSnapshotBuffers = arrayOf(ProjectileSnapshotBuffer(), ProjectileSnapshotBuffer())
+    private val unitSnapshotBuffers = arrayOf(UnitSnapshotBuffer(), UnitSnapshotBuffer())
+    private var enemySnapshotIndex = 0
+    private var projectileSnapshotIndex = 0
+    private var unitSnapshotIndex = 0
+
     // Pre-allocated event buffers to avoid per-event list allocations
     private val damageBuffer = ArrayDeque<DamageEvent>(32)
     private val meleeHitBuffer = ArrayDeque<MeleeHitEvent>(16)
@@ -307,6 +358,65 @@ object BattleBridge {
     private val meleeHitLock = Any()
     private val goldLock = Any()
     private val levelUpLock = Any()
+
+    private fun nextEnemySnapshotBuffer(count: Int): EnemySnapshotBuffer {
+        enemySnapshotIndex = enemySnapshotIndex xor 1
+        val buffer = enemySnapshotBuffers[enemySnapshotIndex]
+        if (buffer.xs.size < count) {
+            buffer.xs = FloatArray(count)
+            buffer.ys = FloatArray(count)
+            buffer.types = IntArray(count)
+            buffer.hpRatios = FloatArray(count)
+            buffer.buffs = IntArray(count)
+        }
+        return buffer
+    }
+
+    private fun nextProjectileSnapshotBuffer(count: Int): ProjectileSnapshotBuffer {
+        projectileSnapshotIndex = projectileSnapshotIndex xor 1
+        val buffer = projectileSnapshotBuffers[projectileSnapshotIndex]
+        if (buffer.srcXs.size < count) {
+            buffer.srcXs = FloatArray(count)
+            buffer.srcYs = FloatArray(count)
+            buffer.dstXs = FloatArray(count)
+            buffer.dstYs = FloatArray(count)
+            buffer.types = IntArray(count)
+            buffer.families = IntArray(count)
+            buffer.grades = IntArray(count)
+        }
+        return buffer
+    }
+
+    private fun nextUnitSnapshotBuffer(count: Int): UnitSnapshotBuffer {
+        unitSnapshotIndex = unitSnapshotIndex xor 1
+        val buffer = unitSnapshotBuffers[unitSnapshotIndex]
+        if (buffer.xs.size < count) {
+            buffer.xs = FloatArray(count)
+            buffer.ys = FloatArray(count)
+            buffer.grades = IntArray(count)
+            buffer.levels = IntArray(count)
+            buffer.isAttacking = BooleanArray(count)
+            buffer.attackAnimTimers = FloatArray(count)
+            buffer.tileIndices = IntArray(count)
+            buffer.blueprintIds = Array(count) { "" }
+            buffer.familiesList = Array(count) { emptyList() }
+            buffer.roles = Array(count) { UnitRole.RANGED_DPS }
+            buffer.attackRanges = Array(count) { AttackRange.RANGED }
+            buffer.damageTypes = Array(count) { DamageType.PHYSICAL }
+            buffer.unitCategories = Array(count) { UnitCategory.NORMAL }
+            buffer.hps = FloatArray(count)
+            buffer.maxHps = FloatArray(count)
+            buffer.states = Array(count) { UnitState.IDLE }
+            buffer.homeXs = FloatArray(count)
+            buffer.homeYs = FloatArray(count)
+            buffer.stackCounts = IntArray(count)
+            buffer.buffs = IntArray(count)
+            buffer.skillAnimTimers = FloatArray(count)
+            buffer.critAnimTimers = FloatArray(count)
+            buffer.ranges = FloatArray(count)
+        }
+        return buffer
+    }
 
     // ── Thread-safe command queue — UI thread enqueues, game loop dequeues ──
     private val commandQueue = java.util.concurrent.ConcurrentLinkedQueue<BattleCommand>()
@@ -615,9 +725,15 @@ object BattleBridge {
     @JvmStatic
     fun updateEnemyPositions(xs: FloatArray, ys: FloatArray, types: IntArray, hpRatios: FloatArray, buffs: IntArray, count: Int) {
         // 엔진 pre-allocated 버퍼를 복사 — UI 스레드에서 읽는 동안 엔진이 덮어쓰는 것 방지
+        val snapshot = nextEnemySnapshotBuffer(count)
+        xs.copyInto(snapshot.xs, endIndex = count)
+        ys.copyInto(snapshot.ys, endIndex = count)
+        types.copyInto(snapshot.types, endIndex = count)
+        hpRatios.copyInto(snapshot.hpRatios, endIndex = count)
+        buffs.copyInto(snapshot.buffs, endIndex = count)
         _enemyPositions.value = EnemyPositionData(
-            xs.copyOf(count), ys.copyOf(count), types.copyOf(count),
-            hpRatios.copyOf(count), buffs.copyOf(count), count, enemyFrameCounter.incrementAndGet(),
+            snapshot.xs, snapshot.ys, snapshot.types,
+            snapshot.hpRatios, snapshot.buffs, count, enemyFrameCounter.incrementAndGet(),
         )
     }
 
@@ -629,9 +745,17 @@ object BattleBridge {
         families: IntArray = IntArray(0),
         grades: IntArray = IntArray(0),
     ) {
+        val snapshot = nextProjectileSnapshotBuffer(count)
+        srcXs.copyInto(snapshot.srcXs, endIndex = count)
+        srcYs.copyInto(snapshot.srcYs, endIndex = count)
+        dstXs.copyInto(snapshot.dstXs, endIndex = count)
+        dstYs.copyInto(snapshot.dstYs, endIndex = count)
+        types.copyInto(snapshot.types, endIndex = count)
+        if (families.size >= count) families.copyInto(snapshot.families, endIndex = count)
+        if (grades.size >= count) grades.copyInto(snapshot.grades, endIndex = count)
         _projectiles.value = ProjectileData(
-            srcXs.copyOf(count), srcYs.copyOf(count), dstXs.copyOf(count), dstYs.copyOf(count),
-            types.copyOf(count), families.copyOf(count), grades.copyOf(count), count, projFrameCounter.incrementAndGet(),
+            snapshot.srcXs, snapshot.srcYs, snapshot.dstXs, snapshot.dstYs,
+            snapshot.types, snapshot.families, snapshot.grades, count, projFrameCounter.incrementAndGet(),
         )
     }
 
@@ -639,17 +763,41 @@ object BattleBridge {
     fun updateUnitPositions(batch: UnitPositionBatch) {
         val count = batch.count
         // 엔진 pre-allocated 버퍼를 복사 — UI 스레드에서 읽는 동안 엔진이 덮어쓰는 것 방지
+        val snapshot = nextUnitSnapshotBuffer(count)
+        batch.xs.copyInto(snapshot.xs, endIndex = count)
+        batch.ys.copyInto(snapshot.ys, endIndex = count)
+        batch.grades.copyInto(snapshot.grades, endIndex = count)
+        batch.levels.copyInto(snapshot.levels, endIndex = count)
+        batch.isAttacking.copyInto(snapshot.isAttacking, endIndex = count)
+        batch.attackAnimTimers.copyInto(snapshot.attackAnimTimers, endIndex = count)
+        batch.tileIndices.copyInto(snapshot.tileIndices, endIndex = count)
+        batch.blueprintIds.copyInto(snapshot.blueprintIds, endIndex = count)
+        batch.familiesList.copyInto(snapshot.familiesList, endIndex = count)
+        batch.roles.copyInto(snapshot.roles, endIndex = count)
+        batch.attackRanges.copyInto(snapshot.attackRanges, endIndex = count)
+        batch.damageTypes.copyInto(snapshot.damageTypes, endIndex = count)
+        batch.unitCategories.copyInto(snapshot.unitCategories, endIndex = count)
+        batch.hps.copyInto(snapshot.hps, endIndex = count)
+        batch.maxHps.copyInto(snapshot.maxHps, endIndex = count)
+        batch.states.copyInto(snapshot.states, endIndex = count)
+        batch.homeXs.copyInto(snapshot.homeXs, endIndex = count)
+        batch.homeYs.copyInto(snapshot.homeYs, endIndex = count)
+        batch.stackCounts.copyInto(snapshot.stackCounts, endIndex = count)
+        batch.buffs.copyInto(snapshot.buffs, endIndex = count)
+        batch.skillAnimTimers.copyInto(snapshot.skillAnimTimers, endIndex = count)
+        batch.critAnimTimers.copyInto(snapshot.critAnimTimers, endIndex = count)
+        batch.ranges.copyInto(snapshot.ranges, endIndex = count)
         _unitPositions.value = UnitPositionData(
-            batch.xs.copyOf(count), batch.ys.copyOf(count), batch.grades.copyOf(count), batch.levels.copyOf(count),
-            batch.isAttacking.copyOf(count), batch.attackAnimTimers.copyOf(count), batch.tileIndices.copyOf(count),
+            snapshot.xs, snapshot.ys, snapshot.grades, snapshot.levels,
+            snapshot.isAttacking, snapshot.attackAnimTimers, snapshot.tileIndices,
             count, unitFrameCounter.incrementAndGet(),
-            batch.blueprintIds.copyOfRange(0, count), batch.familiesList.copyOfRange(0, count),
-            batch.roles.copyOfRange(0, count), batch.attackRanges.copyOfRange(0, count),
-            batch.damageTypes.copyOfRange(0, count), batch.unitCategories.copyOfRange(0, count),
-            batch.hps.copyOf(count), batch.maxHps.copyOf(count), batch.states.copyOfRange(0, count),
-            batch.homeXs.copyOf(count), batch.homeYs.copyOf(count), batch.stackCounts.copyOf(count),
-            batch.buffs.copyOf(count), batch.skillAnimTimers.copyOf(count), batch.critAnimTimers.copyOf(count),
-            batch.ranges.copyOf(count),
+            snapshot.blueprintIds, snapshot.familiesList,
+            snapshot.roles, snapshot.attackRanges,
+            snapshot.damageTypes, snapshot.unitCategories,
+            snapshot.hps, snapshot.maxHps, snapshot.states,
+            snapshot.homeXs, snapshot.homeYs, snapshot.stackCounts,
+            snapshot.buffs, snapshot.skillAnimTimers, snapshot.critAnimTimers,
+            snapshot.ranges,
         )
     }
 

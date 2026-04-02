@@ -1014,7 +1014,7 @@ private fun LevelUpOverlay() {
     if (levelUpEvents.isEmpty()) return
 
     val context = androidx.compose.ui.platform.LocalContext.current
-    val levelUpImgBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_levelup, 96)!! }
+    val levelUpImgBitmap = remember { decodeScaledBitmap(context, R.drawable.vfx_levelup, 96) } ?: return
 
     val now = System.currentTimeMillis()
 
