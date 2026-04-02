@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (!BlueprintRegistry.initialize(applicationContext) || !RecipeSystem.initialize(applicationContext)) {
             finish()
@@ -62,8 +62,6 @@ class MainActivity : ComponentActivity() {
             effectQual = data.effectQuality,
             autoWave = data.autoWaveStart,
         )
-        val effectivePity = data.unitPullPity
-        BattleBridge.updateUnitPullPity(effectivePity)
         BattleBridge.setTutorialMode(!data.tutorialCompleted)
         BattleBridge.setEquippedPets(data.equippedPets)
 
@@ -77,7 +75,6 @@ class MainActivity : ComponentActivity() {
             difficulty = effectiveDifficulty,
             maxWaves = maxWaves,
             gameData = data,
-            initialPity = effectivePity,
         ).also {
             if (dungeonDef != null) {
                 it.isDungeonMode = true

@@ -6,7 +6,6 @@ import com.jay.jaygame.data.GameData
 import com.jay.jaygame.data.RelicGrade
 import com.jay.jaygame.data.addRandomCardsToUnits
 import com.jay.jaygame.bridge.BattleResultData
-import com.jay.jaygame.bridge.BattleBridge
 
 object BattleRewardCalculator {
 
@@ -95,9 +94,6 @@ object BattleRewardCalculator {
             } else current
         } else current
 
-        // Pity counter
-        val finalPity = engine?.currentPity ?: BattleBridge.unitPullPity.value
-
         // Pet card bonus for PET_EXPEDITION dungeon
         val finalPets = if (petCardBonus > 0) {
             val ownedCount = afterRelicData.pets.count { it.owned }.coerceAtLeast(1)
@@ -129,7 +125,6 @@ object BattleRewardCalculator {
             totalXP = newTotalXP,
             playerLevel = newPlayerLevel,
             seasonXP = newSeasonXP,
-            unitPullPity = finalPity,
             dungeonClears = dungeonClears,
             pets = finalPets,
             tutorialCompleted = true,

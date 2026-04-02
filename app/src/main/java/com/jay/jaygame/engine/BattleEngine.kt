@@ -1,6 +1,5 @@
 package com.jay.jaygame.engine
 
-import android.util.Log
 import com.jay.jaygame.audio.SfxManager
 import com.jay.jaygame.audio.SoundEvent
 import com.jay.jaygame.bridge.BattleBridge
@@ -11,16 +10,13 @@ import com.jay.jaygame.engine.behavior.BehaviorFactory
 import com.jay.jaygame.engine.behavior.BehaviorRegistration
 import com.jay.jaygame.engine.math.Vec2
 import kotlinx.coroutines.*
-import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.sqrt
 
 class BattleEngine(
     private val stageId: Int,
     private val difficulty: Int,
     private val maxWaves: Int,
     gameData: GameData? = null,
-    initialPity: Int = 0,
 ) {
     // region Constants & Companion
     companion object {
@@ -70,35 +66,32 @@ class BattleEngine(
     enum class State { WaveDelay, Playing, Victory, Defeat }
     var state = State.WaveDelay; private set
 
-    val maxUnitSlots: Int = Grid.SLOT_COUNT  // 18 slots (3×6 grid)
+    val maxUnitSlots: Int = Grid.SLOT_COUNT  // 18 slots (3x6 grid)
     private val diffCoinMult: Float = when (difficulty) { 1 -> 1.5f; 2 -> 2.5f; else -> 1f }
 
     var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
     val petSystem = PetBattleSystem().also { ps -> gameData?.let { ps.init(it) } }
 
-    // 던전 모드
+    // Dungeon mode state
     var isDungeonMode: Boolean = false
     var dungeonDef: DungeonDef? = null
 
-    // 가족 영구 강화 레벨
+    // Family upgrade levels loaded from saved data
     private val familyUpgradeLevels: Map<Int, Int> = gameData?.let { data ->
         com.jay.jaygame.data.UnitFamily.entries.associate { family ->
             family.ordinal to (data.familyUpgrades[family.name] ?: 0)
         }
     } ?: emptyMap()
 
-    // 유닛별 영구 레벨 (카드 레벨업) — keyed by blueprintId
+    // Permanent unit levels loaded from saved data, keyed by blueprintId
     private val permanentUnitLevels: Map<String, Int> = gameData?.let { data ->
         data.units.mapValues { (_, progress) -> progress.level }
     } ?: emptyMap()
 
-    // 천장(Pity) 시스템
     private val probabilityEngine = DefaultProbabilityEngine()
-    var currentPity: Int = initialPity.coerceIn(0, 100); private set
 
-    // 조합석 — 배틀 중 구매/소모, 배틀 종료 시 리셋
+    // Currency for lucky-stone purchases during battle
     var luckyStones: Int = 0; internal set
-    private var lastPushedLuckyStones: Int = -1
 
     val economy = BattleEconomy(this)
     val mergeHandler = BattleMergeHandler(this)
@@ -113,10 +106,10 @@ class BattleEngine(
     val spatialHash = SpatialHash<Enemy>(64f)
     private val auraTicks = FloatArray(MAX_UNITS)
 
-    /** 배틀 코인 — 적 처치/웨이브 클리어로 획득, 소환/강화에 사용 */
+    /** Main battle economy state: SP, summon cost, and elapsed time. */
     var sp = 50f; internal set
     var summonCost = BASE_SUMMON_COST; private set
-    private var summonCount = 0  // 소환 횟수 (비용 증가 추적)
+    private var summonCount = 0  // Used to scale summon cost over time
     var elapsedTime = 0f; private set
 
     private var waveDelayTimer = WAVE_DELAY
@@ -153,19 +146,19 @@ class BattleEngine(
     private var upgradeRangeMult = 1f
     private var upgradeSpRegen = 0f
 
-    // ── 등급 그룹 통합 강화 (3그룹) ──
+    // Group upgrade levels and cached bonuses
     private val groupUpgradeLevels = IntArray(UnitUpgradeSystem.GROUP_COUNT)
     private val groupAtkBonusCache = FloatArray(UnitUpgradeSystem.GROUP_COUNT)
     private val groupSpdBonusCache = FloatArray(UnitUpgradeSystem.GROUP_COUNT)
 
-    // ── 종족 드래프트 시너지 버프 ──
+    // Drafted race synergy multipliers
     private var synergyAtkMult = 1f       // HUMAN: +10% ATK
-    private var synergySpdMult = 1f       // SPIRIT: +10% 공격속도
-    private var synergyCoinMult = 1f      // ANIMAL: +20% 코인 획득
-    private var synergyLuckyMerge = 0f    // ROBOT: 합성 확률 보너스
-    private var synergyBossDmgMult = 1f   // DEMON: +15% 보스 데미지
+    private var synergySpdMult = 1f       // SPIRIT: +10% speed
+    private var synergyCoinMult = 1f      // ANIMAL: +20% coin gain
+    private var synergyLuckyMerge = 0f    // ROBOT: lucky merge bonus
+    private var synergyBossDmgMult = 1f   // DEMON: +15% boss damage
 
-    // ── 로그라이크 강화 멀티플라이어 ──
+    // Roguelike buff state applied during battle
     internal var roguelikeAtkMult = 1f
     internal var roguelikeSpdMult = 1f
     internal var roguelikeRangeMult = 1f
@@ -189,13 +182,13 @@ class BattleEngine(
     internal var roguelikeMultishot = false
     private var pendingRoguelike = false
 
-    /** 로그라이크 ATK 가산 풀: atk_boost + race_atk + berserker + boss_slayer */
+    /** Total roguelike attack multiplier contribution. */
     private fun roguelikeTotalAtk(isBoss: Boolean): Float =
         roguelikeAtkMult +
             (if (roguelikeBerserkerBase > 0f) roguelikeBerserkerBase * waveSystem.currentWave / 100f else 0f) +
             (if (isBoss) roguelikeBossBonus else 0f)
 
-    /** 로그라이크 온힛 효과 공통 적용 (근접/원거리 공용) */
+    /** Apply roguelike on-hit side effects without changing attack flow. */
     private fun applyRoguelikeOnHit(target: Enemy, damage: Float, isMagic: Boolean) {
         if (!target.alive) return
         if (roguelikeArmorShred) {
@@ -244,10 +237,9 @@ class BattleEngine(
 
     private val roguelikeSystem = RoguelikeEnhanceSystem()
     private val activeRoguelikeBuffs = mutableListOf<ActiveRoguelikeBuff>()
+    private val statePublisher = BattleStatePublisher(MAX_ENEMIES, MAX_UNITS, MAX_PROJECTILES, Grid.TOTAL)
 
-    private var gridPushTimer = 0f
-
-    // PERF: Cached mergeable tiles — recalculated only on grid changes (summon/merge/sell/swap)
+    // PERF: Cached mergeable tiles ??recalculated only on grid changes (summon/merge/sell/swap)
     private var mergeableTilesCache: Set<Int> = emptySet()
     private var mergeableDirty = true
 
@@ -282,52 +274,6 @@ class BattleEngine(
     private val zoneGrades = IntArray(MAX_ZONE_RENDER)
     private val splitQueue = ArrayList<Enemy>(16)
 
-    // PERF-01: Pre-allocated buffers for pushStateToCompose
-    private val enemyXBuf = FloatArray(MAX_ENEMIES)
-    private val enemyYBuf = FloatArray(MAX_ENEMIES)
-    private val enemyTypeBuf = IntArray(MAX_ENEMIES)
-    private val enemyHpBuf = FloatArray(MAX_ENEMIES)
-    private val enemyBuffBuf = IntArray(MAX_ENEMIES)
-
-    private val unitXBuf = FloatArray(MAX_UNITS)
-    private val unitYBuf = FloatArray(MAX_UNITS)
-    private val unitGradeBuf = IntArray(MAX_UNITS)
-    private val unitLevelBuf = IntArray(MAX_UNITS)
-    private val unitAttackingBuf = BooleanArray(MAX_UNITS)
-    private val unitAttackAnimBuf = FloatArray(MAX_UNITS)
-    private val unitTileBuf = IntArray(MAX_UNITS)
-    private val unitBlueprintIdBuf = Array(MAX_UNITS) { "" }
-    private val unitFamiliesListBuf = Array<List<com.jay.jaygame.data.UnitFamily>>(MAX_UNITS) { emptyList() }
-    private val unitRoleBuf = Array(MAX_UNITS) { UnitRole.RANGED_DPS }
-    private val unitAttackRangeBuf = Array(MAX_UNITS) { AttackRange.RANGED }
-    private val unitDamageTypeBuf = Array(MAX_UNITS) { DamageType.PHYSICAL }
-    private val unitCategoryBuf = Array(MAX_UNITS) { UnitCategory.NORMAL }
-    private val unitHpBuf = FloatArray(MAX_UNITS)
-    private val unitMaxHpBuf = FloatArray(MAX_UNITS)
-    private val unitStateBuf = Array(MAX_UNITS) { UnitState.IDLE }
-    private val unitHomeXBuf = FloatArray(MAX_UNITS)
-    private val unitHomeYBuf = FloatArray(MAX_UNITS)
-    private val unitRangeBuf = FloatArray(MAX_UNITS)
-    private val unitStackCountBuf = IntArray(MAX_UNITS)
-    private val unitBuffBuf = IntArray(MAX_UNITS)
-    private val unitSkillAnimBuf = FloatArray(MAX_UNITS)
-    private val unitCritAnimBuf = FloatArray(MAX_UNITS)
-
-    private val projSrcXBuf = FloatArray(MAX_PROJECTILES)
-    private val projSrcYBuf = FloatArray(MAX_PROJECTILES)
-    private val projDstXBuf = FloatArray(MAX_PROJECTILES)
-    private val projDstYBuf = FloatArray(MAX_PROJECTILES)
-    private val projTypeBuf = IntArray(MAX_PROJECTILES)
-    private val projFamilyBuf = IntArray(MAX_PROJECTILES)
-    private val projGradeBuf = IntArray(MAX_PROJECTILES)
-
-    private val gridGradeBuf = IntArray(Grid.TOTAL)
-    private val gridCanMergeBuf = BooleanArray(Grid.TOTAL)
-    private val gridLevelBuf = IntArray(Grid.TOTAL)
-    private val gridBlueprintIdBuf = Array(Grid.TOTAL) { "" }
-    private val gridFamiliesListBuf = Array<List<com.jay.jaygame.data.UnitFamily>>(Grid.TOTAL) { emptyList() }
-    private val gridRoleBuf = Array(Grid.TOTAL) { UnitRole.RANGED_DPS }
-
     // NEW: Blueprint-based system (singleton, loaded at app startup)
     val blueprintRegistry = BlueprintRegistry.instance
 
@@ -336,7 +282,7 @@ class BattleEngine(
         BehaviorRegistration.ensureRegistered()
     }
 
-    // Monster path: 경로 타일 중앙선을 따라 적이 이동 (720×1280 space)
+    // Monster path around the battlefield in 720x1280 space
     private val pathMarginSide = 66f
     private val pathMarginTB = 76f
     private val pathLeft = Grid.ORIGIN_X - pathMarginSide / 2f
@@ -344,12 +290,12 @@ class BattleEngine(
     private val pathRight = (Grid.ORIGIN_X + Grid.GRID_W) + pathMarginSide / 2f
     private val pathBottom = (Grid.ORIGIN_Y + Grid.GRID_H) + pathMarginTB / 2f
 
-    // Corner radius for smooth turns (24 interpolation points per corner — 고속에서도 호 유지)
+    // Corner radius for smooth turns; each corner uses 24 interpolation points
     private val cornerR = 30f
 
     val enemyPath: List<Vec2> = buildList {
         val steps = 24
-        // Top edge: left→right
+        // Top edge: left to right
         add(Vec2(pathLeft + cornerR, pathTop))
         add(Vec2(pathRight - cornerR, pathTop))
         // Top-right corner
@@ -358,7 +304,7 @@ class BattleEngine(
             add(Vec2(pathRight - cornerR + cornerR * kotlin.math.cos(angle),
                       pathTop + cornerR + cornerR * kotlin.math.sin(angle)))
         }
-        // Right edge: top→bottom
+        // Right edge: top to bottom
         add(Vec2(pathRight, pathTop + cornerR))
         add(Vec2(pathRight, pathBottom - cornerR))
         // Bottom-right corner
@@ -367,7 +313,7 @@ class BattleEngine(
             add(Vec2(pathRight - cornerR + cornerR * kotlin.math.cos(angle),
                       pathBottom - cornerR + cornerR * kotlin.math.sin(angle)))
         }
-        // Bottom edge: right→left
+        // Bottom edge: right to left
         add(Vec2(pathRight - cornerR, pathBottom))
         add(Vec2(pathLeft + cornerR, pathBottom))
         // Bottom-left corner
@@ -376,7 +322,7 @@ class BattleEngine(
             add(Vec2(pathLeft + cornerR + cornerR * kotlin.math.cos(angle),
                       pathBottom - cornerR + cornerR * kotlin.math.sin(angle)))
         }
-        // Left edge: bottom→top
+        // Left edge: bottom to top
         add(Vec2(pathLeft, pathBottom - cornerR))
         add(Vec2(pathLeft, pathTop + cornerR))
         // Top-left corner
@@ -398,10 +344,10 @@ class BattleEngine(
             val forceBoss = dungeonDef?.type == com.jay.jaygame.data.DungeonType.BOSS_RUSH
             waveSystem = WaveSystem(maxWaves, difficulty, forceBoss = forceBoss)
         }
-        // 등급 그룹 통합 강화 — groupUpgradeLevels 배틀 시작 시 0으로 초기화
+        // Initialize group upgrade caches
         UniqueAbilitySystem.zonePool = zones
         UniqueAbilitySystem.activeUnits = activeUnitsScratch
-        // ── 종족 드래프트 시너지 초기화 ──
+        // Apply drafted race synergies
         val draftedRaces = BattleBridge.selectedRaces.value
         synergyAtkMult = if (UnitRace.HUMAN in draftedRaces) 1.10f else 1f
         synergySpdMult = if (UnitRace.SPIRIT in draftedRaces) 1.10f else 1f
@@ -411,11 +357,11 @@ class BattleEngine(
 
         // Wire relic bonuses into subsystems
         MergeSystem.luckyMergeBonus = (relicManager?.totalLuckyMergeBonus() ?: 0f) + synergyLuckyMerge
-        // 이펙트 품질 설정 반영
+        // Push current effect quality to the UI particle system
         com.jay.jaygame.ui.battle.ParticleLOD.userQuality = BattleBridge.effectQuality.value
-        // 자동 웨이브 시작이면 초기 딜레이도 스킵
+        // Skip initial wave delay when auto-wave is enabled
         if (BattleBridge.autoWaveStart.value) waveDelayTimer = 0f
-        validatePathSpeedUniformity()
+        BattlePathValidator.validate(enemyPath)
         job = scope.launch(Dispatchers.Default) {
             var lastTime = System.nanoTime()
             var accumulator = 0f
@@ -458,7 +404,7 @@ class BattleEngine(
                                 if (existing != null) existing.stacks++
                                 else activeRoguelikeBuffs.add(ActiveRoguelikeBuff(selectedBuff))
 
-                                // 로그라이크 Lucky merge 보너스 반영
+                                // Update lucky merge bonus after roguelike selection
                                 MergeSystem.luckyMergeBonus = (relicManager?.totalLuckyMergeBonus() ?: 0f) + synergyLuckyMerge + roguelikeLuckyBonus
 
                                 BattleBridge.updateActiveRoguelikeBuffs(activeRoguelikeBuffs.toList())
@@ -491,7 +437,7 @@ class BattleEngine(
                 if (accumulator > FIXED_DT * 4) accumulator = FIXED_DT * 2
 
                 pushStateToCompose()
-                delay(16) // ~60 FPS — sufficient for TD game, halves GC pressure
+                delay(16) // ~60 FPS ??sufficient for TD game, halves GC pressure
             }
         }
     }
@@ -503,12 +449,12 @@ class BattleEngine(
 
     private fun update(dt: Float) {
         elapsedTime += dt
-        // 코인 시스템: 자동 회복 없음 — 적 처치/웨이브 클리어로만 획득
+        // Advance battle simulation according to the current state
 
         when (state) {
             State.WaveDelay -> {
                 if (pendingRoguelike) {
-                    // 로그라이크 선택 대기 중 — 타이머 진행 안 함
+                    // Waiting for roguelike selection before starting the next wave
                 } else {
                     waveDelayTimer -= dt
                     if (waveDelayTimer <= 0f) {
@@ -516,7 +462,7 @@ class BattleEngine(
                         val config = waveSystem.getWaveConfig(waveSystem.currentWave)
                         isBossRound = config.isBoss
                         SfxManager.play(if (isBossRound) SoundEvent.BossAppear else SoundEvent.WaveStart, if (isBossRound) 1f else 0.7f)
-                        sp += relicManager?.totalWaveStartSp() ?: 0f  // 유물 웨이브 시작 보너스 코인
+                        sp += relicManager?.totalWaveStartSp() ?: 0f  // ?좊Ъ ?⑥씠釉??쒖옉 蹂대꼫??肄붿씤
                         UniqueAbilitySystem.onBlueprintPassiveWaveStart(units) { bonus -> sp += bonus }
                         state = State.Playing
                     }
@@ -537,7 +483,7 @@ class BattleEngine(
                 // Defeat: 100+ alive enemies
                 if (enemies.activeCount >= DEFEAT_ENEMY_COUNT) {
                     if (petSystem.canPhoenixRevive()) {
-                        // Pet ID 8 (봉황): one-time revive — clear excess enemies and continue
+                        // Pet ID 8: one-time revive, clear excess enemies, then continue
                         petSystem.usePhoenixRevive()
                         val safeCount = DEFEAT_ENEMY_COUNT / 2
                         val aliveList = mutableListOf<Enemy>()
@@ -551,19 +497,19 @@ class BattleEngine(
                     }
                 }
 
-                // 일반 웨이브: 전멸 or 5분 타임아웃으로 클리어
+                // Non-boss waves can force-complete after all spawns are dead
                 if (!waveSystem.waveComplete && waveSystem.allSpawned && enemies.activeCount == 0) {
                     waveSystem.forceComplete()
                 }
 
-                // 보스 타임아웃 → 즉시 패배 (보스가 살아있으면)
+                // Boss waves fail if the timer ends while enemies are still alive
                 if (isBossRound && waveSystem.waveComplete && enemies.activeCount > 0) {
                     state = State.Defeat
                     onBattleEnd(false)
                     return
                 }
 
-                // 웨이브 클리어 → 보상 지급 및 다음 웨이브 (타임아웃 시 잔존 적 유지)
+                // Handle wave clear rewards and next-wave transition
                 if (waveSystem.waveComplete) {
                     SfxManager.play(SoundEvent.WaveClear, 0.8f)
         
@@ -576,7 +522,7 @@ class BattleEngine(
                         state = State.Victory
                         onBattleEnd(true)
                     } else {
-                        // 로그라이크 강화: 보스 웨이브(10, 20, 30, 40, 50) 클리어 후 선택지 표시
+                        // Offer roguelike choices every 10 cleared waves, except the last wave
                         val clearedWave = waveSystem.currentWave + 1  // 1-indexed
                         if (clearedWave % 10 == 0 && clearedWave < maxWaves) {
                             val choices = roguelikeSystem.generateChoices(clearedWave, activeRoguelikeBuffs, BattleBridge.selectedRaces.value)
@@ -594,7 +540,7 @@ class BattleEngine(
             }
             State.Victory, State.Defeat -> { /* frozen */ }
         }
-        gridPushTimer += dt
+        statePublisher.advance(dt)
     }
 
     // endregion
@@ -655,7 +601,7 @@ class BattleEngine(
             when (enemy.bossModifier) {
                 // COMMANDER: buff nearby enemy armor (temporarily set higher)
                 BossModifier.COMMANDER -> {
-                    // No runtime buff needed — COMMANDER effect is applied
+                    // No runtime buff needed ??COMMANDER effect is applied
                     // during enemy spawn by increasing base armor of nearby enemies
                     // Simple implementation: reduce damage taken by nearby enemies via shield buff
                     spatialHash.forEach(
@@ -745,18 +691,18 @@ class BattleEngine(
                 }
             }
 
-            // on-kill 처리: AbilityEngine + Blueprint 패시브 (단일 루프)
+            // On-kill hooks: AbilityEngine and blueprint passive effects
             var closestKillUnit: GameUnit? = null
             var closestDist = Float.MAX_VALUE
             units.forEach { u ->
                 if (!u.alive) return@forEach
-                // AbilityEngine ON_KILL: 가장 가까운 유닛 1체 트리거
+                // AbilityEngine ON_KILL: choose the nearest eligible unit
                 val ab = u.activeAbility
                 if (ab != null && ab.primitive == AbilityPrimitive.ON_KILL) {
                     val d = u.position.distanceSqTo(dead.position)
                     if (d < closestDist) { closestDist = d; closestKillUnit = u }
                 }
-                // Blueprint 패시브 on-kill (영구 ATK 증가, 코인 보너스 등)
+                // Blueprint on-kill passives may add SP or permanent bonuses
                 if (u.uniqueAbilityType >= UniqueAbilitySystem.BLUEPRINT_ABILITY_BASE) {
                     sp += UniqueAbilitySystem.onBlueprintPassiveKill(u, units)
                 }
@@ -774,7 +720,7 @@ class BattleEngine(
                 SfxManager.play(SoundEvent.EnemyDeath, 0.5f)
                 lastDeathSfxTime = now
             }
-            // 코인 획득: 적 처치 시 (보스 60+wave×2, 엘리트 6, 일반 2) × 난이도 × 시너지
+            // Grant SP and gold for kills based on enemy type and modifiers
 
             val killCoin = when {
                 wasBoss -> COIN_PER_BOSS_BASE + waveSystem.currentWave * COIN_PER_BOSS_PER_WAVE
@@ -799,7 +745,7 @@ class BattleEngine(
         val activeEnemies = activeEnemiesScratch
         UniqueAbilitySystem.update(unitList, dt, activeEnemies, spatialHash, units)
 
-        // ── AbilityEngine: periodic & aura ticks ──
+        // AbilityEngine periodic and aura ticks
         units.forEach { u ->
             if (!u.alive) return@forEach
             val ab = u.activeAbility ?: return@forEach
@@ -826,7 +772,7 @@ class BattleEngine(
         units.forEach { unit ->
             if (!unit.alive && unit.state != UnitState.RESPAWNING) return@forEach
 
-            // NEW: Behavior-based update path — units with a behavior delegate to it
+            // NEW: Behavior-based update path ??units with a behavior delegate to it
             if (unit.behavior != null) {
                 applyGroupBonus(unit)
                 unit.behavior?.update(unit, dt) { pos, range ->
@@ -835,7 +781,7 @@ class BattleEngine(
                 if (unit.attackAnimTimer > 0f) unit.attackAnimTimer = (unit.attackAnimTimer - dt).coerceAtLeast(0f)
                 if (unit.skillAnimTimer > 0f) unit.skillAnimTimer = (unit.skillAnimTimer - dt).coerceAtLeast(0f)
                 if (unit.critAnimTimer > 0f) unit.critAnimTimer = (unit.critAnimTimer - dt).coerceAtLeast(0f)
-                // Clamp position — tanks in MOVING/BLOCKING can go to the enemy path area
+                // Clamp position ??tanks in MOVING/BLOCKING can go to the enemy path area
                 val isTankChasing = unit.state == UnitState.MOVING || unit.state == UnitState.BLOCKING
                 if (isTankChasing) {
                     unit.position.x = unit.position.x.coerceIn(pathLeft, pathRight)
@@ -894,7 +840,7 @@ class BattleEngine(
                         BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), boostedCrit, angle)
                         tryPlayAttackSfx(boostedCrit, unit.attackRange, unit.damageType)
                     } else {
-                        // Projectile — melee slash uses fast projectile, ranged uses normal
+                        // Projectile ??melee slash uses fast projectile, ranged uses normal
                         val isSlash = unit.attackRange == AttackRange.MELEE
                         val projSpeed = if (isSlash) 900f else 400f
                         val proj = projectiles.acquire()
@@ -933,7 +879,7 @@ class BattleEngine(
     }
 
 
-    /** Called from onProjectileHit — apply data-driven on-hit ability for the attacking unit. */
+    /** Called from onProjectileHit ??apply data-driven on-hit ability for the attacking unit. */
     private fun applyAbilityOnHit(sourceUnitTile: Int, target: Enemy) {
         val unit = grid.getUnit(sourceUnitTile) ?: return
         val ab = unit.activeAbility ?: return
@@ -959,7 +905,7 @@ class BattleEngine(
                 // Data-driven ability on-hit (AbilityEngine)
                 applyAbilityOnHit(proj.sourceUnitId, target)
 
-                // ── 로그라이크 온힛 효과 ──
+                // Additional multishot spawned by roguelike effect
                 applyRoguelikeOnHit(target, proj.damage, proj.isMagic)
 
                 val nx = target.position.x / W
@@ -971,7 +917,7 @@ class BattleEngine(
                     BattleBridge.onMeleeHit(nx, ny, proj.family.coerceIn(0, 5), proj.isCrit, angle)
                     tryPlayAttackSfx(proj.isCrit, AttackRange.MELEE, if (proj.isMagic) DamageType.MAGIC else DamageType.PHYSICAL)
                 } else {
-                    // 원거리 투사체 히트 사운드
+                    // Release projectile when it expires or loses its target
                     tryPlayAttackSfx(proj.isCrit, AttackRange.RANGED, if (proj.isMagic) DamageType.MAGIC else DamageType.PHYSICAL)
                 }
             }
@@ -1007,7 +953,7 @@ class BattleEngine(
                 }
             }
         }
-        // StateFlow는 immutable snapshot 필요 — copyOf로 새 배열 생성 (count=0이면 skip)
+        // Snapshot publishing uses preallocated buffers and skips empty frames cheaply
         if (zi > 0 || _zoneDataCount > 0) {
             BattleBridge.updateZoneData(
                 zoneXs.copyOf(zi), zoneYs.copyOf(zi), zoneRadii.copyOf(zi),
@@ -1071,7 +1017,7 @@ class BattleEngine(
             bossMult
 
         if (unit.attackRange == AttackRange.MELEE) {
-            // 근접: 즉시 데미지 + 슬래시 이펙트
+            // Pet attack: direct damage plus optional DOT
             val finalDmg = target.takeDamage(dmg, isMagic, unit.range)
             val nx = target.position.x / W
             val ny = target.position.y / H
@@ -1085,7 +1031,7 @@ class BattleEngine(
             applyAbilityOnHit(unit.tileIndex, target)
             applyRoguelikeOnHit(target, dmg, isMagic)
         } else {
-            // 원거리: 투사체 발사
+            // Pet support buff application
             val proj = projectiles.acquire() ?: return
             proj.init(
                 from = unit.position.copy(), target = target,
@@ -1127,23 +1073,11 @@ class BattleEngine(
         val grade = if (gradeOverride != null) {
             gradeOverride
         } else {
-            val (rawGrade, resetPity) = probabilityEngine.rollGradeWithPity(currentPity)
-            currentPity = if (resetPity) 0 else (currentPity + 1).coerceAtMost(100)
-            BattleBridge.updateUnitPullPity(currentPity)
-            UnitGrade.entries.getOrElse(rawGrade) { UnitGrade.entries.first() }
+            probabilityEngine.rollGrade()
         }
         val selectedRaces = BattleBridge.selectedRaces.value
         val candidates = blueprintRegistry.findByRacesAndGradeAndSummonable(selectedRaces, grade)
-        if (candidates.isEmpty()) return
-        val totalWeight = candidates.sumOf { it.summonWeight }
-        if (totalWeight <= 0) return
-        var roll = (Math.random() * totalWeight).toInt()
-        var sel: UnitBlueprint? = null
-        for (bp in candidates) {
-            roll -= bp.summonWeight
-            if (roll <= 0) { sel = bp; break }
-        }
-        val selected = sel ?: return
+        val selected = BattleSummonPlanner.rollWeightedBlueprint(candidates) ?: return
 
         // Try stacking by same unit first, then find empty slot
         var targetSlot = grid.findStackableSlot(selected.id)
@@ -1156,12 +1090,13 @@ class BattleEngine(
         summonCount++
         summonCost = (BASE_SUMMON_COST + summonCount * SUMMON_COST_INCREMENT).coerceAtMost(MAX_SUMMON_COST)
 
-        // 로그라이크 소환 축복: 7% 확률 1등급 상위 소환
-        val finalSelected = if (roguelikeSummonUpgrade && Math.random() < 0.07 && selected.grade < UnitGrade.LEGEND) {
-            val nextGrade = UnitGrade.entries.getOrNull(selected.grade.ordinal + 1) ?: selected.grade
-            val upgradeCandidates = blueprintRegistry.findByRacesAndGradeAndSummonable(selectedRaces, nextGrade)
-            if (upgradeCandidates.isNotEmpty()) upgradeCandidates.random() else selected
-        } else selected
+        // Roguelike summon upgrade: 7% chance to upgrade by one grade
+        val finalSelected = BattleSummonPlanner.maybeUpgradeSummon(
+            selected = selected,
+            selectedRaces = selectedRaces,
+            blueprintRegistry = blueprintRegistry,
+            summonUpgradeEnabled = roguelikeSummonUpgrade,
+        )
 
         val unit = spawnFromBlueprint(finalSelected) ?: return
         grid.placeUnit(targetSlot, unit)
@@ -1191,7 +1126,7 @@ class BattleEngine(
     }
 
     /** Acquire a unit from pool, init from blueprint. Does NOT place on grid.
-     *  Position is set by grid.placeUnit() → slotCenter(). */
+     *  Position is set by grid.placeUnit() ??slotCenter(). */
     internal fun spawnFromBlueprint(bp: UnitBlueprint): GameUnit? {
         val unit = units.acquire() ?: return null
         unit.initFromBlueprint(bp)
@@ -1208,7 +1143,7 @@ class BattleEngine(
 
     // Merge methods delegated to mergeHandler
 
-    /** 등급 그룹 통합 강화 요청 — 코인 소모하여 해당 그룹의 모든 유닛 ATK/속도 업그레이드 */
+    /** Upgrade one grade group and refresh cached bonuses. */
     fun requestGroupUpgrade(groupIndex: Int) {
         if (groupIndex !in 0 until UnitUpgradeSystem.GROUP_COUNT) return
         val currentLevel = groupUpgradeLevels[groupIndex]
@@ -1227,7 +1162,7 @@ class BattleEngine(
     // tryMergeSlot delegated to mergeHandler
 
     fun requestSwap(from: Int, to: Int) {
-        // 슬롯 전체 스택을 한 묶음으로 이동
+        // Swap all stacked units between two slots
         val unitsA = grid.removeAllFromSlot(from)
         val unitsB = grid.removeAllFromSlot(to)
         for (u in unitsA) grid.placeUnit(to, u)
@@ -1274,256 +1209,59 @@ class BattleEngine(
             1 -> upgradeSpdMult = 1f + level * 0.08f
             2 -> upgradeCritRate = level * 0.05f
             3 -> upgradeRangeMult = 1f + level * 0.1f
-            4 -> { /* SP 회복 업그레이드 제거 — 코인 시스템에서는 불필요 */ }
+            4 -> { /* SP ?뚮났 ?낃렇?덉씠???쒓굅 ??肄붿씤 ?쒖뒪?쒖뿉?쒕뒗 遺덊븘??*/ }
         }
     }
 
     // endregion
 
-    // region State Sync (Engine → Compose)
+    // region State Sync (Engine ??Compose)
 
     private fun pushStateToCompose() {
-        syncBattleState()
-        syncEnemyPositions()
-        syncUnitPositions()
-        syncProjectiles()
-
-        if (luckyStones != lastPushedLuckyStones) {
-            lastPushedLuckyStones = luckyStones
-            BattleBridge.updateLuckyStones(luckyStones)
-        }
-
-        syncGridState()
-    }
-
-    private fun syncBattleState() {
-        BattleBridge.updateState(
-            com.jay.jaygame.bridge.BattleStateUpdate(
-                wave = waveSystem.currentWave + 1,
-                maxWaves = maxWaves,
-                hp = (DEFEAT_ENEMY_COUNT - enemies.activeCount).coerceAtLeast(0),
-                maxHp = DEFEAT_ENEMY_COUNT,
-                sp = sp,
-                elapsed = elapsedTime,
-                state = state.ordinal,
-                summonCost = summonCost,
-                enemyCount = enemies.activeCount,
-                isBossRound = if (isBossRound) 1 else 0,
-                waveTimeRemaining = waveSystem.timeRemaining,
-                waveElapsed = waveSystem.waveElapsed,
-                waveDelayRemaining = if (state == State.WaveDelay) waveDelayTimer else 0f,
-            )
+        statePublisher.publishBattleState(
+            waveSystem = waveSystem,
+            maxWaves = maxWaves,
+            defeatEnemyCount = DEFEAT_ENEMY_COUNT,
+            enemyCount = enemies.activeCount,
+            sp = sp,
+            elapsedTime = elapsedTime,
+            stateOrdinal = state.ordinal,
+            summonCost = summonCost,
+            isBossRound = isBossRound,
+            waveDelayRemaining = if (state == State.WaveDelay) waveDelayTimer else 0f,
         )
+        statePublisher.publishEnemyPositions(enemies, W, H)
+        statePublisher.publishUnitPositions(units, grid, W, H)
+        statePublisher.publishProjectiles(projectiles, W, H)
+        statePublisher.publishLuckyStones(luckyStones)
+        statePublisher.publishGridState(grid, getMergeableTiles())
     }
 
-    private fun syncEnemyPositions() {
-        var ei = 0
-        enemies.forEach { e ->
-            if (ei < enemyXBuf.size) {
-                enemyXBuf[ei] = e.position.x / W
-                enemyYBuf[ei] = e.position.y / H
-                enemyTypeBuf[ei] = if (e.isBoss) WaveSystem.BOSS_ENEMY_TYPE else e.type
-                enemyHpBuf[ei] = e.hpRatio
-                // Build buff bitmask from enemy buff container
-                var bits = 0
-                val hasSlow = e.buffs.hasBuff(com.jay.jaygame.engine.BuffType.Slow)
-                val hasDot = e.buffs.hasBuff(com.jay.jaygame.engine.BuffType.DoT)
-                val hasArmorBreak = e.buffs.hasBuff(com.jay.jaygame.engine.BuffType.ArmorBreak)
-                val hasStun = e.buffs.isStunned()
-                if (hasSlow) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_SLOW
-                if (hasDot) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_DOT
-                if (hasArmorBreak) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_ARMOR_BREAK
-                if (hasStun) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_STUN
-                // Poison = slow + dot combo
-                if (hasSlow && hasDot) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_POISON
-                // Lightning & Wind tracked via recentHitFlags
-                if (e.recentHitFlags and 1 != 0) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_LIGHTNING
-                if (e.recentHitFlags and 2 != 0) bits = bits or com.jay.jaygame.bridge.BUFF_BIT_WIND
-                enemyBuffBuf[ei] = bits
-                ei++
-            }
-        }
-        BattleBridge.updateEnemyPositions(enemyXBuf, enemyYBuf, enemyTypeBuf, enemyHpBuf, enemyBuffBuf, ei)
-    }
-
-    private fun syncUnitPositions() {
-        var ui = 0
-        units.forEach { u ->
-            if (ui < unitXBuf.size) {
-                unitXBuf[ui] = u.position.x / W
-                unitYBuf[ui] = u.position.y / H
-                unitGradeBuf[ui] = u.grade
-                unitLevelBuf[ui] = u.level
-                unitAttackingBuf[ui] = u.isAttacking
-                unitAttackAnimBuf[ui] = u.attackAnimTimer
-                unitTileBuf[ui] = u.tileIndex
-                unitBlueprintIdBuf[ui] = u.blueprintId
-                unitFamiliesListBuf[ui] = u.families
-                unitRoleBuf[ui] = u.role
-                unitAttackRangeBuf[ui] = u.attackRange
-                unitDamageTypeBuf[ui] = u.damageType
-                unitCategoryBuf[ui] = u.unitCategory
-                unitHpBuf[ui] = u.hp
-                unitMaxHpBuf[ui] = u.maxHp
-                unitStateBuf[ui] = u.state
-                unitHomeXBuf[ui] = u.homePosition.x / W
-                unitHomeYBuf[ui] = u.homePosition.y / H
-                unitRangeBuf[ui] = u.range
-                unitStackCountBuf[ui] = grid.getStackCount(u.tileIndex)
-                var ubits = 0
-                if (u.buffs.hasBuff(BuffType.AtkUp)) ubits = ubits or com.jay.jaygame.bridge.UNIT_BUFF_ATK_UP
-                if (u.buffs.hasBuff(BuffType.SpdUp)) ubits = ubits or com.jay.jaygame.bridge.UNIT_BUFF_SPD_UP
-                if (u.buffs.hasBuff(BuffType.Shield)) ubits = ubits or com.jay.jaygame.bridge.UNIT_BUFF_SHIELD
-                if (u.buffs.hasBuff(BuffType.DefUp)) ubits = ubits or com.jay.jaygame.bridge.UNIT_BUFF_DEF_UP
-                unitBuffBuf[ui] = ubits
-                unitSkillAnimBuf[ui] = u.skillAnimTimer
-                unitCritAnimBuf[ui] = u.critAnimTimer
-                ui++
-            }
-        }
-        BattleBridge.updateUnitPositions(
-            com.jay.jaygame.bridge.UnitPositionBatch(
-                xs = unitXBuf, ys = unitYBuf, grades = unitGradeBuf, levels = unitLevelBuf,
-                isAttacking = unitAttackingBuf, tileIndices = unitTileBuf, count = ui,
-                attackAnimTimers = unitAttackAnimBuf, blueprintIds = unitBlueprintIdBuf,
-                familiesList = unitFamiliesListBuf, roles = unitRoleBuf, attackRanges = unitAttackRangeBuf,
-                damageTypes = unitDamageTypeBuf, unitCategories = unitCategoryBuf,
-                hps = unitHpBuf, maxHps = unitMaxHpBuf, states = unitStateBuf,
-                homeXs = unitHomeXBuf, homeYs = unitHomeYBuf, stackCounts = unitStackCountBuf,
-                buffs = unitBuffBuf, skillAnimTimers = unitSkillAnimBuf, critAnimTimers = unitCritAnimBuf,
-                ranges = unitRangeBuf,
-            )
-        )
-    }
-
-    private fun syncProjectiles() {
-        var pi = 0
-        projectiles.forEach { p ->
-            if (pi < projSrcXBuf.size) {
-                projSrcXBuf[pi] = p.sourcePos.x / W
-                projSrcYBuf[pi] = p.sourcePos.y / H
-                projDstXBuf[pi] = p.position.x / W
-                projDstYBuf[pi] = p.position.y / H
-                projTypeBuf[pi] = p.type
-                projFamilyBuf[pi] = p.family
-                projGradeBuf[pi] = p.grade
-                pi++
-            }
-        }
-        BattleBridge.updateProjectiles(projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf, projTypeBuf, pi, projFamilyBuf, projGradeBuf)
-    }
-
-    private fun syncGridState() {
-        if (gridPushTimer >= 0.1f) {
-            gridPushTimer = 0f
-            val mergeableTiles = getMergeableTiles()
-            for (i in 0 until Grid.SLOT_COUNT) {
-                val u = grid.getUnit(i)
-                if (u != null) {
-                    gridGradeBuf[i] = u.grade
-                    // canMerge = 등급/카테고리까지 고려한 합성 가능 여부
-                    gridCanMergeBuf[i] = i in mergeableTiles
-                    gridLevelBuf[i] = grid.getStackCount(i)  // Show stack count as level for UI
-                    gridBlueprintIdBuf[i] = u.blueprintId
-                    gridFamiliesListBuf[i] = u.families
-                    gridRoleBuf[i] = u.role
-                } else {
-                    gridGradeBuf[i] = 0
-                    gridCanMergeBuf[i] = false
-                    gridLevelBuf[i] = 0
-                    gridBlueprintIdBuf[i] = ""
-                    gridFamiliesListBuf[i] = emptyList()
-                    gridRoleBuf[i] = UnitRole.RANGED_DPS
-                }
-            }
-            BattleBridge.updateGridState(gridGradeBuf, gridCanMergeBuf, gridLevelBuf, gridBlueprintIdBuf, gridFamiliesListBuf, gridRoleBuf)
-        }
-    }
 
     // endregion
 
     // region Battle End & Validation
     private fun onBattleEnd(victory: Boolean) {
         SfxManager.play(if (victory) SoundEvent.Victory else SoundEvent.Defeat)
-        val difficultyBonus = if (isDungeonMode && dungeonDef != null) {
-            dungeonDef?.difficultyMultiplier ?: 1f
-        } else {
-            when (difficulty) {
-                1 -> 1.5f    // 하드
-                2 -> 2.5f    // 헬
-                else -> 1.0f // 일반
-            }
-        }
-        val dungeonRewardMult = if (isDungeonMode) dungeonDef?.rewardMultiplier ?: 1f else 1f
-        val baseGold = if (victory) 100 + waveSystem.currentWave * 10 else waveSystem.currentWave * 5
-        val relicWaveBonus = if (victory) (1f + (relicManager?.totalGoldWaveBonus() ?: 0f)) else 1f
-        val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt().coerceAtLeast(1)
-        val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
-        val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
-        val noHpLost = peakEnemyCount <= DEFEAT_ENEMY_COUNT / 5 // HP never dropped below 80%
-        val fastClear = victory && elapsedTime < maxWaves * 8f // cleared quickly
-        val baseCards = if (victory) 3 + stageId + difficulty * 2 else 1
-        val dungeonCardBonus = if (isDungeonMode && victory) waveSystem.currentWave / 5 else 0
-        val cardsEarned = baseCards + dungeonCardBonus
-        // Roll relic drop on victory (10% chance, 50% in RELIC_HUNT dungeon)
-        val relicDrop = if (victory) {
-            val isRelicHunt = isDungeonMode && dungeonDef?.type == com.jay.jaygame.data.DungeonType.RELIC_HUNT
-            if (isRelicHunt) relicManager?.rollRelicDropBoosted(0.50) else relicManager?.rollRelicDrop()
-        } else null
-        BattleBridge.onBattleEnd(
-            victory, waveSystem.currentWave + 1, goldEarned, trophyChange,
-            killCount, mergeCount, cardsEarned, noHpLost, fastClear,
-            relicDropId = relicDrop?.first ?: -1,
-            relicDropGrade = relicDrop?.second?.ordinal ?: -1,
+        val summary = BattleOutcomeSummaryCalculator.calculate(
+            victory = victory,
+            stageId = stageId,
+            difficulty = difficulty,
+            currentWave = waveSystem.currentWave,
+            elapsedTime = elapsedTime,
+            maxWaves = maxWaves,
+            peakEnemyCount = peakEnemyCount,
+            defeatEnemyCount = DEFEAT_ENEMY_COUNT,
+            isDungeonMode = isDungeonMode,
+            dungeonDef = dungeonDef,
+            relicManager = relicManager,
         )
-    }
-
-    // ── Z18: Path Speed Uniformity Validation ──
-
-    private fun validatePathSpeedUniformity() {
-        val tag = "BattlePath"
-
-        if (enemyPath.size < 2) {
-            Log.w(tag, "Z18: Enemy path has fewer than 2 waypoints")
-            return
-        }
-
-        val segmentLengths = mutableListOf<Float>()
-        for (i in 0 until enemyPath.size - 1) {
-            val a = enemyPath[i]
-            val b = enemyPath[i + 1]
-            val dx = b.x - a.x
-            val dy = b.y - a.y
-            segmentLengths.add(sqrt(dx * dx + dy * dy))
-        }
-        // Closing segment (last → first)
-        val last = enemyPath.last()
-        val first = enemyPath.first()
-        val closeDx = first.x - last.x
-        val closeDy = first.y - last.y
-        segmentLengths.add(sqrt(closeDx * closeDx + closeDy * closeDy))
-
-        val totalLength = segmentLengths.sum()
-        val avgLength = totalLength / segmentLengths.size
-        val maxDeviation = segmentLengths.maxOf { abs(it - avgLength) }
-        val variancePercent = if (avgLength > 0f) (maxDeviation / avgLength) * 100f else 0f
-
-        Log.i(tag, "Z18: Path stats — ${segmentLengths.size} segments, total=${totalLength.toInt()}px, avg=${avgLength.toInt()}px")
-
-        // Log each segment length
-        for (i in segmentLengths.indices) {
-            val len = segmentLengths[i]
-            val devPct = if (avgLength > 0f) ((len - avgLength) / avgLength * 100f) else 0f
-            val label = if (i < segmentLengths.size - 1) "Seg[$i]" else "Close"
-            Log.d(tag, "Z18: $label length=${len.toInt()}px (${"%+.1f".format(devPct)}%)")
-        }
-
-        if (variancePercent < 10f) {
-            Log.i(tag, "Z18: Path uniformity OK — max deviation ${variancePercent.toInt()}% (< 10%)")
-        } else {
-            Log.w(tag, "Z18: Path NOT uniform — max deviation ${variancePercent.toInt()}% (>= 10%). " +
-                    "This is expected for paths with corner interpolation points.")
-        }
+        BattleBridge.onBattleEnd(
+            victory, waveSystem.currentWave + 1, summary.goldEarned, summary.trophyChange,
+            killCount, mergeCount, summary.cardsEarned, summary.noHpLost, summary.fastClear,
+            relicDropId = summary.relicDropId,
+            relicDropGrade = summary.relicDropGrade,
+        )
     }
     // endregion
 }
