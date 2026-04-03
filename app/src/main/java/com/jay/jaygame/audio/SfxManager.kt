@@ -22,6 +22,7 @@ object SfxManager {
     @Volatile
     private var soundPool: SoundPool? = null
     private val loadedIds = mutableMapOf<SoundEvent, Int>()
+    private val lock = Any()
     private var enabled = true
 
     /**
@@ -90,7 +91,7 @@ object SfxManager {
     /** Play a sound effect.  Silently no-ops if the asset is not yet loaded. */
     fun play(event: SoundEvent, volume: Float = 1f) {
         if (!enabled) return
-        val id = loadedIds[event]
+        val id = synchronized(lock) { loadedIds[event] }
         if (id != null) {
             soundPool?.play(id, volume, volume, 1, 0, 1f)
         } else {
@@ -103,9 +104,11 @@ object SfxManager {
     }
 
     fun release() {
-        soundPool?.release()
-        soundPool = null
-        loadedIds.clear()
+        synchronized(lock) {
+            soundPool?.release()
+            soundPool = null
+            loadedIds.clear()
+        }
         Log.d(TAG, "SoundPool released")
     }
 }

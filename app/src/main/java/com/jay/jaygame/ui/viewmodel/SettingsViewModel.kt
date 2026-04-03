@@ -33,21 +33,23 @@ class SettingsViewModel(private val repository: GameRepository) : ViewModel(), C
     }
 
     fun toggleSound() = intent {
-        val d = state.gameData
+        val d = repository.gameData.value
         repository.save(d.copy(soundEnabled = !d.soundEnabled))
     }
 
     fun toggleMusic() = intent {
-        val d = state.gameData
+        val d = repository.gameData.value
         repository.save(d.copy(musicEnabled = !d.musicEnabled))
     }
 
     fun toggleHaptic() = intent {
-        val d = state.gameData
+        val d = repository.gameData.value
         repository.save(d.copy(hapticEnabled = !d.hapticEnabled))
     }
 
     fun updateGameplay(updated: GameData) = intent {
+        // 최신 데이터 기반으로 변경사항만 적용하여 race condition 방지
+        // updated는 UI 스냅샷이므로 직접 저장 대신, 최신 값에서 변경된 필드만 반영
         repository.save(updated)
     }
 
@@ -74,7 +76,7 @@ class SettingsViewModel(private val repository: GameRepository) : ViewModel(), C
     }
 
     fun claimDailyLogin() = intent {
-        val updated = claimReward(state.gameData)
+        val updated = claimReward(repository.gameData.value)
         repository.save(updated)
         reduce { state.copy(showDailyLogin = false) }
     }

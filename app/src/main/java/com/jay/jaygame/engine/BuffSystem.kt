@@ -36,7 +36,10 @@ class BuffContainer {
                 if (oldest == null || b.remaining < oldest!!.remaining) oldest = b
             }
         }
-        if (count >= 3) oldest?.let { buffs.remove(it) }
+        if (count >= 3) oldest?.let {
+            if (it.type == BuffType.Shield) shieldHP = (shieldHP - it.value).coerceAtLeast(0f)
+            buffs.remove(it)
+        }
         buffs.add(BuffEntry(type, value, effectiveDuration, sourceId))
         if (type == BuffType.Shield) shieldHP += value
     }
@@ -52,6 +55,7 @@ class BuffContainer {
             val b = iter.next()
             b.remaining -= dt
             if (b.remaining <= 0f) {
+                if (b.type == BuffType.Shield) shieldHP = (shieldHP - b.value).coerceAtLeast(0f)
                 iter.remove()
                 continue
             }

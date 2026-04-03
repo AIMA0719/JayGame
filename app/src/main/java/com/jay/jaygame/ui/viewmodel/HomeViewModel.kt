@@ -16,6 +16,7 @@ data class HomeState(
     val showDailyLogin: Boolean = false,
     val showPreBattle: Boolean = false,
     val newTitle: ProfileDef? = null,
+    val pendingTitles: List<ProfileDef> = emptyList(),
 )
 
 sealed class HomeSideEffect {
@@ -49,15 +50,30 @@ class HomeViewModel(private val repository: GameRepository) : ViewModel(), Conta
         if (newIds.isNotEmpty()) {
             val updated = data.copy(unlockedProfiles = data.unlockedProfiles + nowUnlocked)
             repository.save(updated)
-            val firstNew = ALL_PROFILES.firstOrNull { it.id == newIds.first() }
-            if (firstNew != null) {
-                reduce { state.copy(newTitle = firstNew) }
+            val newProfiles = ALL_PROFILES.filter { it.id in newIds }
+            if (newProfiles.isNotEmpty()) {
+                reduce {
+                    state.copy(
+                        newTitle = newProfiles.first(),
+                        pendingTitles = newProfiles.drop(1),
+                    )
+                }
             }
         }
     }
 
     fun dismissNewTitle() = intent {
-        reduce { state.copy(newTitle = null) }
+        val pending = state.pendingTitles
+        if (pending.isNotEmpty()) {
+            reduce {
+                state.copy(
+                    newTitle = pending.first(),
+                    pendingTitles = pending.drop(1),
+                )
+            }
+        } else {
+            reduce { state.copy(newTitle = null) }
+        }
     }
 
     fun claimDailyLogin() = intent {

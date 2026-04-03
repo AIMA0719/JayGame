@@ -244,7 +244,7 @@ class GameRepository(context: Context) {
             }
             // If neither — fresh install, proceed
 
-            val gold = root.optInt("gold", 500)
+            val gold = root.optInt("gold", 10000)
             val diamonds = root.optInt("diamonds", 0)
             val trophies = root.optInt("trophies", 0)
             val playerLevel = root.optInt("playerLevel", 1)
@@ -335,8 +335,8 @@ class GameRepository(context: Context) {
 
             // stamina
             val staminaData = root.optJSONObject("staminaData")
-            val stamina = staminaData?.optInt("stamina", 30) ?: 30
-            val maxStamina = staminaData?.optInt("maxStamina", 30) ?: 30
+            val stamina = staminaData?.optInt("stamina", 100) ?: 100
+            val maxStamina = staminaData?.optInt("maxStamina", 100) ?: 100
             val lastStaminaRegenTime = staminaData?.optLong("lastStaminaRegenTime", System.currentTimeMillis())
                 ?: System.currentTimeMillis()
 

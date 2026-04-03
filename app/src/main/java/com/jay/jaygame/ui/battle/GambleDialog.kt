@@ -21,7 +21,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +65,7 @@ fun GambleDialog(onDismiss: () -> Unit) {
     var selectedOption by remember { mutableStateOf(GambleSystem.GambleOption.SAFE) }
     var selectedBet by remember { mutableStateOf(GambleSystem.BetSize.SMALL) }
     var result by remember { mutableStateOf<GambleSystem.GambleResult?>(null) }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -100,8 +103,10 @@ fun GambleDialog(onDismiss: () -> Unit) {
                         onSelectOption = { selectedOption = it },
                         onSelectBet = { selectedBet = it },
                         onConfirm = {
-                            val r = BattleBridge.requestGamble(selectedOption, selectedBet)
-                            if (r != null) result = r
+                            scope.launch {
+                                val r = BattleBridge.requestGamble(selectedOption, selectedBet)
+                                if (r != null) result = r
+                            }
                         },
                         onDismiss = onDismiss,
                     )

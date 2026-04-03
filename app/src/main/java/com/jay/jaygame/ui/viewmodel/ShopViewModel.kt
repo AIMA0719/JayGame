@@ -112,6 +112,14 @@ class ShopViewModel(private val repository: GameRepository) : ViewModel(), Conta
 
     fun claimSeasonTier(tier: Int, goldReward: Int, diamondReward: Int, cardReward: Int) = intent {
         val d = repository.gameData.value // 최신 데이터로 중복 수령 방지
+        if (d.seasonTier < tier) {
+            postSideEffect(ShopSideEffect.ShowToast("시즌 등급이 부족합니다"))
+            return@intent
+        }
+        if (d.seasonClaimedTier + 1 != tier) {
+            postSideEffect(ShopSideEffect.ShowToast("이전 단계를 먼저 수령하세요"))
+            return@intent
+        }
         if (d.seasonTier >= tier && d.seasonClaimedTier + 1 == tier) {
             var updated = d.copy(
                 gold = d.gold + goldReward,

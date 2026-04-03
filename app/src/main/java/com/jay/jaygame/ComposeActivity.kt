@@ -116,11 +116,9 @@ class ComposeActivity : ComponentActivity() {
                             onDispose { }
                         }
 
-                        // Default BGM for all non-battle screens
+                        // BGM play는 NavGraph LaunchedEffect가 담당, 여기선 음소거만 처리
                         DisposableEffect(data.musicEnabled) {
-                            if (data.musicEnabled) {
-                                BgmManager.play(this@ComposeActivity, "audio/home_bgm.mp3")
-                            } else {
+                            if (!data.musicEnabled) {
                                 BgmManager.stop()
                             }
                             onDispose { BgmManager.stop() }
@@ -187,8 +185,11 @@ class ComposeActivity : ComponentActivity() {
         if (::appVm.isInitialized) {
             appVm.onResume()
         }
-        if (app.repository.gameData.value.musicEnabled) {
-            BgmManager.play(this, "audio/home_bgm.mp3")
+        // BGM 재생은 NavGraph LaunchedEffect가 담당, 여기선 음소거 해제만
+        if (!app.repository.gameData.value.musicEnabled) {
+            BgmManager.stop()
+        } else {
+            BgmManager.resume()
         }
     }
 

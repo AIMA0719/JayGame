@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -107,6 +109,7 @@ fun BulkSellDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val scope = rememberCoroutineScope()
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -115,21 +118,23 @@ fun BulkSellDialog(
                         NeonButton(
                             text = "${grade.label} 전체 판매",
                             onClick = {
-                                val sold = BattleBridge.requestBulkSell(grade.ordinal)
-                                if (sold > 0) {
-                                    Toast.makeText(
-                                        context,
-                                        "${grade.label} ${sold}개 판매 완료",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "판매할 ${grade.label} 유닛이 없습니다",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                scope.launch {
+                                    val sold = BattleBridge.requestBulkSell(grade.ordinal)
+                                    if (sold > 0) {
+                                        Toast.makeText(
+                                            context,
+                                            "${grade.label} ${sold}개 판매 완료",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "판매할 ${grade.label} 유닛이 없습니다",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                    onDismiss()
                                 }
-                                onDismiss()
                             },
                             modifier = Modifier.fillMaxWidth().height(42.dp),
                             accentColor = grade.color,

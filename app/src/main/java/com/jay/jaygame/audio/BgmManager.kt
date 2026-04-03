@@ -10,6 +10,7 @@ object BgmManager {
     private var currentAsset: String? = null
     private var fadeOutAnimator: ValueAnimator? = null
     private var fadeInAnimator: ValueAnimator? = null
+    private var fadingOutPlayer: MediaPlayer? = null
     private var targetVolume = 0.5f
 
     private const val CROSSFADE_MS = 500L
@@ -69,7 +70,13 @@ object BgmManager {
     }
 
     private fun crossfadeOut(player: MediaPlayer, onComplete: () -> Unit) {
+        // cancel 전에 이전 fade-out 대상 player를 즉시 release (onAnimationEnd가 호출되지 않으므로)
+        fadingOutPlayer?.let { old ->
+            try { if (old.isPlaying) old.stop() } catch (_: IllegalStateException) { }
+            try { old.release() } catch (_: IllegalStateException) { }
+        }
         fadeOutAnimator?.cancel()
+        fadingOutPlayer = player
         fadeOutAnimator = ValueAnimator.ofFloat(targetVolume, 0f).apply {
             duration = CROSSFADE_MS
             interpolator = LinearInterpolator()
@@ -81,6 +88,7 @@ object BgmManager {
                 override fun onAnimationEnd(animation: android.animation.Animator) {
                     try { if (player.isPlaying) player.stop() } catch (_: IllegalStateException) { }
                     onComplete()
+                    fadingOutPlayer = null
                 }
             })
             start()
@@ -101,6 +109,12 @@ object BgmManager {
     }
 
     private fun cancelAllFades() {
+        // fade-out 대상 player를 cancel 전에 release (onAnimationEnd가 호출되지 않으므로)
+        fadingOutPlayer?.let { old ->
+            try { if (old.isPlaying) old.stop() } catch (_: IllegalStateException) { }
+            try { old.release() } catch (_: IllegalStateException) { }
+            fadingOutPlayer = null
+        }
         fadeOutAnimator?.cancel()
         fadeOutAnimator = null
         fadeInAnimator?.cancel()

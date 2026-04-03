@@ -18,7 +18,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
 data class BattleState(
@@ -733,8 +732,8 @@ object BattleBridge {
         hpRatios.copyInto(snapshot.hpRatios, endIndex = count)
         buffs.copyInto(snapshot.buffs, endIndex = count)
         _enemyPositions.value = EnemyPositionData(
-            snapshot.xs, snapshot.ys, snapshot.types,
-            snapshot.hpRatios, snapshot.buffs, count, enemyFrameCounter.incrementAndGet(),
+            snapshot.xs.copyOf(count), snapshot.ys.copyOf(count), snapshot.types.copyOf(count),
+            snapshot.hpRatios.copyOf(count), snapshot.buffs.copyOf(count), count, enemyFrameCounter.incrementAndGet(),
         )
     }
 
@@ -755,8 +754,10 @@ object BattleBridge {
         if (families.size >= count) families.copyInto(snapshot.families, endIndex = count)
         if (grades.size >= count) grades.copyInto(snapshot.grades, endIndex = count)
         _projectiles.value = ProjectileData(
-            snapshot.srcXs, snapshot.srcYs, snapshot.dstXs, snapshot.dstYs,
-            snapshot.types, snapshot.families, snapshot.grades, count, projFrameCounter.incrementAndGet(),
+            snapshot.srcXs.copyOf(count), snapshot.srcYs.copyOf(count),
+            snapshot.dstXs.copyOf(count), snapshot.dstYs.copyOf(count),
+            snapshot.types.copyOf(count), snapshot.families.copyOf(count),
+            snapshot.grades.copyOf(count), count, projFrameCounter.incrementAndGet(),
         )
     }
 
@@ -789,16 +790,21 @@ object BattleBridge {
         batch.critAnimTimers.copyInto(snapshot.critAnimTimers, endIndex = count)
         batch.ranges.copyInto(snapshot.ranges, endIndex = count)
         _unitPositions.value = UnitPositionData(
-            snapshot.xs, snapshot.ys, snapshot.grades, snapshot.levels,
-            snapshot.isAttacking, snapshot.attackAnimTimers, snapshot.tileIndices,
+            snapshot.xs.copyOf(count), snapshot.ys.copyOf(count),
+            snapshot.grades.copyOf(count), snapshot.levels.copyOf(count),
+            snapshot.isAttacking.copyOf(count), snapshot.attackAnimTimers.copyOf(count),
+            snapshot.tileIndices.copyOf(count),
             count, unitFrameCounter.incrementAndGet(),
-            snapshot.blueprintIds, snapshot.familiesList,
-            snapshot.roles, snapshot.attackRanges,
-            snapshot.damageTypes, snapshot.unitCategories,
-            snapshot.hps, snapshot.maxHps, snapshot.states,
-            snapshot.homeXs, snapshot.homeYs, snapshot.stackCounts,
-            snapshot.buffs, snapshot.skillAnimTimers, snapshot.critAnimTimers,
-            snapshot.ranges,
+            snapshot.blueprintIds.copyOfRange(0, count), snapshot.familiesList.copyOfRange(0, count),
+            snapshot.roles.copyOfRange(0, count), snapshot.attackRanges.copyOfRange(0, count),
+            snapshot.damageTypes.copyOfRange(0, count), snapshot.unitCategories.copyOfRange(0, count),
+            snapshot.hps.copyOf(count), snapshot.maxHps.copyOf(count),
+            snapshot.states.copyOfRange(0, count),
+            snapshot.homeXs.copyOf(count), snapshot.homeYs.copyOf(count),
+            snapshot.stackCounts.copyOf(count),
+            snapshot.buffs.copyOf(count), snapshot.skillAnimTimers.copyOf(count),
+            snapshot.critAnimTimers.copyOf(count),
+            snapshot.ranges.copyOf(count),
         )
     }
 
@@ -1165,10 +1171,10 @@ object BattleBridge {
         commandQueue.add(BattleCommand.SellAllSlot(tileIndex))
     }
 
-    fun requestBulkSell(grade: Int): Int {
+    suspend fun requestBulkSell(grade: Int): Int {
         val deferred = CompletableDeferred<Int>()
         commandQueue.add(BattleCommand.BulkSell(grade, deferred))
-        return runBlocking { withTimeoutOrNull(100L) { deferred.await() } ?: 0 }
+        return withTimeoutOrNull(100L) { deferred.await() } ?: 0
     }
 
     fun requestRecipeCraft(recipeId: String? = null) {
@@ -1189,13 +1195,13 @@ object BattleBridge {
      * Casino-style gamble: player bets a % of current SP.
      * Win → bet × multiplier reward. Lose → lose bet.
      */
-    fun requestGamble(
+    suspend fun requestGamble(
         option: com.jay.jaygame.engine.GambleSystem.GambleOption,
         betSize: com.jay.jaygame.engine.GambleSystem.BetSize = com.jay.jaygame.engine.GambleSystem.BetSize.SMALL,
     ): com.jay.jaygame.engine.GambleSystem.GambleResult? {
         val deferred = CompletableDeferred<com.jay.jaygame.engine.GambleSystem.GambleResult?>()
         commandQueue.add(BattleCommand.Gamble(option, betSize, deferred))
-        return runBlocking { withTimeoutOrNull(100L) { deferred.await() } }
+        return withTimeoutOrNull(100L) { deferred.await() }
     }
 
     // ── Buy Unit ────────────────────────────────────────────

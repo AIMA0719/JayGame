@@ -249,6 +249,12 @@ class BattleEngine(
         if (roguelikeExecute && !target.isBoss && target.alive && target.hp <= target.maxHp * 0.07f) {
             target.hp = 0f
             target.alive = false
+            // 보스 가드 처형 시 guardsAlive 갱신
+            if (target.isBossGuard) {
+                target.guardBossRef?.let { boss ->
+                    if (boss.alive) boss.guardsAlive = (boss.guardsAlive - 1).coerceAtLeast(0)
+                }
+            }
         }
     }
 
@@ -1123,11 +1129,16 @@ class BattleEngine(
             units = activeUnits,
             onDamageEnemy = { enemy, damage ->
                 if (enemy.alive) {
-                    enemy.hp -= damage
-                    if (enemy.hp <= 0f) enemy.alive = false
-                    val nx = enemy.position.x / W
-                    val ny = enemy.position.y / H
-                    BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
+                    val immune = (enemy.hasModifier(BossModifier.SHIELDED) && enemy.shieldActive) ||
+                        (enemy.hasModifier(BossModifier.PHANTOM) && enemy.phantomActive) ||
+                        (enemy.bossModifier == BossModifier.MINION_RUSH && enemy.guardsAlive > 0)
+                    if (!immune) {
+                        enemy.hp -= damage
+                        if (enemy.hp <= 0f) enemy.alive = false
+                        val nx = enemy.position.x / W
+                        val ny = enemy.position.y / H
+                        BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
+                    }
                 }
             },
             onBuffUnit = { unit, type, value, duration ->

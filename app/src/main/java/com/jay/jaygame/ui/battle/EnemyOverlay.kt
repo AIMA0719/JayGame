@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -195,11 +196,11 @@ fun EnemyOverlay() {
     // Smooth HP bar values (lerped)
     val smoothHpRatios = remember { mutableStateOf(FloatArray(0)) }
 
-    // Previous enemy count for death detection
-    val prevEnemyCount = remember { mutableStateOf(0) }
-    val prevEnemyXs = remember { mutableStateOf(FloatArray(0)) }
-    val prevEnemyYs = remember { mutableStateOf(FloatArray(0)) }
-    val prevEnemyTypes = remember { mutableStateOf(IntArray(0)) }
+    // Previous enemy count for death detection (pre-allocated buffers, no per-frame allocation)
+    var prevEnemyCount by remember { mutableStateOf(0) }
+    val prevEnemyXs = remember { FloatArray(256) }
+    val prevEnemyYs = remember { FloatArray(256) }
+    val prevEnemyTypes = remember { IntArray(256) }
 
     // Dying enemies (sprite fade-out after leaving active list)
     val dyingEnemies = remember { mutableStateListOf<DyingEnemy>() }
@@ -229,13 +230,13 @@ fun EnemyOverlay() {
                     }
 
                     // Enemy count changed — detect deaths
-                    if (data.count < prevEnemyCount.value && prevEnemyCount.value > 0) {
+                    if (data.count < prevEnemyCount && prevEnemyCount > 0) {
                         // Find which enemies disappeared (simple: add death effects at old positions
                         // not found in new data)
-                        val oldXs = prevEnemyXs.value
-                        val oldYs = prevEnemyYs.value
-                        val oldTypes = prevEnemyTypes.value
-                        val oldCount = prevEnemyCount.value
+                        val oldXs = prevEnemyXs
+                        val oldYs = prevEnemyYs
+                        val oldTypes = prevEnemyTypes
+                        val oldCount = prevEnemyCount
                         currentEnemyPositionKeys.clear()
                         for (ni in 0 until data.count) {
                             currentEnemyPositionKeys.add(quantizedEnemyKey(data.xs[ni], data.ys[ni]))
@@ -315,12 +316,13 @@ fun EnemyOverlay() {
                     }
                 }
 
-                // Save for death detection
-                prevEnemyCount.value = data.count
-                if (data.count > 0) {
-                    prevEnemyXs.value = data.xs.copyOf(data.count)
-                    prevEnemyYs.value = data.ys.copyOf(data.count)
-                    prevEnemyTypes.value = data.types.copyOf(data.count)
+                // Save for death detection (copy into pre-allocated buffers, no allocation)
+                val count = data.count.coerceAtMost(256)
+                prevEnemyCount = count
+                if (count > 0) {
+                    data.xs.copyInto(prevEnemyXs, endIndex = count)
+                    data.ys.copyInto(prevEnemyYs, endIndex = count)
+                    data.types.copyInto(prevEnemyTypes, endIndex = count)
                 }
 
                 // Update death effects
@@ -658,10 +660,12 @@ fun EnemyOverlay() {
             val dy = de.y * h
             val deType = de.type
             val deIsBoss = deType == com.jay.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE
+            val deIsBossGuard = deType == com.jay.jaygame.engine.WaveSystem.BOSS_GUARD_ENEMY_TYPE
 
             val pathWidth = w * (70f / 720f)
             val deSpriteSize = when {
                 deIsBoss -> pathWidth * 1.955f
+                deIsBossGuard -> pathWidth * 1.45f
                 deType == 6 -> pathWidth * 1.615f
                 else -> pathWidth * 1.36f
             }
@@ -681,7 +685,7 @@ fun EnemyOverlay() {
             val deSz = IntSize(deSpriteSize.toInt(), deSpriteSize.toInt())
 
             // 스프라이트 시트 die 애니메이션 우선, 없으면 정적 PNG fallback
-            val deAnimator = enemyAnimators[deType]
+            val deAnimator = enemyAnimators[deType] ?: if (deIsBossGuard) enemyAnimators[com.jay.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE] else null
             rotate(degrees = deRotation, pivot = dePivot) {
                 scale(scaleX = deScale, scaleY = deScale, pivot = dePivot) {
                     if (deAnimator != null) {
@@ -698,7 +702,7 @@ fun EnemyOverlay() {
                             colorFilter = deTint,
                         )
                     } else {
-                        val deBitmap = if (deIsBoss) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
+                        val deBitmap = if (deIsBoss || deIsBossGuard) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
                         deBitmap?.let {
                             drawImage(
                                 image = it,

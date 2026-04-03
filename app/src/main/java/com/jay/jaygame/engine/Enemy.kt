@@ -97,7 +97,7 @@ class Enemy {
         // Blocked by a unit: skip path movement entirely
         if (blockedBy != null) return true
 
-        val effectiveSpeed = baseSpeed * buffs.getSlowFactor()
+        val effectiveSpeed = speed * buffs.getSlowFactor()
         var remaining = effectiveSpeed * dt
         var safety = path.size + 1
         while (remaining > 0f && pathIndex < path.size && --safety > 0) {
