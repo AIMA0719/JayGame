@@ -111,7 +111,11 @@ internal class BattleStatePublisher(
             if (index >= enemyXBuf.size) return@forEach
             enemyXBuf[index] = enemy.position.x / worldWidth
             enemyYBuf[index] = enemy.position.y / worldHeight
-            enemyTypeBuf[index] = if (enemy.isBoss) WaveSystem.BOSS_ENEMY_TYPE else enemy.type
+            enemyTypeBuf[index] = when {
+                enemy.isBossGuard -> WaveSystem.BOSS_GUARD_ENEMY_TYPE
+                enemy.isBoss -> WaveSystem.BOSS_ENEMY_TYPE
+                else -> enemy.type
+            }
             enemyHpBuf[index] = enemy.hpRatio
             enemyBuffBuf[index] = enemyBuffBits(enemy)
             index++

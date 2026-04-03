@@ -74,6 +74,9 @@ class GameUnit {
     var abilityStacks: Int = 0        // for stackable self-buffs
     var abilityAuraTick: Float = 0f   // aura tick accumulator
 
+    /** MIRROR 보스 반사 → 유닛 공격 불능 타이머 (>0이면 공격 불가) */
+    var disabledTimer: Float = 0f
+
     private var attackCooldown = 0f
     var currentTarget: Enemy? = null
 
@@ -107,6 +110,9 @@ class GameUnit {
 
     fun update(dt: Float, findEnemy: (Vec2, Float) -> Enemy?) {
         if (!alive) return
+
+        // MIRROR 반사 디버프 감소
+        if (disabledTimer > 0f) disabledTimer = (disabledTimer - dt).coerceAtLeast(0f)
 
         buffs.update(dt)
         val spdMult = buffs.getSpdMultiplier()
@@ -147,7 +153,7 @@ class GameUnit {
         }
     }
 
-    fun canAttack(): Boolean = isAttacking && attackCooldown <= 0f && currentTarget?.alive == true
+    fun canAttack(): Boolean = isAttacking && attackCooldown <= 0f && currentTarget?.alive == true && disabledTimer <= 0f
 
     fun onAttack() {
         attackCooldown = 1f / atkSpeed
@@ -235,6 +241,8 @@ class GameUnit {
         bpPassiveTimer = 0f
         permanentAtkBonus = 0f
         bpPassiveId = ""
+
+        disabledTimer = 0f
 
         // Reset AbilityEngine fields
         activeAbility = null

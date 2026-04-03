@@ -362,15 +362,18 @@ fun EnemyOverlay() {
             val type = data.types[i]
             val hpRatio = if (i < sHp.size) sHp[i] else data.hpRatios[i]
             val isBoss = type == com.jay.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE
+            val isBossGuard = type == com.jay.jaygame.engine.WaveSystem.BOSS_GUARD_ENEMY_TYPE
 
             // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
             val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
             val spriteSize = when {
                 isBoss -> pathWidth * 1.955f
+                isBossGuard -> pathWidth * 1.45f  // 보스 가드: 보스보다 작게
                 type == 6 -> pathWidth * 1.615f
                 else -> pathWidth * 1.36f
             }
-            val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
+            // 보스 가드는 보스와 같은 이미지 사용 (크기만 다름)
+            val bitmap = if (isBoss || isBossGuard) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
             val bSpeed = battleSpeed
 

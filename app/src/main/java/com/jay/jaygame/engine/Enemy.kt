@@ -81,8 +81,14 @@ class Enemy {
 
         val dotDmg = buffs.update(dt)
         if (dotDmg > 0f) {
-            hp -= dotDmg
-            if (hp <= 0f) { alive = false; return false }
+            // PHANTOM 투명 / SHIELDED 보호막 / MINION_RUSH 호위 중에는 DoT도 면역
+            val dotImmune = (hasModifier(BossModifier.PHANTOM) && phantomActive) ||
+                (hasModifier(BossModifier.SHIELDED) && shieldActive) ||
+                (bossModifier == BossModifier.MINION_RUSH && guardsAlive > 0)
+            if (!dotImmune) {
+                hp -= dotDmg
+                if (hp <= 0f) { alive = false; return false }
+            }
         }
 
         // Stun: skip movement and boss abilities
@@ -123,19 +129,14 @@ class Enemy {
     var shieldActive = false
 
     fun takeDamage(damage: Float, isMagic: Boolean = false, attackRange: Float = 0f): Float {
-        // SHIELDED: completely block damage during shield phase
-        if (bossModifier == BossModifier.SHIELDED && shieldActive) return 0f
+        // 면역/무적 체크 (DUAL_MOD 포함)
+        if (hasModifier(BossModifier.SHIELDED) && shieldActive) return 0f
+        if (hasModifier(BossModifier.PHANTOM) && phantomActive) return 0f
+        if (bossModifier == BossModifier.MINION_RUSH && guardsAlive > 0) return 0f
 
         var adjustedDamage = damage
-        // Boss modifier: reduce physical/magic/ranged damage
-        when (bossModifier) {
-            BossModifier.PHYSICAL_RESIST -> if (!isMagic) adjustedDamage *= 0.4f
-            BossModifier.MAGIC_RESIST -> if (isMagic) adjustedDamage *= 0.4f
-            BossModifier.RANGED_RESIST -> if (attackRange > 200f) adjustedDamage *= 0.5f
-            // BERSERKER: takes 15% more damage as trade-off
-            BossModifier.BERSERKER -> if (hpRatio < 0.5f) adjustedDamage *= 1.15f
-            else -> {}
-        }
+        // 데미지 감소 적용 (DUAL_MOD면 양쪽 모두 체크)
+        adjustedDamage = applyModifierDamageReduction(adjustedDamage, isMagic, attackRange)
         val effectiveArmor = (armor - buffs.getArmorReduction()).coerceAtLeast(0f)
         val reduction = if (isMagic) {
             1f - (magicResist / (magicResist + 100f))
@@ -146,12 +147,71 @@ class Enemy {
         hp -= finalDmg
 
         // VAMPIRIC: heal 20% of damage dealt to player
-        if (bossModifier == BossModifier.VAMPIRIC) {
+        if (hasModifier(BossModifier.VAMPIRIC)) {
             hp = (hp + finalDmg * 0.2f).coerceAtMost(maxHp)
         }
 
-        if (hp <= 0f) alive = false
+        // MIRROR: 반사 데미지 기록 (실제 유닛 디버프는 BattleEngine에서 처리)
+        if (hasModifier(BossModifier.MIRROR) && mirrorCooldown <= 0f) {
+            mirrorCooldown = 0.5f
+            lastMirrorDamage = finalDmg * 0.15f
+        }
+
+        if (hp <= 0f) {
+            alive = false
+            // 보스 가드 사망 시 보스의 guardsAlive 감소
+            if (isBossGuard) {
+                guardBossRef?.let { boss ->
+                    if (boss.alive) boss.guardsAlive = (boss.guardsAlive - 1).coerceAtLeast(0)
+                }
+            }
+        }
         return finalDmg
+    }
+
+    /** MIRROR: 마지막 반사 데미지 (BattleEngine이 읽고 0으로 리셋) */
+    var lastMirrorDamage = 0f
+
+    /** DUAL_MOD: 실제 적용되는 기믹 2개 (BattleEngine이 스폰 시 설정) */
+    var dualModFirst: BossModifier? = null
+    var dualModSecond: BossModifier? = null
+
+    /** 이 적이 특정 기믹을 가지고 있는지 확인 (DUAL_MOD 양쪽 모두 체크) */
+    fun hasModifier(mod: BossModifier): Boolean {
+        if (bossModifier == mod) return true
+        if (bossModifier == BossModifier.DUAL_MOD) {
+            return dualModFirst == mod || dualModSecond == mod
+        }
+        return false
+    }
+
+    /** 단일 기믹의 데미지 감소 적용 (할당 없음) */
+    private fun applySingleModDamageReduction(d: Float, mod: BossModifier, damage: Float, isMagic: Boolean, attackRange: Float): Float {
+        return when (mod) {
+            BossModifier.PHYSICAL_RESIST -> if (!isMagic) d * 0.4f else d
+            BossModifier.MAGIC_RESIST -> if (isMagic) d * 0.4f else d
+            BossModifier.RANGED_RESIST -> if (attackRange > 200f) d * 0.5f else d
+            BossModifier.BERSERKER -> if (hpRatio < 0.5f) d * 1.15f else d
+            BossModifier.ADAPTIVE -> {
+                if (isMagic) adaptiveMagicDmg += damage else adaptivePhysicalDmg += damage
+                if (adaptiveResistPhysical && !isMagic) d * 0.6f
+                else if (!adaptiveResistPhysical && isMagic) d * 0.6f
+                else d
+            }
+            else -> d
+        }
+    }
+
+    /** 기믹별 데미지 감소 적용 (GC-free: 리스트 할당 없음) */
+    private fun applyModifierDamageReduction(damage: Float, isMagic: Boolean, attackRange: Float): Float {
+        var d = damage
+        if (bossModifier == BossModifier.DUAL_MOD) {
+            dualModFirst?.let { d = applySingleModDamageReduction(d, it, damage, isMagic, attackRange) }
+            dualModSecond?.let { d = applySingleModDamageReduction(d, it, damage, isMagic, attackRange) }
+        } else {
+            bossModifier?.let { d = applySingleModDamageReduction(d, it, damage, isMagic, attackRange) }
+        }
+        return d
     }
 
     /** Apply CC/DoT immune flags to buff container based on assigned bossModifier */
@@ -175,6 +235,19 @@ class Enemy {
         shieldActive = false
         berserkerActivated = false
         splitterTriggered = false
+        phantomTimer = 0f
+        phantomActive = false
+        mirrorCooldown = 0f
+        adaptivePhysicalDmg = 0f
+        adaptiveMagicDmg = 0f
+        adaptiveCheckTimer = 5f
+        adaptiveResistPhysical = false
+        isBossGuard = false
+        guardBossRef = null
+        guardsAlive = 0
+        lastMirrorDamage = 0f
+        dualModFirst = null
+        dualModSecond = null
     }
 
     /** BERSERKER: track if speed boost was applied */
@@ -182,6 +255,24 @@ class Enemy {
 
     /** SPLITTER: track if split already happened */
     var splitterTriggered = false
+
+    // ── PHANTOM 기믹 필드 ──
+    var phantomTimer = 0f       // 3초 visible → 1초 invisible 사이클
+    var phantomActive = false   // true일 때 투명 (데미지 면역 + 타겟팅 불가)
+
+    // ── MIRROR 기믹 필드 ──
+    var mirrorCooldown = 0f     // 반사 쿨타임 (연속 반사 방지)
+
+    // ── ADAPTIVE 기믹 필드 ──
+    var adaptivePhysicalDmg = 0f  // 누적 물리 피해
+    var adaptiveMagicDmg = 0f     // 누적 마법 피해
+    var adaptiveCheckTimer = 5f   // 5초마다 적응 갱신
+    var adaptiveResistPhysical = false // true면 물리 저항 +40%
+
+    // ── MINION_RUSH 기믹 필드 ──
+    var isBossGuard = false     // 호위대 엘리트 여부
+    var guardBossRef: Enemy? = null  // 호위 대상 보스 참조
+    var guardsAlive = 0         // 보스: 남은 호위대 수 (0이면 타겟 가능)
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f
     val size: Float get() = when (type) {

@@ -61,6 +61,18 @@ class BattleEngine(
         const val SWIFT_SPEED_MULT = 2f
         const val SHIELDED_ACTIVE_DURATION = 3f
         const val SHIELDED_COOLDOWN_DURATION = 5f
+
+        // ── 신규 보스 기믹 상수 ──
+        const val PHANTOM_VISIBLE_DURATION = 3f   // 3초 보임
+        const val PHANTOM_INVISIBLE_DURATION = 1f  // 1초 투명
+        const val GRAVITY_RANGE = 250f             // 중력장 범위
+        const val GRAVITY_SPEED_REDUCTION = 0.7f   // 공격속도 30% 감소
+        const val MIRROR_DISABLE_DURATION = 2f     // 반사 시 유닛 공격 불능 시간
+        const val ADAPTIVE_CHECK_INTERVAL = 5f     // 적응 갱신 주기
+        const val ADAPTIVE_RESIST_MULT = 0.6f      // 적응 저항 (40% 감소)
+        const val MINION_RUSH_GUARD_COUNT = 5      // 호위대 수
+        const val MINION_RUSH_GUARD_HP_MULT = 0.15f // 호위대 HP = 보스 HP의 15%
+        const val DARKNESS_RANGE_MULT = 0.7f       // 암흑 웨이브 사거리 감소
     }
 
     // endregion
@@ -588,70 +600,83 @@ class BattleEngine(
                     enemy.speed = enemy.baseSpeed
                 }
                 if (modifier == BossModifier.SHIELDED) {
-                    enemy.shieldTimer = SHIELDED_COOLDOWN_DURATION // Start with shield down
+                    enemy.shieldTimer = SHIELDED_COOLDOWN_DURATION
                     enemy.shieldActive = false
                 }
-                enemy.applyBossModifierFlags()
-                // Notify UI of boss modifier
-                BattleBridge.notifyBossModifier(modifier)
+                if (modifier == BossModifier.PHANTOM) {
+                    enemy.phantomTimer = PHANTOM_VISIBLE_DURATION // 처음엔 보이는 상태
+                    enemy.phantomActive = false
+                }
+                if (modifier == BossModifier.DUAL_MOD) {
+                    // 후반 전용: 기본 풀에서 랜덤 2개를 보조로 설정
+                    val pool = BASE_MODIFIER_POOL.filter {
+                        it != BossModifier.DUAL_MOD && it != BossModifier.MINION_RUSH
+                    }
+                    val first = pool.random()
+                    val second = pool.filter { it != first }.random()
+                    enemy.bossModifier = BossModifier.DUAL_MOD
+                    enemy.dualModFirst = first
+                    enemy.dualModSecond = second
+                    // 양쪽 기믹 초기화
+                    initBossModifierState(enemy, first)
+                    initBossModifierState(enemy, second)
+                    // CC/DOT 면역은 양쪽 모두 체크
+                    enemy.buffs.ccImmune = first == BossModifier.CC_IMMUNE || second == BossModifier.CC_IMMUNE
+                    enemy.buffs.dotImmune = first == BossModifier.DOT_IMMUNE || second == BossModifier.DOT_IMMUNE
+                    BattleBridge.notifyBossModifier(modifier)
+                } else {
+                    enemy.applyBossModifierFlags()
+                    BattleBridge.notifyBossModifier(modifier)
+                }
+                if (modifier == BossModifier.MINION_RUSH) {
+                    enemy.guardsAlive = MINION_RUSH_GUARD_COUNT
+                    // 호위대 5마리 스폰 (보스와 같은 타입)
+                    repeat(MINION_RUSH_GUARD_COUNT) {
+                        val guard = enemies.acquire() ?: return@repeat
+                        guard.init(
+                            hp = enemy.maxHp * MINION_RUSH_GUARD_HP_MULT,
+                            speed = enemy.baseSpeed * 1.2f,
+                            armor = enemy.armor * 0.6f,
+                            magicResist = enemy.magicResist * 0.6f,
+                            type = config.enemyType, // 보스와 같은 타입
+                            startPos = enemy.position.copy(),
+                            ccResistance = enemy.ccResistance * 0.3f,
+                        )
+                        guard.isElite = true
+                        guard.isBossGuard = true
+                        guard.guardBossRef = enemy
+                        guard.pathIndex = enemy.pathIndex
+                    }
+                }
             }
+        }
+    }
+
+    /** 보스 기믹별 초기 상태 설정 (DUAL_MOD용) */
+    private fun initBossModifierState(enemy: Enemy, mod: BossModifier) {
+        when (mod) {
+            BossModifier.SWIFT -> { enemy.baseSpeed *= SWIFT_SPEED_MULT; enemy.speed = enemy.baseSpeed }
+            BossModifier.SHIELDED -> { enemy.shieldTimer = SHIELDED_COOLDOWN_DURATION; enemy.shieldActive = false }
+            BossModifier.PHANTOM -> { enemy.phantomTimer = PHANTOM_VISIBLE_DURATION; enemy.phantomActive = false }
+            else -> {}
         }
     }
 
     private fun updateEnemies(dt: Float) {
         spatialHash.clear()
         splitQueue.clear() // Reuse pre-allocated list
+        gravityBossPos = null // 매 프레임 리셋
         enemies.forEach { enemy ->
             if (!enemy.alive) return@forEach
             enemy.update(dt, enemyPath)
 
-            when (enemy.bossModifier) {
-                // COMMANDER: buff nearby enemy armor (temporarily set higher)
-                BossModifier.COMMANDER -> {
-                    // No runtime buff needed ??COMMANDER effect is applied
-                    // during enemy spawn by increasing base armor of nearby enemies
-                    // Simple implementation: reduce damage taken by nearby enemies via shield buff
-                    spatialHash.forEach(
-                        enemy.position.x - 200f, enemy.position.y - 200f,
-                        enemy.position.x + 200f, enemy.position.y + 200f,
-                    ) { nearby ->
-                        if (nearby !== enemy && nearby.alive && !nearby.buffs.hasBuff(BuffType.Shield)) {
-                            nearby.buffs.addBuff(BuffType.Shield, nearby.maxHp * COMMANDER_SHIELD_RATIO, 2f)
-                        }
-                    }
-                }
-                // REGENERATION: heal 5% maxHp every 10 seconds
-                BossModifier.REGENERATION -> {
-                    enemy.regenTimer -= dt
-                    if (enemy.regenTimer <= 0f) {
-                        enemy.hp = (enemy.hp + enemy.maxHp * REGEN_HEAL_RATIO).coerceAtMost(enemy.maxHp)
-                        enemy.regenTimer = REGEN_INTERVAL
-                    }
-                }
-                // BERSERKER: triple attack speed (move speed) below 50% HP
-                BossModifier.BERSERKER -> {
-                    if (!enemy.berserkerActivated && enemy.hpRatio < BERSERKER_HP_THRESHOLD) {
-                        enemy.berserkerActivated = true
-                        enemy.speed = enemy.baseSpeed * BERSERKER_SPEED_MULT // Faster movement in berserk
-                    }
-                }
-                // SPLITTER: spawn 2 mini-bosses at 50% HP
-                BossModifier.SPLITTER -> {
-                    if (!enemy.splitterTriggered && enemy.hpRatio < SPLITTER_HP_THRESHOLD) {
-                        enemy.splitterTriggered = true
-                        splitQueue.add(enemy)
-                    }
-                }
-                // SHIELDED: cycle shield on/off (3s active, 5s cooldown)
-                BossModifier.SHIELDED -> {
-                    enemy.shieldTimer -= dt
-                    if (enemy.shieldTimer <= 0f) {
-                        enemy.shieldActive = !enemy.shieldActive
-                        enemy.shieldTimer = if (enemy.shieldActive) SHIELDED_ACTIVE_DURATION else SHIELDED_COOLDOWN_DURATION
-                    }
-                }
-                else -> {}
+            // GRAVITY 보스 위치 캐시 (applyGroupBonus에서 사용)
+            if (enemy.hasModifier(BossModifier.GRAVITY)) {
+                gravityBossPos = enemy.position
             }
+
+            // 보스 기믹 업데이트
+            updateBossModifier(enemy, dt)
 
             spatialHash.insert(
                 enemy,
@@ -744,6 +769,117 @@ class BattleEngine(
         }
     }
 
+    // (DUAL_MOD 기믹은 Enemy.dualModFirst/dualModSecond에 저장됨)
+
+    /** 보스 기믹 매 프레임 업데이트 */
+    private fun updateBossModifier(enemy: Enemy, dt: Float) {
+        val mod = enemy.bossModifier ?: return
+
+        if (mod == BossModifier.DUAL_MOD) {
+            // DUAL_MOD: enemy 자체에 저장된 기믹 2개 실행 (엔진 변수 대신 — 보스 2마리 동시 존재 대비)
+            enemy.dualModFirst?.let { executeSingleModifier(enemy, it, dt) }
+            enemy.dualModSecond?.let { executeSingleModifier(enemy, it, dt) }
+            return
+        }
+
+        executeSingleModifier(enemy, mod, dt)
+    }
+
+    private fun executeSingleModifier(enemy: Enemy, mod: BossModifier, dt: Float) {
+        when (mod) {
+            // COMMANDER: 주변 200px 적에게 쉴드 버프
+            BossModifier.COMMANDER -> {
+                spatialHash.forEach(
+                    enemy.position.x - 200f, enemy.position.y - 200f,
+                    enemy.position.x + 200f, enemy.position.y + 200f,
+                ) { nearby ->
+                    if (nearby !== enemy && nearby.alive && !nearby.buffs.hasBuff(BuffType.Shield)) {
+                        nearby.buffs.addBuff(BuffType.Shield, nearby.maxHp * COMMANDER_SHIELD_RATIO, 2f)
+                    }
+                }
+            }
+            // REGENERATION: 10초마다 5% 회복
+            BossModifier.REGENERATION -> {
+                enemy.regenTimer -= dt
+                if (enemy.regenTimer <= 0f) {
+                    enemy.hp = (enemy.hp + enemy.maxHp * REGEN_HEAL_RATIO).coerceAtMost(enemy.maxHp)
+                    enemy.regenTimer = REGEN_INTERVAL
+                }
+            }
+            // BERSERKER: 50% 이하 속도 1.5배
+            BossModifier.BERSERKER -> {
+                if (!enemy.berserkerActivated && enemy.hpRatio < BERSERKER_HP_THRESHOLD) {
+                    enemy.berserkerActivated = true
+                    enemy.speed = enemy.baseSpeed * BERSERKER_SPEED_MULT
+                }
+            }
+            // SPLITTER: 50% 이하 2마리 분열
+            BossModifier.SPLITTER -> {
+                if (!enemy.splitterTriggered && enemy.hpRatio < SPLITTER_HP_THRESHOLD) {
+                    enemy.splitterTriggered = true
+                    splitQueue.add(enemy)
+                }
+            }
+            // SHIELDED: 3초 활성 / 5초 쿨다운 사이클
+            BossModifier.SHIELDED -> {
+                enemy.shieldTimer -= dt
+                if (enemy.shieldTimer <= 0f) {
+                    enemy.shieldActive = !enemy.shieldActive
+                    enemy.shieldTimer = if (enemy.shieldActive) SHIELDED_ACTIVE_DURATION else SHIELDED_COOLDOWN_DURATION
+                }
+            }
+            // ── 신규 기믹 ──
+            // PHANTOM: 3초 보임 → 1초 투명 사이클
+            BossModifier.PHANTOM -> {
+                enemy.phantomTimer -= dt
+                if (enemy.phantomTimer <= 0f) {
+                    enemy.phantomActive = !enemy.phantomActive
+                    enemy.phantomTimer = if (enemy.phantomActive) PHANTOM_INVISIBLE_DURATION else PHANTOM_VISIBLE_DURATION
+                }
+            }
+            // MIRROR: 반사 쿨타임 감소 + 가장 가까운 유닛에 디버프
+            BossModifier.MIRROR -> {
+                enemy.mirrorCooldown = (enemy.mirrorCooldown - dt).coerceAtLeast(0f)
+                if (enemy.lastMirrorDamage > 0f) {
+                    // 가장 가까운 유닛 찾아서 공격 불능
+                    var nearest: GameUnit? = null
+                    var nearDist = Float.MAX_VALUE
+                    units.forEach { u ->
+                        if (!u.alive) return@forEach
+                        val d = u.position.distanceSqTo(enemy.position)
+                        if (d < nearDist) { nearDist = d; nearest = u }
+                    }
+                    nearest?.let { it.disabledTimer = MIRROR_DISABLE_DURATION }
+                    enemy.lastMirrorDamage = 0f
+                }
+            }
+            // GRAVITY: 실제 공격속도 감소는 updateUnits의 applyGravityEffect()에서 처리
+            // (updateEnemies가 updateUnits보다 먼저 실행되어 applyGroupBonus가 덮어쓰므로)
+            BossModifier.GRAVITY -> { /* gravity position tracked via enemy.position */ }
+            // ADAPTIVE: 5초마다 많이 받은 데미지 타입 저항
+            BossModifier.ADAPTIVE -> {
+                enemy.adaptiveCheckTimer -= dt
+                if (enemy.adaptiveCheckTimer <= 0f) {
+                    enemy.adaptiveCheckTimer = ADAPTIVE_CHECK_INTERVAL
+                    enemy.adaptiveResistPhysical = enemy.adaptivePhysicalDmg >= enemy.adaptiveMagicDmg
+                    // 누적 리셋
+                    enemy.adaptivePhysicalDmg = 0f
+                    enemy.adaptiveMagicDmg = 0f
+                }
+            }
+            // MINION_RUSH: 호위대 관리 (guardsAlive는 Enemy.takeDamage에서 감소)
+            BossModifier.MINION_RUSH -> {
+                // 호위대 생존 수 실시간 갱신 (가드 참조가 끊어졌을 때 대비)
+                var aliveGuards = 0
+                enemies.forEach { e ->
+                    if (e.alive && e.isBossGuard && e.guardBossRef === enemy) aliveGuards++
+                }
+                enemy.guardsAlive = aliveGuards
+            }
+            else -> {}
+        }
+    }
+
     private fun updateUnits(dt: Float) {
         units.fillActiveList(activeUnitsScratch)
         val unitList = activeUnitsScratch
@@ -784,6 +920,8 @@ class BattleEngine(
             // NEW: Behavior-based update path ??units with a behavior delegate to it
             if (unit.behavior != null) {
                 applyGroupBonus(unit)
+                // MIRROR 반사 디버프 감소 (behavior 유닛은 GameUnit.update() 안 타므로 여기서 처리)
+                if (unit.disabledTimer > 0f) unit.disabledTimer = (unit.disabledTimer - dt).coerceAtLeast(0f)
                 unit.behavior?.update(unit, dt) { pos, range ->
                     findNearestEnemy(pos, range)
                 }
@@ -800,7 +938,7 @@ class BattleEngine(
                     unit.position.y = unit.position.y.coerceIn(Grid.FIELD_MIN_Y, Grid.FIELD_MAX_Y)
                 }
                 // For behavior-based units, use behavior's canAttack() (interface default = true)
-                val canFire = unit.behavior?.canAttack() == true
+                val canFire = unit.behavior?.canAttack() == true && unit.disabledTimer <= 0f
                 if (canFire && unit.state == UnitState.ATTACKING && unit.currentTarget?.alive == true) {
                     val target = unit.currentTarget ?: return@forEach
                     val result = unit.behavior?.onAttack(unit, target) ?: return@forEach
@@ -1063,6 +1201,10 @@ class BattleEngine(
         var nearestDist = Float.MAX_VALUE
         spatialHash.forEach(pos.x - range, pos.y - range, pos.x + range, pos.y + range) { enemy ->
             if (enemy.alive) {
+                // PHANTOM: 투명 상태일 때 타겟팅 불가
+                if (enemy.hasModifier(BossModifier.PHANTOM) && enemy.phantomActive) return@forEach
+                // MINION_RUSH: 호위대 살아있으면 보스 타겟 불가
+                if (enemy.bossModifier == BossModifier.MINION_RUSH && enemy.guardsAlive > 0) return@forEach
                 val d = enemy.position.distanceSqTo(pos)
                 if (d < nearestDist && d <= range * range) {
                     nearestDist = d
@@ -1122,11 +1264,26 @@ class BattleEngine(
         )
     }
 
+    /** GRAVITY 보스 위치 캐시 — updateEnemies에서 매 프레임 갱신 */
+    private var gravityBossPos: com.jay.jaygame.engine.math.Vec2? = null
+
     private fun applyGroupBonus(unit: GameUnit) {
         val grp = UnitUpgradeSystem.gradeToGroup(unit.grade)
         unit.groupAtkBonus = groupAtkBonusCache[grp]
         unit.spdMultiplier = upgradeSpdMult * synergySpdMult * roguelikeSpdMult * (1f + groupSpdBonusCache[grp])
-        unit.range = unit.baseRange * upgradeRangeMult * roguelikeRangeMult
+
+        // GRAVITY: 보스 중력장 범위 내 유닛 공격속도 30% 감소
+        val gPos = gravityBossPos
+        if (gPos != null) {
+            val d = unit.position.distanceSqTo(gPos)
+            if (d <= GRAVITY_RANGE * GRAVITY_RANGE) {
+                unit.spdMultiplier *= GRAVITY_SPEED_REDUCTION
+            }
+        }
+
+        val darknessRangeMult = if (waveSystem.currentConfig.specialWave == SpecialWaveType.DARKNESS)
+            DARKNESS_RANGE_MULT else 1f
+        unit.range = unit.baseRange * upgradeRangeMult * roguelikeRangeMult * darknessRangeMult
     }
 
     private fun refreshGroupBonusCache() {
