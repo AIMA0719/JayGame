@@ -37,6 +37,29 @@ private val BossRed = Color(0xFFFF4444)                 // Red (boss text + rays
 private val SubTextColor = Color.White.copy(alpha = 0.8f)
 private val ShimmerGold = Color(0xFFFFE57F)
 
+// Special wave colors & labels (indexed by SpecialWaveType ordinal)
+private val SpecialWaveColors = arrayOf(
+    GoldColor,              // NONE (unused)
+    Color(0xFF00E5FF),      // RUSH — 시안
+    Color(0xFFFF9100),      // HEAVY_ARMOR — 오렌지
+    Color(0xFFAB47BC),      // DARKNESS — 보라
+    Color(0xFFFFD740),      // ELITE_MARCH — 노랑
+    Color(0xFFFF5252),      // LAST_CHARGE — 빨강
+)
+
+private val SpecialWaveLabels = arrayOf(
+    "",                          // NONE
+    "⚡ 쇄도 — 대량 고속 돌격!",  // RUSH
+    "🛡 중장갑 — 느리지만 단단!",  // HEAVY_ARMOR
+    "🌑 암흑 — 사거리 감소!",     // DARKNESS
+    "⚔ 엘리트 행진 — 전원 엘리트!",// ELITE_MARCH
+    "💀 최후의 돌격 — 대규모 급습!",// LAST_CHARGE
+)
+
+// Pre-allocated Offsets for Shadow (GC policy)
+private val ShadowOffsetLarge = Offset(3f, 3f)
+private val ShadowOffsetSmall = Offset(2f, 2f)
+
 /**
  * Shows "WAVE X" announcement when a new wave starts.
  * Normal waves: slide-in from left, scale punch, decorative bars, slide-out right.
@@ -48,6 +71,8 @@ fun WaveAnnouncementOverlay() {
     val currentWave = battleState.currentWave
     val isBoss = battleState.isBossRound
     val gameState = battleState.state // 0=WaveDelay, 1=Playing
+    val specialWave = battleState.specialWave // SpecialWaveType ordinal
+    val isSpecialWave = !isBoss && specialWave in 1..5
 
     // Track wave transitions
     val lastAnnouncedWave = remember { mutableIntStateOf(-1) }
@@ -62,6 +87,9 @@ fun WaveAnnouncementOverlay() {
     // Boss-specific animations
     val bossSubAlpha = remember { Animatable(0f) }
     val bossRayAlpha = remember { Animatable(0f) }
+
+    // Special wave sub-text animation
+    val specialSubAlpha = remember { Animatable(0f) }
 
     // Pre-compute wave text string outside Canvas
     val waveText = remember(currentWave) { "WAVE $currentWave" }
@@ -80,6 +108,7 @@ fun WaveAnnouncementOverlay() {
             barProgress.snapTo(0f)
             bossSubAlpha.snapTo(0f)
             bossRayAlpha.snapTo(0f)
+            specialSubAlpha.snapTo(0f)
 
             if (isBoss) {
                 // ── BOSS WAVE TIMELINE ──
@@ -154,10 +183,26 @@ fun WaveAnnouncementOverlay() {
                     barProgress.animateTo(1f, tween(200, easing = FastOutSlowInEasing))
                 }
 
-                // 300-1100ms: hold at center
-                delay(800)
+                // Special wave: sub-text fade in + screen shake
+                if (isSpecialWave) {
+                    launch {
+                        specialSubAlpha.animateTo(1f, tween(250, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        repeat(4) {
+                            shakeOffset.animateTo(6f * (if (it % 2 == 0) 1f else -1f), tween(50))
+                        }
+                        shakeOffset.animateTo(0f, tween(50))
+                    }
+                }
 
-                // 1100-1500ms: slide out right + fade out
+                // Hold at center (longer for special waves)
+                delay(if (isSpecialWave) 1200 else 800)
+
+                // Slide out right + fade out
+                if (isSpecialWave) {
+                    launch { specialSubAlpha.animateTo(0f, tween(400)) }
+                }
                 launch {
                     barProgress.animateTo(0f, tween(400))
                 }
@@ -174,6 +219,7 @@ fun WaveAnnouncementOverlay() {
 
     val anyVisible = textAlpha.value > 0.01f
             || bossRayAlpha.value > 0.01f
+            || specialSubAlpha.value > 0.01f
 
     if (anyVisible) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -213,7 +259,9 @@ fun WaveAnnouncementOverlay() {
             }
 
             // ── Wave text ──
-            val textColor = if (isBoss) BossRed else GoldColor
+            val textColor = if (isBoss) BossRed
+                else if (isSpecialWave) SpecialWaveColors[specialWave]
+                else GoldColor
             val isLateWave = currentWave >= 50
             val fontSize = if (isBoss) 56.sp else 44.sp
 
@@ -236,7 +284,7 @@ fun WaveAnnouncementOverlay() {
                 fontWeight = FontWeight.ExtraBold,
                 shadow = Shadow(
                     color = Color.Black.copy(alpha = 0.8f * alpha),
-                    offset = Offset(3f, 3f),
+                    offset = ShadowOffsetLarge,
                     blurRadius = 8f,
                 ),
             )
@@ -254,7 +302,8 @@ fun WaveAnnouncementOverlay() {
                 val barThick = 3f
                 val barGlowThick = 8f
                 val barY1 = textY - 14f
-                val barY2 = textY + textLayout.size.height + (if (isBoss) 50f else 10f)
+                val hasSubText = isBoss || isSpecialWave
+                val barY2 = textY + textLayout.size.height + (if (hasSubText) 50f else 10f)
                 val barLeft = (w - barW) / 2f
 
                 // Glow layer (wider, lower alpha)
@@ -291,7 +340,7 @@ fun WaveAnnouncementOverlay() {
                     fontWeight = FontWeight.Bold,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.6f * bsAlpha),
-                        offset = Offset(2f, 2f),
+                        offset = ShadowOffsetSmall,
                         blurRadius = 4f,
                     ),
                 )
@@ -299,6 +348,27 @@ fun WaveAnnouncementOverlay() {
                 val bossX = (w - bossLayout.size.width) / 2 + shake
                 val bossY = textY + textLayout.size.height + 14f
                 drawText(bossLayout, topLeft = Offset(bossX, bossY))
+            }
+
+            // ── Special wave sub-text ──
+            val ssAlpha = specialSubAlpha.value
+            if (isSpecialWave && ssAlpha > 0.01f) {
+                val swColor = SpecialWaveColors[specialWave]
+                val specialStyle = TextStyle(
+                    color = swColor.copy(alpha = ssAlpha),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.7f * ssAlpha),
+                        offset = ShadowOffsetSmall,
+                        blurRadius = 6f,
+                    ),
+                )
+                val specialLabel = SpecialWaveLabels[specialWave]
+                val specialLayout = textMeasurer.measure(specialLabel, specialStyle)
+                val specialX = (w - specialLayout.size.width) / 2 + shake
+                val specialY = textY + textLayout.size.height + 14f
+                drawText(specialLayout, topLeft = Offset(specialX, specialY))
             }
         }
     }

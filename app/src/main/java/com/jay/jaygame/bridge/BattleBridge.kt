@@ -36,6 +36,7 @@ data class BattleState(
     val waveElapsed: Float = 0f,
     val maxUnitSlots: Int = 18,
     val waveDelayRemaining: Float = 0f,
+    val specialWave: Int = 0, // SpecialWaveType ordinal (0=NONE)
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -47,9 +48,10 @@ data class BattleState(
                 enemyCount == other.enemyCount && maxEnemyCount == other.maxEnemyCount &&
                 isBossRound == other.isBossRound && waveTimeRemaining == other.waveTimeRemaining &&
                 waveElapsed == other.waveElapsed && maxUnitSlots == other.maxUnitSlots &&
-                waveDelayRemaining == other.waveDelayRemaining
+                waveDelayRemaining == other.waveDelayRemaining &&
+                specialWave == other.specialWave
     }
-    override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + waveElapsed.toBits() + if (isBossRound) 1 else 0
+    override fun hashCode(): Int = currentWave * 31 + playerHP + enemyCount * 7 + waveElapsed.toBits() + (if (isBossRound) 1 else 0) + specialWave
 }
 
 /**
@@ -257,6 +259,7 @@ data class BattleStateUpdate(
     val waveTimeRemaining: Float,
     val waveElapsed: Float = 0f,
     val waveDelayRemaining: Float = 0f,
+    val specialWave: Int = 0, // SpecialWaveType ordinal
 )
 
 /** Batched parameters for [BattleBridge.updateUnitPositions]. */
@@ -679,6 +682,7 @@ object BattleBridge {
             waveElapsed = update.waveElapsed,
             maxUnitSlots = Grid.SLOT_COUNT,
             waveDelayRemaining = update.waveDelayRemaining,
+            specialWave = update.specialWave,
         )
 
         // Clear visual effects on wave end

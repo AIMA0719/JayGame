@@ -1247,7 +1247,7 @@
         "damageType": "MAGIC",
         "value": 400.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체에 ATK 400% 마법 데미지 + 3초 감속 40%"
       },
       "requiredGrade": "LEGEND"
@@ -1382,7 +1382,7 @@
         "damageType": "MAGIC",
         "value": 350.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 350% 마법 데미지 + 방어력/마저 30% 감소 (5초)"
       },
       "requiredGrade": "LEGEND"
@@ -1472,7 +1472,7 @@
         "damageType": "PHYSICAL",
         "value": 800.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 궤도 폭격: 전장 적 전체 ATK 800% 데미지 + 3초 스턴"
       },
       "requiredGrade": "LEGEND"
@@ -1517,7 +1517,7 @@
         "damageType": "MAGIC",
         "value": 400.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 400% 마법 데미지 + 4초 스턴 + 방어력 40% 감소"
       },
       "requiredGrade": "LEGEND"
@@ -1571,7 +1571,7 @@
         "damageType": "PHYSICAL",
         "value": 1200.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 1000% 물리 데미지 + 5초간 아군 전체 ATK 40% 증가"
       },
       "requiredGrade": "MYTHIC"
@@ -1679,7 +1679,7 @@
         "damageType": "MAGIC",
         "value": 600.0,
         "cooldown": 0,
-        "range": 300,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 600% 마법 데미지 + 5초간 감속 50%"
       },
       "requiredGrade": "MYTHIC"
@@ -1733,7 +1733,7 @@
         "damageType": "MAGIC",
         "value": 1200.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 900% 원소 데미지 + 2초 스턴 + 4초 DoT"
       },
       "requiredGrade": "MYTHIC"
@@ -1787,7 +1787,7 @@
         "damageType": "MAGIC",
         "value": 700.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 700% 냉기 데미지 + 3초 동결"
       },
       "requiredGrade": "MYTHIC"
@@ -1841,7 +1841,7 @@
         "damageType": "MAGIC",
         "value": 600.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 500% + 4초 혼란 + 방어력 50% 감소"
       },
       "requiredGrade": "MYTHIC"
@@ -1895,7 +1895,7 @@
         "damageType": "MAGIC",
         "value": 1200.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 1200% 데미지 + 3초 전체 감속 60%"
       },
       "requiredGrade": "MYTHIC"
@@ -1949,7 +1949,7 @@
         "damageType": "PHYSICAL",
         "value": 1300.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 1500% 물리 데미지"
       },
       "requiredGrade": "MYTHIC"
@@ -2057,7 +2057,7 @@
         "damageType": "MAGIC",
         "value": 1300.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 1200% 암흑 데미지 + 4초 공포 (이동불가)"
       },
       "requiredGrade": "MYTHIC"
@@ -2111,7 +2111,7 @@
         "damageType": "PHYSICAL",
         "value": 2200.0,
         "cooldown": 0,
-        "range": 300,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 2000% 물리 데미지 + 8초간 아군 전체 ATK 50% 증가"
       },
       "requiredGrade": "IMMORTAL"
@@ -2165,7 +2165,7 @@
         "damageType": "MAGIC",
         "value": 2000.0,
         "cooldown": 0,
-        "range": 300,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 1800% 마법 데미지 + 3초 스턴 + 방어/마저 60% 감소 (6초)"
       },
       "requiredGrade": "IMMORTAL"
@@ -2219,7 +2219,7 @@
         "damageType": "MAGIC",
         "value": 2500.0,
         "cooldown": 0,
-        "range": 300,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 2500% 마법 데미지 + 4초 스턴 + 10초간 아군 ATK 60% 증가"
       },
       "requiredGrade": "IMMORTAL"
@@ -2419,7 +2419,7 @@
         "damageType": "MAGIC",
         "value": 450.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 450% 마법 데미지 + 마법저항 40% 감소 (5초)"
       },
       "requiredGrade": "LEGEND"
@@ -2651,7 +2651,7 @@
         "damageType": "MAGIC",
         "value": 400.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 400% 마법 데미지 + 3초 동결 + 방어 30% 감소"
       },
       "requiredGrade": "LEGEND"
@@ -2752,7 +2752,7 @@
         "damageType": "MAGIC",
         "value": 750.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 1000% 마법 데미지 + 5초 화염 DoT"
       },
       "requiredGrade": "MYTHIC"
@@ -2807,7 +2807,7 @@
         "damageType": "PHYSICAL",
         "value": 800.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 1100% 물리 데미지 + 3초 스턴 + 방어 40% 감소"
       },
       "requiredGrade": "MYTHIC"
@@ -3125,7 +3125,7 @@
         "damageType": "MAGIC",
         "value": 700.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 900% 마법 데미지 + 3초 스턴 + 방어/마저 35% 감소"
       },
       "requiredGrade": "MYTHIC"
@@ -3180,7 +3180,7 @@
         "damageType": "MAGIC",
         "value": 2200.0,
         "cooldown": 0,
-        "range": 300,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 전체 ATK 2200% 마법 데미지 + 5초 스턴 + 방어/마저 50% 감소"
       },
       "requiredGrade": "IMMORTAL"
@@ -3474,7 +3474,7 @@
         "damageType": "PHYSICAL",
         "value": 800.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 800% 물리 데미지 + 5초 화염 DoT (초당 ATK 30%)"
       },
       "requiredGrade": "LEGEND"
@@ -3520,7 +3520,7 @@
         "damageType": "MAGIC",
         "value": 550.0,
         "cooldown": 0,
-        "range": 200,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 550% 마법 데미지 + HP 8% 추가 데미지 + 처치당 코인 +3"
       },
       "requiredGrade": "LEGEND"
@@ -3566,7 +3566,7 @@
         "damageType": "MAGIC",
         "value": 700.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 700% 마법 데미지 + 4초 공포 (이동불가) + 방어 40% 감소"
       },
       "requiredGrade": "LEGEND"
@@ -3621,7 +3621,7 @@
         "damageType": "MAGIC",
         "value": 800.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 1300% 마법 데미지 + 3초 스턴 + 5초 방어/마저 50% 감소"
       },
       "requiredGrade": "MYTHIC"
@@ -3676,7 +3676,7 @@
         "damageType": "MAGIC",
         "value": 800.0,
         "cooldown": 0,
-        "range": 250,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 1100% 마법 데미지 + 4초 공포 + 방어/마저 40% 감소"
       },
       "requiredGrade": "MYTHIC"
@@ -3731,7 +3731,7 @@
         "damageType": "MAGIC",
         "value": 2500.0,
         "cooldown": 0,
-        "range": 300,
+        "range": 9999,
         "description": "마나 충전 시 전장 적 ATK 2300% 마법 데미지 + 5초 공포 + 방어/마저 70% 감소"
       },
       "requiredGrade": "IMMORTAL"

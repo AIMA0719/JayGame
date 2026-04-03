@@ -271,6 +271,7 @@ fun LottieAsset(
     asset: String,
     modifier: Modifier = Modifier,
     iterations: Int = 1,
+    hideOnComplete: Boolean = false,
 ) {
     val result = rememberLottieComposition(LottieCompositionSpec.Asset(asset))
     val composition = result.value
@@ -306,6 +307,8 @@ fun LottieAsset(
         isPlaying = isResumed.value,
         cancellationBehavior = LottieCancellationBehavior.OnIterationFinish,
     )
+    // 유한 반복 완료 후 숨기기
+    if (hideOnComplete && iterations != Int.MAX_VALUE && progress >= 1f) return
     LottieAnimation(
         composition,
         progress = { progress },

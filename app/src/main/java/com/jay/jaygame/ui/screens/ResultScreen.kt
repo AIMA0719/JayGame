@@ -14,6 +14,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,6 +81,8 @@ private val RewardCardBg = Color(0xFF2A1F15)
 private val RewardCardBorder = Color(0xFF5A4430)
 private val ButtonNeutralColor = Color(0xFF5A5A5A)
 private val ButtonNeutralDark = Color(0xFF3A3A3A)
+private val CheckGreen = Color(0xFF4CAF50)
+private val CheckEmpty = Color(0xFF5A5A5A)
 @Composable
 fun ResultScreen(
     victory: Boolean,
@@ -241,6 +246,22 @@ fun ResultScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Star conditions checklist
+            if (victory) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    StarConditionRow("승리", achieved = true)
+                    StarConditionRow("적 동시 생존 41마리 이하", achieved = noPressure)
+                    StarConditionRow("매 웨이브 잔여 적 5마리 이하", achieved = cleanSweep)
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
             // H4: New record banner
@@ -389,13 +410,15 @@ fun ResultScreen(
             LottieAsset(
                 asset = "lottie/victory_celebration.json",
                 iterations = 3,
+                hideOnComplete = true,
                 modifier = Modifier.fillMaxSize(),
             )
         }
         if (showNewRecord && victory) {
             LottieAsset(
                 asset = "lottie/confetti.json",
-                iterations = Int.MAX_VALUE,
+                iterations = 3,
+                hideOnComplete = true,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -506,6 +529,42 @@ private fun StatRow(label: String, value: String) {
             fontSize = 14.sp,
             color = LightText,
         )
+    }
+}
+
+@Composable
+private fun StarConditionRow(label: String, achieved: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = if (achieved) LightText else SubText,
+        )
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .then(
+                    if (achieved) {
+                        Modifier.background(CheckGreen, CircleShape)
+                    } else {
+                        Modifier.border(1.5.dp, CheckEmpty, CircleShape)
+                    }
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (achieved) {
+                Text(
+                    text = "✓",
+                    fontSize = 11.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
     }
 }
 
