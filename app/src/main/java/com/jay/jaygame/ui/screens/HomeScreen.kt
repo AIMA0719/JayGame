@@ -171,6 +171,8 @@ fun HomeScreen(
         }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
+            // frameTime을 읽어서 매 프레임 Canvas 재그리기 트리거
+            frameTime
             val w = size.width
             val h = size.height
             for (p in particles) {

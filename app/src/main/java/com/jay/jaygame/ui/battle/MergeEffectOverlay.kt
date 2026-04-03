@@ -1,5 +1,6 @@
 package com.jay.jaygame.ui.battle
 
+import com.jay.jaygame.ui.components.blueprintIconRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
@@ -537,7 +538,7 @@ fun MergeEffectOverlay() {
 
                 // Unit icon
                 if (bp != null) {
-                    val iconRes = com.jay.jaygame.ui.screens.blueprintIconRes(bp)
+                    val iconRes = blueprintIconRes(bp)
                     CachedIcon(
                         resId = iconRes,
                         contentDescription = bp.name,

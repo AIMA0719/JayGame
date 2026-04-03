@@ -42,7 +42,7 @@ import com.jay.jaygame.engine.UnitGrade
 import com.jay.jaygame.ui.components.CachedIcon
 import com.jay.jaygame.ui.components.GameCard
 import com.jay.jaygame.ui.components.NeonButton
-import com.jay.jaygame.ui.screens.blueprintIconRes
+import com.jay.jaygame.ui.components.blueprintIconRes
 import com.jay.jaygame.ui.theme.*
 
 private const val MYTHIC_BUY_PRICE = 800

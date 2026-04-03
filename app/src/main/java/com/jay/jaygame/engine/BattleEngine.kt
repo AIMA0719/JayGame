@@ -39,6 +39,8 @@ class BattleEngine(
         const val WAVE_CLEAR_PER_WAVE = 2.5f
         const val SELL_BASE = 8f
         const val SELL_PER_GRADE = 8f
+        const val COIN_PER_MINIBOSS_KILL = 25f
+        const val MAX_SELL_RATIO = 0.8f
         const val MAX_ZONE_RENDER = 32
         const val WAVE_DELAY = 3f
 
@@ -68,7 +70,7 @@ class BattleEngine(
     var state = State.WaveDelay; private set
 
     val maxUnitSlots: Int = Grid.SLOT_COUNT  // 18 slots (3x6 grid)
-    private val diffCoinMult: Float = when (difficulty) { 1 -> 1.5f; 2 -> 2.5f; else -> 1f }
+    private val diffCoinMult: Float = when (difficulty) { 1 -> 1.2f; 2 -> 1.5f; else -> 1f }
 
     var relicManager: RelicManager? = gameData?.let { RelicManager(it) }
     val petSystem = PetBattleSystem().also { ps -> gameData?.let { ps.init(it) } }
@@ -186,11 +188,11 @@ class BattleEngine(
     /** Total roguelike attack multiplier contribution. */
     private fun roguelikeTotalAtk(isBoss: Boolean): Float =
         roguelikeAtkMult +
-            (if (roguelikeBerserkerBase > 0f) roguelikeBerserkerBase * waveSystem.currentWave / 100f else 0f) +
+            (if (roguelikeBerserkerBase > 0f) (roguelikeBerserkerBase * waveSystem.currentWave / 100f).coerceAtMost(0.50f) else 0f) +
             (if (isBoss) roguelikeBossBonus else 0f)
 
     /** Apply roguelike on-hit side effects without changing attack flow. */
-    private fun applyRoguelikeOnHit(target: Enemy, damage: Float, isMagic: Boolean) {
+    private fun applyRoguelikeOnHit(target: Enemy, damage: Float, isMagic: Boolean, dotBaseAtk: Float? = null) {
         if (!target.alive) return
         if (roguelikeArmorShred) {
             val minArmor = target.baseArmor * 0.5f
@@ -200,7 +202,8 @@ class BattleEngine(
             target.buffs.addBuff(BuffType.Slow, 0.3f, 2f * (1f + roguelikeCCDuration))
         }
         if (roguelikeDotBoost > 0f) {
-            target.buffs.addBuff(BuffType.DoT, damage * roguelikeDotBoost / 3f, 3f)
+            val dotBase = dotBaseAtk ?: damage
+            target.buffs.addBuff(BuffType.DoT, dotBase * roguelikeDotBoost / 3f, 3f)
         }
         if (roguelikeSplash) {
             val splashRange = 80f
@@ -517,7 +520,7 @@ class BattleEngine(
                 if (waveSystem.waveComplete) {
                     SfxManager.play(SoundEvent.WaveClear, 0.8f)
         
-                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * diffCoinMult * synergyCoinMult * roguelikeCoinMult
+                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * diffCoinMult * synergyCoinMult
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
                     BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
@@ -727,7 +730,9 @@ class BattleEngine(
             // Grant SP and gold for kills based on enemy type and modifiers
 
             val killCoin = when {
-                wasBoss -> COIN_PER_BOSS_BASE + waveSystem.currentWave * COIN_PER_BOSS_PER_WAVE
+                wasBoss && !waveSystem.currentConfig.isMiniBoss ->
+                    COIN_PER_BOSS_BASE + waveSystem.currentWave * COIN_PER_BOSS_PER_WAVE
+                wasBoss -> COIN_PER_MINIBOSS_KILL // 3마리 * 25 = 75 ≈ 일반 80
                 wasElite -> COIN_PER_ELITE_KILL.toFloat()
                 else -> COIN_PER_KILL.toFloat()
             }
@@ -910,7 +915,8 @@ class BattleEngine(
                 applyAbilityOnHit(proj.sourceUnitId, target)
 
                 // Additional multishot spawned by roguelike effect
-                applyRoguelikeOnHit(target, proj.damage, proj.isMagic)
+                val sourceUnit = if (proj.sourceUnitId >= 0) grid.getUnit(proj.sourceUnitId) else null
+                applyRoguelikeOnHit(target, proj.damage, proj.isMagic, sourceUnit?.effectiveATK())
 
                 val nx = target.position.x / W
                 val ny = target.position.y / H
@@ -1014,7 +1020,8 @@ class BattleEngine(
         val gradeBonus = DamageCalculator.gradeMultiplier(unit.grade)
         val advantageMult = DamageCalculator.familyAdvantageMultiplier(unit.familyOrdinal, target.type)
         val bossMult = if (target.isBoss) synergyBossDmgMult else 1f
-        val baseAtk = unit.effectiveATK() * upgradeAtkMult * synergyAtkMult * roguelikeTotalAtk(target.isBoss) * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
+        val unitAtk = unit.effectiveATK()
+        val baseAtk = unitAtk * upgradeAtkMult * synergyAtkMult * roguelikeTotalAtk(target.isBoss) * (1f + relicAtkBonus) * familyUpgradeBonus * gradeBonus * advantageMult
         val dmg = baseAtk * (if (isCrit) critMultiplier else 1f) *
             (if (isMagic) (1f + relicMagicDmg) else 1f) *
             (if (!isMagic && relicArmorPen > 0f) (1f + relicArmorPen * 0.5f) else 1f) *
@@ -1033,7 +1040,7 @@ class BattleEngine(
             BattleBridge.onMeleeHit(nx, ny, unit.familyOrdinal.coerceIn(0, 5), isCrit, angle)
             tryPlayAttackSfx(isCrit, unit.attackRange, unit.damageType)
             applyAbilityOnHit(unit.tileIndex, target)
-            applyRoguelikeOnHit(target, dmg, isMagic)
+            applyRoguelikeOnHit(target, dmg, isMagic, unitAtk)
         } else {
             // Pet support buff application
             val proj = projectiles.acquire() ?: return

@@ -1,5 +1,6 @@
 package com.jay.jaygame.ui.battle
 
+import com.jay.jaygame.ui.components.blueprintIconRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -182,7 +183,7 @@ fun BattleField() {
                 else {
                     val bp = com.jay.jaygame.engine.BlueprintRegistry.instance.findById(bpId)
                     if (bp != null) {
-                        val resId = com.jay.jaygame.ui.screens.blueprintIconRes(bp)
+                        val resId = blueprintIconRes(bp)
                         ContextCompat.getDrawable(context, resId)?.toBitmap(128, 128)?.asImageBitmap()
                     } else null
                 }

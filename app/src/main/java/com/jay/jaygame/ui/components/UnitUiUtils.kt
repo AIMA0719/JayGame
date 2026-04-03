@@ -45,6 +45,8 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.jay.jaygame.data.UnitFamily
 import com.jay.jaygame.data.UnitRace
 import com.jay.jaygame.engine.BlueprintRegistry
+import com.jay.jaygame.engine.UnitBlueprint
+import com.jay.jaygame.JayGameApplication
 import com.jay.jaygame.engine.UnitRole
 import com.jay.jaygame.ui.theme.Gold
 import com.jay.jaygame.ui.theme.SubText
@@ -210,6 +212,38 @@ fun UnitStatRow(label: String, value: String, valueColor: Color, modifier: Modif
 // ── Blueprint name helper ──
 fun blueprintDisplayName(blueprintId: String): String? =
     BlueprintRegistry.instance.findById(blueprintId)?.name
+
+// ── Blueprint icon resolution ──
+@Volatile
+private var _iconResCache: Map<String, Int>? = null
+
+private fun getIconResMap(context: android.content.Context): Map<String, Int> {
+    _iconResCache?.let { return it }
+    if (!BlueprintRegistry.isReady) return emptyMap() // 초기화 전이면 캐시하지 않음
+    val map = mutableMapOf<String, Int>()
+    for (bp in BlueprintRegistry.instance.all()) {
+        val resName = "ic_bp_${bp.id}"
+        val resId = context.resources.getIdentifier(resName, "drawable", context.packageName)
+        if (resId != 0) map[bp.id] = resId
+    }
+    _iconResCache = map
+    return map
+}
+
+/** Resolve icon resource for a blueprint.
+ *  우선순위: 1) bp.iconRes (JSON에 지정) 2) ic_bp_{id}.png (자동 매핑) 3) fallback
+ */
+fun blueprintIconRes(bp: UnitBlueprint, context: android.content.Context? = null): Int {
+    if (bp.iconRes != 0) return bp.iconRes
+    val ctx = context ?: try {
+        JayGameApplication.appContext
+    } catch (_: Exception) { null }
+    if (ctx != null) {
+        val map = getIconResMap(ctx)
+        map[bp.id]?.let { return it }
+    }
+    return R.drawable.ic_bp_human_common_01
+}
 
 /**
  * painterResource 기반 아이콘 — Android 프레임워크 리소스 캐시 사용.

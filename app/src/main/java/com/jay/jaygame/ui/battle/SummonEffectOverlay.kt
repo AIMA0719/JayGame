@@ -1,5 +1,6 @@
 package com.jay.jaygame.ui.battle
 
+import com.jay.jaygame.ui.components.blueprintIconRes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
@@ -826,7 +827,7 @@ fun SummonEffectOverlay() {
                 // Icon with bounce effect
                 val bounceScale = if (isLegendPlus) 0.15f else 0.1f
                 val bounceOffset = (iconBounce - 0.5f) * (if (isLegendPlus) 10f else 6f)
-                val iconRes = com.jay.jaygame.ui.screens.blueprintIconRes(bp)
+                val iconRes = blueprintIconRes(bp)
                 CachedIcon(
                     resId = iconRes,
                     contentDescription = bp.name,

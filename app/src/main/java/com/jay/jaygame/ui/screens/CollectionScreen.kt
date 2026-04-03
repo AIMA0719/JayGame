@@ -3,6 +3,7 @@ package com.jay.jaygame.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import com.jay.jaygame.ui.components.blueprintIconRes
 import com.jay.jaygame.ui.components.CachedIcon
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

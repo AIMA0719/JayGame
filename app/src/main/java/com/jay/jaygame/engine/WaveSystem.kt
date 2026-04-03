@@ -7,6 +7,7 @@ data class WaveConfig(
     val armor: Float,
     val magicResist: Float,
     val isBoss: Boolean,
+    val isMiniBoss: Boolean = false,
     val spawnInterval: Float,
     val enemyType: Int,
     val ccResistance: Float = 0f,
@@ -20,7 +21,7 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
     private var spawnedCount = 0
     private var waveTimer = 0f       // 보스: 카운트다운, 일반: 미사용
     var waveElapsed = 0f; private set // 웨이브 경과 시간 (카운트업)
-    private var currentConfig: WaveConfig = getWaveConfig(0)
+    var currentConfig: WaveConfig = getWaveConfig(0); private set
 
     companion object {
         const val BOSS_ENEMY_TYPE = 99
@@ -42,14 +43,14 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         val w = wave
         val capped = w.coerceAtMost(59)
 
-        // Late-game scaling for waves 40+
-        val lateScale = if (w >= 40) 1f + (w - 39) * 0.12f else 1f
+        // Late-game scaling: gradual ramp from wave 30+
+        val lateScale = if (w >= 30) 1f + (w - 29) * 0.04f else 1f
 
         val baseHP = (50f + capped * 30f + (capped * capped * 0.5f)) * lateScale
         val baseSpeed = (60f + (capped * 1.2f).coerceAtMost(50f)) *
             (if (w >= 40) 1f + (w - 39) * 0.015f else 1f).coerceAtMost(1.4f)
-        val baseArmor = ((capped * 1.8f).coerceAtMost(80f) + if (w >= 40) (w - 39) * 2.5f else 0f)
-        val baseMR = ((capped * 1.3f).coerceAtMost(50f) + if (w >= 40) (w - 39) * 1.5f else 0f)
+        val baseArmor = ((capped * 1.5f).coerceAtMost(70f) + if (w >= 30) (w - 29) * 1.5f else 0f)
+        val baseMR = ((capped * 1.3f).coerceAtMost(50f) + if (w >= 30) (w - 29) * 1.0f else 0f)
 
         // 웨이브당 40마리 고정
         val count = 40
@@ -70,15 +71,12 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
         }
 
         val bossMultHP = when {
-            isBoss && w >= 40 -> 15f   // Late-game bosses are tankier
-            isBoss -> 10f
-            isMiniBoss && w >= 30 -> 7f
-            isMiniBoss -> 5f
+            isBoss -> 10f + (w.coerceIn(30, 50) - 30) * 0.25f   // W30=10, W50=15
+            isMiniBoss -> 5f + (w.coerceIn(20, 40) - 20) * 0.10f // W20=5, W40=7
             else -> 1f
         }
         val bossMultArmor = when {
-            isBoss && w >= 40 -> 3f
-            isBoss -> 2f
+            isBoss -> 2f + (w.coerceIn(30, 50) - 30) * 0.04f     // W30=2.0, W50=2.8
             isMiniBoss -> 1.5f
             else -> 1f
         }
@@ -112,6 +110,7 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
             armor = baseArmor * bossMultArmor,
             magicResist = baseMR * bossMultArmor,
             isBoss = isBoss || isMiniBoss,
+            isMiniBoss = isMiniBoss,
             spawnInterval = if (isBoss) 0f else (0.5f + (1f / (1 + w * 0.1f))).coerceAtLeast(0.2f),
             enemyType = enemyType,
             ccResistance = ccResistance,

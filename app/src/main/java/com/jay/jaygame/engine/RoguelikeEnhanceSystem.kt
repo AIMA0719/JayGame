@@ -34,8 +34,8 @@ class RoguelikeEnhanceSystem {
         RoguelikeBuff("range_boost", "사거리 확장", "전체 유닛 사거리 +10%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("crit_boost", "치명타 확률", "크리율 +5%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("coin_boost", "코인 보너스", "적 처치 코인 +9%", RoguelikeBuffGrade.NORMAL, 0, true),
-        RoguelikeBuff("sell_bonus", "되팔이의 눈", "유닛 판매 가격 +75%", RoguelikeBuffGrade.NORMAL, 0, true),
-        RoguelikeBuff("cc_duration", "속박 강화", "로그라이크 효과 CC 지속시간 +20%", RoguelikeBuffGrade.NORMAL, 0, true),
+        RoguelikeBuff("sell_bonus", "되팔이의 눈", "유닛 판매 가격 +50%", RoguelikeBuffGrade.NORMAL, 0, false),
+        RoguelikeBuff("cc_duration", "속박 강화", "CC 지속시간 +20%", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("dot_boost", "맹독 부여", "공격 시 ATK 15%의 독 피해 (3초)", RoguelikeBuffGrade.NORMAL, 0, true),
         // ── 희귀 (minWave=20) ──
         RoguelikeBuff("summon_discount", "소환 할인", "소환 비용 -15%", RoguelikeBuffGrade.RARE, 20, true),
@@ -49,7 +49,7 @@ class RoguelikeEnhanceSystem {
         // ── 영웅 (minWave=40) ──
         RoguelikeBuff("boss_slayer", "보스 킬러", "보스/엘리트 데미지 +40%", RoguelikeBuffGrade.HERO, 40, true),
         RoguelikeBuff("double_merge", "합성 행운", "Lucky merge 확률 +15%", RoguelikeBuffGrade.HERO, 40, true),
-        RoguelikeBuff("mana_surge", "마나 폭주", "마나 충전량 +50%", RoguelikeBuffGrade.HERO, 40, true),
+        RoguelikeBuff("mana_surge", "마나 폭주", "마나 충전량 +30%", RoguelikeBuffGrade.HERO, 40, true),
         RoguelikeBuff("execute", "처형자", "적 HP 7% 이하 시 즉사 (보스 제외)", RoguelikeBuffGrade.HERO, 40, false),
         RoguelikeBuff("multishot", "다중 사격", "원거리 유닛 20% 확률 2회 공격", RoguelikeBuffGrade.HERO, 40, false),
         RoguelikeBuff("berserker", "광전사", "웨이브당 공격력 +1% 누적", RoguelikeBuffGrade.HERO, 40, true),
@@ -115,7 +115,7 @@ class RoguelikeEnhanceSystem {
             "range_boost" -> engine.roguelikeRangeMult += 0.10f
             "crit_boost" -> engine.roguelikeCritBonus += 0.05f
             "coin_boost" -> engine.roguelikeCoinMult += 0.09f
-            "sell_bonus" -> engine.roguelikeSellBonus += 0.75f
+            "sell_bonus" -> engine.roguelikeSellBonus = 0.50f
             "cc_duration" -> engine.roguelikeCCDuration += 0.20f
             "dot_boost" -> engine.roguelikeDotBoost += 0.15f
             "summon_discount" -> engine.roguelikeSummonDiscount = (engine.roguelikeSummonDiscount + 0.15f).coerceAtMost(0.75f)
@@ -128,7 +128,7 @@ class RoguelikeEnhanceSystem {
             "summon_upgrade" -> engine.roguelikeSummonUpgrade = true
             "boss_slayer" -> engine.roguelikeBossBonus += 0.40f
             "double_merge" -> engine.roguelikeLuckyBonus += 0.15f
-            "mana_surge" -> engine.roguelikeManaBonus += 0.50f
+            "mana_surge" -> engine.roguelikeManaBonus = (engine.roguelikeManaBonus + 0.30f).coerceAtMost(0.60f)
             "execute" -> engine.roguelikeExecute = true
             "multishot" -> engine.roguelikeMultishot = true
             "berserker" -> engine.roguelikeBerserkerBase += 1f

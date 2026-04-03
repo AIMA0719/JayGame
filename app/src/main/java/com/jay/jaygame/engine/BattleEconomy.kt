@@ -10,7 +10,9 @@ import com.jay.jaygame.engine.BattleEngine.Companion.SELL_PER_GRADE
 class BattleEconomy(private val engine: BattleEngine) {
 
     private fun sellUnit(u: GameUnit) {
-        engine.sp += (SELL_BASE + u.grade * SELL_PER_GRADE) * (1f + engine.roguelikeSellBonus)
+        val basePrice = (SELL_BASE + u.grade * SELL_PER_GRADE) * (1f + engine.roguelikeSellBonus)
+        val maxSellPrice = BattleEngine.MAX_SUMMON_COST * BattleEngine.MAX_SELL_RATIO
+        engine.sp += basePrice.coerceAtMost(maxSellPrice)
         engine.units.release(u)
     }
 
