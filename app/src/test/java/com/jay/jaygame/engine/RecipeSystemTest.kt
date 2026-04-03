@@ -338,6 +338,27 @@ class RecipeSystemTest {
     }
 
     @Test
+    fun `resolveRecipe does not mark as discovered`() {
+        recipeSystem.loadRecipes("""[{
+            "id": "recipe_test",
+            "ingredients": [
+                { "family": "FIRE", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null },
+                { "family": "LIGHTNING", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null }
+            ],
+            "resultId": "hidden_test_result"
+        }]""")
+
+        val fireUnit = makeUnit("fire_melee_hero")
+        val lightningUnit = makeUnit("lightning_melee_hero")
+
+        val recipe = recipeSystem.matchRecipe(fireUnit, lightningUnit)!!
+        val resultBp = recipeSystem.resolveRecipe(recipe, listOf(fireUnit, lightningUnit))
+        assertNotNull(resultBp)
+        assertFalse(recipe.discovered)
+        assertFalse(recipeSystem.isDiscovered("recipe_test"))
+    }
+
+    @Test
     fun `isDiscovered returns correct state`() {
         recipeSystem.loadRecipes("""[{
             "id": "recipe_test",
@@ -359,5 +380,26 @@ class RecipeSystemTest {
         // Verify getDiscoveredIds returns the set
         val ids = recipeSystem.getDiscoveredIds()
         assertTrue("recipe_test" in ids)
+    }
+
+    @Test
+    fun `setDiscoveredIds replaces previous state`() {
+        recipeSystem.loadRecipes("""[{
+            "id": "recipe_test",
+            "ingredients": [
+                { "family": "FIRE", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null },
+                { "family": "LIGHTNING", "role": "MELEE_DPS", "minGrade": "HERO", "specificUnitId": null }
+            ],
+            "resultId": "hidden_test_result"
+        }]""")
+
+        val recipe = recipeSystem.allRecipes().first()
+        recipeSystem.setDiscoveredIds(setOf("recipe_test"))
+        assertTrue(recipe.discovered)
+
+        recipeSystem.setDiscoveredIds(emptySet())
+        assertFalse(recipe.discovered)
+        assertFalse(recipeSystem.isDiscovered("recipe_test"))
+        assertTrue(recipeSystem.getDiscoveredIds().isEmpty())
     }
 }

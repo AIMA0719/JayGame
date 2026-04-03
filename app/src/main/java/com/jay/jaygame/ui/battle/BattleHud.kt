@@ -169,8 +169,11 @@ private data class RecipeDisplayInfo(
     val resultBlueprint: UnitBlueprint?,
     val fieldMatchCount: Int,     // 필드에서 충족된 재료 수
     val totalIngredients: Int,    // 총 재료 수
+    val hasEnoughLuckyStones: Boolean,
+    val slotMatched: List<Boolean>,
 ) {
     val readyOnField get() = fieldMatchCount >= totalIngredients
+    val canCraft get() = readyOnField && hasEnoughLuckyStones
 }
 
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
@@ -427,19 +430,21 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
 
     // 필드 상태는 다이얼로그가 열릴 때만 스냅샷으로 캡처
     val gridState by BattleBridge.gridState.collectAsState()
+    val luckyStones by BattleBridge.luckyStones.collectAsState()
     val occupiedTiles = remember(gridState) {
         gridState.filter { it.blueprintId.isNotEmpty() }
     }
 
     // 스택을 개별 유닛으로 펼침 (같은 슬롯에서 여러 재료 매칭 가능)
-    val recipeInfos = remember(allRecipes, occupiedTiles) {
+    val recipeInfos = remember(allRecipes, occupiedTiles, luckyStones) {
         val occupiedCounts = IntArray(occupiedTiles.size) { idx ->
             occupiedTiles[idx].level.coerceAtLeast(1)
         }
         allRecipes.map { recipe ->
             val remainingCounts = occupiedCounts.copyOf()
             var matchCount = 0
-            for (slot in recipe.ingredients) {
+            val slotMatched = MutableList(recipe.ingredients.size) { false }
+            recipe.ingredients.forEachIndexed { slotIndex, slot ->
                 val matchedIndex = occupiedTiles.indices.firstOrNull { idx ->
                     if (remainingCounts[idx] <= 0) return@firstOrNull false
                     val tile = occupiedTiles[idx]
@@ -454,17 +459,26 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                 if (matchedIndex != null) {
                     remainingCounts[matchedIndex]--
                     matchCount++
+                    slotMatched[slotIndex] = true
                 }
             }
 
             val resultBp = if (BlueprintRegistry.isReady) {
                 BlueprintRegistry.instance.findById(recipe.resultId)
             } else null
-            RecipeDisplayInfo(recipe, resultBp, matchCount, recipe.ingredients.size)
+            RecipeDisplayInfo(
+                recipe = recipe,
+                resultBlueprint = resultBp,
+                fieldMatchCount = matchCount,
+                totalIngredients = recipe.ingredients.size,
+                hasEnoughLuckyStones = luckyStones >= recipe.luckyStonesCost,
+                slotMatched = slotMatched,
+            )
         }.sortedByDescending { it.fieldMatchCount }
     }
-    val readyRecipes = recipeInfos.filter { it.readyOnField }
+    val readyRecipes = recipeInfos.filter { it.canCraft }
     val hasReadyRecipe = readyRecipes.isNotEmpty()
+    val hasRecipeMissingStones = recipeInfos.any { it.readyOnField && !it.hasEnoughLuckyStones }
     var selectedRecipeId by remember(readyRecipes) {
         mutableStateOf(readyRecipes.firstOrNull()?.recipe?.id)
     }
@@ -502,14 +516,7 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "현재 덱으로 조합 가능한 신화 레시피",
-                    color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 11.sp,
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 if (recipeInfos.isEmpty()) {
                     Box(
@@ -533,8 +540,11 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                             RecipeCard(
                                 info.recipe, info.resultBlueprint,
                                 info.fieldMatchCount, info.totalIngredients,
-                                isSelected = info.readyOnField && info.recipe.id == selectedRecipeId,
-                                onClick = if (info.readyOnField) {{ selectedRecipeId = info.recipe.id }} else null,
+                                hasEnoughLuckyStones = info.hasEnoughLuckyStones,
+                                luckyStonesCost = info.recipe.luckyStonesCost,
+                                slotMatched = info.slotMatched,
+                                isSelected = info.canCraft && info.recipe.id == selectedRecipeId,
+                                onClick = if (info.canCraft) {{ selectedRecipeId = info.recipe.id }} else null,
                             )
                         }
                     }
@@ -563,7 +573,9 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = if (hasReadyRecipe) "\u2728 조합하기" else "필드에 재료를 배치하세요",
+                            text = if (hasReadyRecipe) "\u2728 조합하기"
+                            else if (hasRecipeMissingStones) "조합석이 부족합니다"
+                            else "필드에 재료를 배치하세요",
                             color = if (hasReadyRecipe) Color.White else DisabledText,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -581,14 +593,19 @@ private fun RecipeCard(
     resultBlueprint: UnitBlueprint?,
     fieldMatchCount: Int,
     totalIngredients: Int,
+    hasEnoughLuckyStones: Boolean,
+    luckyStonesCost: Int,
+    slotMatched: List<Boolean>,
     isSelected: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val readyOnField = fieldMatchCount >= totalIngredients
+    val canCraft = readyOnField && hasEnoughLuckyStones
     val hasPartial = fieldMatchCount > 0
     val borderColor = when {
         isSelected -> Color(0xFF00E676)
-        readyOnField -> GoldBright.copy(alpha = 0.8f)
+        canCraft -> GoldBright.copy(alpha = 0.8f)
+        readyOnField -> RecipeGradeWarningColor.copy(alpha = 0.9f)
         hasPartial -> RecipeAvailableGlow.copy(alpha = 0.4f)
         else -> RecipeCardBorder
     }
@@ -645,7 +662,10 @@ private fun RecipeCard(
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                    RecipeSlotChip(slot)
+                    RecipeSlotChip(
+                        slot = slot,
+                        isMatched = slotMatched.getOrElse(idx) { false },
+                    )
                 }
 
                 Text(
@@ -667,12 +687,25 @@ private fun RecipeCard(
                 }
             }
 
+            Text(
+                text = "\uD83D\uDD37 조합석 x$luckyStonesCost",
+                color = if (hasEnoughLuckyStones) Color(0xFF88DDFF) else RecipeGradeWarningColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+
             when {
-                readyOnField -> Text(
+                canCraft -> Text(
                     text = "\u2728 조합 준비 완료!",
                     color = GoldBright,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
+                )
+                readyOnField -> Text(
+                    text = "\uD83D\uDD37 조합석 부족 (필요: $luckyStonesCost)",
+                    color = RecipeGradeWarningColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
                 )
                 hasPartial -> {
                     val maxGrade = recipe.ingredients.maxOf { it.minGrade.ordinal }
@@ -696,16 +729,18 @@ private fun RecipeCard(
 }
 
 @Composable
-private fun RecipeSlotChip(slot: RecipeSlot) {
+private fun RecipeSlotChip(slot: RecipeSlot, isMatched: Boolean = false) {
     val specificBp = remember(slot.specificUnitId) { slot.specificUnitId?.let { BlueprintRegistry.instance.findById(it) } }
-    val borderColor = if (specificBp != null) specificBp.grade.color.copy(alpha = 0.5f)
+    val baseBorderColor = if (specificBp != null) specificBp.grade.color.copy(alpha = 0.5f)
     else (slot.family?.color ?: Color.White.copy(alpha = 0.5f)).copy(alpha = 0.4f)
+    val borderColor = if (isMatched) RecipeAvailableGlow else baseBorderColor
+    val chipBg = if (isMatched) RecipeAvailableGlow.copy(alpha = 0.2f) else RecipeIngredientBg
 
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(RecipeIngredientBg)
-            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .background(chipBg)
+            .border(if (isMatched) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1846,4 +1881,3 @@ private fun WideHexButton(
         }
     }
 }
-

@@ -3,6 +3,7 @@ package com.jay.jaygame.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import com.jay.jaygame.data.GameData
 import com.jay.jaygame.data.GameRepository
+import com.jay.jaygame.engine.RecipeSystem
 import com.jay.jaygame.ui.components.claimReward
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
@@ -60,6 +61,10 @@ class SettingsViewModel(private val repository: GameRepository) : ViewModel(), C
 
     fun resetData() = intent {
         repository.save(GameData())
+        repository.saveDiscoveredRecipes(emptySet())
+        if (RecipeSystem.isReady) {
+            RecipeSystem.instance.setDiscoveredIds(emptySet())
+        }
         reduce { state.copy(showResetDialog = false) }
         postSideEffect(SettingsSideEffect.DataReset)
     }

@@ -1,5 +1,6 @@
 package com.jay.jaygame.engine
 
+import com.jay.jaygame.JayGameApplication
 import com.jay.jaygame.audio.SfxManager
 import com.jay.jaygame.audio.SoundEvent
 import com.jay.jaygame.bridge.BattleBridge
@@ -53,7 +54,7 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         }
 
         // 레시피 검증 (실제 유닛 리스트로)
-        val resultBp = RecipeSystem.instance.completeRecipe(
+        val resultBp = RecipeSystem.instance.resolveRecipe(
             recipe, unitsToConsume.map { it.second }
         ) ?: return false
 
@@ -97,9 +98,7 @@ class BattleMergeHandler(private val engine: BattleEngine) {
             val fallback = engine.grid.findEmpty()
             if (fallback >= 0) {
                 engine.grid.placeUnit(fallback, resultUnit)
-                engine.invalidateMergeCache()
-                engine.mergeCount++
-                BattleBridge.onMergeComplete(fallback, true, resultUnit.blueprintId)
+                finalizeRecipeCraft(recipe.id, fallback, resultUnit.blueprintId)
                 return true
             }
             // 사전 검증을 통과했으므로 여기 도달은 불가하지만 안전장치
@@ -107,9 +106,7 @@ class BattleMergeHandler(private val engine: BattleEngine) {
             return false
         }
 
-        engine.invalidateMergeCache()
-        engine.mergeCount++
-        BattleBridge.onMergeComplete(placeTile, true, resultUnit.blueprintId)
+        finalizeRecipeCraft(recipe.id, placeTile, resultUnit.blueprintId)
         return true
     }
 
@@ -181,5 +178,18 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         SfxManager.play(if (mergeResult.isLucky) SoundEvent.MergeLucky else SoundEvent.Merge)
         BattleBridge.onMergeComplete(actualSlot, mergeResult.isLucky, resultUnit.blueprintId)
         return true
+    }
+
+    private fun finalizeRecipeCraft(recipeId: String, placeTile: Int, blueprintId: String) {
+        RecipeSystem.instance.markDiscovered(recipeId)
+        runCatching {
+            val app = JayGameApplication.appContext as? JayGameApplication
+            app?.repository?.saveDiscoveredRecipes(RecipeSystem.instance.getDiscoveredIds())
+        }.onFailure { error ->
+            android.util.Log.w("BattleMergeHandler", "Failed to persist discovered recipes", error)
+        }
+        engine.invalidateMergeCache()
+        engine.mergeCount++
+        BattleBridge.onMergeComplete(placeTile, true, blueprintId)
     }
 }

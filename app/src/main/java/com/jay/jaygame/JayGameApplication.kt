@@ -47,6 +47,7 @@ class JayGameApplication : Application(), ImageLoaderFactory {
                 check(BlueprintRegistry.initialize(this@JayGameApplication)) { "Blueprint initialization failed" }
                 check(RecipeSystem.initialize(this@JayGameApplication)) { "Recipe initialization failed" }
                 repository = withContext(Dispatchers.IO) { GameRepository(this@JayGameApplication) }
+                RecipeSystem.instance.setDiscoveredIds(repository.loadDiscoveredRecipes())
             }.onSuccess {
                 _initReady.value = true
             }.onFailure { error ->

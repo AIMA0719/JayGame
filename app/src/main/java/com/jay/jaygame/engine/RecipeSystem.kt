@@ -66,6 +66,7 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
                 android.util.Log.w("RecipeSystem", "Skipping recipe at index $i: ${e.message}")
             }
         }
+        syncDiscoveredFlags()
     }
 
     fun matchRecipe(unitA: GameUnit, unitB: GameUnit): HiddenRecipe? {
@@ -144,11 +145,20 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
         }
     }
 
-    fun completeRecipe(recipe: HiddenRecipe, units: List<GameUnit>): UnitBlueprint? {
+    fun resolveRecipe(recipe: HiddenRecipe, units: List<GameUnit>): UnitBlueprint? {
         if (!matchesIngredients(recipe, units)) return null
-        discoveredIds.add(recipe.id)
-        recipe.discovered = true
         return blueprintRegistry.findById(recipe.resultId)
+    }
+
+    fun completeRecipe(recipe: HiddenRecipe, units: List<GameUnit>): UnitBlueprint? {
+        val result = resolveRecipe(recipe, units) ?: return null
+        markDiscovered(recipe.id)
+        return result
+    }
+
+    fun markDiscovered(recipeId: String) {
+        discoveredIds.add(recipeId)
+        recipes.find { it.id == recipeId }?.discovered = true
     }
 
     fun isDiscovered(recipeId: String): Boolean = recipeId in discoveredIds
@@ -156,10 +166,15 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
 
     fun recipeCount(): Int = recipes.size
     fun setDiscoveredIds(ids: Set<String>) {
+        discoveredIds.clear()
         discoveredIds.addAll(ids)
-        recipes.forEach { if (it.id in discoveredIds) it.discovered = true }
+        syncDiscoveredFlags()
     }
     fun getDiscoveredIds(): Set<String> = discoveredIds.toSet()
+
+    private fun syncDiscoveredFlags() {
+        recipes.forEach { it.discovered = it.id in discoveredIds }
+    }
 
     private fun matchesIngredients(recipe: HiddenRecipe, units: List<GameUnit>): Boolean {
         if (recipe.ingredients.isEmpty()) return false
