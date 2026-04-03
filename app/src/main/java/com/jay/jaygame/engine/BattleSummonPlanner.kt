@@ -8,7 +8,7 @@ internal object BattleSummonPlanner {
         var roll = (Math.random() * totalWeight).toInt()
         for (candidate in candidates) {
             roll -= candidate.summonWeight
-            if (roll <= 0) return candidate
+            if (roll < 0) return candidate
         }
         return null
     }

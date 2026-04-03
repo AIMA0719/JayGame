@@ -27,6 +27,7 @@ class BattleEngine(
         const val MAX_UNITS = 128
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
+        const val HP_PRESSURE_THRESHOLD = DEFEAT_ENEMY_COUNT / 5  // 20+ 동시 생존 적 → 3성 불가
         const val COIN_PER_KILL = 2
         const val COIN_PER_ELITE_KILL = 6
         const val COIN_PER_BOSS_BASE = 60f
@@ -478,6 +479,9 @@ class BattleEngine(
 
                 if (enemies.activeCount > peakEnemyCount) {
                     peakEnemyCount = enemies.activeCount
+                }
+                if (!hpEverLost && enemies.activeCount > HP_PRESSURE_THRESHOLD) {
+                    hpEverLost = true
                 }
 
                 // Defeat: 100+ alive enemies
@@ -1250,8 +1254,7 @@ class BattleEngine(
             currentWave = waveSystem.currentWave,
             elapsedTime = elapsedTime,
             maxWaves = maxWaves,
-            peakEnemyCount = peakEnemyCount,
-            defeatEnemyCount = DEFEAT_ENEMY_COUNT,
+            hpEverLost = hpEverLost,
             isDungeonMode = isDungeonMode,
             dungeonDef = dungeonDef,
             relicManager = relicManager,

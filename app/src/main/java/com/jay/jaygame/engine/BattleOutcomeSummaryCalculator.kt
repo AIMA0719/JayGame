@@ -21,8 +21,7 @@ internal object BattleOutcomeSummaryCalculator {
         currentWave: Int,
         elapsedTime: Float,
         maxWaves: Int,
-        peakEnemyCount: Int,
-        defeatEnemyCount: Int,
+        hpEverLost: Boolean,
         isDungeonMode: Boolean,
         dungeonDef: DungeonDef?,
         relicManager: RelicManager?,
@@ -42,7 +41,7 @@ internal object BattleOutcomeSummaryCalculator {
         val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt().coerceAtLeast(1)
         val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
-        val noHpLost = peakEnemyCount <= defeatEnemyCount / 5
+        val noHpLost = !hpEverLost
         val fastClear = victory && elapsedTime < maxWaves * 8f
         val baseCards = if (victory) 3 + stageId + difficulty * 2 else 1
         val dungeonCardBonus = if (isDungeonMode && victory) currentWave / 5 else 0

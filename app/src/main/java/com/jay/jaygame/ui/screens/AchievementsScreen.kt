@@ -43,15 +43,11 @@ import com.jay.jaygame.ui.components.NeonProgressBar
 import com.jay.jaygame.ui.components.ResourceHeader
 import com.jay.jaygame.ui.theme.BorderGlow
 import com.jay.jaygame.ui.theme.DeepDark
-import com.jay.jaygame.ui.theme.DiamondBlue
 import com.jay.jaygame.ui.theme.DimText
 import com.jay.jaygame.ui.theme.Gold
-import com.jay.jaygame.ui.theme.GoldCoin
 import com.jay.jaygame.ui.theme.LightText
 import com.jay.jaygame.ui.theme.NeonCyan
 import com.jay.jaygame.ui.theme.NeonGreen
-import com.jay.jaygame.ui.theme.NeonRed
-import com.jay.jaygame.ui.theme.NeonRedDark
 import com.jay.jaygame.ui.theme.SubText
 
 // ── Achievement definitions ──

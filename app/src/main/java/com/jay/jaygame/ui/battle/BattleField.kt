@@ -86,9 +86,6 @@ private val CRIT_ANIM_DUR get() = com.jay.jaygame.engine.GameUnit.CRIT_ANIM_DURA
 private val StarColor = Color(0xFFFFD700)
 private val StarBgGlow = Color(0xFF1A1A2E).copy(alpha = 0.9f)
 
-// Pedestal particle colors (pre-allocated per grade)
-private val PedestalParticleAlpha = 0.4f
-
 // Vignette
 private val VignetteColor = Color.Black.copy(alpha = 0.4f)
 

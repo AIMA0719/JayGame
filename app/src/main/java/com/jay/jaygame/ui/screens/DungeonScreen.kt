@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,7 +36,6 @@ import com.jay.jaygame.data.GameData
 import com.jay.jaygame.data.GameRepository
 import com.jay.jaygame.engine.DungeonManager
 import com.jay.jaygame.ui.components.NeonButton
-import com.jay.jaygame.ui.theme.DeepDark
 import com.jay.jaygame.ui.theme.DimText
 import com.jay.jaygame.ui.theme.Gold
 import com.jay.jaygame.ui.theme.NeonGreen
@@ -100,7 +100,7 @@ fun DungeonScreen(
         }
 
         // ── Daily attempts info ──
-        val manager = DungeonManager(data)
+        val manager = remember(data) { DungeonManager(data) }
         val remaining = manager.remainingAttempts()
 
         Row(
@@ -134,12 +134,14 @@ fun DungeonScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(ALL_DUNGEONS) { def ->
+                val canEnter = manager.canEnter(def.id)
                 DungeonCard(
                     def = def,
                     gameData = data,
+                    canEnter = canEnter,
+                    remainingAttempts = remaining,
                     onEnter = {
-                        val mgr = DungeonManager(data)
-                        val updated = mgr.enterDungeon(def.id)
+                        val updated = manager.enterDungeon(def.id)
                         if (updated != null) {
                             repository.save(updated)
                             onStartDungeonBattle(def.id)
@@ -156,13 +158,12 @@ fun DungeonScreen(
 private fun DungeonCard(
     def: DungeonDef,
     gameData: GameData,
+    canEnter: Boolean,
+    remainingAttempts: Int,
     onEnter: () -> Unit,
 ) {
     val isUnlocked = gameData.trophies >= def.requiredTrophies
-    val manager = DungeonManager(gameData)
-    val canEnter = manager.canEnter(def.id)
     val bestWave = gameData.dungeonClears[def.id] ?: 0
-    val remaining = manager.remainingAttempts()
 
     Box(
         modifier = Modifier
@@ -237,9 +238,9 @@ private fun DungeonCard(
                     color = if (bestWave > 0) Gold else DimText,
                 )
                 Text(
-                    text = "남은 횟수: $remaining",
+                    text = "남은 횟수: $remainingAttempts",
                     fontSize = 12.sp,
-                    color = if (remaining > 0) SubText else NeonRed,
+                    color = if (remainingAttempts > 0) SubText else NeonRed,
                 )
             }
 
@@ -249,7 +250,7 @@ private fun DungeonCard(
             NeonButton(
                 text = when {
                     !isUnlocked -> "트로피 ${def.requiredTrophies} 필요"
-                    remaining <= 0 -> "오늘 입장 완료"
+                    remainingAttempts <= 0 -> "오늘 입장 완료"
                     gameData.stamina < def.staminaCost -> "스태미나 부족"
                     else -> "입장 (스태미나 ${def.staminaCost})"
                 },

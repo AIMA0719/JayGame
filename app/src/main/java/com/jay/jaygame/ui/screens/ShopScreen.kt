@@ -3,7 +3,6 @@ package com.jay.jaygame.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -240,6 +238,10 @@ fun ShopScreen(viewModel: ShopViewModel) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(currentItems) { item ->
+                    val itemEnabled = when (item.action) {
+                        is ShopAction.StarterPack -> !data.starterPackPurchased
+                        else -> true
+                    }
                     ShopItemCard(
                         item = item,
                         onBuy = {
@@ -251,6 +253,7 @@ fun ShopScreen(viewModel: ShopViewModel) {
                                 is ShopAction.StarterPack -> viewModel.purchaseStarterPack(a.diamondCost)
                             }
                         },
+                        enabled = itemEnabled,
                     )
                 }
 
@@ -397,6 +400,7 @@ private fun SeasonPassContent(data: com.jay.jaygame.data.GameData, viewModel: Sh
 private fun ShopItemCard(
     item: ShopItem,
     onBuy: () -> Unit,
+    enabled: Boolean = true,
 ) {
     GameCard(
         modifier = Modifier.fillMaxWidth(),
@@ -435,7 +439,16 @@ private fun ShopItemCard(
                 CurrencyType.FREE -> SubText.copy(alpha = 0.7f)
             }
 
-            if (item.currencyType == CurrencyType.FREE) {
+            if (!enabled) {
+                NeonButton(
+                    text = "구매 완료",
+                    onClick = {},
+                    fontSize = 11.sp,
+                    enabled = false,
+                    accentColor = SubText,
+                    accentColorDark = SubText.copy(alpha = 0.7f),
+                )
+            } else if (item.currencyType == CurrencyType.FREE) {
                 NeonButton(
                     text = item.priceAmount,
                     onClick = onBuy,
@@ -494,13 +507,6 @@ private fun TierCard(
     val cardModifier = Modifier
         .width(100.dp)
         .height(150.dp)
-        .then(
-            if (isCurrent) {
-                Modifier.border(2.dp, NeonCyan, RoundedCornerShape(12.dp))
-            } else {
-                Modifier
-            },
-        )
 
     GameCard(
         modifier = cardModifier,

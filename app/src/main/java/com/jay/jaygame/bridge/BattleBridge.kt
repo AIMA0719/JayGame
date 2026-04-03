@@ -341,9 +341,9 @@ object BattleBridge {
     private val enemySnapshotBuffers = arrayOf(EnemySnapshotBuffer(), EnemySnapshotBuffer())
     private val projectileSnapshotBuffers = arrayOf(ProjectileSnapshotBuffer(), ProjectileSnapshotBuffer())
     private val unitSnapshotBuffers = arrayOf(UnitSnapshotBuffer(), UnitSnapshotBuffer())
-    private var enemySnapshotIndex = 0
-    private var projectileSnapshotIndex = 0
-    private var unitSnapshotIndex = 0
+    @Volatile private var enemySnapshotIndex = 0
+    @Volatile private var projectileSnapshotIndex = 0
+    @Volatile private var unitSnapshotIndex = 0
 
     // Pre-allocated event buffers to avoid per-event list allocations
     private val damageBuffer = ArrayDeque<DamageEvent>(32)
@@ -678,7 +678,7 @@ object BattleBridge {
             isBossRound = update.isBossRound != 0,
             waveTimeRemaining = update.waveTimeRemaining,
             waveElapsed = update.waveElapsed,
-            maxUnitSlots = engine?.maxUnitSlots ?: 50,
+            maxUnitSlots = Grid.SLOT_COUNT,
             waveDelayRemaining = update.waveDelayRemaining,
         )
 

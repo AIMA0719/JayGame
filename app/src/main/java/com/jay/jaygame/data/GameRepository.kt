@@ -209,6 +209,9 @@ class GameRepository(context: Context) {
             // 조합석
             root.put("luckyStones", data.luckyStones)
 
+            // 초보자 패키지
+            root.putBool("starterPackPurchased", data.starterPackPurchased)
+
             // 시간 조작 감지
             root.put("lastKnownSystemTime", data.lastKnownSystemTime)
 
@@ -448,6 +451,9 @@ class GameRepository(context: Context) {
             // 조합석
             val luckyStones = root.optInt("luckyStones", 0)
 
+            // 초보자 패키지
+            val starterPackPurchased = (root.optInt("starterPackPurchased", 0)) != 0
+
             // 시간 조작 감지
             val lastKnownSystemTime = root.optLong("lastKnownSystemTime", 0L)
 
@@ -506,6 +512,7 @@ class GameRepository(context: Context) {
                 unlockedProfiles = unlockedProfiles,
                 tutorialCompleted = tutorialCompleted,
                 luckyStones = luckyStones,
+                starterPackPurchased = starterPackPurchased,
                 lastKnownSystemTime = lastKnownSystemTime,
             )
         }

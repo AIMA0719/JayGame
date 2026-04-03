@@ -30,6 +30,7 @@ import com.jay.jaygame.bridge.BUFF_BIT_DOT
 import com.jay.jaygame.bridge.BUFF_BIT_LIGHTNING
 import com.jay.jaygame.bridge.BUFF_BIT_POISON
 import com.jay.jaygame.bridge.BUFF_BIT_SLOW
+import com.jay.jaygame.bridge.BUFF_BIT_SILENCE
 import com.jay.jaygame.bridge.BUFF_BIT_STUN
 import com.jay.jaygame.bridge.BUFF_BIT_WIND
 import com.jay.jaygame.bridge.BattleBridge
@@ -56,6 +57,12 @@ private val LightningGlow = Color(0xFFFFDD00).copy(alpha = 0.2f)
 // Wind — swirl and dust
 private val WindCyan = Color(0xFF88FFDD)
 private val WindDust = Color(0xFFBBAA88)
+
+// Silence — purple speech-bubble X
+private val SilencePurple = Color(0xFFAA44DD)
+private val SilencePurpleDark = Color(0xFF7722AA)
+private val SilenceBg = Color(0xFF2A1144).copy(alpha = 0.75f)
+private val SilenceXStroke = Stroke(width = 2.5f)
 
 // Pre-allocated HP bar colors at 10% increments to avoid Color() in draw loop
 private val HpBarColors = Array(11) { i ->
@@ -601,6 +608,42 @@ fun EnemyOverlay() {
                         alpha = 0.8f,
                     )
                 }
+            }
+
+            // E9: Silence — 보라색 말풍선 X 표시 (Canvas 기본 도형, 스프라이트 없음)
+            if (buffBits and BUFF_BIT_SILENCE != 0) {
+                val sSize = fxSize * 0.9f
+                val silenceY = screenY - spriteSize * 0.55f
+                val cx = screenX
+                val cy = silenceY
+                val r = sSize * 0.45f
+                // 배경 원
+                drawCircle(
+                    color = SilenceBg,
+                    radius = r,
+                    center = Offset(cx, cy),
+                )
+                // 보라색 테두리
+                drawCircle(
+                    color = SilencePurple,
+                    radius = r,
+                    center = Offset(cx, cy),
+                    style = SilenceXStroke,
+                )
+                // X 표시
+                val xLen = r * 0.45f
+                drawLine(
+                    color = SilencePurpleDark,
+                    start = Offset(cx - xLen, cy - xLen),
+                    end = Offset(cx + xLen, cy + xLen),
+                    strokeWidth = 2.5f,
+                )
+                drawLine(
+                    color = SilencePurpleDark,
+                    start = Offset(cx + xLen, cy - xLen),
+                    end = Offset(cx - xLen, cy + xLen),
+                    strokeWidth = 2.5f,
+                )
             }
         }
 

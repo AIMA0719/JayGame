@@ -1,17 +1,12 @@
 package com.jay.jaygame.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,11 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.jaygame.ui.theme.DarkNavy
-import com.jay.jaygame.ui.theme.DeepDark
 import com.jay.jaygame.ui.theme.DiamondBlue
 import com.jay.jaygame.ui.theme.Gold
-import com.jay.jaygame.ui.theme.LightText
-import com.jay.jaygame.ui.theme.NeonCyan
 import com.jay.jaygame.ui.theme.SubText
 
 data class RankInfo(
@@ -74,47 +66,3 @@ fun RankBadge(
     }
 }
 
-@Composable
-fun DifficultyDialog(
-    currentDifficulty: Int,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val options = listOf(
-        Triple(0, "쉬움", "적 체력 -20%, 보상 -20%"),
-        Triple(1, "보통", "기본 난이도"),
-        Triple(2, "어려움", "적 체력 +50%, 보상 +50%"),
-    )
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "난이도 선택",
-                fontWeight = FontWeight.Bold,
-                color = Gold,
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                options.forEach { (id, name, desc) ->
-                    val isSelected = id == currentDifficulty
-                    NeonButton(
-                        text = "$name — $desc",
-                        onClick = { onSelect(id) },
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = 13.sp,
-                        accentColor = if (isSelected) NeonCyan else SubText,
-                        accentColorDark = if (isSelected) NeonCyan.copy(alpha = 0.5f) else SubText.copy(alpha = 0.5f),
-                    )
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("닫기", color = LightText)
-            }
-        },
-        containerColor = DeepDark,
-    )
-}

@@ -93,11 +93,16 @@ class ShopViewModel(private val repository: GameRepository) : ViewModel(), Conta
 
     fun purchaseStarterPack(diamondCost: Int) = intent {
         val d = state.gameData
+        if (d.starterPackPurchased) {
+            postSideEffect(ShopSideEffect.ShowToast("이미 구매한 패키지입니다."))
+            return@intent
+        }
         if (d.diamonds >= diamondCost) {
             repository.save(d.copy(
                 diamonds = d.diamonds - diamondCost,
                 gold = d.gold + 5000,
                 units = addRandomCardsToUnits(d.units, 10),
+                starterPackPurchased = true,
             ))
             postSideEffect(ShopSideEffect.ShowToast("구매 완료!"))
         } else {

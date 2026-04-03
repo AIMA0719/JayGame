@@ -31,10 +31,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jay.jaygame.data.StageDef
@@ -134,14 +132,10 @@ private fun StageCardItem(
     // ── B2: 3D tilt/parallax ──
     var tiltX by remember { mutableFloatStateOf(0f) }
     var tiltY by remember { mutableFloatStateOf(0f) }
-    var cardSize by remember { mutableFloatStateOf(1f) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { size: IntSize ->
-                cardSize = size.width.toFloat().coerceAtLeast(1f)
-            }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {

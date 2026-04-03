@@ -185,6 +185,8 @@ data class GameData(
     val tutorialCompleted: Boolean = false,
     // 조합석 (신화 레시피 합성 재화)
     val luckyStones: Int = 0,
+    // 초보자 패키지 구매 여부
+    val starterPackPurchased: Boolean = false,
     // 시간 조작 감지용
     val lastKnownSystemTime: Long = System.currentTimeMillis(),
 ) {

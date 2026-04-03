@@ -141,7 +141,7 @@ val ChipUnselectedBorder = Color(0xFF333355)
 // ── Grade background colors (pre-allocated) ──
 val GradeBgCommon = Color(0xFF424242)
 val GradeBgRare = Color(0xFF1A237E)
-val GradeBgAncient = Color(0xFF4A148C)
+val GradeBgHero = Color(0xFF4A148C)
 
 // ── Sort mode ──
 enum class SortMode(val label: String) {

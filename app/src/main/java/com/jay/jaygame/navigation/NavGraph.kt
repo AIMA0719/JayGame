@@ -24,18 +24,13 @@ import com.jay.jaygame.ui.screens.CollectionScreen
 import com.jay.jaygame.ui.screens.HomeScreen
 import com.jay.jaygame.ui.screens.SettingsScreen
 import com.jay.jaygame.ui.screens.AchievementsScreen
-import com.jay.jaygame.ui.screens.ResultScreen
 import com.jay.jaygame.ui.screens.ShopScreen
 import com.jay.jaygame.ui.screens.DungeonScreen
 import com.jay.jaygame.data.STAGES
 import com.jay.jaygame.data.UnitProgress
 import com.jay.jaygame.engine.BlueprintRegistry
-import com.jay.jaygame.ui.screens.ProfileScreen
-import com.jay.jaygame.ui.screens.UnitCollectionScreen
 import com.jay.jaygame.ui.theme.*
 import com.jay.jaygame.ui.viewmodel.*
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 import android.widget.Toast
 import com.jay.jaygame.audio.BgmManager
 
@@ -73,7 +68,7 @@ fun NavGraph(
     LaunchedEffect(currentRoute, musicEnabled.value.musicEnabled) {
         if (!musicEnabled.value.musicEnabled) return@LaunchedEffect
         val bgmAsset = when (currentRoute) {
-            Routes.COLLECTION, Routes.UNIT_CODEX -> "audio/collection_bgm.mp3"
+            Routes.COLLECTION -> "audio/collection_bgm.mp3"
             Routes.SHOP -> "audio/shop_bgm.mp3"
             Routes.DUNGEON -> "audio/dungeon_bgm.mp3"
             else -> "audio/home_bgm.mp3"
@@ -133,54 +128,11 @@ fun NavGraph(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(Routes.UNIT_CODEX) {
-                UnitCollectionScreen(
-                    onBack = { navController.popBackStack() },
-                    repository = repository,
-                )
-            }
             composable(Routes.DUNGEON) {
                 DungeonScreen(
                     repository = repository,
                     onBack = { navController.popBackStack() },
                     onStartDungeonBattle = onStartDungeonBattle,
-                )
-            }
-            composable(Routes.PROFILE) {
-                ProfileScreen(
-                    repository = repository,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(
-                route = "${Routes.RESULT}?victory={victory}&wave={wave}&gold={gold}&trophy={trophy}&kills={kills}&merges={merges}",
-                arguments = listOf(
-                    navArgument("victory") { type = NavType.BoolType; defaultValue = true },
-                    navArgument("wave") { type = NavType.IntType; defaultValue = 0 },
-                    navArgument("gold") { type = NavType.IntType; defaultValue = 0 },
-                    navArgument("trophy") { type = NavType.IntType; defaultValue = 0 },
-                    navArgument("kills") { type = NavType.IntType; defaultValue = 0 },
-                    navArgument("merges") { type = NavType.IntType; defaultValue = 0 },
-                ),
-            ) { entry ->
-                val args = entry.arguments ?: return@composable
-                ResultScreen(
-                    victory = args.getBoolean("victory"),
-                    waveReached = args.getInt("wave"),
-                    goldEarned = args.getInt("gold"),
-                    trophyChange = args.getInt("trophy"),
-                    killCount = args.getInt("kills"),
-                    mergeCount = args.getInt("merges"),
-                    onGoHome = {
-                        navController.navigate(Routes.HOME) {
-                            popUpTo(Routes.HOME) { inclusive = true }
-                        }
-                    },
-                    onRetry = {
-                        navController.navigate(Routes.HOME) {
-                            popUpTo(Routes.HOME) { inclusive = true }
-                        }
-                    },
                 )
             }
         }

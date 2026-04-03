@@ -73,9 +73,8 @@ import com.jay.jaygame.engine.UnitBlueprint
 import com.jay.jaygame.engine.UnitGrade
 import com.jay.jaygame.ui.components.GameFilterChip
 import com.jay.jaygame.ui.components.RaceIconLabel
-import com.jay.jaygame.ui.components.RACE_LABELS
 import com.jay.jaygame.ui.components.GradeBgCommon
-import com.jay.jaygame.ui.components.GradeBgAncient
+import com.jay.jaygame.ui.components.GradeBgHero
 import com.jay.jaygame.ui.components.GradeBgRare
 import com.jay.jaygame.ui.components.NeonButton
 import com.jay.jaygame.ui.components.SortMode
@@ -120,7 +119,7 @@ private val GradeBgImmortal = Color(0xFF4A0010)
 private fun gradeBackgroundColor(grade: UnitGrade): Color = when (grade) {
     UnitGrade.COMMON -> GradeBgCommon
     UnitGrade.RARE -> GradeBgRare
-    UnitGrade.HERO -> GradeBgAncient
+    UnitGrade.HERO -> GradeBgHero
     UnitGrade.LEGEND -> GradeBgLegend
     UnitGrade.MYTHIC -> GradeBgMythic
     UnitGrade.IMMORTAL -> GradeBgImmortal
@@ -717,7 +716,9 @@ private fun CollectionBlueprintDetailSheet(
                         text = buildString {
                             append(blueprint.grade.label)
                             append(" · ")
-                            append(if (blueprint.attackRange == AttackRange.MELEE) "근거리·물리" else "원거리·마법")
+                            append(if (blueprint.attackRange == AttackRange.MELEE) "근거리" else "원거리")
+                            append("·")
+                            append(if (blueprint.damageType == DamageType.PHYSICAL) "물리" else "마법")
                         },
                         fontSize = 10.sp,
                         color = SubText,

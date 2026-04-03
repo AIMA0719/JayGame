@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -296,7 +295,7 @@ fun HomeScreen(
                             accentColorDark = NeonRedDark,
                             glowPulse = true,
                         )
-                        val dungeonMgr = com.jay.jaygame.engine.DungeonManager(data)
+                        val dungeonMgr = remember(data) { com.jay.jaygame.engine.DungeonManager(data) }
                         val dungeonRemaining = dungeonMgr.remainingAttempts()
                         NeonButton(
                             text = "던전 ($dungeonRemaining)",

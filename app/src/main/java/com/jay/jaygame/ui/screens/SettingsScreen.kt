@@ -44,7 +44,11 @@ import com.jay.jaygame.R
 import com.jay.jaygame.data.GameData
 import com.jay.jaygame.ui.viewmodel.SettingsViewModel
 import org.orbitmvi.orbit.compose.collectAsState
+import org.orbitmvi.orbit.compose.collectSideEffect
+import com.jay.jaygame.ui.viewmodel.SettingsSideEffect
 import com.jay.jaygame.navigation.Routes
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import com.jay.jaygame.ui.components.DailyLoginDialog
 import com.jay.jaygame.ui.components.GameCard
 import com.jay.jaygame.ui.components.NeonButton
@@ -72,9 +76,19 @@ fun SettingsScreen(
     val settingsState by viewModel.collectAsState()
     val data = settingsState.gameData
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
+    val context = LocalContext.current
+
+    viewModel.collectSideEffect { effect ->
+        when (effect) {
+            is SettingsSideEffect.DataReset ->
+                Toast.makeText(context, "데이터가 초기화되었습니다", Toast.LENGTH_SHORT).show()
+            is SettingsSideEffect.ShowToast ->
+                Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // System back → return to settings main when on sub-page
-    androidx.activity.compose.BackHandler(enabled = currentPage != SettingsPage.MAIN) {
+    BackHandler(enabled = currentPage != SettingsPage.MAIN) {
         currentPage = SettingsPage.MAIN
     }
 
