@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -531,39 +532,45 @@ private fun TutorialHintOverlay() {
     val battle by BattleBridge.state.collectAsState()
     val unitCount by remember { derivedStateOf { BattleBridge.unitPositions.value.count } }
 
-    // Boss hint: show for 3 seconds then hide
-    var showBossHint by remember { mutableStateOf(false) }
-    var lastBossWave by remember { mutableStateOf(-1) }
-    LaunchedEffect(battle.isBossRound, battle.currentWave) {
-        if (battle.isBossRound && battle.currentWave != lastBossWave) {
-            lastBossWave = battle.currentWave
-            showBossHint = true
-            kotlinx.coroutines.delay(3000)
-            showBossHint = false
-        } else if (!battle.isBossRound) {
-            showBossHint = false
-        }
-    }
-
     // Determine which hint to show based on game state
     val hintText = when {
         battle.currentWave == 0 && unitCount == 0 -> "하단의 소환 버튼을 탭하여 유닛을 배치하세요!"
         unitCount in 1..3 -> "유닛을 더 소환하세요. 같은 등급 4개를 합성할 수 있습니다!"
         battle.currentWave == 0 && unitCount >= 3 -> "적이 곧 나타납니다. 유닛이 자동으로 공격합니다."
         battle.currentWave in 1..2 && battle.sp > 80 -> "SP가 충분합니다! 유닛을 더 소환하세요."
-        showBossHint -> "보스 웨이브! 제한 시간 내에 처치하세요!"
+        battle.isBossRound -> "보스 웨이브! 제한 시간 내에 처치하세요!"
         else -> null
     }
 
-    if (hintText != null) {
+    // 3초 표시 후 스르륵 사라지는 토스트 스타일
+    var visibleHint by remember { mutableStateOf<String?>(null) }
+    val alpha = remember { Animatable(0f) }
+
+    LaunchedEffect(hintText) {
+        if (hintText != null && hintText != visibleHint) {
+            visibleHint = hintText
+            alpha.snapTo(1f)
+            kotlinx.coroutines.delay(3000)
+            alpha.animateTo(0f, androidx.compose.animation.core.tween(500))
+            visibleHint = null
+        } else if (hintText == null) {
+            if (visibleHint != null) {
+                alpha.animateTo(0f, androidx.compose.animation.core.tween(300))
+                visibleHint = null
+            }
+        }
+    }
+
+    if (visibleHint != null) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 120.dp),
+                .padding(horizontal = 32.dp, vertical = 120.dp)
+                .graphicsLayer { this.alpha = alpha.value },
             contentAlignment = Alignment.TopCenter,
         ) {
             Text(
-                text = hintText,
+                text = visibleHint!!,
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,

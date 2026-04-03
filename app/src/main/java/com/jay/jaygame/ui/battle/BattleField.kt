@@ -419,30 +419,6 @@ fun BattleField() {
                 if (validMoveTargets[slot]) highlightSlot(slot, MoveHighlightFill, MoveHighlightBorder)
             }
 
-            // ── Move mode: 선택된 유닛의 공격 범위 원 표시 ──
-            val uData = unitPositions
-            for (i in 0 until uData.count) {
-                if (uData.tileIndices[i] == moveModeTile && i < uData.ranges.size) {
-                    val unitRange = uData.ranges[i]
-                    if (unitRange > 0f) {
-                        val rangeScreen = (unitRange / Grid.CANVAS_W) * w
-                        val cx = uData.xs[i] * w
-                        val cy = uData.ys[i] * h
-                        drawCircle(
-                            color = MoveRangeCircleColor,
-                            radius = rangeScreen,
-                            center = Offset(cx, cy),
-                        )
-                        drawCircle(
-                            color = MoveRangeCircleBorder,
-                            radius = rangeScreen,
-                            center = Offset(cx, cy),
-                            style = MoveHighlightStroke,
-                        )
-                    }
-                    break
-                }
-            }
         }
 
         // ── Draw unit sprites (Compose drawable icons) ──
@@ -915,6 +891,33 @@ fun BattleField() {
                     radius = 5f + sin(t * 4f) * 1.5f,
                     center = Offset(screenX + unitSize * 0.35f, screenY - unitSize * 0.7f + bounceOffset),
                 )
+            }
+        }
+
+        // ── 공격 범위 원: 유닛 스프라이트 위에 그려야 가려지지 않음 ──
+        if (moveModeTile >= 0) {
+            val uData = unitPositions
+            for (i in 0 until uData.count) {
+                if (uData.tileIndices[i] == moveModeTile && i < uData.ranges.size) {
+                    val unitRange = uData.ranges[i]
+                    if (unitRange > 0f) {
+                        val rangeScreen = (unitRange / Grid.CANVAS_W) * w
+                        val cx = uData.xs[i] * w
+                        val cy = uData.ys[i] * h
+                        drawCircle(
+                            color = MoveRangeCircleColor,
+                            radius = rangeScreen,
+                            center = Offset(cx, cy),
+                        )
+                        drawCircle(
+                            color = MoveRangeCircleBorder,
+                            radius = rangeScreen,
+                            center = Offset(cx, cy),
+                            style = MoveHighlightStroke,
+                        )
+                    }
+                    break
+                }
             }
         }
 
