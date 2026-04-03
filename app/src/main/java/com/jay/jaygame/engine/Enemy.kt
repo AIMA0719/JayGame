@@ -81,11 +81,7 @@ class Enemy {
 
         val dotDmg = buffs.update(dt)
         if (dotDmg > 0f) {
-            // PHANTOM 투명 / SHIELDED 보호막 / MINION_RUSH 호위 중에는 DoT도 면역
-            val dotImmune = (hasModifier(BossModifier.PHANTOM) && phantomActive) ||
-                (hasModifier(BossModifier.SHIELDED) && shieldActive) ||
-                (bossModifier == BossModifier.MINION_RUSH && guardsAlive > 0)
-            if (!dotImmune) {
+            if (!isImmune()) {
                 hp -= dotDmg
                 if (hp <= 0f) { alive = false; return false }
             }
@@ -129,10 +125,7 @@ class Enemy {
     var shieldActive = false
 
     fun takeDamage(damage: Float, isMagic: Boolean = false, attackRange: Float = 0f): Float {
-        // 면역/무적 체크 (DUAL_MOD 포함)
-        if (hasModifier(BossModifier.SHIELDED) && shieldActive) return 0f
-        if (hasModifier(BossModifier.PHANTOM) && phantomActive) return 0f
-        if (bossModifier == BossModifier.MINION_RUSH && guardsAlive > 0) return 0f
+        if (isImmune()) return 0f
 
         var adjustedDamage = damage
         // 데미지 감소 적용 (DUAL_MOD면 양쪽 모두 체크)
@@ -176,6 +169,12 @@ class Enemy {
     var dualModFirst: BossModifier? = null
     var dualModSecond: BossModifier? = null
 
+    /** 보스 면역 상태인지 (SHIELDED 보호막 / PHANTOM 투명 / MINION_RUSH 호위 중) */
+    fun isImmune(): Boolean =
+        (hasModifier(BossModifier.SHIELDED) && shieldActive) ||
+        (hasModifier(BossModifier.PHANTOM) && phantomActive) ||
+        (hasModifier(BossModifier.MINION_RUSH) && guardsAlive > 0)
+
     /** 이 적이 특정 기믹을 가지고 있는지 확인 (DUAL_MOD 양쪽 모두 체크) */
     fun hasModifier(mod: BossModifier): Boolean {
         if (bossModifier == mod) return true
@@ -186,14 +185,14 @@ class Enemy {
     }
 
     /** 단일 기믹의 데미지 감소 적용 (할당 없음) */
-    private fun applySingleModDamageReduction(d: Float, mod: BossModifier, damage: Float, isMagic: Boolean, attackRange: Float): Float {
+    private fun applySingleModDamageReduction(d: Float, mod: BossModifier, originalDamage: Float, isMagic: Boolean, attackRange: Float): Float {
         return when (mod) {
             BossModifier.PHYSICAL_RESIST -> if (!isMagic) d * 0.4f else d
             BossModifier.MAGIC_RESIST -> if (isMagic) d * 0.4f else d
             BossModifier.RANGED_RESIST -> if (attackRange > 200f) d * 0.5f else d
             BossModifier.BERSERKER -> if (hpRatio < 0.5f) d * 1.15f else d
             BossModifier.ADAPTIVE -> {
-                if (isMagic) adaptiveMagicDmg += damage else adaptivePhysicalDmg += damage
+                if (isMagic) adaptiveMagicDmg += originalDamage else adaptivePhysicalDmg += originalDamage
                 if (adaptiveResistPhysical && !isMagic) d * 0.6f
                 else if (!adaptiveResistPhysical && isMagic) d * 0.6f
                 else d

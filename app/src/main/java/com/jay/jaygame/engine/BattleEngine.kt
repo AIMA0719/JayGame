@@ -107,9 +107,6 @@ class BattleEngine(
 
     private val probabilityEngine = DefaultProbabilityEngine()
 
-    // Currency for lucky-stone purchases during battle
-    var luckyStones: Int = 0; internal set
-
     val economy = BattleEconomy(this)
     val mergeHandler = BattleMergeHandler(this)
 
@@ -413,12 +410,7 @@ class BattleEngine(
                         is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
                         is BattleBridge.BattleCommand.BuyBlueprint -> requestBuyBlueprint(cmd.blueprintId, cmd.cost.toFloat())
                         is BattleBridge.BattleCommand.BattleUpgrade -> applyBattleUpgrade(cmd.upgradeType, cmd.level, cmd.cost)
-                        is BattleBridge.BattleCommand.BuyLuckyStone -> {
-                            if (sp >= cmd.cost) {
-                                sp -= cmd.cost
-                                luckyStones++
-                            }
-                        }
+                        // BuyLuckyStone removed — recipe costs are now paid in SP directly
                         is BattleBridge.BattleCommand.SelectRoguelikeBuff -> {
                             val choices = BattleBridge.roguelikeChoices.value
                             if (choices != null && cmd.index in choices.indices) {
@@ -880,15 +872,8 @@ class BattleEngine(
                     enemy.adaptiveMagicDmg = 0f
                 }
             }
-            // MINION_RUSH: 호위대 관리 (guardsAlive는 Enemy.takeDamage에서 감소)
-            BossModifier.MINION_RUSH -> {
-                // 호위대 생존 수 실시간 갱신 (가드 참조가 끊어졌을 때 대비)
-                var aliveGuards = 0
-                enemies.forEach { e ->
-                    if (e.alive && e.isBossGuard && e.guardBossRef === enemy) aliveGuards++
-                }
-                enemy.guardsAlive = aliveGuards
-            }
+            // MINION_RUSH: guardsAlive는 takeDamage/roguelikeExecute에서 이벤트 기반 감소
+            BossModifier.MINION_RUSH -> { /* no per-frame work needed */ }
             else -> {}
         }
     }
@@ -1135,10 +1120,7 @@ class BattleEngine(
             units = activeUnits,
             onDamageEnemy = { enemy, damage ->
                 if (enemy.alive) {
-                    val immune = (enemy.hasModifier(BossModifier.SHIELDED) && enemy.shieldActive) ||
-                        (enemy.hasModifier(BossModifier.PHANTOM) && enemy.phantomActive) ||
-                        (enemy.bossModifier == BossModifier.MINION_RUSH && enemy.guardsAlive > 0)
-                    if (!immune) {
+                    if (!enemy.isImmune()) {
                         enemy.hp -= damage
                         if (enemy.hp <= 0f) enemy.alive = false
                         val nx = enemy.position.x / W
@@ -1419,7 +1401,6 @@ class BattleEngine(
         statePublisher.publishEnemyPositions(enemies, W, H)
         statePublisher.publishUnitPositions(units, grid, W, H)
         statePublisher.publishProjectiles(projectiles, W, H)
-        statePublisher.publishLuckyStones(luckyStones)
         statePublisher.publishGridState(grid, getMergeableTiles())
     }
 

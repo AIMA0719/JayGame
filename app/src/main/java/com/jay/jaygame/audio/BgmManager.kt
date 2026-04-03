@@ -15,16 +15,20 @@ object BgmManager {
 
     private const val CROSSFADE_MS = 500L
 
+    private fun safeRelease(player: MediaPlayer?) {
+        player ?: return
+        try { if (player.isPlaying) player.stop() } catch (_: IllegalStateException) { }
+        try { player.release() } catch (_: IllegalStateException) { }
+    }
+
     fun play(context: Context, assetPath: String, loop: Boolean = true) {
         if (currentAsset == assetPath && mediaPlayer?.isPlaying == true) return
 
         val oldPlayer = mediaPlayer
         if (oldPlayer != null && oldPlayer.isPlaying) {
-            crossfadeOut(oldPlayer) {
-                try { oldPlayer.release() } catch (_: IllegalStateException) { }
-            }
+            crossfadeOut(oldPlayer) { safeRelease(oldPlayer) }
         } else {
-            try { oldPlayer?.release() } catch (_: IllegalStateException) { }
+            safeRelease(oldPlayer)
         }
 
         mediaPlayer = null
@@ -70,11 +74,7 @@ object BgmManager {
     }
 
     private fun crossfadeOut(player: MediaPlayer, onComplete: () -> Unit) {
-        // cancel 전에 이전 fade-out 대상 player를 즉시 release (onAnimationEnd가 호출되지 않으므로)
-        fadingOutPlayer?.let { old ->
-            try { if (old.isPlaying) old.stop() } catch (_: IllegalStateException) { }
-            try { old.release() } catch (_: IllegalStateException) { }
-        }
+        safeRelease(fadingOutPlayer)
         fadeOutAnimator?.cancel()
         fadingOutPlayer = player
         fadeOutAnimator = ValueAnimator.ofFloat(targetVolume, 0f).apply {
@@ -86,7 +86,6 @@ object BgmManager {
             }
             addListener(object : android.animation.AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: android.animation.Animator) {
-                    try { if (player.isPlaying) player.stop() } catch (_: IllegalStateException) { }
                     onComplete()
                     fadingOutPlayer = null
                 }
@@ -109,12 +108,8 @@ object BgmManager {
     }
 
     private fun cancelAllFades() {
-        // fade-out 대상 player를 cancel 전에 release (onAnimationEnd가 호출되지 않으므로)
-        fadingOutPlayer?.let { old ->
-            try { if (old.isPlaying) old.stop() } catch (_: IllegalStateException) { }
-            try { old.release() } catch (_: IllegalStateException) { }
-            fadingOutPlayer = null
-        }
+        safeRelease(fadingOutPlayer)
+        fadingOutPlayer = null
         fadeOutAnimator?.cancel()
         fadeOutAnimator = null
         fadeInAnimator?.cancel()

@@ -438,7 +438,6 @@ object BattleBridge {
         data class RecipeCraft(val recipeId: String? = null) : BattleCommand()
         data class BuyBlueprint(val blueprintId: String, val cost: Int) : BattleCommand()
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
-        data class BuyLuckyStone(val cost: Int) : BattleCommand()
         data class SelectRoguelikeBuff(val index: Int) : BattleCommand()
         object RerollRoguelike : BattleCommand()
     }
@@ -732,8 +731,8 @@ object BattleBridge {
         hpRatios.copyInto(snapshot.hpRatios, endIndex = count)
         buffs.copyInto(snapshot.buffs, endIndex = count)
         _enemyPositions.value = EnemyPositionData(
-            snapshot.xs.copyOf(count), snapshot.ys.copyOf(count), snapshot.types.copyOf(count),
-            snapshot.hpRatios.copyOf(count), snapshot.buffs.copyOf(count), count, enemyFrameCounter.incrementAndGet(),
+            snapshot.xs, snapshot.ys, snapshot.types,
+            snapshot.hpRatios, snapshot.buffs, count, enemyFrameCounter.incrementAndGet(),
         )
     }
 
@@ -754,10 +753,8 @@ object BattleBridge {
         if (families.size >= count) families.copyInto(snapshot.families, endIndex = count)
         if (grades.size >= count) grades.copyInto(snapshot.grades, endIndex = count)
         _projectiles.value = ProjectileData(
-            snapshot.srcXs.copyOf(count), snapshot.srcYs.copyOf(count),
-            snapshot.dstXs.copyOf(count), snapshot.dstYs.copyOf(count),
-            snapshot.types.copyOf(count), snapshot.families.copyOf(count),
-            snapshot.grades.copyOf(count), count, projFrameCounter.incrementAndGet(),
+            snapshot.srcXs, snapshot.srcYs, snapshot.dstXs, snapshot.dstYs,
+            snapshot.types, snapshot.families, snapshot.grades, count, projFrameCounter.incrementAndGet(),
         )
     }
 
@@ -790,21 +787,21 @@ object BattleBridge {
         batch.critAnimTimers.copyInto(snapshot.critAnimTimers, endIndex = count)
         batch.ranges.copyInto(snapshot.ranges, endIndex = count)
         _unitPositions.value = UnitPositionData(
-            snapshot.xs.copyOf(count), snapshot.ys.copyOf(count),
-            snapshot.grades.copyOf(count), snapshot.levels.copyOf(count),
-            snapshot.isAttacking.copyOf(count), snapshot.attackAnimTimers.copyOf(count),
-            snapshot.tileIndices.copyOf(count),
+            snapshot.xs, snapshot.ys,
+            snapshot.grades, snapshot.levels,
+            snapshot.isAttacking, snapshot.attackAnimTimers,
+            snapshot.tileIndices,
             count, unitFrameCounter.incrementAndGet(),
-            snapshot.blueprintIds.copyOfRange(0, count), snapshot.familiesList.copyOfRange(0, count),
-            snapshot.roles.copyOfRange(0, count), snapshot.attackRanges.copyOfRange(0, count),
-            snapshot.damageTypes.copyOfRange(0, count), snapshot.unitCategories.copyOfRange(0, count),
-            snapshot.hps.copyOf(count), snapshot.maxHps.copyOf(count),
-            snapshot.states.copyOfRange(0, count),
-            snapshot.homeXs.copyOf(count), snapshot.homeYs.copyOf(count),
-            snapshot.stackCounts.copyOf(count),
-            snapshot.buffs.copyOf(count), snapshot.skillAnimTimers.copyOf(count),
-            snapshot.critAnimTimers.copyOf(count),
-            snapshot.ranges.copyOf(count),
+            snapshot.blueprintIds, snapshot.familiesList,
+            snapshot.roles, snapshot.attackRanges,
+            snapshot.damageTypes, snapshot.unitCategories,
+            snapshot.hps, snapshot.maxHps,
+            snapshot.states,
+            snapshot.homeXs, snapshot.homeYs,
+            snapshot.stackCounts,
+            snapshot.buffs, snapshot.skillAnimTimers,
+            snapshot.critAnimTimers,
+            snapshot.ranges,
         )
     }
 
@@ -1133,7 +1130,6 @@ object BattleBridge {
         // equippedPetIds is reset here and re-set by MainActivity.onCreate()
         _battleUpgradeLevels.value = IntArray(5) { 0 }
         _groupUpgradeLevels.value = IntArray(com.jay.jaygame.engine.UnitUpgradeSystem.GROUP_COUNT) { 0 }
-        _luckyStones.value = 0
         _debugMode.value = false
         _roguelikeChoices.value = null
         _activeRoguelikeBuffs.value = emptyList()
@@ -1208,18 +1204,6 @@ object BattleBridge {
 
     fun requestBuyBlueprint(blueprintId: String, cost: Int) {
         commandQueue.add(BattleCommand.BuyBlueprint(blueprintId, cost))
-    }
-
-    // ── Lucky Stones ─────────────────────────────────────
-
-    private val _luckyStones = MutableStateFlow(0)
-    val luckyStones: StateFlow<Int> = _luckyStones.asStateFlow()
-
-    @JvmStatic
-    fun updateLuckyStones(count: Int) { _luckyStones.value = count }
-
-    fun requestBuyLuckyStone(cost: Int) {
-        commandQueue.add(BattleCommand.BuyLuckyStone(cost))
     }
 
     // ── Battle Upgrades (글로벌 버프) ─────────────────────────────────────
