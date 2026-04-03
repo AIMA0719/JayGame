@@ -410,7 +410,6 @@ class BattleEngine(
                         is BattleBridge.BattleCommand.Gamble -> cmd.result.complete(requestGamble(cmd.option, cmd.betSize))
                         is BattleBridge.BattleCommand.BuyBlueprint -> requestBuyBlueprint(cmd.blueprintId, cmd.cost.toFloat())
                         is BattleBridge.BattleCommand.BattleUpgrade -> applyBattleUpgrade(cmd.upgradeType, cmd.level, cmd.cost)
-                        // BuyLuckyStone removed — recipe costs are now paid in SP directly
                         is BattleBridge.BattleCommand.SelectRoguelikeBuff -> {
                             val choices = BattleBridge.roguelikeChoices.value
                             if (choices != null && cmd.index in choices.indices) {

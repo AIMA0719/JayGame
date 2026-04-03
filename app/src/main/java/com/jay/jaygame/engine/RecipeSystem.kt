@@ -10,7 +10,7 @@ data class HiddenRecipe(
     val ingredients: List<RecipeSlot>,
     val resultId: String,
     var discovered: Boolean = false,
-    val luckyStonesCost: Int = 1,  // 조합석 소모량 (신화 레시피 합성 시 필요)
+    val goldCost: Int = 300,  // 골드(SP) 소모량 (레시피 합성 시 필요)
 )
 
 data class RecipeSlot(
@@ -94,10 +94,10 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
     }
 
     /** 필드의 모든 유닛에서 완성 가능한 레시피와 매칭 유닛 인덱스를 반환 */
-    fun findMatchingRecipeOnGrid(grid: Grid, availableLuckyStones: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
+    fun findMatchingRecipeOnGrid(grid: Grid, availableGold: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
         val allUnits = collectGridUnits(grid)
         for (recipe in recipes) {
-            if (availableLuckyStones < recipe.luckyStonesCost) continue
+            if (availableGold < recipe.goldCost) continue
             val matched = findMatchingUnitsForRecipe(recipe, allUnits)
             if (matched != null) return recipe to matched
         }
@@ -105,9 +105,9 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
     }
 
     /** 특정 레시피 ID로 필드에서 매칭하여 합성 시도 */
-    fun findSpecificRecipeOnGrid(recipeId: String, grid: Grid, availableLuckyStones: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
+    fun findSpecificRecipeOnGrid(recipeId: String, grid: Grid, availableGold: Int = Int.MAX_VALUE): Pair<HiddenRecipe, List<Int>>? {
         val recipe = recipes.find { it.id == recipeId } ?: return null
-        if (availableLuckyStones < recipe.luckyStonesCost) return null
+        if (availableGold < recipe.goldCost) return null
         val matched = findMatchingUnitsForRecipe(recipe, collectGridUnits(grid)) ?: return null
         return recipe to matched
     }
@@ -241,7 +241,7 @@ class RecipeSystem(private val blueprintRegistry: BlueprintRegistry) {
             ingredients = ingredients,
             resultId = obj.getString("resultId"),
             discovered = false,
-            luckyStonesCost = obj.optInt("luckyStonesCost", 1),
+            goldCost = obj.optInt("goldCost", 300),
         )
     }
 }

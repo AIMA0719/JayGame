@@ -118,37 +118,6 @@ fun UpgradeSheet(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 조합석 구매 (가격 300코인)
-                val luckyStoneCount by BattleBridge.luckyStones.collectAsState()
-                val luckyPrice = 300
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("\uD83D\uDC8E", fontSize = 20.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text("조합석", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(6.dp))
-                        Text("x$luckyStoneCount", color = Color(0xFFFFD700), fontSize = 14.sp)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (battle.sp >= luckyPrice) Color(0xFF4CAF50) else Color(0xFF555555))
-                            .clickable(enabled = battle.sp >= luckyPrice) {
-                                BattleBridge.requestBuyLuckyStone(luckyPrice)
-                            }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("\uD83E\uDE99 $luckyPrice", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-
                 // 3 group upgrade rows
                 for (group in 0 until UnitUpgradeSystem.GROUP_COUNT) {
                     val currentLevel = groupLevels.getOrElse(group) { 0 }

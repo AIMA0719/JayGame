@@ -206,9 +206,6 @@ class GameRepository(context: Context) {
             // tutorial
             root.put("tutorialCompleted", data.tutorialCompleted)
 
-            // 조합석
-            root.put("luckyStones", data.luckyStones)
-
             // 초보자 패키지
             root.putBool("starterPackPurchased", data.starterPackPurchased)
 
@@ -448,9 +445,6 @@ class GameRepository(context: Context) {
             // tutorial
             val tutorialCompleted = root.optBoolean("tutorialCompleted", false)
 
-            // 조합석
-            val luckyStones = root.optInt("luckyStones", 0)
-
             // 초보자 패키지
             val starterPackPurchased = (root.optInt("starterPackPurchased", 0)) != 0
 
@@ -511,7 +505,6 @@ class GameRepository(context: Context) {
                 selectedProfileId = selectedProfileId,
                 unlockedProfiles = unlockedProfiles,
                 tutorialCompleted = tutorialCompleted,
-                luckyStones = luckyStones,
                 starterPackPurchased = starterPackPurchased,
                 lastKnownSystemTime = lastKnownSystemTime,
             )

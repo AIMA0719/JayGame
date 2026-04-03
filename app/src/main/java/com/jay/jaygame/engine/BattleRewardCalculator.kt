@@ -128,7 +128,6 @@ object BattleRewardCalculator {
             dungeonClears = dungeonClears,
             pets = finalPets,
             tutorialCompleted = true,
-            luckyStones = 0,
         )
     }
 }

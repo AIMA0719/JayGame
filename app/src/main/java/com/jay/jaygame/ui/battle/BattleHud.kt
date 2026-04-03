@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -115,6 +116,7 @@ private fun playClick() { SfxManager.play(SoundEvent.ButtonClick, 0.5f) }
 private val DisabledTop = Color(0xFF3A3A3A)
 private val DisabledBot = Color(0xFF2A2A2A)
 private val DisabledText = Color(0xFF888888)
+private const val COIN_EMOJI = "\uD83E\uDE99"
 
 // ── Pre-allocated drawBehind resources (GC-free rendering) ──
 private val HighlightBrush = Brush.verticalGradient(
@@ -170,11 +172,11 @@ private data class RecipeDisplayInfo(
     val resultBlueprint: UnitBlueprint?,
     val fieldMatchCount: Int,     // 필드에서 충족된 재료 수
     val totalIngredients: Int,    // 총 재료 수
-    val hasEnoughLuckyStones: Boolean,
+    val hasEnoughGold: Boolean,
     val slotMatched: List<Boolean>,
 ) {
     val readyOnField get() = fieldMatchCount >= totalIngredients
-    val canCraft get() = readyOnField && hasEnoughLuckyStones
+    val canCraft get() = readyOnField && hasEnoughGold
 }
 
 // ── Top HUD — centered compact badge (WAVE | timer | enemy count) ──
@@ -431,13 +433,14 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
 
     // 필드 상태는 다이얼로그가 열릴 때만 스냅샷으로 캡처
     val gridState by BattleBridge.gridState.collectAsState()
-    val luckyStones by BattleBridge.luckyStones.collectAsState()
+    val battle by BattleBridge.state.collectAsState()
+    val currentSp by remember { derivedStateOf { battle.sp.toInt() } }
     val occupiedTiles = remember(gridState) {
         gridState.filter { it.blueprintId.isNotEmpty() }
     }
 
     // 스택을 개별 유닛으로 펼침 (같은 슬롯에서 여러 재료 매칭 가능)
-    val recipeInfos = remember(allRecipes, occupiedTiles, luckyStones) {
+    val recipeInfos = remember(allRecipes, occupiedTiles, currentSp) {
         val occupiedCounts = IntArray(occupiedTiles.size) { idx ->
             occupiedTiles[idx].level.coerceAtLeast(1)
         }
@@ -472,14 +475,14 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                 resultBlueprint = resultBp,
                 fieldMatchCount = matchCount,
                 totalIngredients = recipe.ingredients.size,
-                hasEnoughLuckyStones = luckyStones >= recipe.luckyStonesCost,
+                hasEnoughGold = currentSp >= recipe.goldCost,
                 slotMatched = slotMatched,
             )
         }.sortedByDescending { it.fieldMatchCount }
     }
     val readyRecipes = recipeInfos.filter { it.canCraft }
     val hasReadyRecipe = readyRecipes.isNotEmpty()
-    val hasRecipeMissingStones = recipeInfos.any { it.readyOnField && !it.hasEnoughLuckyStones }
+    val hasRecipeMissingGold = recipeInfos.any { it.readyOnField && !it.hasEnoughGold }
     var selectedRecipeId by remember(readyRecipes) {
         mutableStateOf(readyRecipes.firstOrNull()?.recipe?.id)
     }
@@ -541,8 +544,8 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                             RecipeCard(
                                 info.recipe, info.resultBlueprint,
                                 info.fieldMatchCount, info.totalIngredients,
-                                hasEnoughLuckyStones = info.hasEnoughLuckyStones,
-                                luckyStonesCost = info.recipe.luckyStonesCost,
+                                hasEnoughGold = info.hasEnoughGold,
+                                goldCost = info.recipe.goldCost,
                                 slotMatched = info.slotMatched,
                                 isSelected = info.canCraft && info.recipe.id == selectedRecipeId,
                                 onClick = if (info.canCraft) {{ selectedRecipeId = info.recipe.id }} else null,
@@ -575,7 +578,7 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                     ) {
                         Text(
                             text = if (hasReadyRecipe) "\u2728 조합하기"
-                            else if (hasRecipeMissingStones) "조합석이 부족합니다"
+                            else if (hasRecipeMissingGold) "골드가 부족합니다"
                             else "필드에 재료를 배치하세요",
                             color = if (hasReadyRecipe) Color.White else DisabledText,
                             fontSize = 15.sp,
@@ -594,14 +597,14 @@ private fun RecipeCard(
     resultBlueprint: UnitBlueprint?,
     fieldMatchCount: Int,
     totalIngredients: Int,
-    hasEnoughLuckyStones: Boolean,
-    luckyStonesCost: Int,
+    hasEnoughGold: Boolean,
+    goldCost: Int,
     slotMatched: List<Boolean>,
     isSelected: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val readyOnField = fieldMatchCount >= totalIngredients
-    val canCraft = readyOnField && hasEnoughLuckyStones
+    val canCraft = readyOnField && hasEnoughGold
     val hasPartial = fieldMatchCount > 0
     val borderColor = when {
         isSelected -> Color(0xFF00E676)
@@ -689,8 +692,8 @@ private fun RecipeCard(
             }
 
             Text(
-                text = "\uD83D\uDD37 조합석 x$luckyStonesCost",
-                color = if (hasEnoughLuckyStones) Color(0xFF88DDFF) else RecipeGradeWarningColor,
+                text = "$COIN_EMOJI $goldCost",
+                color = if (hasEnoughGold) GoldBright else RecipeGradeWarningColor,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -703,7 +706,7 @@ private fun RecipeCard(
                     fontWeight = FontWeight.ExtraBold,
                 )
                 readyOnField -> Text(
-                    text = "\uD83D\uDD37 조합석 부족 (필요: $luckyStonesCost)",
+                    text = "$COIN_EMOJI 골드 부족 (필요: $goldCost)",
                     color = RecipeGradeWarningColor,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -1380,12 +1383,6 @@ fun BattleBottomHud(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                 )
-                // Lucky stones display
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("\uD83D\uDC8E", fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(2.dp))
-                val luckyStones by BattleBridge.luckyStones.collectAsState()
-                Text("$luckyStones", color = Color(0xFF88DDFF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
 
             // 조합 (우) — 일괄판매 대칭

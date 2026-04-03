@@ -23,7 +23,6 @@ internal class BattleStatePublisher(
     maxProjectiles: Int,
     gridSlots: Int,
 ) {
-    private var lastPushedLuckyStones = -1
     private var gridPushTimer = 0f
 
     private val enemyXBuf = FloatArray(maxEnemies)
@@ -206,12 +205,6 @@ internal class BattleStatePublisher(
             projFamilyBuf,
             projGradeBuf,
         )
-    }
-
-    fun publishLuckyStones(luckyStones: Int) {
-        if (luckyStones == lastPushedLuckyStones) return
-        lastPushedLuckyStones = luckyStones
-        BattleBridge.updateLuckyStones(luckyStones)
     }
 
     fun publishGridState(grid: Grid, mergeableTiles: Set<Int>) {

@@ -37,9 +37,9 @@ class BattleMergeHandler(private val engine: BattleEngine) {
     fun tryExecuteRecipeCraft(targetRecipeId: String? = null): Boolean {
         if (!RecipeSystem.isReady) return false
         val (recipe, consumedTiles) = if (targetRecipeId != null) {
-            RecipeSystem.instance.findSpecificRecipeOnGrid(targetRecipeId, engine.grid, engine.luckyStones)
+            RecipeSystem.instance.findSpecificRecipeOnGrid(targetRecipeId, engine.grid, engine.sp.toInt())
         } else {
-            RecipeSystem.instance.findMatchingRecipeOnGrid(engine.grid, engine.luckyStones)
+            RecipeSystem.instance.findMatchingRecipeOnGrid(engine.grid, engine.sp.toInt())
         } ?: return false
 
         // 매칭된 유닛들을 미리 수집 (각 타일에서 1개씩, 중복 타일은 순서대로 제거)
@@ -75,7 +75,7 @@ class BattleMergeHandler(private val engine: BattleEngine) {
         val resultUnit = engine.spawnFromBlueprint(resultBp) ?: return false
 
         // 모든 준비 완료 — 이제 소모 실행
-        engine.luckyStones = (engine.luckyStones - recipe.luckyStonesCost).coerceAtLeast(0)
+        engine.sp = (engine.sp - recipe.goldCost).coerceAtLeast(0f)
 
         // 타일별 제거 횟수에 따라 유닛 제거
         for ((tileIdx, count) in removeCountPerTile) {

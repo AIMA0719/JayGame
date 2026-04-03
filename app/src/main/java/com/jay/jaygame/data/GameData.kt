@@ -25,12 +25,11 @@ data class PetProgress(
 // GameData still holds all fields flat (for backward-compatible copy()),
 // and exposes grouped views via computed properties.
 
-/** 재화 (골드, 다이아, 가스, 조합석) */
+/** 재화 (골드, 다이아, 가스) */
 data class EconomyData(
     val gold: Int = 10000,
     val diamonds: Int = 0,
     val gas: Int = 0,
-    val luckyStones: Int = 0,
 )
 
 /** 전투 통계 */
@@ -183,8 +182,6 @@ data class GameData(
     val unlockedProfiles: Set<Int> = setOf(0),
     // 튜토리얼
     val tutorialCompleted: Boolean = false,
-    // 조합석 (신화 레시피 합성 재화)
-    val luckyStones: Int = 0,
     // 초보자 패키지 구매 여부
     val starterPackPurchased: Boolean = false,
     // 시간 조작 감지용
@@ -200,7 +197,6 @@ data class GameData(
         gold = gold,
         diamonds = diamonds,
         gas = gas,
-        luckyStones = luckyStones,
     )
 
     /** 전투 통계 */
@@ -319,7 +315,6 @@ data class GameData(
             gold = economy.gold,
             diamonds = economy.diamonds,
             gas = economy.gas,
-            luckyStones = economy.luckyStones,
             totalWins = battleStats.totalWins,
             totalLosses = battleStats.totalLosses,
             totalKills = battleStats.totalKills,
@@ -382,7 +377,6 @@ fun GameData.copyEconomy(block: EconomyData.() -> EconomyData): GameData {
         gold = updated.gold,
         diamonds = updated.diamonds,
         gas = updated.gas,
-        luckyStones = updated.luckyStones,
     )
 }
 
