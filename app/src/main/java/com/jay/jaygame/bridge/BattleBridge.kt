@@ -177,8 +177,8 @@ data class BattleResultData(
     val killCount: Int = 0,
     val mergeCount: Int = 0,
     val cardsEarned: Int = 0,
-    val noHpLost: Boolean = false,
-    val fastClear: Boolean = false,
+    val noPressure: Boolean = false,  // 41마리 초과 동시 생존 없음 → 2성
+    val cleanSweep: Boolean = false,  // 매 웨이브 잔여 ≤5마리 → 3성
     val relicDropId: Int = -1,      // -1 = no drop
     val relicDropGrade: Int = -1,   // RelicGrade.ordinal, -1 = no drop
 )
@@ -702,8 +702,8 @@ object BattleBridge {
         killCount: Int,
         mergeCount: Int,
         cardsEarned: Int,
-        noHpLost: Boolean = false,
-        fastClear: Boolean = false,
+        noPressure: Boolean = false,
+        cleanSweep: Boolean = false,
         relicDropId: Int = -1,
         relicDropGrade: Int = -1,
     ) {
@@ -715,8 +715,8 @@ object BattleBridge {
             killCount = killCount,
             mergeCount = mergeCount,
             cardsEarned = cardsEarned,
-            noHpLost = noHpLost,
-            fastClear = fastClear,
+            noPressure = noPressure,
+            cleanSweep = cleanSweep,
             relicDropId = relicDropId,
             relicDropGrade = relicDropGrade,
         )

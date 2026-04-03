@@ -28,7 +28,8 @@ class BattleEngine(
         const val MAX_UNITS = 128
         const val MAX_PROJECTILES = 512
         const val DEFEAT_ENEMY_COUNT = 100
-        const val HP_PRESSURE_THRESHOLD = DEFEAT_ENEMY_COUNT / 5  // 20+ 동시 생존 적 → 3성 불가
+        const val HP_PRESSURE_THRESHOLD = 41  // 41+ 동시 생존 적 → 2성 불가
+        const val WAVE_CLEAN_LEFTOVER_MAX = 5 // 웨이브 전환 시 잔여 5마리 이하면 clean sweep
         const val COIN_PER_KILL = 2
         const val COIN_PER_ELITE_KILL = 6
         const val COIN_PER_BOSS_BASE = 60f
@@ -153,7 +154,8 @@ class BattleEngine(
         }
     }
     private var peakEnemyCount = 0
-    private var hpEverLost = false // Track if player ever took HP damage
+    private var pressured = false      // 41마리 초과 동시 생존 → 2성 불가
+    private var waveCleanSweep = true  // 모든 웨이브 전환 시 잔여 ≤5마리 → 3성 조건
 
     private val upgradeLevels = IntArray(5)
     private var upgradeAtkMult = 1f
@@ -502,8 +504,8 @@ class BattleEngine(
                 if (enemies.activeCount > peakEnemyCount) {
                     peakEnemyCount = enemies.activeCount
                 }
-                if (!hpEverLost && enemies.activeCount > HP_PRESSURE_THRESHOLD) {
-                    hpEverLost = true
+                if (!pressured && enemies.activeCount > HP_PRESSURE_THRESHOLD) {
+                    pressured = true
                 }
 
                 // Defeat: 100+ alive enemies
@@ -537,6 +539,10 @@ class BattleEngine(
 
                 // Handle wave clear rewards and next-wave transition
                 if (waveSystem.waveComplete) {
+                    // 3성 조건: 웨이브 전환 시 잔여 적 5마리 이하
+                    if (waveCleanSweep && enemies.activeCount > WAVE_CLEAN_LEFTOVER_MAX) {
+                        waveCleanSweep = false
+                    }
                     SfxManager.play(SoundEvent.WaveClear, 0.8f)
         
                     val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * diffCoinMult * synergyCoinMult
@@ -1430,14 +1436,15 @@ class BattleEngine(
             currentWave = waveSystem.currentWave,
             elapsedTime = elapsedTime,
             maxWaves = maxWaves,
-            hpEverLost = hpEverLost,
+            pressured = pressured,
+            waveCleanSweep = waveCleanSweep,
             isDungeonMode = isDungeonMode,
             dungeonDef = dungeonDef,
             relicManager = relicManager,
         )
         BattleBridge.onBattleEnd(
             victory, waveSystem.currentWave + 1, summary.goldEarned, summary.trophyChange,
-            killCount, mergeCount, summary.cardsEarned, summary.noHpLost, summary.fastClear,
+            killCount, mergeCount, summary.cardsEarned, summary.noPressure, summary.cleanSweep,
             relicDropId = summary.relicDropId,
             relicDropGrade = summary.relicDropGrade,
         )

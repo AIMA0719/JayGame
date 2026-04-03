@@ -52,11 +52,11 @@ object BattleRewardCalculator {
             }
         }
 
-        // Star rating bonus
+        // Star rating: 1성=승리, 2성=밀리지 않음(41마리 미초과), 3성=완벽 웨이브 클리어(잔여≤5)
         val starCount = if (!battleResult.victory) 0 else {
             var s = 1
-            if (battleResult.noHpLost || battleResult.fastClear) s++
-            if (battleResult.noHpLost && battleResult.fastClear) s++
+            if (battleResult.noPressure) s++        // 2성: 밀리지 않음
+            if (battleResult.cleanSweep) s++         // 3성: 완벽 클리어
             s
         }
         val starGoldBonus = when (starCount) {
@@ -118,7 +118,7 @@ object BattleRewardCalculator {
             totalWins = afterRelicData.totalWins + if (battleResult.victory) 1 else 0,
             totalLosses = afterRelicData.totalLosses + if (!battleResult.victory) 1 else 0,
             highestWave = maxOf(afterRelicData.highestWave, battleResult.waveReached),
-            wonWithoutDamage = afterRelicData.wonWithoutDamage || battleResult.noHpLost,
+            wonWithoutDamage = afterRelicData.wonWithoutDamage || battleResult.noPressure,
             wonWithSingleType = afterRelicData.wonWithSingleType || singleTypeWin,
             stageBestWaves = bestWaves,
             units = updatedUnits,

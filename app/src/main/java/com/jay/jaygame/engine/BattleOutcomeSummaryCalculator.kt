@@ -6,8 +6,8 @@ import com.jay.jaygame.data.DungeonType
 internal data class BattleRewardSummary(
     val goldEarned: Int,
     val trophyChange: Int,
-    val noHpLost: Boolean,
-    val fastClear: Boolean,
+    val noPressure: Boolean,   // 41마리 초과 동시 생존 없음 → 2성
+    val cleanSweep: Boolean,   // 모든 웨이브 잔여 ≤5마리 → 3성
     val cardsEarned: Int,
     val relicDropId: Int,
     val relicDropGrade: Int,
@@ -21,7 +21,8 @@ internal object BattleOutcomeSummaryCalculator {
         currentWave: Int,
         elapsedTime: Float,
         maxWaves: Int,
-        hpEverLost: Boolean,
+        pressured: Boolean,
+        waveCleanSweep: Boolean,
         isDungeonMode: Boolean,
         dungeonDef: DungeonDef?,
         relicManager: RelicManager?,
@@ -41,8 +42,8 @@ internal object BattleOutcomeSummaryCalculator {
         val goldEarned = (baseGold * difficultyBonus * relicWaveBonus * dungeonRewardMult).toInt().coerceAtLeast(1)
         val baseTrophy = if (victory) 20 + stageId * 5 else -(10 + stageId * 3)
         val trophyChange = if (baseTrophy > 0) (baseTrophy * difficultyBonus).toInt() else baseTrophy
-        val noHpLost = !hpEverLost
-        val fastClear = victory && elapsedTime < maxWaves * 8f
+        val noPressure = !pressured           // 41마리 초과 없음 → 2성
+        val cleanSweep = waveCleanSweep       // 매 웨이브 잔여 ≤5 → 3성
         val baseCards = if (victory) 3 + stageId + difficulty * 2 else 1
         val dungeonCardBonus = if (isDungeonMode && victory) currentWave / 5 else 0
         val cardsEarned = baseCards + dungeonCardBonus
@@ -55,8 +56,8 @@ internal object BattleOutcomeSummaryCalculator {
         return BattleRewardSummary(
             goldEarned = goldEarned,
             trophyChange = trophyChange,
-            noHpLost = noHpLost,
-            fastClear = fastClear,
+            noPressure = noPressure,
+            cleanSweep = cleanSweep,
             cardsEarned = cardsEarned,
             relicDropId = relicDrop?.first ?: -1,
             relicDropGrade = relicDrop?.second?.ordinal ?: -1,

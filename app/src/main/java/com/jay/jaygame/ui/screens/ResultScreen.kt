@@ -87,8 +87,8 @@ fun ResultScreen(
     killCount: Int,
     mergeCount: Int,
     cardsEarned: Int = 0,
-    noHpLost: Boolean = false,
-    fastClear: Boolean = false,
+    noPressure: Boolean = false,
+    cleanSweep: Boolean = false,
     isNewRecord: Boolean = victory,
     relicDropId: Int = -1,
     relicDropGrade: Int = -1,
@@ -97,9 +97,9 @@ fun ResultScreen(
 ) {
     // H1: Star rating calculation
     val starCount = if (!victory) 0 else {
-        var stars = 1 // base star for victory
-        if (noHpLost || fastClear) stars++
-        if (noHpLost && fastClear) stars++
+        var stars = 1 // 1성: 승리
+        if (noPressure) stars++      // 2성: 밀리지 않음
+        if (cleanSweep) stars++      // 3성: 완벽 클리어
         stars
     }
 
@@ -534,8 +534,8 @@ private fun ResultScreenVictoryPreview() {
             killCount = 150,
             mergeCount = 12,
             cardsEarned = 3,
-            noHpLost = true,
-            fastClear = true,
+            noPressure = true,
+            cleanSweep = true,
             isNewRecord = true,
             onGoHome = {},
             onRetry = {},

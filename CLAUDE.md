@@ -301,9 +301,11 @@ interface FieldEffectController {
 GOLD_RUSH, RELIC_HUNT, PET_EXPEDITION, BOSS_RUSH, SURVIVAL — 일일 3회 제한
 
 ### Battle Result Stars
-- 3성: 무피해 + 빠른 클리어 (+50% gold)
-- 2성: 둘 중 하나 (+25% gold)
+- 3성: 밀리지 않음 + 완벽 클리어 (+50% gold)
+- 2성: 밀리지 않음만 (+25% gold)
 - 1성: 승리만
+- **2성 조건 (noPressure)**: 동시 생존 적 41마리 초과한 적 없음
+- **3성 조건 (cleanSweep)**: 모든 웨이브 전환 시 잔여 적 ≤5마리
 
 ## Language
 
