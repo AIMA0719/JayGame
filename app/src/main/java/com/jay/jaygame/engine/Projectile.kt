@@ -1,6 +1,7 @@
 package com.jay.jaygame.engine
 
 import com.jay.jaygame.engine.math.Vec2
+import kotlin.math.sqrt
 
 class Projectile {
     var alive = false
@@ -29,8 +30,10 @@ class Projectile {
         attackerRange: Float = 0f,
     ) {
         this.alive = true
-        this.position = from.copy()
-        this.sourcePos = from.copy()
+        this.position.x = from.x
+        this.position.y = from.y
+        this.sourcePos.x = from.x
+        this.sourcePos.y = from.y
         this.target = target
         this.damage = damage
         this.speed = speed
@@ -55,8 +58,9 @@ class Projectile {
             return false
         }
 
-        val dir = t.position - position
-        val dist = dir.length
+        val dx = t.position.x - position.x
+        val dy = t.position.y - position.y
+        val dist = sqrt(dx * dx + dy * dy)
         val step = speed * dt
 
         if (dist <= step + t.size * 0.5f) {
@@ -64,9 +68,9 @@ class Projectile {
             return false
         }
 
-        val norm = dir.normalized()
-        position.x += norm.x * step
-        position.y += norm.y * step
+        val invDist = if (dist > 0.0001f) 1f / dist else 0f
+        position.x += dx * invDist * step
+        position.y += dy * invDist * step
         return true
     }
 

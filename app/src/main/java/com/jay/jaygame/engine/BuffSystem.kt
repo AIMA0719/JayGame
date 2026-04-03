@@ -20,6 +20,45 @@ class BuffContainer {
     /** DOT_IMMUNE boss modifier: skips DoT buffs */
     var dotImmune: Boolean = false
 
+    private var dirty = true
+    private var cachedFlags = 0        // bit per BuffType ordinal
+    private var cachedSlowFactor = 1f
+    private var cachedArmorReduction = 0f
+    private var cachedAtkMult = 1f
+    private var cachedSpdMult = 1f
+    private var cachedDefMult = 1f
+
+    private fun markDirty() { dirty = true }
+
+    private fun recomputeIfDirty() {
+        if (!dirty) return
+        dirty = false
+        var flags = 0
+        var maxSlow = 0f
+        var armorBreak = 0f
+        var atkMult = 1f
+        var spdMult = 1f
+        var defMult = 1f
+        for (b in buffs) {
+            if (b.remaining <= 0f) continue
+            flags = flags or (1 shl b.type.ordinal)
+            when (b.type) {
+                BuffType.Slow -> if (b.value > maxSlow) maxSlow = b.value
+                BuffType.ArmorBreak -> armorBreak += b.value
+                BuffType.AtkUp -> atkMult += b.value
+                BuffType.SpdUp -> spdMult += b.value
+                BuffType.DefUp -> defMult += b.value
+                else -> {}
+            }
+        }
+        cachedFlags = flags
+        cachedSlowFactor = 1f - maxSlow.coerceIn(0f, 0.8f)
+        cachedArmorReduction = armorBreak
+        cachedAtkMult = atkMult
+        cachedSpdMult = spdMult
+        cachedDefMult = defMult
+    }
+
     fun addBuff(type: BuffType, value: Float, duration: Float, sourceId: Int = -1) {
         // Boss modifier immunity checks
         if (ccImmune && (type == BuffType.Slow || type == BuffType.Stun || type == BuffType.Silence)) return
@@ -42,14 +81,24 @@ class BuffContainer {
         }
         buffs.add(BuffEntry(type, value, effectiveDuration, sourceId))
         if (type == BuffType.Shield) shieldHP += value
+        markDirty()
     }
 
     fun countBuff(type: BuffType): Int = buffs.count { it.type == type && it.remaining > 0f }
-    fun isStunned(): Boolean = buffs.any { it.type == BuffType.Stun && it.remaining > 0f }
-    fun isSilenced(): Boolean = buffs.any { it.type == BuffType.Silence && it.remaining > 0f }
+
+    fun isStunned(): Boolean {
+        recomputeIfDirty()
+        return cachedFlags and (1 shl BuffType.Stun.ordinal) != 0
+    }
+
+    fun isSilenced(): Boolean {
+        recomputeIfDirty()
+        return cachedFlags and (1 shl BuffType.Silence.ordinal) != 0
+    }
 
     fun update(dt: Float): Float {
         var dotDamage = 0f
+        var removed = false
         val iter = buffs.iterator()
         while (iter.hasNext()) {
             val b = iter.next()
@@ -57,6 +106,7 @@ class BuffContainer {
             if (b.remaining <= 0f) {
                 if (b.type == BuffType.Shield) shieldHP = (shieldHP - b.value).coerceAtLeast(0f)
                 iter.remove()
+                removed = true
                 continue
             }
             if (b.type == BuffType.DoT) {
@@ -67,37 +117,33 @@ class BuffContainer {
                 }
             }
         }
+        if (removed) markDirty()
         return dotDamage
     }
 
     fun getSlowFactor(): Float {
-        var maxSlow = 0f
-        buffs.forEach { if (it.type == BuffType.Slow) maxSlow = maxOf(maxSlow, it.value) }
-        return 1f - maxSlow.coerceIn(0f, 0.8f)
+        recomputeIfDirty()
+        return cachedSlowFactor
     }
 
     fun getArmorReduction(): Float {
-        var total = 0f
-        buffs.forEach { if (it.type == BuffType.ArmorBreak) total += it.value }
-        return total
+        recomputeIfDirty()
+        return cachedArmorReduction
     }
 
     fun getAtkMultiplier(): Float {
-        var mult = 1f
-        buffs.forEach { if (it.type == BuffType.AtkUp) mult += it.value }
-        return mult
+        recomputeIfDirty()
+        return cachedAtkMult
     }
 
     fun getSpdMultiplier(): Float {
-        var mult = 1f
-        buffs.forEach { if (it.type == BuffType.SpdUp) mult += it.value }
-        return mult
+        recomputeIfDirty()
+        return cachedSpdMult
     }
 
     fun getDefMultiplier(): Float {
-        var mult = 1f
-        buffs.forEach { if (it.type == BuffType.DefUp) mult += it.value }
-        return mult
+        recomputeIfDirty()
+        return cachedDefMult
     }
 
     fun absorbDamage(damage: Float): Float {
@@ -105,9 +151,18 @@ class BuffContainer {
         val absorbed = minOf(shieldHP, damage)
         shieldHP -= absorbed
         if (shieldHP <= 0f) {
-            buffs.removeAll { it.type == BuffType.Shield }
+            // PERF: reverse-index removal instead of removeAll
+            for (i in buffs.lastIndex downTo 0) {
+                if (buffs[i].type == BuffType.Shield) buffs.removeAt(i)
+            }
+            markDirty()
         }
         return damage - absorbed
+    }
+
+    fun hasBuff(type: BuffType): Boolean {
+        recomputeIfDirty()
+        return cachedFlags and (1 shl type.ordinal) != 0
     }
 
     fun clear() {
@@ -115,7 +170,6 @@ class BuffContainer {
         shieldHP = 0f
         ccImmune = false
         dotImmune = false
+        markDirty()
     }
-
-    fun hasBuff(type: BuffType) = buffs.any { it.type == type }
 }

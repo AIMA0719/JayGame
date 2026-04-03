@@ -101,6 +101,7 @@ internal class BattleStatePublisher(
                 waveTimeRemaining = waveSystem.timeRemaining,
                 waveElapsed = waveSystem.waveElapsed,
                 waveDelayRemaining = waveDelayRemaining,
+                specialWave = waveSystem.currentConfig.specialWave.ordinal,
             )
         )
     }

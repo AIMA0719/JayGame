@@ -505,10 +505,22 @@ class BattleEngine(
                         // Pet ID 8: one-time revive, clear excess enemies, then continue
                         petSystem.usePhoenixRevive()
                         val safeCount = DEFEAT_ENEMY_COUNT / 2
-                        val aliveList = mutableListOf<Enemy>()
-                        enemies.forEach { if (it.alive) aliveList.add(it) }
-                        val toRemove = (aliveList.size - safeCount).coerceAtLeast(0)
-                        aliveList.shuffled().take(toRemove).forEach { it.alive = false; phoenixReleased.add(it); enemies.release(it) }
+                        activeEnemiesScratch.clear()
+                        enemies.forEach { if (it.alive) activeEnemiesScratch.add(it) }
+                        val toRemove = (activeEnemiesScratch.size - safeCount).coerceAtLeast(0)
+                        // Fisher-Yates partial shuffle — only shuffle toRemove elements
+                        for (i in 0 until toRemove) {
+                            val j = i + (Math.random() * (activeEnemiesScratch.size - i)).toInt()
+                            val tmp = activeEnemiesScratch[i]
+                            activeEnemiesScratch[i] = activeEnemiesScratch[j]
+                            activeEnemiesScratch[j] = tmp
+                        }
+                        for (i in 0 until toRemove) {
+                            val e = activeEnemiesScratch[i]
+                            e.alive = false
+                            phoenixReleased.add(e)
+                            enemies.release(e)
+                        }
                         BattleBridge.onPhoenixRevive()
                     } else {
                         state = State.Defeat
@@ -580,7 +592,7 @@ class BattleEngine(
                 speed = config.speed * (if (isElite) ELITE_SPEED_MULT else 1f),
                 armor = config.armor * (if (isElite) ELITE_ARMOR_MULT else 1f),
                 magicResist = config.magicResist * (if (isElite) ELITE_MAGIC_RESIST_MULT else 1f),
-                type = config.enemyType, startPos = enemyPath.first().copy(),
+                type = config.enemyType, startPos = enemyPath.first(),
                 ccResistance = config.ccResistance + if (isElite) ELITE_CC_RESIST_BONUS else 0f,
             )
             enemy.isElite = isElite
@@ -613,11 +625,12 @@ class BattleEngine(
                 }
                 if (modifier == BossModifier.DUAL_MOD) {
                     // 후반 전용: 기본 풀에서 랜덤 2개를 보조로 설정
-                    val pool = BASE_MODIFIER_POOL.filter {
-                        it != BossModifier.DUAL_MOD && it != BossModifier.MINION_RUSH
+                    val first = BASE_MODIFIER_POOL.random()
+                    var second = first
+                    for (attempt in 0 until 50) {
+                        second = BASE_MODIFIER_POOL.random()
+                        if (second != first) break
                     }
-                    val first = pool.random()
-                    val second = pool.filter { it != first }.random()
                     enemy.bossModifier = BossModifier.DUAL_MOD
                     enemy.dualModFirst = first
                     enemy.dualModSecond = second
@@ -643,7 +656,7 @@ class BattleEngine(
                             armor = enemy.armor * 0.6f,
                             magicResist = enemy.magicResist * 0.6f,
                             type = config.enemyType, // 보스와 같은 타입
-                            startPos = enemy.position.copy(),
+                            startPos = enemy.position,
                             ccResistance = enemy.ccResistance * 0.3f,
                         )
                         guard.isElite = true
@@ -699,7 +712,7 @@ class BattleEngine(
                     armor = parent.armor * 0.7f,
                     magicResist = parent.magicResist * 0.7f,
                     type = 5, // mini-boss type
-                    startPos = parent.position.copy(),
+                    startPos = parent.position,
                     ccResistance = parent.ccResistance * 0.5f,
                 )
                 mini.pathIndex = parent.pathIndex
@@ -990,7 +1003,7 @@ class BattleEngine(
                         val proj = projectiles.acquire()
                         if (proj != null) {
                             proj.init(
-                                from = unit.position.copy(), target = target,
+                                from = unit.position, target = target,
                                 damage = boostedDamage, speed = projSpeed,
                                 type = unit.projectileVisualType(),
                                 isMagic = result.isMagic, isCrit = boostedCrit,
@@ -1182,7 +1195,7 @@ class BattleEngine(
             // Pet support buff application
             val proj = projectiles.acquire() ?: return
             proj.init(
-                from = unit.position.copy(), target = target,
+                from = unit.position, target = target,
                 damage = dmg, speed = 400f,
                 type = unit.projectileVisualType(),
                 isMagic = isMagic, isCrit = isCrit,

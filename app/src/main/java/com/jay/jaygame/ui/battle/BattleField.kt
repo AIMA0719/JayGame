@@ -523,13 +523,13 @@ fun BattleField() {
 
                 // Outer glow fill
                 drawCircle(
-                    color = auraColor.copy(alpha = auraPulseAlpha * 0.3f),
+                    color = auraColor, alpha = auraPulseAlpha * 0.3f,
                     radius = auraRadius * 1.2f,
                     center = Offset(screenX, screenY - unitSize * 0.2f),
                 )
                 // Aura ring
                 drawCircle(
-                    color = auraColor.copy(alpha = auraPulseAlpha),
+                    color = auraColor, alpha = auraPulseAlpha,
                     radius = auraRadius,
                     center = Offset(screenX, screenY - unitSize * 0.2f),
                     style = auraStroke,
@@ -542,17 +542,17 @@ fun BattleField() {
                 val auraPulse = 0.08f + sin(t * 2f + animSeed * 0.5f) * 0.04f
                 // Layered circles instead of Brush.radialGradient to avoid per-frame allocation
                 drawCircle(
-                    color = FamilyAuraColors[4].copy(alpha = auraPulse * 0.5f),
+                    color = FamilyAuraColors[4], alpha = auraPulse * 0.5f,
                     radius = auraRadiusScreen * 0.5f,
                     center = Offset(screenX, screenY),
                 )
                 drawCircle(
-                    color = FamilyAuraColors[4].copy(alpha = auraPulse * 0.3f),
+                    color = FamilyAuraColors[4], alpha = auraPulse * 0.3f,
                     radius = auraRadiusScreen * 0.8f,
                     center = Offset(screenX, screenY),
                 )
                 drawCircle(
-                    color = FamilyAuraColors[4].copy(alpha = auraPulse * 1.5f),
+                    color = FamilyAuraColors[4], alpha = auraPulse * 1.5f,
                     radius = auraRadiusScreen,
                     center = Offset(screenX, screenY),
                     style = ThinStroke1f,
@@ -564,7 +564,7 @@ fun BattleField() {
                 val rangeScreen = (200f / Grid.CANVAS_W) * w
                 val rangePulse = 0.15f + sin(t * 3f) * 0.05f
                 drawCircle(
-                    color = gradeColor.copy(alpha = rangePulse),
+                    color = gradeColor, alpha = rangePulse,
                     radius = rangeScreen,
                     center = Offset(screenX, screenY),
                     style = ThinStroke1_5f,
@@ -596,13 +596,13 @@ fun BattleField() {
             )
             // Outer soft glow
             drawOval(
-                color = pedestalColor.copy(alpha = 0.15f),
+                color = pedestalColor, alpha = 0.15f,
                 topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
                 size = Size(pedestalRx * 2.4f, pedestalRy * 2.5f),
             )
             // Inner bright glow
             drawOval(
-                color = pedestalColor.copy(alpha = 0.4f),
+                color = pedestalColor, alpha = 0.4f,
                 topLeft = Offset(screenX - pedestalRx * 0.7f, screenY - pedestalRy * 0.1f),
                 size = Size(pedestalRx * 1.4f, pedestalRy * 1.5f),
             )
@@ -616,7 +616,7 @@ fun BattleField() {
                     val py = screenY + sin(t * 2f + p * 0.9f) * pedestalRy * 0.5f
                     val pAlpha = (0.3f + sin(t * 3f + p * 0.5f) * 0.15f).coerceIn(0.1f, 0.5f)
                     drawCircle(
-                        color = gradeColor.copy(alpha = pAlpha),
+                        color = gradeColor, alpha = pAlpha,
                         radius = 2f + sin(t * 4f + p * 1.7f) * 0.8f,
                         center = Offset(px, py),
                     )
@@ -669,7 +669,7 @@ fun BattleField() {
                             val emberY = screenY - unitSize * 0.2f - emberPhase * unitSize * 0.5f
                             val emberAlpha = sin(emberPhase * PI.toFloat()) * 0.4f
                             drawCircle(
-                                color = FireEmberColor.copy(alpha = emberAlpha),
+                                color = FireEmberColor, alpha = emberAlpha,
                                 radius = 1.5f + sin(t * 3f + e) * 0.5f,
                                 center = Offset(emberX, emberY),
                             )
@@ -684,7 +684,7 @@ fun BattleField() {
                             val snowY = screenY - unitSize * 0.5f + snowPhase * unitSize * 0.3f
                             val snowAlpha = sin(snowPhase * PI.toFloat()) * 0.35f
                             drawCircle(
-                                color = FrostSnowColor.copy(alpha = snowAlpha),
+                                color = FrostSnowColor, alpha = snowAlpha,
                                 radius = 1.5f,
                                 center = Offset(snowX, snowY),
                             )
@@ -698,7 +698,7 @@ fun BattleField() {
                             val dripY = screenY - unitSize * 0.1f + dripPhase * unitSize * 0.25f
                             val dripAlpha = sin(dripPhase * PI.toFloat()) * 0.35f
                             drawCircle(
-                                color = PoisonDripColor.copy(alpha = dripAlpha),
+                                color = PoisonDripColor, alpha = dripAlpha,
                                 radius = 1.5f + (1f - dripPhase) * 0.5f,
                                 center = Offset(dripX, dripY),
                             )
@@ -711,7 +711,7 @@ fun BattleField() {
                             val sparkAngle = sin(t * 7f + animSeed * 0.5f) * PI.toFloat()
                             val sparkLen = unitSize * 0.2f
                             drawLine(
-                                color = LightSparkColor.copy(alpha = sparkAlpha),
+                                color = LightSparkColor, alpha = sparkAlpha,
                                 start = Offset(screenX, screenY - unitSize * 0.3f),
                                 end = Offset(
                                     screenX + cos(sparkAngle) * sparkLen,
@@ -724,7 +724,7 @@ fun BattleField() {
                     4 -> { // Support: soft pulsing halo
                         val haloPulse = 0.12f + sin(t * 1.5f + animSeed * 0.4f) * 0.06f
                         drawCircle(
-                            color = SupportGlowColor.copy(alpha = haloPulse),
+                            color = SupportGlowColor, alpha = haloPulse,
                             radius = unitSize * 0.4f,
                             center = Offset(screenX, screenY - unitSize * 0.35f),
                         )
@@ -738,7 +738,7 @@ fun BattleField() {
                             val breezeY = screenY - unitSize * 0.5f + breezePhase * unitSize * 0.3f
                             val breezeAlpha = sin(breezePhase * PI.toFloat()) * 0.35f
                             drawCircle(
-                                color = WindLeafColor.copy(alpha = breezeAlpha),
+                                color = WindLeafColor, alpha = breezeAlpha,
                                 radius = 1.5f,
                                 center = Offset(breezeX, breezeY),
                             )
@@ -777,7 +777,7 @@ fun BattleField() {
                 if (skillPhase > 0f) {
                     val glowAlpha = sin(skillPhase * PI.toFloat()) * 0.4f
                     drawCircle(
-                        color = SkillGlowColor.copy(alpha = glowAlpha),
+                        color = SkillGlowColor, alpha = glowAlpha,
                         radius = spriteSize * 0.8f,
                         center = Offset(screenX, spriteCenterY),
                     )
@@ -828,7 +828,7 @@ fun BattleField() {
 
                 // Badge background
                 drawRoundRect(
-                    color = gradeColor.copy(alpha = 0.8f),
+                    color = gradeColor, alpha = 0.8f,
                     topLeft = Offset(screenX - badgeWidth / 2, badgeY),
                     size = Size(badgeWidth, badgeHeight),
                     cornerRadius = CornerRadius(6f),
@@ -887,7 +887,7 @@ fun BattleField() {
             if (tile != null && tile.canMerge) {
                 val mergeAlpha = 0.7f + sin(t * 6f) * 0.3f
                 drawCircle(
-                    color = Gold.copy(alpha = mergeAlpha),
+                    color = Gold, alpha = mergeAlpha,
                     radius = 5f + sin(t * 4f) * 1.5f,
                     center = Offset(screenX + unitSize * 0.35f, screenY - unitSize * 0.7f + bounceOffset),
                 )
@@ -935,7 +935,7 @@ fun BattleField() {
                 // Common: simple fade out circle
                 val fadeAlpha = (1f - progress) * 0.6f
                 drawCircle(
-                    color = effectColor.copy(alpha = fadeAlpha),
+                    color = effectColor, alpha = fadeAlpha,
                     radius = unitSizeDefault * 0.4f * (1f + progress * 0.5f),
                     center = Offset(ex, ey),
                 )
@@ -949,7 +949,7 @@ fun BattleField() {
                     val py = (ey + sin(angle) * dist).toFloat()
                     val pAlpha = (1f - progress) * 0.7f
                     drawCircle(
-                        color = famColor.copy(alpha = pAlpha),
+                        color = famColor, alpha = pAlpha,
                         radius = 2f + (1f - progress) * 2f,
                         center = Offset(px, py),
                     )
@@ -960,14 +960,14 @@ fun BattleField() {
                 val burstAlpha = (1f - progress) * 0.5f
                 // Outer ring
                 drawCircle(
-                    color = effectColor.copy(alpha = burstAlpha),
+                    color = effectColor, alpha = burstAlpha,
                     radius = burstRadius,
                     center = Offset(ex, ey),
                     style = Stroke(width = 3f + (1f - progress) * 4f),
                 )
                 // Inner glow
                 drawCircle(
-                    color = effectColor.copy(alpha = burstAlpha * 0.6f),
+                    color = effectColor, alpha = burstAlpha * 0.6f,
                     radius = burstRadius * 0.5f,
                     center = Offset(ex, ey),
                 )
@@ -980,7 +980,7 @@ fun BattleField() {
                     val py = (ey + sin(angle) * dist).toFloat()
                     val pAlpha = (1f - progress) * 0.8f
                     drawCircle(
-                        color = famColor.copy(alpha = pAlpha),
+                        color = famColor, alpha = pAlpha,
                         radius = 1.5f + (1f - progress) * 2.5f,
                         center = Offset(px, py),
                     )
@@ -1016,12 +1016,12 @@ private fun DrawScope.drawGradePlatform(
             // Common: 은은한 호흡 애니메이션 + 내부 밝은 코어
             val breathAlpha = 0.2f + sin(t * 1.5f + unitDefId * 0.3f) * 0.06f
             drawOval(
-                color = PlatformCommonColor.copy(alpha = breathAlpha),
+                color = PlatformCommonColor, alpha = breathAlpha,
                 topLeft = Offset(screenX - pedestalRx * 1.0f, screenY - pedestalRy * 0.25f),
                 size = Size(pedestalRx * 2.0f, pedestalRy * 2.0f),
             )
             drawOval(
-                color = PlatformCommonInner.copy(alpha = breathAlpha + 0.08f),
+                color = PlatformCommonInner, alpha = breathAlpha + 0.08f,
                 topLeft = Offset(screenX - pedestalRx * 0.6f, screenY - pedestalRy * 0.05f),
                 size = Size(pedestalRx * 1.2f, pedestalRy * 1.2f),
             )
@@ -1030,12 +1030,12 @@ private fun DrawScope.drawGradePlatform(
             // Rare: 파란 이중 글로우 + 회전 빛줄기 2개 + 내부 링
             val glowAlpha = 0.22f + sin(t * 2f + unitDefId * 0.5f) * 0.06f
             drawOval(
-                color = PlatformRareGlow.copy(alpha = glowAlpha),
+                color = PlatformRareGlow, alpha = glowAlpha,
                 topLeft = Offset(screenX - pedestalRx * 1.15f, screenY - pedestalRy * 0.45f),
                 size = Size(pedestalRx * 2.3f, pedestalRy * 2.3f),
             )
             drawOval(
-                color = PlatformRareColor.copy(alpha = glowAlpha + 0.12f),
+                color = PlatformRareColor, alpha = glowAlpha + 0.12f,
                 topLeft = Offset(screenX - pedestalRx * 0.8f, screenY - pedestalRy * 0.2f),
                 size = Size(pedestalRx * 1.6f, pedestalRy * 1.6f),
             )
@@ -1046,14 +1046,14 @@ private fun DrawScope.drawGradePlatform(
                 val by = screenY + sin(angle) * pedestalRy * 0.55f
                 val bAlpha = 0.35f + sin(t * 3f + p * 2f) * 0.15f
                 drawCircle(
-                    color = PlatformRareBeam.copy(alpha = bAlpha),
+                    color = PlatformRareBeam, alpha = bAlpha,
                     radius = 2f,
                     center = Offset(bx, by),
                 )
             }
             // 내부 링
             drawOval(
-                color = PlatformRareRing.copy(alpha = glowAlpha * 0.5f),
+                color = PlatformRareRing, alpha = glowAlpha * 0.5f,
                 topLeft = Offset(screenX - pedestalRx * 0.95f, screenY - pedestalRy * 0.3f),
                 size = Size(pedestalRx * 1.9f, pedestalRy * 1.7f),
                 style = ThinStroke1_5f,
@@ -1063,19 +1063,19 @@ private fun DrawScope.drawGradePlatform(
             // Hero: 보라 에너지 글로우 + 펄싱 코어 + 8개 궤도 파티클 + 외곽 에너지 링
             val glowAlpha = 0.28f + sin(t * 2.5f + unitDefId * 0.4f) * 0.1f
             drawOval(
-                color = PlatformHeroGlow.copy(alpha = glowAlpha),
+                color = PlatformHeroGlow, alpha = glowAlpha,
                 topLeft = Offset(screenX - pedestalRx * 1.2f, screenY - pedestalRy * 0.5f),
                 size = Size(pedestalRx * 2.4f, pedestalRy * 2.4f),
             )
             // 펄싱 코어
             val coreAlpha = 0.2f + sin(t * 4f) * 0.1f
             drawOval(
-                color = PlatformHeroCore.copy(alpha = coreAlpha),
+                color = PlatformHeroCore, alpha = coreAlpha,
                 topLeft = Offset(screenX - pedestalRx * 0.5f, screenY - pedestalRy * 0.05f),
                 size = Size(pedestalRx * 1.0f, pedestalRy * 1.0f),
             )
             drawOval(
-                color = PlatformHeroColor.copy(alpha = glowAlpha + 0.08f),
+                color = PlatformHeroColor, alpha = glowAlpha + 0.08f,
                 topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
                 size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
             )
@@ -1087,14 +1087,14 @@ private fun DrawScope.drawGradePlatform(
                 val py = screenY + sin(angle) * orbitR * 0.6f
                 val pAlpha = 0.35f + sin(t * 3.5f + p * 1.2f) * 0.2f
                 drawCircle(
-                    color = PlatformHeroParticle.copy(alpha = pAlpha),
+                    color = PlatformHeroParticle, alpha = pAlpha,
                     radius = 1.8f,
                     center = Offset(px, py),
                 )
             }
             // 외곽 에너지 링
             drawOval(
-                color = PlatformHeroRing.copy(alpha = glowAlpha * 0.6f),
+                color = PlatformHeroRing, alpha = glowAlpha * 0.6f,
                 topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.4f),
                 size = Size(pedestalRx * 2.2f, pedestalRy * 2.0f),
                 style = ThinStroke1_5f,
@@ -1105,19 +1105,19 @@ private fun DrawScope.drawGradePlatform(
             val flameAlpha = 0.35f + sin(t * 4f + unitDefId * 0.6f) * 0.14f
             // 외곽 불꽃
             drawOval(
-                color = PlatformLegendColor.copy(alpha = flameAlpha * 0.5f),
+                color = PlatformLegendColor, alpha = flameAlpha * 0.5f,
                 topLeft = Offset(screenX - pedestalRx * 1.3f, screenY - pedestalRy * 0.55f),
                 size = Size(pedestalRx * 2.6f, pedestalRy * 2.6f),
             )
             // 내부 불꽃
             drawOval(
-                color = PlatformLegendFlame.copy(alpha = flameAlpha + 0.06f),
+                color = PlatformLegendFlame, alpha = flameAlpha + 0.06f,
                 topLeft = Offset(screenX - pedestalRx * 0.85f, screenY - pedestalRy * 0.25f),
                 size = Size(pedestalRx * 1.7f, pedestalRy * 1.7f),
             )
             // 불꽃 외곽 링
             drawOval(
-                color = PlatformLegendRing.copy(alpha = flameAlpha + 0.08f),
+                color = PlatformLegendRing, alpha = flameAlpha + 0.08f,
                 topLeft = Offset(screenX - pedestalRx * 1.1f, screenY - pedestalRy * 0.35f),
                 size = Size(pedestalRx * 2.2f, pedestalRy * 2.0f),
                 style = GroundBorderStroke,
@@ -1125,7 +1125,7 @@ private fun DrawScope.drawGradePlatform(
             // 내부 골드 코어
             val coreAlpha = 0.15f + sin(t * 5f) * 0.1f
             drawOval(
-                color = PlatformLegendFlame.copy(alpha = coreAlpha),
+                color = PlatformLegendFlame, alpha = coreAlpha,
                 topLeft = Offset(screenX - pedestalRx * 0.45f, screenY + pedestalRy * 0.0f),
                 size = Size(pedestalRx * 0.9f, pedestalRy * 0.9f),
             )
@@ -1137,7 +1137,7 @@ private fun DrawScope.drawGradePlatform(
                 val py = screenY + sin(angle) * sparkR * 0.55f
                 val sAlpha = 0.5f + sin(t * 6f + p * 2f) * 0.3f
                 drawCircle(
-                    color = EffectWhite.copy(alpha = sAlpha),
+                    color = EffectWhite, alpha = sAlpha,
                     radius = 1.2f,
                     center = Offset(px, py),
                 )
@@ -1158,13 +1158,13 @@ private fun DrawScope.drawGradePlatform(
             val mythicAlpha = 0.35f + sin(t * 3f) * 0.12f
             // 외곽 글로우
             drawOval(
-                color = PlatformMythicGold.copy(alpha = mythicAlpha * 0.35f),
+                color = PlatformMythicGold, alpha = mythicAlpha * 0.35f,
                 topLeft = Offset(screenX - pedestalRx * 1.4f, screenY - pedestalRy * 0.65f),
                 size = Size(pedestalRx * 2.8f, pedestalRy * 2.8f),
             )
             // 내부 글로우
             drawOval(
-                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.06f),
+                color = PlatformMythicGold, alpha = mythicAlpha + 0.06f,
                 topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.3f),
                 size = Size(pedestalRx * 1.8f, pedestalRy * 1.8f),
             )
@@ -1178,13 +1178,13 @@ private fun DrawScope.drawGradePlatform(
             // 골드 코어 펄스
             val corePulse = 0.25f + sin(t * 5f) * 0.15f
             drawOval(
-                color = PlatformMythicCore.copy(alpha = corePulse),
+                color = PlatformMythicCore, alpha = corePulse,
                 topLeft = Offset(screenX - pedestalRx * 0.4f, screenY + pedestalRy * 0.0f),
                 size = Size(pedestalRx * 0.8f, pedestalRy * 0.8f),
             )
             // 내부 골드 링
             drawOval(
-                color = PlatformMythicGold.copy(alpha = mythicAlpha + 0.18f),
+                color = PlatformMythicGold, alpha = mythicAlpha + 0.18f,
                 topLeft = Offset(screenX - pedestalRx * 0.9f, screenY - pedestalRy * 0.2f),
                 size = Size(pedestalRx * 1.8f, pedestalRy * 1.6f),
                 style = ThinStroke1_5f,
@@ -1197,7 +1197,7 @@ private fun DrawScope.drawGradePlatform(
                 val py = screenY + sin(angle) * starR * 0.55f
                 val sAlpha = 0.5f + sin(t * 4f + p * 1.8f) * 0.35f
                 drawCircle(
-                    color = EffectWhite.copy(alpha = sAlpha),
+                    color = EffectWhite, alpha = sAlpha,
                     radius = 1.5f,
                     center = Offset(px, py),
                 )
@@ -1231,8 +1231,8 @@ private fun DrawScope.drawSsjAura(
                 val fy = cy + spriteSize * 0.3f - rise * spriteSize * 1.0f
                 val fAlpha = (1f - rise) * 0.25f
                 val fRadius = halfW * (0.15f + (1f - rise) * 0.12f)
-                drawCircle(color = AuraRareOuter.copy(alpha = fAlpha), radius = fRadius * 1.4f, center = Offset(fx, fy))
-                drawCircle(color = AuraRareInner.copy(alpha = fAlpha * 0.7f), radius = fRadius * 0.7f, center = Offset(fx, fy))
+                drawCircle(color = AuraRareOuter, alpha = fAlpha, radius = fRadius * 1.4f, center = Offset(fx, fy))
+                drawCircle(color = AuraRareInner, alpha = fAlpha * 0.7f, radius = fRadius * 0.7f, center = Offset(fx, fy))
             }
         }
         2 -> {
@@ -1244,12 +1244,12 @@ private fun DrawScope.drawSsjAura(
                 val fy = cy + spriteSize * 0.3f - rise * spriteSize * 1.2f
                 val fAlpha = (1f - rise) * 0.3f
                 val fRadius = halfW * (0.18f + (1f - rise) * 0.14f)
-                drawCircle(color = PlatformHeroColor.copy(alpha = fAlpha), radius = fRadius * 1.5f, center = Offset(fx, fy))
-                drawCircle(color = PlatformHeroCore.copy(alpha = fAlpha * 0.6f), radius = fRadius * 0.6f, center = Offset(fx, fy))
+                drawCircle(color = PlatformHeroColor, alpha = fAlpha, radius = fRadius * 1.5f, center = Offset(fx, fy))
+                drawCircle(color = PlatformHeroCore, alpha = fAlpha * 0.6f, radius = fRadius * 0.6f, center = Offset(fx, fy))
             }
             val coreAlpha = 0.12f + sin(t * 5f + seed) * 0.06f
             drawOval(
-                color = PlatformHeroCore.copy(alpha = coreAlpha),
+                color = PlatformHeroCore, alpha = coreAlpha,
                 topLeft = Offset(cx - halfW * 0.4f, cy - spriteSize * 0.4f),
                 size = Size(halfW * 0.8f, spriteSize * 0.8f),
             )
@@ -1264,20 +1264,20 @@ private fun DrawScope.drawSsjAura(
                 val fy = cy + spriteSize * 0.35f - rise * spriteSize * 1.4f
                 val fAlpha = (1f - rise) * 0.35f
                 val fRadius = halfW * (0.2f + (1f - rise) * 0.16f)
-                drawCircle(color = PlatformLegendColor.copy(alpha = fAlpha), radius = fRadius * 1.6f, center = Offset(fx, fy))
-                drawCircle(color = AuraLegendInner.copy(alpha = fAlpha * 0.7f), radius = fRadius * 0.8f, center = Offset(fx, fy))
+                drawCircle(color = PlatformLegendColor, alpha = fAlpha, radius = fRadius * 1.6f, center = Offset(fx, fy))
+                drawCircle(color = AuraLegendInner, alpha = fAlpha * 0.7f, radius = fRadius * 0.8f, center = Offset(fx, fy))
                 if (f % 2 == 0) {
-                    drawCircle(color = EffectWhite.copy(alpha = fAlpha * 0.4f), radius = fRadius * 0.35f, center = Offset(fx, fy))
+                    drawCircle(color = EffectWhite, alpha = fAlpha * 0.4f, radius = fRadius * 0.35f, center = Offset(fx, fy))
                 }
             }
             val coreAlpha = 0.15f + sin(t * 6f + seed) * 0.08f
             drawOval(
-                color = PlatformLegendColor.copy(alpha = coreAlpha),
+                color = PlatformLegendColor, alpha = coreAlpha,
                 topLeft = Offset(cx - halfW * 0.55f, cy - spriteSize * 0.5f),
                 size = Size(halfW * 1.1f, spriteSize * 1.0f),
             )
             drawOval(
-                color = AuraLegendInner.copy(alpha = coreAlpha * 0.6f),
+                color = AuraLegendInner, alpha = coreAlpha * 0.6f,
                 topLeft = Offset(cx - halfW * 0.3f, cy - spriteSize * 0.35f),
                 size = Size(halfW * 0.6f, spriteSize * 0.7f),
             )
@@ -1293,10 +1293,10 @@ private fun DrawScope.drawSsjAura(
                 val fy = cy + spriteSize * 0.4f - rise * spriteSize * 1.6f
                 val fAlpha = (1f - rise) * 0.38f
                 val fRadius = halfW * (0.22f + (1f - rise) * 0.18f)
-                drawCircle(color = PlatformMythicGold.copy(alpha = fAlpha), radius = fRadius * 1.7f, center = Offset(fx, fy))
-                drawCircle(color = PlatformMythicCore.copy(alpha = fAlpha * 0.7f), radius = fRadius * 0.8f, center = Offset(fx, fy))
+                drawCircle(color = PlatformMythicGold, alpha = fAlpha, radius = fRadius * 1.7f, center = Offset(fx, fy))
+                drawCircle(color = PlatformMythicCore, alpha = fAlpha * 0.7f, radius = fRadius * 0.8f, center = Offset(fx, fy))
                 if (f % 3 == 0) {
-                    drawCircle(color = EffectWhite.copy(alpha = fAlpha * 0.5f), radius = fRadius * 0.3f, center = Offset(fx, fy))
+                    drawCircle(color = EffectWhite, alpha = fAlpha * 0.5f, radius = fRadius * 0.3f, center = Offset(fx, fy))
                 }
             }
             for (s in 0 until 4) {
@@ -1304,21 +1304,21 @@ private fun DrawScope.drawSsjAura(
                 val sx = cx + cos(sPhase) * halfW * 0.7f
                 val sy = cy - spriteSize * 0.2f + sin(sPhase * 1.3f) * spriteSize * 0.4f
                 val sAlpha = (0.4f + sin(sPhase * 3f) * 0.4f).coerceAtLeast(0f)
-                drawCircle(color = AuraMythicElectric.copy(alpha = sAlpha), radius = 2f, center = Offset(sx, sy))
+                drawCircle(color = AuraMythicElectric, alpha = sAlpha, radius = 2f, center = Offset(sx, sy))
             }
             val coreAlpha = 0.18f + sin(t * 7f + seed) * 0.1f
             drawOval(
-                color = PlatformMythicGold.copy(alpha = coreAlpha),
+                color = PlatformMythicGold, alpha = coreAlpha,
                 topLeft = Offset(cx - halfW * 0.65f, cy - spriteSize * 0.55f),
                 size = Size(halfW * 1.3f, spriteSize * 1.1f),
             )
             drawOval(
-                color = PlatformMythicCore.copy(alpha = coreAlpha * 0.7f),
+                color = PlatformMythicCore, alpha = coreAlpha * 0.7f,
                 topLeft = Offset(cx - halfW * 0.35f, cy - spriteSize * 0.4f),
                 size = Size(halfW * 0.7f, spriteSize * 0.8f),
             )
             drawOval(
-                color = EffectWhite.copy(alpha = coreAlpha * 0.3f),
+                color = EffectWhite, alpha = coreAlpha * 0.3f,
                 topLeft = Offset(cx - halfW * 0.2f, cy - spriteSize * 0.3f),
                 size = Size(halfW * 0.4f, spriteSize * 0.6f),
             )

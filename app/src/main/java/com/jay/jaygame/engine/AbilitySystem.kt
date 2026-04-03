@@ -5,6 +5,7 @@ import com.jay.jaygame.engine.math.Vec2
 
 object AbilitySystem {
     private const val AURA_RADIUS = 90f
+    private const val AURA_RADIUS_SQ = AURA_RADIUS * AURA_RADIUS
     private const val AURA_TICK = 0.5f
 
     fun onProjectileHit(
@@ -26,8 +27,8 @@ object AbilitySystem {
                 )
                 spatialHash.forEach(rect.x, rect.y, rect.right, rect.bottom) { nearby ->
                     if (nearby !== enemy && nearby.alive) {
-                        val dist = nearby.position.distanceTo(enemy.position)
-                        if (dist <= splashRadius) {
+                        val distSq = nearby.position.distanceSqTo(enemy.position)
+                        if (distSq <= splashRadius * splashRadius) {
                             nearby.takeDamage(proj.damage * 0.5f, proj.isMagic)
                         }
                     }
@@ -95,8 +96,8 @@ object AbilitySystem {
 
             for (other in units) {
                 if (other === unit || !other.alive) continue
-                val dist = unit.position.distanceTo(other.position)
-                if (dist <= AURA_RADIUS) {
+                val distSq = unit.position.distanceSqTo(other.position)
+                if (distSq <= AURA_RADIUS_SQ) {
                     when (unit.abilityType) {
                         5 -> other.buffs.addBuff(BuffType.AtkUp, unit.abilityValue, 1f, i)
                         8 -> {

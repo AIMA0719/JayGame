@@ -376,8 +376,14 @@ object UniqueAbilitySystem {
                     current.takeDamage(chainDmg)
                     current.buffs.addBuff(BuffType.Slow, 0.5f, 1f)
                     chainDmg *= 1.1f
-                    current = enemies.filter { it.alive && it !in hit }
-                        .minByOrNull { it.position.distanceSqTo(current.position) } ?: return@repeat
+                    var nearest: Enemy? = null
+                    var nearestDistSq = Float.MAX_VALUE
+                    for (e in enemies) {
+                        if (!e.alive || e in hit) continue
+                        val dSq = e.position.distanceSqTo(current.position)
+                        if (dSq < nearestDistSq) { nearestDistSq = dSq; nearest = e }
+                    }
+                    current = nearest ?: return@repeat
                 }
             }
             // Q3: Thunder King — Thunderstorm zone
@@ -465,7 +471,6 @@ object UniqueAbilitySystem {
     }
 
     private fun emitVfx(type: SkillVfxType, x: Float, y: Float, radius: Float, unit: GameUnit, duration: Float) {
-        // Hero(grade2)는 passiveAbilityId, Legend+(grade3+)는 blueprintId 우선
         val id = if (unit.grade <= 2 && unit.passiveAbilityId.isNotEmpty())
             unit.passiveAbilityId else unit.blueprintId
         BattleBridge.emitSkillEvent(
@@ -479,6 +484,12 @@ object UniqueAbilitySystem {
                 abilityId = id,
             )
         )
+    }
+
+    /** 유닛 위치에 등급/종족 기반 VFX emit (패시브용 단축 헬퍼) */
+    private fun emitUnitVfx(unit: GameUnit, duration: Float) {
+        val vfx = resolveVfxTypeEnum(unit.familyOrdinal, unit.grade) ?: return
+        emitVfx(vfx, unit.position.x / W, unit.position.y / H, UNIT_VFX_RADIUS, unit, duration)
     }
 
     /**
@@ -696,6 +707,7 @@ object UniqueAbilitySystem {
                     unit.bpPassiveTimer = 0f
                     pickRandomAllies(allUnits, unit, 2).forEach { it.mana += 15f }
                     applyAoECC(unit, spatialHash, 9999f, BuffType.Slow, 0.10f, 2f)
+                    emitUnitVfx(unit, 2f)
                 }
             }
             "grand_sage_passive" -> {
@@ -703,6 +715,7 @@ object UniqueAbilitySystem {
                 if (unit.bpPassiveTimer >= 10f) {
                     unit.bpPassiveTimer = 0f
                     pickRandomAllies(allUnits, unit, 1).forEach { it.mana += 20f }
+                    emitUnitVfx(unit, 2f)
                 }
             }
 
@@ -753,6 +766,7 @@ object UniqueAbilitySystem {
         if (unit.bpPassiveTimer >= cooldown) {
             unit.bpPassiveTimer = 0f
             applyAoECC(unit, spatialHash, range, type, value, duration)
+            emitUnitVfx(unit, 2f)
         }
     }
 
@@ -793,12 +807,12 @@ object UniqueAbilitySystem {
         }
     }
 
-    /** AoE CC — 범위 내 적에게 버프 적용 (GameRect 할당 없이 직접 query) */
+    /** AoE CC — 범위 내 적에게 버프 적용 (forEach로 리스트 할당 없이 처리) */
     private fun applyAoECC(unit: GameUnit, spatialHash: SpatialHash<Enemy>, range: Float, type: BuffType, value: Float, duration: Float) {
         val r = range.coerceAtLeast(100f)
-        for (enemy in spatialHash.query(unit.position.x - r, unit.position.y - r, unit.position.x + r, unit.position.y + r)) {
-            if (!enemy.alive) continue
-            if (range < 9000f && enemy.position.distanceTo(unit.position) > r) continue
+        spatialHash.forEach(unit.position.x - r, unit.position.y - r, unit.position.x + r, unit.position.y + r) { enemy ->
+            if (!enemy.alive) return@forEach
+            if (range < 9000f && enemy.position.distanceTo(unit.position) > r) return@forEach
             enemy.buffs.addBuff(type, value, duration, unit.tileIndex)
         }
     }

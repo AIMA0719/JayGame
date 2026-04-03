@@ -746,7 +746,7 @@ fun EnemyOverlay() {
                 val pColor = EnemyColors[p.colorIdx % EnemyColors.size]
                 val pSize = p.size * (1f - progress * 0.5f)
                 drawCircle(
-                    color = pColor.copy(alpha = alpha * 0.7f),
+                    color = pColor, alpha = alpha * 0.7f,
                     radius = pSize,
                     center = Offset(px, py),
                 )
