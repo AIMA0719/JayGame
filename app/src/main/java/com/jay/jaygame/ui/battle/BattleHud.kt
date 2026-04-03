@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.jay.jaygame.ui.battle
 
 import android.graphics.BitmapFactory

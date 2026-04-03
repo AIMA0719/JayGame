@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.jay.jaygame.ui.components
 
 import androidx.annotation.DrawableRes

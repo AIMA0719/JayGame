@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.jay.jaygame.ui.screens
 
 import androidx.compose.animation.AnimatedContent

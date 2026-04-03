@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -146,7 +146,7 @@ fun UpgradeSheet(
                         Text("\uD83E\uDE99 $luckyPrice", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                Divider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 3 group upgrade rows

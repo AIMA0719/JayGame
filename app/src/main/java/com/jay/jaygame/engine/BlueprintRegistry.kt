@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.jay.jaygame.engine
 
 import com.jay.jaygame.data.UnitFamily

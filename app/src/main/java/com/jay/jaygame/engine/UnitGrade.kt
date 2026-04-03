@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.jay.jaygame.engine
 
 import androidx.compose.ui.graphics.Color
