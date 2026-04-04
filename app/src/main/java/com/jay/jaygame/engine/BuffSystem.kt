@@ -1,6 +1,6 @@
 package com.jay.jaygame.engine
 
-enum class BuffType { Slow, DoT, ArmorBreak, AtkUp, SpdUp, Shield, Stun, Silence, DefUp }
+enum class BuffType { Slow, DoT, ArmorBreak, MagicResistBreak, AtkUp, SpdUp, Shield, Stun, Silence, DefUp }
 
 data class BuffEntry(
     val type: BuffType,
@@ -24,6 +24,7 @@ class BuffContainer {
     private var cachedFlags = 0        // bit per BuffType ordinal
     private var cachedSlowFactor = 1f
     private var cachedArmorReduction = 0f
+    private var cachedMagicResistReduction = 0f
     private var cachedAtkMult = 1f
     private var cachedSpdMult = 1f
     private var cachedDefMult = 1f
@@ -36,6 +37,7 @@ class BuffContainer {
         var flags = 0
         var maxSlow = 0f
         var armorBreak = 0f
+        var mrBreak = 0f
         var atkMult = 1f
         var spdMult = 1f
         var defMult = 1f
@@ -45,6 +47,7 @@ class BuffContainer {
             when (b.type) {
                 BuffType.Slow -> if (b.value > maxSlow) maxSlow = b.value
                 BuffType.ArmorBreak -> armorBreak += b.value
+                BuffType.MagicResistBreak -> mrBreak += b.value
                 BuffType.AtkUp -> atkMult += b.value
                 BuffType.SpdUp -> spdMult += b.value
                 BuffType.DefUp -> defMult += b.value
@@ -54,6 +57,7 @@ class BuffContainer {
         cachedFlags = flags
         cachedSlowFactor = 1f - maxSlow.coerceIn(0f, 0.8f)
         cachedArmorReduction = armorBreak
+        cachedMagicResistReduction = mrBreak
         cachedAtkMult = atkMult
         cachedSpdMult = spdMult
         cachedDefMult = defMult
@@ -129,6 +133,11 @@ class BuffContainer {
     fun getArmorReduction(): Float {
         recomputeIfDirty()
         return cachedArmorReduction
+    }
+
+    fun getMagicResistReduction(): Float {
+        recomputeIfDirty()
+        return cachedMagicResistReduction
     }
 
     fun getAtkMultiplier(): Float {

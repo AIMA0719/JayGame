@@ -833,7 +833,7 @@ private fun SettingsLicenses(onBack: () -> Unit) {
     val context = LocalContext.current
     val creditsText = remember {
         try {
-            context.assets.open("CREDITS.txt").bufferedReader().readText()
+            context.assets.open("CREDITS.txt").use { it.bufferedReader().readText() }
         } catch (_: Exception) {
             ""
         }

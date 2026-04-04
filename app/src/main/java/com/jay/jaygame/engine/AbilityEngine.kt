@@ -536,7 +536,7 @@ object AbilityEngine {
                             is AbilityEffect.Stun -> enemy.buffs.addBuff(BuffType.Stun, 1f, effect.duration, unit.tileIndex)
                             is AbilityEffect.DoT -> enemy.buffs.addBuff(BuffType.DoT, atk * effect.atkPercentPerTick, effect.duration, unit.tileIndex)
                             is AbilityEffect.ArmorBreak -> enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
-                            is AbilityEffect.MagicResistBreak -> enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex) // MR break → ArmorBreak 대체 (동일 감산 효과)
+                            is AbilityEffect.MagicResistBreak -> enemy.buffs.addBuff(BuffType.MagicResistBreak, effect.percent, effect.duration, unit.tileIndex)
                             // Buff effects in periodic AOE target allies, not enemies
                             is AbilityEffect.AtkBuff -> applyAllyBuff(unit, allUnits, effect.percent, effect.duration, isAtk = true, targetAll = effect.targetAll)
                             is AbilityEffect.SpdBuff -> applyAllyBuff(unit, allUnits, effect.percent, effect.duration, isAtk = false, targetAll = effect.targetAll)
@@ -604,9 +604,8 @@ object AbilityEngine {
                 is AbilityEffect.ArmorBreak -> applyEnemyDebuffInRange(unit, spatialHash, ability.range) { enemy ->
                     enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
                 }
-                // MR 감소 — BuffSystem에 별도 MR debuff 타입 없으므로 ArmorBreak로 통합
                 is AbilityEffect.MagicResistBreak -> applyEnemyDebuffInRange(unit, spatialHash, ability.range) { enemy ->
-                    enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
+                    enemy.buffs.addBuff(BuffType.MagicResistBreak, effect.percent, effect.duration, unit.tileIndex)
                 }
                 is AbilityEffect.DoT -> applyEnemyDebuffInRange(unit, spatialHash, ability.range) { enemy ->
                     enemy.buffs.addBuff(BuffType.DoT, unit.effectiveATK() * effect.atkPercentPerTick, effect.duration, unit.tileIndex)
@@ -677,7 +676,7 @@ object AbilityEngine {
                 is AbilityEffect.Stun -> target.buffs.addBuff(BuffType.Stun, 1f, effect.duration, unit.tileIndex)
                 is AbilityEffect.DoT -> target.buffs.addBuff(BuffType.DoT, atk * effect.atkPercentPerTick, effect.duration, unit.tileIndex)
                 is AbilityEffect.ArmorBreak -> target.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
-                is AbilityEffect.MagicResistBreak -> target.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
+                is AbilityEffect.MagicResistBreak -> target.buffs.addBuff(BuffType.MagicResistBreak, effect.percent, effect.duration, unit.tileIndex)
                 is AbilityEffect.CoinBonus -> coinBonus += effect.amount
                 is AbilityEffect.SelfAtkBuff -> {
                     if (effect.maxStacks > 0) unit.abilityStacks = unit.buffs.countBuff(BuffType.AtkUp)

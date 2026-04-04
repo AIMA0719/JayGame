@@ -77,7 +77,7 @@ fun ProfileScreen(
     val allUnlocked = remember(data.unlockedProfiles, nowUnlocked) { data.unlockedProfiles + nowUnlocked }
 
     // Auto-save if new profiles were unlocked
-    LaunchedEffect(allUnlocked.size) {
+    LaunchedEffect(allUnlocked) {
         if (nowUnlocked.any { it !in data.unlockedProfiles }) {
             repository.save(data.copy(unlockedProfiles = allUnlocked))
         }

@@ -130,10 +130,11 @@ class Enemy {
         var adjustedDamage = damage
         // 데미지 감소 적용 (DUAL_MOD면 양쪽 모두 체크)
         adjustedDamage = applyModifierDamageReduction(adjustedDamage, isMagic, attackRange)
-        val effectiveArmor = (armor - buffs.getArmorReduction()).coerceAtLeast(0f)
         val reduction = if (isMagic) {
-            1f - (magicResist / (magicResist + 100f))
+            val effectiveMR = (magicResist - buffs.getMagicResistReduction()).coerceAtLeast(0f)
+            1f - (effectiveMR / (effectiveMR + 100f))
         } else {
+            val effectiveArmor = (armor - buffs.getArmorReduction()).coerceAtLeast(0f)
             1f - (effectiveArmor / (effectiveArmor + 100f))
         }
         val finalDmg = buffs.absorbDamage(adjustedDamage * reduction)

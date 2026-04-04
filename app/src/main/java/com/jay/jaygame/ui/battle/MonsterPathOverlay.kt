@@ -31,6 +31,8 @@ import kotlin.math.sin
 // Pre-allocated constants
 private val OuterStroke = Stroke(width = 2.5f)
 private val InnerStroke = Stroke(width = 1.5f)
+private val TileBorderStroke = Stroke(width = 0.5f)
+private val CornerHighlightStroke = Stroke(width = 2f, cap = StrokeCap.Round)
 
 // Z8: Corner fill colors
 private val CornerFillDark = Color.Black.copy(alpha = 0.08f)
@@ -231,7 +233,7 @@ private fun DrawScope.drawPathTiles(
             val th = tileSize.coerceAtMost(gT - 2f - ty)
             drawRect(color = tColor, topLeft = Offset(tx, ty), size = Size(tw, th))
             drawRect(color = TileBorder, topLeft = Offset(tx, ty), size = Size(tw, th),
-                style = Stroke(width = 0.5f))
+                style = TileBorderStroke)
             ty += tileSize
         }
         tx += tileSize
@@ -248,7 +250,7 @@ private fun DrawScope.drawPathTiles(
             val th = tileSize.coerceAtMost(pB - 4f - ty)
             drawRect(color = tColor, topLeft = Offset(tx, ty), size = Size(tw, th))
             drawRect(color = TileBorder, topLeft = Offset(tx, ty), size = Size(tw, th),
-                style = Stroke(width = 0.5f))
+                style = TileBorderStroke)
             ty += tileSize
         }
         tx += tileSize
@@ -265,7 +267,7 @@ private fun DrawScope.drawPathTiles(
             val th = tileSize.coerceAtMost(gB - ly)
             drawRect(color = tColor, topLeft = Offset(lx, ly), size = Size(tw, th))
             drawRect(color = TileBorder, topLeft = Offset(lx, ly), size = Size(tw, th),
-                style = Stroke(width = 0.5f))
+                style = TileBorderStroke)
             lx += tileSize
         }
         ly += tileSize
@@ -282,7 +284,7 @@ private fun DrawScope.drawPathTiles(
             val th = tileSize.coerceAtMost(gB - ly)
             drawRect(color = tColor, topLeft = Offset(rx, ly), size = Size(tw, th))
             drawRect(color = TileBorder, topLeft = Offset(rx, ly), size = Size(tw, th),
-                style = Stroke(width = 0.5f))
+                style = TileBorderStroke)
             rx += tileSize
         }
         ly += tileSize
@@ -314,7 +316,7 @@ private fun DrawScope.drawCornerFills(
         moveTo(pL + 18f, gT - 2f)
         cubicTo(pL + 18f, pT + 18f + cornerRadius * 0.3f, gL - 2f, pT + 18f, gL - 2f, pT + 18f)
     }
-    drawPath(tlHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+    drawPath(tlHighlight, CornerFillLight, style = CornerHighlightStroke)
 
     // Top-right corner
     val trPath = Path().apply {
@@ -329,7 +331,7 @@ private fun DrawScope.drawCornerFills(
         moveTo(gR + 2f, pT + 18f)
         cubicTo(gR + 2f, pT + 18f, pR - 18f, pT + 18f + cornerRadius * 0.3f, pR - 18f, gT - 2f)
     }
-    drawPath(trHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+    drawPath(trHighlight, CornerFillLight, style = CornerHighlightStroke)
 
     // Bottom-right corner
     val brPath = Path().apply {
@@ -344,7 +346,7 @@ private fun DrawScope.drawCornerFills(
         moveTo(pR - 18f, gB + 2f)
         cubicTo(pR - 18f, gB + 2f, pR - 18f - cornerRadius * 0.3f, pB - 18f, gR + 2f, pB - 18f)
     }
-    drawPath(brHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+    drawPath(brHighlight, CornerFillLight, style = CornerHighlightStroke)
 
     // Bottom-left corner
     val blPath = Path().apply {
@@ -359,7 +361,7 @@ private fun DrawScope.drawCornerFills(
         moveTo(gL - 2f, pB - 18f)
         cubicTo(gL - 2f, pB - 18f, pL + 18f + cornerRadius * 0.3f, pB - 18f, pL + 18f, gB + 2f)
     }
-    drawPath(blHighlight, CornerFillLight, style = Stroke(width = 2f, cap = StrokeCap.Round))
+    drawPath(blHighlight, CornerFillLight, style = CornerHighlightStroke)
 }
 
 /**

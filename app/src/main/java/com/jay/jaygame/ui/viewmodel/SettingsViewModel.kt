@@ -33,17 +33,17 @@ class SettingsViewModel(private val repository: GameRepository) : ViewModel(), C
     }
 
     fun toggleSound() = intent {
-        val d = repository.gameData.value
+        val d = state.gameData
         repository.save(d.copy(soundEnabled = !d.soundEnabled))
     }
 
     fun toggleMusic() = intent {
-        val d = repository.gameData.value
+        val d = state.gameData
         repository.save(d.copy(musicEnabled = !d.musicEnabled))
     }
 
     fun toggleHaptic() = intent {
-        val d = repository.gameData.value
+        val d = state.gameData
         repository.save(d.copy(hapticEnabled = !d.hapticEnabled))
     }
 
@@ -76,7 +76,7 @@ class SettingsViewModel(private val repository: GameRepository) : ViewModel(), C
     }
 
     fun claimDailyLogin() = intent {
-        val updated = claimReward(repository.gameData.value)
+        val updated = claimReward(state.gameData)
         repository.save(updated)
         reduce { state.copy(showDailyLogin = false) }
     }

@@ -21,6 +21,9 @@ object UniqueAbilitySystem {
     /** 유닛 위치 PNG 이펙트 반경 — 그리드 1칸 크기 (96/720 ≈ 0.067) */
     private const val UNIT_VFX_RADIUS = 0.07f
 
+    private fun manaPerHitForGrade(grade: Int): Float =
+        if (grade >= 4) 7f else if (grade >= 3) 9f else 0f
+
     /**
      * Initialize unique ability fields on a newly placed unit.
      * Should be called when a unit is placed/summoned/merged.
@@ -44,7 +47,7 @@ object UniqueAbilitySystem {
         if (unit.blueprintId.isNotEmpty() && unit.activeAbility != null) {
             val bp = if (BlueprintRegistry.isReady) BlueprintRegistry.instance.findById(unit.blueprintId) else null
             if (bp?.uniqueAbility != null) {
-                unit.manaPerHit = if (unit.grade >= 4) 6f else if (unit.grade >= 3) 9f else 0f
+                unit.manaPerHit = manaPerHitForGrade(unit.grade)
                 unit.maxMana = 100f
                 unit.hasUltimate = unit.manaPerHit > 0f
                 unit.uniqueAbilityType = BLUEPRINT_ABILITY_BASE + unit.grade
@@ -63,7 +66,7 @@ object UniqueAbilitySystem {
             unit.grade >= 3 -> {
                 // 전설/신화: 마나 기반 궁극기
                 unit.hasUltimate = true
-                unit.manaPerHit = if (unit.grade >= 4) 6f else 9f  // 신화: 느리게 충전, 강한 궁극기
+                unit.manaPerHit = manaPerHitForGrade(unit.grade)  // 신화/불멸: ~14타 충전, 전설: ~11타 충전
                 unit.maxMana = 100f
                 unit.resetMana()
             }
@@ -616,7 +619,7 @@ object UniqueAbilitySystem {
     private val RE_CONFUSE = Regex("(\\d+\\.?\\d*)초\\s*혼란")
     private val RE_SLOW = Regex("(\\d+\\.?\\d*)초[간\\s]*(?:전체\\s*)?감속\\s*(\\d+)%")
     private val RE_ARMOR = Regex("방어[력]?[/마저]*\\s*(\\d+)%\\s*감소(?:\\s*\\((\\d+)초\\))?")
-    private val RE_MR = Regex("마저\\s*(\\d+)%\\s*감소")
+    private val RE_MR = Regex("(?:마법저항|마저)\\s*(\\d+)%\\s*감소(?:\\s*\\((\\d+)초\\))?")
     private val RE_DOT = Regex("(\\d+)초.*?(?:DoT|화염)")
     private val RE_DOT_STRENGTH = Regex("초당\\s*ATK\\s*(\\d+)%")
     private val RE_DOT_DUR = Regex("(\\d+)초\\s*(?:화염\\s*)?DoT")
@@ -898,10 +901,9 @@ object UniqueAbilitySystem {
             val dur = m.groupValues[2].toFloatOrNull() ?: 5f
             results.add(ParsedCC(BuffType.ArmorBreak, percent, dur))
         }
-        if (desc.contains("마저") && results.none { it.type == BuffType.ArmorBreak }) {
-            RE_MR.find(desc)?.let { m ->
-                results.add(ParsedCC(BuffType.ArmorBreak, m.groupValues[1].toFloatOrNull()?.div(100f) ?: 0.4f, 5f))
-            }
+        RE_MR.find(desc)?.let { m ->
+            val dur = m.groupValues[2].toFloatOrNull() ?: 5f
+            results.add(ParsedCC(BuffType.MagicResistBreak, m.groupValues[1].toFloatOrNull()?.div(100f) ?: 0.4f, dur))
         }
         RE_DOT.find(desc)?.let { m ->
             val dur = m.groupValues[1].toFloatOrNull() ?: 5f
