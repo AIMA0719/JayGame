@@ -32,6 +32,9 @@ import com.jay.jaygame.engine.BlueprintRegistry
 import com.jay.jaygame.ui.theme.*
 import com.jay.jaygame.ui.viewmodel.*
 import android.widget.Toast
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jay.jaygame.audio.BgmManager
 
 @Composable
@@ -63,9 +66,18 @@ fun NavGraph(
         Routes.HOME, Routes.COLLECTION, Routes.SHOP, Routes.SETTINGS,
     )
 
-    // 화면별 BGM 전환
+    // 화면별 BGM 전환 — 라이프사이클 resume 시에도 재평가
     val musicEnabled = (context.applicationContext as JayGameApplication).repository.gameData.collectAsState()
-    LaunchedEffect(currentRoute, musicEnabled.value.musicEnabled) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var bgmRefreshKey by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) bgmRefreshKey++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(currentRoute, musicEnabled.value.musicEnabled, bgmRefreshKey) {
         if (!musicEnabled.value.musicEnabled) return@LaunchedEffect
         val bgmAsset = when (currentRoute) {
             Routes.COLLECTION -> "audio/collection_bgm.mp3"

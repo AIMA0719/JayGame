@@ -176,7 +176,6 @@ class BattleEngine(
     internal var roguelikeSpdMult = 1f
     internal var roguelikeRangeMult = 1f
     internal var roguelikeCritBonus = 0f
-    internal var roguelikeCoinMult = 1f
     internal var roguelikeSellBonus = 0f
     internal var roguelikeSummonDiscount = 0f
     internal var roguelikeCCDuration = 0f
@@ -185,7 +184,6 @@ class BattleEngine(
     internal var roguelikeManaBonus = 0f
     internal var roguelikeLuckyBonus = 0f
     internal var roguelikeBerserkerBase = 0f
-    internal var roguelikeVampiricChance = 0f
     internal var roguelikeArmorShred = false
     internal var roguelikeSplash = false
     internal var roguelikeSlowOnHit = false
@@ -195,9 +193,9 @@ class BattleEngine(
     internal var roguelikeMultishot = false
     private var pendingRoguelike = false
 
-    /** 코인 합연산 멀티플라이어 (난이도 + 시너지 + 로그라이크 보너스를 합산) */
+    /** 코인 합연산 멀티플라이어 (난이도 + 시너지 보너스를 합산) */
     private val additiveCoinMult: Float
-        get() = 1f + (diffCoinMult - 1f) + (synergyCoinMult - 1f) + (roguelikeCoinMult - 1f)
+        get() = 1f + (diffCoinMult - 1f) + (synergyCoinMult - 1f)
 
     /** Total roguelike attack multiplier contribution. */
     private fun roguelikeTotalAtk(isBoss: Boolean): Float =
@@ -754,8 +752,7 @@ class BattleEngine(
                 wasElite -> COIN_PER_ELITE_KILL.toFloat()
                 else -> COIN_PER_KILL.toFloat()
             }
-            val vampiricDouble = if (roguelikeVampiricChance > 0f && Math.random() < roguelikeVampiricChance) 2f else 1f
-            sp += killCoin * additiveCoinMult * vampiricDouble
+            sp += killCoin * additiveCoinMult
             val eliteGoldMult = if (wasElite) 3f else 1f
             val killGold = (eliteGoldMult * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
             BattleBridge.onGoldPickup(deathX, deathY, killGold)

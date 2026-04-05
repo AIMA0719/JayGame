@@ -185,11 +185,9 @@ class ComposeActivity : ComponentActivity() {
         if (::appVm.isInitialized) {
             appVm.onResume()
         }
-        // BGM 재생은 NavGraph LaunchedEffect가 담당, 여기선 음소거 해제만
+        // BGM 재생은 NavGraph의 lifecycle observer가 화면별로 담당
         if (!app.repository.gameData.value.musicEnabled) {
             BgmManager.stop()
-        } else {
-            BgmManager.resume()
         }
     }
 

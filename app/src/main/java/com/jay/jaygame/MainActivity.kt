@@ -162,6 +162,7 @@ class MainActivity : ComponentActivity() {
         engine?.stop()
         BattleBridge.engine = null
         engineScope.cancel()
+        BgmManager.stop()
         super.onDestroy()
     }
 

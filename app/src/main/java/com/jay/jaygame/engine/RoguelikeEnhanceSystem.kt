@@ -33,7 +33,6 @@ class RoguelikeEnhanceSystem {
         RoguelikeBuff("spd_boost", "공격속도 강화", "전체 유닛 공속 +8%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("range_boost", "사거리 확장", "전체 유닛 사거리 +10%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("crit_boost", "치명타 확률", "크리율 +5%", RoguelikeBuffGrade.NORMAL, 0, true),
-        RoguelikeBuff("coin_boost", "코인 보너스", "적 처치 코인 +5%", RoguelikeBuffGrade.NORMAL, 0, true),
         RoguelikeBuff("sell_bonus", "되팔이의 눈", "유닛 판매 가격 +50%", RoguelikeBuffGrade.NORMAL, 0, false),
         RoguelikeBuff("cc_duration", "속박 강화", "CC 지속시간 +20%", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("dot_boost", "맹독 부여", "공격 시 ATK 15%의 독 피해 (3초)", RoguelikeBuffGrade.NORMAL, 0, true),
@@ -43,7 +42,6 @@ class RoguelikeEnhanceSystem {
         RoguelikeBuff("splash_dmg", "폭발의 여파", "모든 공격에 범위 피해 20%", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("slow_on_hit", "동결 타격", "공격 시 15% 확률 슬로우", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("chain_lightning", "연쇄 번개", "공격 시 10% 확률 주변 2체 50% 데미지", RoguelikeBuffGrade.RARE, 20, false),
-        RoguelikeBuff("vampiric", "생명력 착취", "적 처치 시 4% 확률 코인 2배", RoguelikeBuffGrade.RARE, 20, true),
         RoguelikeBuff("armor_shred", "방어구 파쇄", "공격 시 적 방어력 5% 영구 감소", RoguelikeBuffGrade.RARE, 20, false),
         RoguelikeBuff("summon_upgrade", "소환 축복", "소환 시 7% 확률 1등급 상위", RoguelikeBuffGrade.RARE, 20, false),
         // ── 영웅 (minWave=40) ──
@@ -114,7 +112,6 @@ class RoguelikeEnhanceSystem {
             "spd_boost" -> engine.roguelikeSpdMult += 0.08f
             "range_boost" -> engine.roguelikeRangeMult += 0.10f
             "crit_boost" -> engine.roguelikeCritBonus += 0.05f
-            "coin_boost" -> engine.roguelikeCoinMult += 0.05f
             "sell_bonus" -> engine.roguelikeSellBonus = 0.50f
             "cc_duration" -> engine.roguelikeCCDuration += 0.20f
             "dot_boost" -> engine.roguelikeDotBoost += 0.15f
@@ -123,7 +120,6 @@ class RoguelikeEnhanceSystem {
             "splash_dmg" -> engine.roguelikeSplash = true
             "slow_on_hit" -> engine.roguelikeSlowOnHit = true
             "chain_lightning" -> engine.roguelikeChainLightning = true
-            "vampiric" -> engine.roguelikeVampiricChance += 0.04f
             "armor_shred" -> engine.roguelikeArmorShred = true
             "summon_upgrade" -> engine.roguelikeSummonUpgrade = true
             "boss_slayer" -> engine.roguelikeBossBonus += 0.40f
