@@ -41,6 +41,11 @@ data class UnitStats(
 
 enum class UnitCategory { NORMAL, HIDDEN, SPECIAL }
 
+enum class DamageType {
+    PHYSICAL,  // 방어력(Defense) 감산
+    MAGIC,     // 마법 저항(MagicResist) 비율 감산
+}
+
 data class AbilityDef(
     val id: String,
     val name: String,

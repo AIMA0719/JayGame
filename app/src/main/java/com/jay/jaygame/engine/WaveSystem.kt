@@ -36,7 +36,6 @@ class WaveSystem(private val maxWaves: Int, private val difficulty: Int, val for
 
     companion object {
         const val BOSS_ENEMY_TYPE = 99
-        const val BOSS_GUARD_ENEMY_TYPE = 98  // MINION_RUSH 호위대 타입
         const val WAVE_DURATION = 180f      // 일반 웨이브 3분 제한
         const val BOSS_DURATION = 180f      // 보스 웨이브 3분 제한
         private val MID_GAME_TYPE_POOL = intArrayOf(0, 1, 2, 3, 4, 6, 7, 8, 9)

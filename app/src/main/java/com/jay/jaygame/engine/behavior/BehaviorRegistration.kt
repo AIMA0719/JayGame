@@ -2,7 +2,7 @@ package com.jay.jaygame.engine.behavior
 
 /**
  * Registers all built-in behavior factories.
- * Call once at app startup (e.g., from Application.onCreate or GameEngine.init).
+ * Call once at app startup (e.g., from Application.onCreate).
  */
 object BehaviorRegistration {
     private var registered = false

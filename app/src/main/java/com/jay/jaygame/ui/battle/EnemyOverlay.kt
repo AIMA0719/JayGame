@@ -364,18 +364,15 @@ fun EnemyOverlay() {
             val type = data.types[i]
             val hpRatio = if (i < sHp.size) sHp[i] else data.hpRatios[i]
             val isBoss = type == com.jay.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE
-            val isBossGuard = type == com.jay.jaygame.engine.WaveSystem.BOSS_GUARD_ENEMY_TYPE
 
             // 적 크기: 경로 폭 기준 (그리드 가로 기준, 세로 비율 무관)
             val pathWidth = w * (70f / 720f)  // 경로 마진 70px in 720-space
             val spriteSize = when {
                 isBoss -> pathWidth * 1.955f
-                isBossGuard -> pathWidth * 1.45f  // 보스 가드: 보스보다 작게
                 type == 6 -> pathWidth * 1.615f
                 else -> pathWidth * 1.36f
             }
-            // 보스 가드는 보스와 같은 이미지 사용 (크기만 다름)
-            val bitmap = if (isBoss || isBossGuard) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
+            val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
             val bSpeed = battleSpeed
 
@@ -660,12 +657,10 @@ fun EnemyOverlay() {
             val dy = de.y * h
             val deType = de.type
             val deIsBoss = deType == com.jay.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE
-            val deIsBossGuard = deType == com.jay.jaygame.engine.WaveSystem.BOSS_GUARD_ENEMY_TYPE
 
             val pathWidth = w * (70f / 720f)
             val deSpriteSize = when {
                 deIsBoss -> pathWidth * 1.955f
-                deIsBossGuard -> pathWidth * 1.45f
                 deType == 6 -> pathWidth * 1.615f
                 else -> pathWidth * 1.36f
             }
@@ -685,7 +680,7 @@ fun EnemyOverlay() {
             val deSz = IntSize(deSpriteSize.toInt(), deSpriteSize.toInt())
 
             // 스프라이트 시트 die 애니메이션 우선, 없으면 정적 PNG fallback
-            val deAnimator = enemyAnimators[deType] ?: if (deIsBossGuard) enemyAnimators[com.jay.jaygame.engine.WaveSystem.BOSS_ENEMY_TYPE] else null
+            val deAnimator = enemyAnimators[deType]
             rotate(degrees = deRotation, pivot = dePivot) {
                 scale(scaleX = deScale, scaleY = deScale, pivot = dePivot) {
                     if (deAnimator != null) {
@@ -702,7 +697,7 @@ fun EnemyOverlay() {
                             colorFilter = deTint,
                         )
                     } else {
-                        val deBitmap = if (deIsBoss || deIsBossGuard) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
+                        val deBitmap = if (deIsBoss) bossBitmap else (enemyBitmaps[deType] ?: enemyBitmaps[0])
                         deBitmap?.let {
                             drawImage(
                                 image = it,

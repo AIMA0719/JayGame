@@ -72,8 +72,6 @@ class BattleEngine(
         const val MIRROR_DISABLE_DURATION = 2f     // 반사 시 유닛 공격 불능 시간
         const val ADAPTIVE_CHECK_INTERVAL = 5f     // 적응 갱신 주기
         const val ADAPTIVE_RESIST_MULT = 0.6f      // 적응 저항 (40% 감소)
-        const val MINION_RUSH_GUARD_COUNT = 5      // 호위대 수
-        const val MINION_RUSH_GUARD_HP_MULT = 0.15f // 호위대 HP = 보스 HP의 15%
         const val DARKNESS_RANGE_MULT = 0.7f       // 암흑 웨이브 사거리 감소
     }
 
@@ -197,6 +195,10 @@ class BattleEngine(
     internal var roguelikeMultishot = false
     private var pendingRoguelike = false
 
+    /** 코인 합연산 멀티플라이어 (난이도 + 시너지 + 로그라이크 보너스를 합산) */
+    private val additiveCoinMult: Float
+        get() = 1f + (diffCoinMult - 1f) + (synergyCoinMult - 1f) + (roguelikeCoinMult - 1f)
+
     /** Total roguelike attack multiplier contribution. */
     private fun roguelikeTotalAtk(isBoss: Boolean): Float =
         roguelikeAtkMult +
@@ -248,12 +250,6 @@ class BattleEngine(
         if (roguelikeExecute && !target.isBoss && target.alive && target.hp <= target.maxHp * 0.07f) {
             target.hp = 0f
             target.alive = false
-            // 보스 가드 처형 시 guardsAlive 갱신
-            if (target.isBossGuard) {
-                target.guardBossRef?.let { boss ->
-                    if (boss.alive) boss.guardsAlive = (boss.guardsAlive - 1).coerceAtLeast(0)
-                }
-            }
         }
     }
 
@@ -548,7 +544,7 @@ class BattleEngine(
                     }
                     SfxManager.play(SoundEvent.WaveClear, 0.8f)
         
-                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * diffCoinMult * synergyCoinMult
+                    val waveClearCoins = (WAVE_CLEAR_BASE + waveSystem.currentWave * WAVE_CLEAR_PER_WAVE) * (1f + (diffCoinMult - 1f) + (synergyCoinMult - 1f))
                     sp += waveClearCoins
                     val waveClearGold = 5 + waveSystem.currentWave
                     BattleBridge.onGoldPickup(0.5f, 0.5f, waveClearGold)
@@ -644,26 +640,6 @@ class BattleEngine(
                 } else {
                     enemy.applyBossModifierFlags()
                     BattleBridge.notifyBossModifier(modifier)
-                }
-                if (modifier == BossModifier.MINION_RUSH) {
-                    enemy.guardsAlive = MINION_RUSH_GUARD_COUNT
-                    // 호위대 5마리 스폰 (보스와 같은 타입)
-                    repeat(MINION_RUSH_GUARD_COUNT) {
-                        val guard = enemies.acquire() ?: return@repeat
-                        guard.init(
-                            hp = enemy.maxHp * MINION_RUSH_GUARD_HP_MULT,
-                            speed = enemy.baseSpeed * 1.2f,
-                            armor = enemy.armor * 0.6f,
-                            magicResist = enemy.magicResist * 0.6f,
-                            type = config.enemyType, // 보스와 같은 타입
-                            startPos = enemy.position,
-                            ccResistance = enemy.ccResistance * 0.3f,
-                        )
-                        guard.isElite = true
-                        guard.isBossGuard = true
-                        guard.guardBossRef = enemy
-                        guard.pathIndex = enemy.pathIndex
-                    }
                 }
             }
         }
@@ -779,7 +755,7 @@ class BattleEngine(
                 else -> COIN_PER_KILL.toFloat()
             }
             val vampiricDouble = if (roguelikeVampiricChance > 0f && Math.random() < roguelikeVampiricChance) 2f else 1f
-            sp += killCoin * diffCoinMult * synergyCoinMult * roguelikeCoinMult * vampiricDouble
+            sp += killCoin * additiveCoinMult * vampiricDouble
             val eliteGoldMult = if (wasElite) 3f else 1f
             val killGold = (eliteGoldMult * (1f + (relicManager?.totalGoldKillBonus() ?: 0f) + petSystem.getGoldKillBonus())).toInt().coerceAtLeast(1)
             BattleBridge.onGoldPickup(deathX, deathY, killGold)
@@ -884,8 +860,6 @@ class BattleEngine(
                     enemy.adaptiveMagicDmg = 0f
                 }
             }
-            // MINION_RUSH: guardsAlive는 takeDamage/roguelikeExecute에서 이벤트 기반 감소
-            BossModifier.MINION_RUSH -> { /* no per-frame work needed */ }
             else -> {}
         }
     }
@@ -1215,8 +1189,6 @@ class BattleEngine(
             if (enemy.alive) {
                 // PHANTOM: 투명 상태일 때 타겟팅 불가
                 if (enemy.hasModifier(BossModifier.PHANTOM) && enemy.phantomActive) return@forEach
-                // MINION_RUSH: 호위대 살아있으면 보스 타겟 불가
-                if (enemy.bossModifier == BossModifier.MINION_RUSH && enemy.guardsAlive > 0) return@forEach
                 val d = enemy.position.distanceSqTo(pos)
                 if (d < nearestDist && d <= range * range) {
                     nearestDist = d

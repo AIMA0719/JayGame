@@ -153,12 +153,6 @@ class Enemy {
 
         if (hp <= 0f) {
             alive = false
-            // 보스 가드 사망 시 보스의 guardsAlive 감소
-            if (isBossGuard) {
-                guardBossRef?.let { boss ->
-                    if (boss.alive) boss.guardsAlive = (boss.guardsAlive - 1).coerceAtLeast(0)
-                }
-            }
         }
         return finalDmg
     }
@@ -170,11 +164,10 @@ class Enemy {
     var dualModFirst: BossModifier? = null
     var dualModSecond: BossModifier? = null
 
-    /** 보스 면역 상태인지 (SHIELDED 보호막 / PHANTOM 투명 / MINION_RUSH 호위 중) */
+    /** 보스 면역 상태인지 (SHIELDED 보호막 / PHANTOM 투명) */
     fun isImmune(): Boolean =
         (hasModifier(BossModifier.SHIELDED) && shieldActive) ||
-        (hasModifier(BossModifier.PHANTOM) && phantomActive) ||
-        (hasModifier(BossModifier.MINION_RUSH) && guardsAlive > 0)
+        (hasModifier(BossModifier.PHANTOM) && phantomActive)
 
     /** 이 적이 특정 기믹을 가지고 있는지 확인 (DUAL_MOD 양쪽 모두 체크) */
     fun hasModifier(mod: BossModifier): Boolean {
@@ -242,9 +235,6 @@ class Enemy {
         adaptiveMagicDmg = 0f
         adaptiveCheckTimer = 5f
         adaptiveResistPhysical = false
-        isBossGuard = false
-        guardBossRef = null
-        guardsAlive = 0
         lastMirrorDamage = 0f
         dualModFirst = null
         dualModSecond = null
@@ -268,11 +258,6 @@ class Enemy {
     var adaptiveMagicDmg = 0f     // 누적 마법 피해
     var adaptiveCheckTimer = 5f   // 5초마다 적응 갱신
     var adaptiveResistPhysical = false // true면 물리 저항 +40%
-
-    // ── MINION_RUSH 기믹 필드 ──
-    var isBossGuard = false     // 호위대 엘리트 여부
-    var guardBossRef: Enemy? = null  // 호위 대상 보스 참조
-    var guardsAlive = 0         // 보스: 남은 호위대 수 (0이면 타겟 가능)
 
     val hpRatio: Float get() = if (maxHp > 0f) (hp / maxHp).coerceIn(0f, 1f) else 0f
     val size: Float get() = when (type) {

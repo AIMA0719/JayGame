@@ -22,17 +22,16 @@ enum class BossModifier(val label: String, val description: String) {
     // ── 후반 전용 기믹 ──
     DUAL_MOD("이중 기믹", "기존 기믹 2개 동시 적용"),
     ADAPTIVE("적응형", "가장 많이 받은 데미지 타입 저항 +40%"),
-    MINION_RUSH("호위대", "엘리트 5마리 호위 — 전멸 전 보스 타겟 불가"),
 }
 
-/** 기본 보스 기믹 풀 (초중반) — DUAL_MOD, ADAPTIVE, MINION_RUSH 제외 */
+/** 기본 보스 기믹 풀 (초중반) — DUAL_MOD, ADAPTIVE 제외 */
 val BASE_MODIFIER_POOL = BossModifier.entries.filter {
-    it !in setOf(BossModifier.DUAL_MOD, BossModifier.ADAPTIVE, BossModifier.MINION_RUSH)
+    it !in setOf(BossModifier.DUAL_MOD, BossModifier.ADAPTIVE)
 }
 
 /** 후반 전용 기믹 풀 (웨이브 40+) */
 private val LATE_MODIFIER_POOL = listOf(
-    BossModifier.DUAL_MOD, BossModifier.ADAPTIVE, BossModifier.MINION_RUSH,
+    BossModifier.DUAL_MOD, BossModifier.ADAPTIVE,
 )
 
 fun getBossModifier(stageId: Int, waveIndex: Int): BossModifier? {
