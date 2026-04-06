@@ -1,0 +1,834 @@
+warning: in the working copy of 'app/src/main/java/com/jay/jaygame/engine/SpatialHash.kt', LF will be replaced by CRLF the next time Git touches it
+diff --git a/app/src/main/java/com/jay/jaygame/MainActivity.kt b/app/src/main/java/com/jay/jaygame/MainActivity.kt
+index a0a5453..5128b21 100644
+--- a/app/src/main/java/com/jay/jaygame/MainActivity.kt
++++ b/app/src/main/java/com/jay/jaygame/MainActivity.kt
+@@ -162,7 +162,10 @@ class MainActivity : ComponentActivity() {
+         engine?.stop()
+         BattleBridge.engine = null
+         engineScope.cancel()
+-        BgmManager.stop()
++        // BgmManager.stop()을 여기서 호출하면 안 됨
++        // Android 라이프사이클상 ComposeActivity.onResume() 이후에 onDestroy()가 실행되어
++        // NavGraph에서 방금 시작한 홈 BGM까지 죽여버림
++        // 배틀 BGM 정리는 ComposeActivity 복귀 시 NavGraph의 play()가 자동 처리
+         super.onDestroy()
+     }
+ 
+diff --git a/app/src/main/java/com/jay/jaygame/bridge/BattleBridge.kt b/app/src/main/java/com/jay/jaygame/bridge/BattleBridge.kt
+index 2bb5130..971aa9a 100644
+--- a/app/src/main/java/com/jay/jaygame/bridge/BattleBridge.kt
++++ b/app/src/main/java/com/jay/jaygame/bridge/BattleBridge.kt
+@@ -355,6 +355,12 @@ object BattleBridge {
+     private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
+     private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
+ 
++    // PERF: throttle timestamps for event types that previously had no throttle
++    private var lastMeleeHitEmitTime = 0L
++    private const val MELEE_HIT_EMIT_INTERVAL_MS = 33L // ~30 FPS for melee VFX
++    private var lastLevelUpEmitTime = 0L
++    private const val LEVEL_UP_EMIT_INTERVAL_MS = 100L // level-up badges don't need high FPS
++
+     // Lock objects for thread-safe buffer access (game thread writes, UI thread reads)
+     private val skillLock = Any()
+     private val damageLock = Any()
+@@ -687,7 +693,9 @@ object BattleBridge {
+ 
+         // Clear visual effects on wave end
+         if (update.state == 0 || update.state == 2 || update.state == 3) {
+-            _damageEvents.value = emptyList()
++            if (_damageEvents.value.isNotEmpty()) {
++                _damageEvents.value = emptyList()
++            }
+         }
+     }
+ 
+@@ -811,7 +819,7 @@ object BattleBridge {
+ 
+     // PERF: Throttle damage event list emission to avoid per-hit List allocation
+     private var lastDamageEmitTime = 0L
+-    private const val DAMAGE_EMIT_INTERVAL_MS = 33L // ~30 FPS for damage numbers
++    private const val DAMAGE_EMIT_INTERVAL_MS = 50L // ~20 FPS for damage numbers (sufficient visual fidelity)
+ 
+     @JvmStatic
+     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
+@@ -840,10 +848,21 @@ object BattleBridge {
+                 if ((meleeHitBuffer.firstOrNull()?.timestamp ?: now) <= cutoff) meleeHitBuffer.removeFirst() else break
+             }
+             meleeHitBuffer.addLast(MeleeHitEvent(x, y, family, isCrit, angle))
+-            _meleeHitEvents.value = meleeHitBuffer.toList()
++            // PERF: throttle emission — crits bypass throttle for immediate feedback
++            if (isCrit || now - lastMeleeHitEmitTime >= MELEE_HIT_EMIT_INTERVAL_MS) {
++                lastMeleeHitEmitTime = now
++                _meleeHitEvents.value = meleeHitBuffer.toList()
++            }
+         }
+     }
+ 
++    // PERF: cached grid arrays for dirty check — avoid recreating 18 GridTileState objects every call
++    private val cachedGridGrades = IntArray(GRID_TOTAL) { -1 }
++    private val cachedGridCanMerge = BooleanArray(GRID_TOTAL)
++    private val cachedGridLevels = IntArray(GRID_TOTAL)
++    private val cachedGridBlueprintIds = Array(GRID_TOTAL) { "" }
++    private var gridDirty = true
++
+     @JvmStatic
+     fun updateGridState(
+         grades: IntArray,
+@@ -853,6 +872,31 @@ object BattleBridge {
+         roles: Array<UnitRole> = emptyArray(),
+     ) {
+         val count = grades.size.coerceAtMost(GRID_TOTAL)
++        // PERF: dirty check — skip emission if grid content unchanged
++        var dirty = gridDirty
++        if (!dirty) {
++            for (i in 0 until count) {
++                if (grades[i] != cachedGridGrades[i] ||
++                    canMerge[i] != cachedGridCanMerge[i] ||
++                    levels[i] != cachedGridLevels[i] ||
++                    blueprintIds.getOrElse(i) { "" } != cachedGridBlueprintIds[i]
++                ) {
++                    dirty = true
++                    break
++                }
++            }
++        }
++        if (!dirty) return
++
++        // Update cache
++        grades.copyInto(cachedGridGrades, endIndex = count)
++        canMerge.copyInto(cachedGridCanMerge, endIndex = count)
++        levels.copyInto(cachedGridLevels, endIndex = count)
++        for (i in 0 until count) {
++            cachedGridBlueprintIds[i] = blueprintIds.getOrElse(i) { "" }
++        }
++        gridDirty = false
++
+         val tiles = List(count) { i ->
+             GridTileState(
+                 grade = grades[i],
+@@ -949,13 +993,18 @@ object BattleBridge {
+ 
+     fun onUnitLevelUp(x: Float, y: Float) {
+         synchronized(levelUpLock) {
+-            val cutoff = System.currentTimeMillis() - 1500L
++            val now = System.currentTimeMillis()
++            val cutoff = now - 1500L
+             while (levelUpBuffer.isNotEmpty()) {
+                 val first = levelUpBuffer.firstOrNull() ?: break
+                 if (first.timestamp <= cutoff) levelUpBuffer.removeFirst() else break
+             }
+             levelUpBuffer.addLast(LevelUpEvent(x, y))
+-            _levelUpEvents.value = levelUpBuffer.toList()
++            // PERF: throttle emission — level-up badges don't need high-frequency updates
++            if (now - lastLevelUpEmitTime >= LEVEL_UP_EMIT_INTERVAL_MS) {
++                lastLevelUpEmitTime = now
++                _levelUpEvents.value = levelUpBuffer.toList()
++            }
+         }
+     }
+ 
+@@ -1103,6 +1152,18 @@ object BattleBridge {
+             _meleeHitEvents.value = emptyList()
+         }
+         _gridState.value = List(GRID_TOTAL) { GridTileState() }
++        // PERF: reset grid dirty flag so first updateGridState after reset always emits
++        gridDirty = true
++        cachedGridGrades.fill(-1)
++        cachedGridCanMerge.fill(false)
++        cachedGridLevels.fill(0)
++        cachedGridBlueprintIds.fill("")
++        // PERF: reset throttle timestamps
++        lastDamageEmitTime = 0L
++        lastMeleeHitEmitTime = 0L
++        lastLevelUpEmitTime = 0L
++        lastSkillEmitTime = 0L
++        lastGoldEmitTime = 0L
+         _selectedTile.value = -1
+         _moveModeTile.value = -1
+         _validMoveTargets.value = EMPTY_BOOL_ARRAY
+@@ -1216,6 +1277,9 @@ object BattleBridge {
+     val battleUpgradeLevels: StateFlow<IntArray> = _battleUpgradeLevels.asStateFlow()
+ 
+     fun updateBattleUpgradeLevels(levels: IntArray) {
++        // PERF: skip emission if content unchanged
++        val current = _battleUpgradeLevels.value
++        if (current.size == levels.size && current.contentEquals(levels)) return
+         _battleUpgradeLevels.value = levels.copyOf()
+     }
+ 
+@@ -1237,6 +1301,9 @@ object BattleBridge {
+     val groupUpgradeLevels: StateFlow<IntArray> = _groupUpgradeLevels.asStateFlow()
+ 
+     fun updateGroupUpgradeLevels(levels: IntArray) {
++        // PERF: skip emission if content unchanged
++        val current = _groupUpgradeLevels.value
++        if (current.size == levels.size && current.contentEquals(levels)) return
+         _groupUpgradeLevels.value = levels.copyOf()
+     }
+ 
+diff --git a/app/src/main/java/com/jay/jaygame/engine/AbilityEngine.kt b/app/src/main/java/com/jay/jaygame/engine/AbilityEngine.kt
+index 0da8d1d..d2c08fe 100644
+--- a/app/src/main/java/com/jay/jaygame/engine/AbilityEngine.kt
++++ b/app/src/main/java/com/jay/jaygame/engine/AbilityEngine.kt
+@@ -73,8 +73,8 @@ object AbilityEngine {
+ 
+         return when (id) {
+             // ── HUMAN COMMON ──
+-            "bandit_steal" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.05f, r, isMagic,
+-                listOf(AbilityEffect.CoinBonus(v.toInt())))
++            "bandit_steal" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.15f, r, isMagic,
++                listOf(AbilityEffect.ArmorBreak(v / 100f, 3f)))
+ 
+             "militia_grit" -> makeAbility(id, trigger, AbilityPrimitive.SELF_BUFF_TIMER, 10f, 1f, r, isMagic,
+                 listOf(AbilityEffect.SelfAtkBuff(v / 100f, Float.MAX_VALUE, 3)))
+@@ -145,7 +145,7 @@ object AbilityEngine {
+ 
+             // ── ANIMAL RARE ──
+             "unicorn_heal" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+-                listOf(AbilityEffect.SpdBuff(v / 100f, 1f, false), AbilityEffect.CoinBonus(1)))
++                listOf(AbilityEffect.SpdBuff(v / 100f, 1f, false)))
+ 
+             "viper_venom" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.40f, r, isMagic,
+                 listOf(AbilityEffect.DoT(v / 100f, 4f)))
+@@ -172,7 +172,7 @@ object AbilityEngine {
+                 listOf(AbilityEffect.Damage(v / 100f, true), AbilityEffect.Slow(0.30f, 2f)))
+ 
+             "assassin_execute" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, r, isMagic,
+-                listOf(AbilityEffect.Execute(0.30f, 2f), AbilityEffect.CoinBonus(1)))
++                listOf(AbilityEffect.Execute(0.30f, 2f)))
+ 
+             "commander_rally" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
+                 listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true)))
+diff --git a/app/src/main/java/com/jay/jaygame/engine/BattleEngine.kt b/app/src/main/java/com/jay/jaygame/engine/BattleEngine.kt
+index e2cd912..785d179 100644
+--- a/app/src/main/java/com/jay/jaygame/engine/BattleEngine.kt
++++ b/app/src/main/java/com/jay/jaygame/engine/BattleEngine.kt
+@@ -903,9 +903,7 @@ class BattleEngine(
+                 applyGroupBonus(unit)
+                 // MIRROR 반사 디버프 감소 (behavior 유닛은 GameUnit.update() 안 타므로 여기서 처리)
+                 if (unit.disabledTimer > 0f) unit.disabledTimer = (unit.disabledTimer - dt).coerceAtLeast(0f)
+-                unit.behavior?.update(unit, dt) { pos, range ->
+-                    findNearestEnemy(pos, range)
+-                }
++                unit.behavior?.update(unit, dt, findEnemyLambda)
+                 if (unit.attackAnimTimer > 0f) unit.attackAnimTimer = (unit.attackAnimTimer - dt).coerceAtLeast(0f)
+                 if (unit.skillAnimTimer > 0f) unit.skillAnimTimer = (unit.skillAnimTimer - dt).coerceAtLeast(0f)
+                 if (unit.critAnimTimer > 0f) unit.critAnimTimer = (unit.critAnimTimer - dt).coerceAtLeast(0f)
+@@ -991,9 +989,7 @@ class BattleEngine(
+                 }
+             } else {
+                 applyGroupBonus(unit)
+-                unit.update(dt) { pos, range ->
+-                    findNearestEnemy(pos, range)
+-                }
++                unit.update(dt, findEnemyLambda)
+                 if (unit.canAttack()) {
+                     fireProjectile(unit)
+                     if (roguelikeMultishot && unit.attackRange == AttackRange.RANGED && Math.random() < 0.20) {
+@@ -1026,10 +1022,7 @@ class BattleEngine(
+             val stillAlive = proj.update(dt)
+             val target = proj.target
+             if (!stillAlive && target != null && target.alive) {
+-                AbilitySystem.onProjectileHit(proj, target, spatialHash) { from, t, dmg, type ->
+-                    val chain = projectiles.acquire() ?: return@onProjectileHit
+-                    chain.init(from, t, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
+-                }
++                AbilitySystem.onProjectileHit(proj, target, spatialHash, chainProjectileLambda)
+                 // Data-driven ability on-hit (AbilityEngine)
+                 applyAbilityOnHit(proj.sourceUnitId, target)
+ 
+@@ -1082,7 +1075,7 @@ class BattleEngine(
+                 }
+             }
+         }
+-        // Snapshot publishing uses preallocated buffers and skips empty frames cheaply
++        // Zone 수가 변했을 때만 copyOf로 스냅샷 생성 (UI 스레드 안전)
+         if (zi > 0 || _zoneDataCount > 0) {
+             BattleBridge.updateZoneData(
+                 zoneXs.copyOf(zi), zoneYs.copyOf(zi), zoneRadii.copyOf(zi),
+@@ -1092,6 +1085,27 @@ class BattleEngine(
+         }
+     }
+ 
++    // Pre-allocated lambdas — updatePets()에서 매 프레임 캡처 방지
++    private val petOnDamageEnemy: (Enemy, Float) -> Unit = { enemy, damage ->
++        if (enemy.alive) {
++            if (!enemy.isImmune()) {
++                enemy.hp -= damage
++                if (enemy.hp <= 0f) enemy.alive = false
++                val nx = enemy.position.x / W
++                val ny = enemy.position.y / H
++                BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
++            }
++        }
++    }
++    private val petOnBuffUnit: (GameUnit, BuffType, Float, Float) -> Unit = { unit, type, value, duration ->
++        unit.buffs.addBuff(type, value, duration)
++    }
++    private val petOnDotEnemy: (Enemy, Float, Float) -> Unit = { enemy, dps, duration ->
++        if (enemy.alive) {
++            enemy.buffs.addBuff(BuffType.DoT, dps, duration)
++        }
++    }
++
+     private fun updatePets(dt: Float) {
+         enemies.fillActiveList(activeEnemiesScratch)
+         val activeEnemies = activeEnemiesScratch
+@@ -1101,25 +1115,9 @@ class BattleEngine(
+             dt = dt,
+             enemies = activeEnemies,
+             units = activeUnits,
+-            onDamageEnemy = { enemy, damage ->
+-                if (enemy.alive) {
+-                    if (!enemy.isImmune()) {
+-                        enemy.hp -= damage
+-                        if (enemy.hp <= 0f) enemy.alive = false
+-                        val nx = enemy.position.x / W
+-                        val ny = enemy.position.y / H
+-                        BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
+-                    }
+-                }
+-            },
+-            onBuffUnit = { unit, type, value, duration ->
+-                unit.buffs.addBuff(type, value, duration)
+-            },
+-            onDotEnemy = { enemy, dps, duration ->
+-                if (enemy.alive) {
+-                    enemy.buffs.addBuff(BuffType.DoT, dps, duration)
+-                }
+-            },
++            onDamageEnemy = petOnDamageEnemy,
++            onBuffUnit = petOnBuffUnit,
++            onDotEnemy = petOnDotEnemy,
+         )
+     }
+ 
+@@ -1179,6 +1177,13 @@ class BattleEngine(
+         }
+     }
+ 
++    // Pre-allocated lambdas — updateUnits/updateProjectiles에서 매 프레임 캡처 방지
++    private val findEnemyLambda: (Vec2, Float) -> Enemy? = { pos, range -> findNearestEnemy(pos, range) }
++    private val chainProjectileLambda: (Vec2, Enemy, Float, Int) -> Unit = lambda@{ from, t, dmg, type ->
++        val chain = projectiles.acquire() ?: return@lambda
++        chain.init(from, t, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
++    }
++
+     private fun findNearestEnemy(pos: Vec2, range: Float): Enemy? {
+         var nearest: Enemy? = null
+         var nearestDist = Float.MAX_VALUE
+diff --git a/app/src/main/java/com/jay/jaygame/engine/BuffSystem.kt b/app/src/main/java/com/jay/jaygame/engine/BuffSystem.kt
+index 26e84ce..ad75547 100644
+--- a/app/src/main/java/com/jay/jaygame/engine/BuffSystem.kt
++++ b/app/src/main/java/com/jay/jaygame/engine/BuffSystem.kt
+@@ -41,7 +41,8 @@ class BuffContainer {
+         var atkMult = 1f
+         var spdMult = 1f
+         var defMult = 1f
+-        for (b in buffs) {
++        for (i in buffs.indices) {
++            val b = buffs[i]
+             if (b.remaining <= 0f) continue
+             flags = flags or (1 shl b.type.ordinal)
+             when (b.type) {
+@@ -73,7 +74,8 @@ class BuffContainer {
+         } else duration
+         var count = 0
+         var oldest: BuffEntry? = null
+-        for (b in buffs) {
++        for (i in buffs.indices) {
++            val b = buffs[i]
+             if (b.type == type) {
+                 count++
+                 if (oldest == null || b.remaining < oldest!!.remaining) oldest = b
+@@ -88,7 +90,14 @@ class BuffContainer {
+         markDirty()
+     }
+ 
+-    fun countBuff(type: BuffType): Int = buffs.count { it.type == type && it.remaining > 0f }
++    fun countBuff(type: BuffType): Int {
++        var count = 0
++        for (i in buffs.indices) {
++            val b = buffs[i]
++            if (b.type == type && b.remaining > 0f) count++
++        }
++        return count
++    }
+ 
+     fun isStunned(): Boolean {
+         recomputeIfDirty()
+@@ -103,13 +112,12 @@ class BuffContainer {
+     fun update(dt: Float): Float {
+         var dotDamage = 0f
+         var removed = false
+-        val iter = buffs.iterator()
+-        while (iter.hasNext()) {
+-            val b = iter.next()
++        for (i in buffs.lastIndex downTo 0) {
++            val b = buffs[i]
+             b.remaining -= dt
+             if (b.remaining <= 0f) {
+                 if (b.type == BuffType.Shield) shieldHP = (shieldHP - b.value).coerceAtLeast(0f)
+-                iter.remove()
++                buffs.removeAt(i)
+                 removed = true
+                 continue
+             }
+diff --git a/app/src/main/java/com/jay/jaygame/engine/SpatialHash.kt b/app/src/main/java/com/jay/jaygame/engine/SpatialHash.kt
+index bbab1b2..96774bf 100644
+--- a/app/src/main/java/com/jay/jaygame/engine/SpatialHash.kt
++++ b/app/src/main/java/com/jay/jaygame/engine/SpatialHash.kt
+@@ -6,24 +6,25 @@ import com.jay.jaygame.engine.math.GameRect
+  * Zero-allocation spatial hash using pre-allocated 2D grid arrays.
+  * Designed for 720×1280 game field with configurable cell size.
+  */
+-class SpatialHash<T>(private val cellSize: Float = 64f) {
++class SpatialHash<T>(@PublishedApi internal val cellSize: Float = 64f) {
+     // Grid dimensions: covers 0..799 x 0..1399 with some margin
+-    private val gridW = (800f / cellSize).toInt() + 1   // 13
+-    private val gridH = (1400f / cellSize).toInt() + 1   // 22
++    @PublishedApi internal val gridW = (800f / cellSize).toInt() + 1   // 13
++    @PublishedApi internal val gridH = (1400f / cellSize).toInt() + 1   // 22
+     private val maxPerCell = 64
+ 
+     // Flat storage: each cell holds up to maxPerCell item indices
+-    private val cellItems = Array(gridW * gridH) { IntArray(maxPerCell) }
+-    private val cellCounts = IntArray(gridW * gridH)
++    @PublishedApi internal val cellItems = Array(gridW * gridH) { IntArray(maxPerCell) }
++    @PublishedApi internal val cellCounts = IntArray(gridW * gridH)
+ 
+     // Item registry: maps items to internal indices for dedup
+     @Suppress("UNCHECKED_CAST")
+-    private val items = arrayOfNulls<Any>(512) as Array<T?>
++    @PublishedApi internal val items = arrayOfNulls<Any>(512) as Array<T?>
+     private var itemCount = 0
+ 
+     // Generation counter for O(1) dedup reset
+-    private var generation = 0
+-    private val seenGen = IntArray(512)
++    @PublishedApi internal var generation = 0
++    @PublishedApi internal val seenGen = IntArray(512)
++
+ 
+     fun clear() {
+         for (i in cellCounts.indices) cellCounts[i] = 0
+@@ -52,6 +53,7 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
+ 
+     fun query(rect: GameRect): List<T> = query(rect.x, rect.y, rect.right, rect.bottom)
+ 
++    /** Query — 호출 빈도 낮은 경로용. 핫패스는 forEach() 사용 권장. */
+     fun query(left: Float, top: Float, right: Float, bottom: Float): List<T> {
+         val result = mutableListOf<T>()
+         forEach(left, top, right, bottom) { result.add(it) }
+@@ -59,10 +61,10 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
+     }
+ 
+     /**
+-     * Zero-allocation forEach using generation-counter dedup.
++     * Zero-allocation inline forEach using generation-counter dedup.
+      * SpatialHash is single-threaded (battle thread only).
+      */
+-    fun forEach(left: Float, top: Float, right: Float, bottom: Float, action: (T) -> Unit) {
++    inline fun forEach(left: Float, top: Float, right: Float, bottom: Float, action: (T) -> Unit) {
+         val gen = ++generation
+ 
+         val minCX = (left / cellSize).toInt().coerceIn(0, gridW - 1)
+diff --git a/app/src/main/java/com/jay/jaygame/engine/UniqueAbilitySystem.kt b/app/src/main/java/com/jay/jaygame/engine/UniqueAbilitySystem.kt
+index 52a7135..5ac73f2 100644
+--- a/app/src/main/java/com/jay/jaygame/engine/UniqueAbilitySystem.kt
++++ b/app/src/main/java/com/jay/jaygame/engine/UniqueAbilitySystem.kt
+@@ -825,7 +825,7 @@ object UniqueAbilitySystem {
+             "abadon_passive", "abyss_king_passive" -> addPermanentAtk(unit, 0.05f, 0.35f)
+             "chaos_lord_passive", "world_end_passive" -> addPermanentAtk(unit, 0.05f, 0.40f)
+             "god_emperor_passive" -> unit.mana += 25f
+-            "emperor_passive" -> coinBonus += 3f
++            "emperor_passive" -> coinBonus += 1f
+         }
+         return coinBonus
+     }
+@@ -910,7 +910,12 @@ object UniqueAbilitySystem {
+                 family = unit.familyOrdinal,
+                 grade = unit.grade.coerceAtMost(UnitGrade.MYTHIC.ordinal),
+             ) ?: SkillVfxType.VOLCANIC_ERUPTION
+-            emitVfx(ultVfxType, htx, hty, 0.1f, unit, 2f)
++            // 등급별 순차 VFX — 레거시 궁극기와 유사한 연출
++            when {
++                unit.grade >= 5 -> emitSequentialVfx(ultVfxType, htx, hty, unit, count = 4, delayMs = 250L, radius = 0.14f, duration = 1.8f, scatter = 0.03f)
++                unit.grade >= 4 -> emitSequentialVfx(ultVfxType, htx, hty, unit, count = 3, delayMs = 300L, radius = 0.12f, duration = 1.5f, scatter = 0.03f)
++                else            -> emitSequentialVfx(ultVfxType, htx, hty, unit, count = 3, delayMs = 300L, radius = 0.10f, duration = 1.5f, scatter = 0.03f)
++            }
+         }
+ 
+         unit.resetMana()
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/BattleField.kt b/app/src/main/java/com/jay/jaygame/ui/battle/BattleField.kt
+index bf9b1fd..e9e8ba8 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/BattleField.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/BattleField.kt
+@@ -168,7 +168,8 @@ private val GRID_NORM_H = Grid.GRID_H / Grid.CANVAS_H
+ @Composable
+ fun BattleField() {
+     val unitPositions by BattleBridge.unitPositions.collectAsState()
+-    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
++    // battleSpeed: read directly from StateFlow in draw scope to avoid redundant recomposition
++    // (Canvas already recomposes every frame due to smoothXs/smoothYs updates)
+     val selectedTile by BattleBridge.selectedTile.collectAsState()
+     val moveModeTile by BattleBridge.moveModeTile.collectAsState()
+     val validMoveTargets by BattleBridge.validMoveTargets.collectAsState()
+@@ -434,6 +435,7 @@ fun BattleField() {
+         val unitSizeNormal = minOf(cellW, cellH) * 1.1f
+         val gridState = BattleBridge.gridState.value
+         // PERF: Reduce visual detail when many units exist
++        val battleSpeed = BattleBridge.battleSpeed.value
+         val fastBattleMode = battleSpeed >= 6f
+         val highUnitCount = data.count > 50 || fastBattleMode
+ 
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/BattleHud.kt b/app/src/main/java/com/jay/jaygame/ui/battle/BattleHud.kt
+index 8c351fa..3547b84 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/BattleHud.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/BattleHud.kt
+@@ -162,7 +162,7 @@ private val RecipeBtnBrush = Brush.verticalGradient(listOf(RecipeBtnTop, RecipeB
+ private val RecipeCraftBtnTop = Color(0xFF4CAF50)
+ private val RecipeCraftBtnBot = Color(0xFF2E7D32)
+ private val RecipeCraftEnabledBrush = Brush.verticalGradient(listOf(RecipeCraftBtnTop, RecipeCraftBtnBot))
+-private val RecipeCraftDisabledBrush = Brush.verticalGradient(listOf(DisabledTop, DisabledBot))
++private val DisabledBrush = Brush.verticalGradient(listOf(DisabledTop, DisabledBot))
+ private val RecipeCraftEnabledBorder = Color(0xFF1B5E20)
+ private val RecipeGradeWarningColor = Color(0xFFFFAA33)
+ 
+@@ -561,7 +561,7 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .clip(RoundedCornerShape(12.dp))
+-                            .background(if (hasReadyRecipe) RecipeCraftEnabledBrush else RecipeCraftDisabledBrush)
++                            .background(if (hasReadyRecipe) RecipeCraftEnabledBrush else DisabledBrush)
+                             .border(
+                                 2.dp,
+                                 if (hasReadyRecipe) RecipeCraftEnabledBorder else DisabledBot,
+@@ -1356,7 +1356,7 @@ fun BattleBottomHud(
+                 modifier = Modifier
+                     .align(Alignment.CenterStart)
+                     .clip(sellShape)
+-                    .background(if (hasUnits) SellBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
++                    .background(if (hasUnits) SellBtnBrush else DisabledBrush)
+                     .border(2.dp, if (hasUnits) Color(0xFF8B1A1A) else DisabledBot, sellShape)
+                     .then(if (hasUnits) Modifier.clickable(onClick = {
+                     playClick()
+@@ -1391,7 +1391,7 @@ fun BattleBottomHud(
+                 modifier = Modifier
+                     .align(Alignment.CenterEnd)
+                     .clip(mergeShape2)
+-                    .background(if (canMerge) MergeBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
++                    .background(if (canMerge) MergeBtnBrush else DisabledBrush)
+                     .border(2.dp, if (canMerge) Color(0xFF8B6914) else DisabledBot, mergeShape2)
+                     .then(if (canMerge) Modifier.clickable {
+                         playClick()
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/BattleScreen.kt b/app/src/main/java/com/jay/jaygame/ui/battle/BattleScreen.kt
+index fa151bb..1a56459 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/BattleScreen.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/BattleScreen.kt
+@@ -257,18 +257,21 @@ fun BattleScreen(
+         SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
+ 
+         // Boss red vignette overlay (화면 전체)
++        // Note: radialGradient + Color.copy() per frame is acceptable here because this
++        // Canvas only renders during boss waves and the alpha changes per frame.
++        // Moving to pre-allocated would require caching per-alpha variants.
+         if (bossVignetteAlpha > 0.01f) {
+             Canvas(modifier = Modifier.fillMaxSize()) {
+                 val vigAlpha = bossVignetteAlpha * bossPulse
+                 drawRect(
+-                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
++                    brush = Brush.radialGradient(
+                         colors = listOf(
+                             Color.Transparent,
+                             Color.Transparent,
+                             Color.Red.copy(alpha = vigAlpha * 0.5f),
+                             Color.Red.copy(alpha = vigAlpha),
+                         ),
+-                        center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2),
++                        center = Offset(size.width / 2, size.height / 2),
+                         radius = size.maxDimension * 0.7f,
+                     ),
+                     size = size,
+@@ -412,6 +415,10 @@ private val ZoneLightningColor = Color(0xFFFFD54F)
+ private val ZoneSupportColor = Color(0xFFCE93D8)
+ private val ZoneWindColor = Color(0xFF80CBC4)
+ 
++// Pre-allocated Stroke objects for zone rendering (avoid per-frame allocation)
++private val ZoneOuterStroke = Stroke(width = 2.5f)
++private val ZoneInnerStroke = Stroke(width = 1.5f)
++
+ private fun zoneColor(family: Int): Color = when (family) {
+     0 -> ZoneFireColor
+     1 -> ZoneFrostColor
+@@ -480,7 +487,7 @@ private fun ZoneGroundOverlay() {
+                     useCenter = false,
+                     topLeft = Offset(cx - radius, cy - radius),
+                     size = Size(radius * 2, radius * 2),
+-                    style = Stroke(width = 2.5f),
++                    style = ZoneOuterStroke,
+                 )
+             }
+ 
+@@ -495,7 +502,7 @@ private fun ZoneGroundOverlay() {
+                     useCenter = false,
+                     topLeft = Offset(cx - innerRadius, cy - innerRadius),
+                     size = Size(innerRadius * 2, innerRadius * 2),
+-                    style = Stroke(width = 1.5f),
++                    style = ZoneInnerStroke,
+                 )
+             }
+ 
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/EnemyOverlay.kt b/app/src/main/java/com/jay/jaygame/ui/battle/EnemyOverlay.kt
+index cab2f7f..e2a990f 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/EnemyOverlay.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/EnemyOverlay.kt
+@@ -171,8 +171,8 @@ fun EnemyOverlay() {
+     // Per-enemy animation state — pre-allocated pool (256 max, GC-free)
+     val animStates = remember { Array(256) { EnemyAnimState() } }
+ 
+-    // Battle speed for animation & LOD
+-    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
++    // Battle speed: read directly from StateFlow in draw scope to avoid redundant recomposition
++    // (Canvas already recomposes every frame due to smoothXs/smoothYs updates)
+ 
+     // Pre-load VFX sprite bitmaps from assets/fx/
+     val fxBitmaps = remember {
+@@ -374,7 +374,7 @@ fun EnemyOverlay() {
+             }
+             val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
+ 
+-            val bSpeed = battleSpeed
++            val bSpeed = BattleBridge.battleSpeed.value
+ 
+             // ── WALK animation: wobble + bounce + tilt ──
+             val wobbleOffsetX: Float
+@@ -733,15 +733,15 @@ fun EnemyOverlay() {
+                 )
+             }
+ 
++            // PERF: use template fields directly instead of .copy() to avoid per-frame allocation
++            val deColorIdx = de.type % EnemyColors.size
++            val deColor = EnemyColors[deColorIdx]
+             for (template in DeathParticleTemplate) {
+-                val colorIdx = de.type % EnemyColors.size
+-                val p = template.copy(colorIdx = colorIdx)
+-                val px = dx + p.vx * progress
+-                val py = dy + p.vy * progress + 20f * progress * progress
+-                val pColor = EnemyColors[p.colorIdx % EnemyColors.size]
+-                val pSize = p.size * (1f - progress * 0.5f)
++                val px = dx + template.vx * progress
++                val py = dy + template.vy * progress + 20f * progress * progress
++                val pSize = template.size * (1f - progress * 0.5f)
+                 drawCircle(
+-                    color = pColor, alpha = alpha * 0.7f,
++                    color = deColor, alpha = alpha * 0.7f,
+                     radius = pSize,
+                     center = Offset(px, py),
+                 )
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/MeleeHitOverlay.kt b/app/src/main/java/com/jay/jaygame/ui/battle/MeleeHitOverlay.kt
+index 9cac1f9..3194d4f 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/MeleeHitOverlay.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/MeleeHitOverlay.kt
+@@ -38,6 +38,10 @@ private const val CRIT_ANIM = "anim_sfx3b_1"
+ @Composable
+ fun MeleeHitOverlay() {
+     val events by BattleBridge.meleeHitEvents.collectAsState()
++
++    // Early return before any Canvas when no melee hit events
++    if (events.isEmpty()) return
++
+     val context = LocalContext.current
+ 
+     val manifest = remember { loadAnimManifest(context) }
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/MonsterPathOverlay.kt b/app/src/main/java/com/jay/jaygame/ui/battle/MonsterPathOverlay.kt
+index e747320..b5c8714 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/MonsterPathOverlay.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/MonsterPathOverlay.kt
+@@ -79,7 +79,7 @@ fun MonsterPathOverlay() {
+     val stageId by BattleBridge.stageId.collectAsState()
+     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
+ 
+-    // Stage-dependent colors
++    // Stage-dependent colors (pre-computed per stageId change)
+     val pathColor = remember(stageId) { stage.pathColor }
+     val pathColorBright = remember(stageId) { stage.pathColor.copy(alpha = 0.7f) }
+     val pathColorDim = remember(stageId) { stage.pathColor.copy(alpha = 0.4f) }
+@@ -88,6 +88,9 @@ fun MonsterPathOverlay() {
+     val fieldTop = remember(stageId) { stage.fieldColors.first() }
+     val fieldMid = remember(stageId) { stage.fieldColors.getOrElse(1) { stage.fieldColors.first() } }
+     val fieldBot = remember(stageId) { stage.fieldColors.last() }
++    // Pre-allocated Brush objects (avoid per-frame Brush.verticalGradient allocation)
++    val pathGradient = remember(stageId) { Brush.verticalGradient(listOf(pathColorBright, pathColorDim)) }
++    val fieldGradient = remember(stageId) { Brush.verticalGradient(listOf(fieldTop, fieldMid, fieldBot)) }
+     // Animated dash for path flow
+     val infiniteTransition = rememberInfiniteTransition(label = "pathFlow")
+     val dashOffset by infiniteTransition.animateFloat(
+@@ -127,7 +130,7 @@ fun MonsterPathOverlay() {
+ 
+         // Path fill
+         drawRoundRect(
+-            brush = Brush.verticalGradient(listOf(pathColorBright, pathColorDim)),
++            brush = pathGradient,
+             topLeft = Offset(pL, pT),
+             size = Size(pW, pH),
+             cornerRadius = CornerRadius(16f),
+@@ -151,9 +154,7 @@ fun MonsterPathOverlay() {
+ 
+         // Main ground surface
+         drawRoundRect(
+-            brush = Brush.verticalGradient(
+-                colors = listOf(fieldTop, fieldMid, fieldBot),
+-            ),
++            brush = fieldGradient,
+             topLeft = Offset(gL, gT),
+             size = Size(gW, gH),
+             cornerRadius = CornerRadius(cornerR),
+@@ -291,9 +292,20 @@ private fun DrawScope.drawPathTiles(
+     }
+ }
+ 
++// Pre-allocated Path objects — MonsterPathOverlay는 단일 Canvas에서만 사용 (메인 스레드 직렬)
++private val tlCornerPath = Path()
++private val tlCornerHighlight = Path()
++private val trCornerPath = Path()
++private val trCornerHighlight = Path()
++private val brCornerPath = Path()
++private val brCornerHighlight = Path()
++private val blCornerPath = Path()
++private val blCornerHighlight = Path()
++
+ /**
+  * Z8: Fills the 4 corner areas where the path turns with smooth rounded shapes.
+  * Corners are the areas between the outer path rect and the inner grid rect at each corner.
++ * Uses pre-allocated Path objects to avoid GC pressure.
+  */
+ private fun DrawScope.drawCornerFills(
+     pL: Float, pT: Float, pR: Float, pB: Float,
+@@ -302,66 +314,57 @@ private fun DrawScope.drawCornerFills(
+     val cornerRadius = 20f
+ 
+     // Top-left corner: quarter arc from top strip into left strip
+-    val tlPath = Path().apply {
+-        moveTo(pL + 16f, gT)
+-        lineTo(gL, gT)
+-        lineTo(gL, pT + 16f)
+-        // Arc curving inward
+-        cubicTo(gL, pT + 16f, pL + 16f + cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, pL + 16f, gT)
+-        close()
+-    }
+-    drawPath(tlPath, CornerFillDark)
++    tlCornerPath.reset()
++    tlCornerPath.moveTo(pL + 16f, gT)
++    tlCornerPath.lineTo(gL, gT)
++    tlCornerPath.lineTo(gL, pT + 16f)
++    tlCornerPath.cubicTo(gL, pT + 16f, pL + 16f + cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, pL + 16f, gT)
++    tlCornerPath.close()
++    drawPath(tlCornerPath, CornerFillDark)
+     // Inner highlight arc
+-    val tlHighlight = Path().apply {
+-        moveTo(pL + 18f, gT - 2f)
+-        cubicTo(pL + 18f, pT + 18f + cornerRadius * 0.3f, gL - 2f, pT + 18f, gL - 2f, pT + 18f)
+-    }
+-    drawPath(tlHighlight, CornerFillLight, style = CornerHighlightStroke)
++    tlCornerHighlight.reset()
++    tlCornerHighlight.moveTo(pL + 18f, gT - 2f)
++    tlCornerHighlight.cubicTo(pL + 18f, pT + 18f + cornerRadius * 0.3f, gL - 2f, pT + 18f, gL - 2f, pT + 18f)
++    drawPath(tlCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
+ 
+     // Top-right corner
+-    val trPath = Path().apply {
+-        moveTo(gR, pT + 16f)
+-        lineTo(gR, gT)
+-        lineTo(pR - 16f, gT)
+-        cubicTo(pR - 16f, gT, pR - 16f - cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, gR, pT + 16f)
+-        close()
+-    }
+-    drawPath(trPath, CornerFillDark)
+-    val trHighlight = Path().apply {
+-        moveTo(gR + 2f, pT + 18f)
+-        cubicTo(gR + 2f, pT + 18f, pR - 18f, pT + 18f + cornerRadius * 0.3f, pR - 18f, gT - 2f)
+-    }
+-    drawPath(trHighlight, CornerFillLight, style = CornerHighlightStroke)
++    trCornerPath.reset()
++    trCornerPath.moveTo(gR, pT + 16f)
++    trCornerPath.lineTo(gR, gT)
++    trCornerPath.lineTo(pR - 16f, gT)
++    trCornerPath.cubicTo(pR - 16f, gT, pR - 16f - cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, gR, pT + 16f)
++    trCornerPath.close()
++    drawPath(trCornerPath, CornerFillDark)
++    trCornerHighlight.reset()
++    trCornerHighlight.moveTo(gR + 2f, pT + 18f)
++    trCornerHighlight.cubicTo(gR + 2f, pT + 18f, pR - 18f, pT + 18f + cornerRadius * 0.3f, pR - 18f, gT - 2f)
++    drawPath(trCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
+ 
+     // Bottom-right corner
+-    val brPath = Path().apply {
+-        moveTo(pR - 16f, gB)
+-        lineTo(gR, gB)
+-        lineTo(gR, pB - 16f)
+-        cubicTo(gR, pB - 16f, pR - 16f - cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, pR - 16f, gB)
+-        close()
+-    }
+-    drawPath(brPath, CornerFillDark)
+-    val brHighlight = Path().apply {
+-        moveTo(pR - 18f, gB + 2f)
+-        cubicTo(pR - 18f, gB + 2f, pR - 18f - cornerRadius * 0.3f, pB - 18f, gR + 2f, pB - 18f)
+-    }
+-    drawPath(brHighlight, CornerFillLight, style = CornerHighlightStroke)
++    brCornerPath.reset()
++    brCornerPath.moveTo(pR - 16f, gB)
++    brCornerPath.lineTo(gR, gB)
++    brCornerPath.lineTo(gR, pB - 16f)
++    brCornerPath.cubicTo(gR, pB - 16f, pR - 16f - cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, pR - 16f, gB)
++    brCornerPath.close()
++    drawPath(brCornerPath, CornerFillDark)
++    brCornerHighlight.reset()
++    brCornerHighlight.moveTo(pR - 18f, gB + 2f)
++    brCornerHighlight.cubicTo(pR - 18f, gB + 2f, pR - 18f - cornerRadius * 0.3f, pB - 18f, gR + 2f, pB - 18f)
++    drawPath(brCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
+ 
+     // Bottom-left corner
+-    val blPath = Path().apply {
+-        moveTo(gL, pB - 16f)
+-        lineTo(gL, gB)
+-        lineTo(pL + 16f, gB)
+-        cubicTo(pL + 16f, gB, pL + 16f + cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, gL, pB - 16f)
+-        close()
+-    }
+-    drawPath(blPath, CornerFillDark)
+-    val blHighlight = Path().apply {
+-        moveTo(gL - 2f, pB - 18f)
+-        cubicTo(gL - 2f, pB - 18f, pL + 18f + cornerRadius * 0.3f, pB - 18f, pL + 18f, gB + 2f)
+-    }
+-    drawPath(blHighlight, CornerFillLight, style = CornerHighlightStroke)
++    blCornerPath.reset()
++    blCornerPath.moveTo(gL, pB - 16f)
++    blCornerPath.lineTo(gL, gB)
++    blCornerPath.lineTo(pL + 16f, gB)
++    blCornerPath.cubicTo(pL + 16f, gB, pL + 16f + cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, gL, pB - 16f)
++    blCornerPath.close()
++    drawPath(blCornerPath, CornerFillDark)
++    blCornerHighlight.reset()
++    blCornerHighlight.moveTo(gL - 2f, pB - 18f)
++    blCornerHighlight.cubicTo(gL - 2f, pB - 18f, pL + 18f + cornerRadius * 0.3f, pB - 18f, pL + 18f, gB + 2f)
++    drawPath(blCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
+ }
+ 
+ /**
+diff --git a/app/src/main/java/com/jay/jaygame/ui/battle/ProjectileOverlay.kt b/app/src/main/java/com/jay/jaygame/ui/battle/ProjectileOverlay.kt
+index 1747239..3f60016 100644
+--- a/app/src/main/java/com/jay/jaygame/ui/battle/ProjectileOverlay.kt
++++ b/app/src/main/java/com/jay/jaygame/ui/battle/ProjectileOverlay.kt
+@@ -89,6 +89,10 @@ private const val VISUAL_TYPE_COUNT = 10
+ @Composable
+ fun ProjectileOverlay() {
+     val projData by BattleBridge.projectiles.collectAsState()
++
++    // Early return before any Canvas allocation when no projectiles
++    if (projData.count == 0) return
++
+     val context = LocalContext.current
+ 
+     // Load all projectile bitmaps once (pre-scaled to 128×128 for performance)
