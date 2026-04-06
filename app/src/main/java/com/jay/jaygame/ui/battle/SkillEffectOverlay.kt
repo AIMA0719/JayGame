@@ -140,8 +140,8 @@ private val AnimOverrideMap: Map<String, String> = mapOf(
     "fx_armor_break"       to "anim_sfx3e_1",             // 방어구파괴 → SFX 3E 백색 다중슬래시
 )
 
-// SkillVfxType → 범용 AOE 스프라이트 매핑 (18개 전부 커버)
-private val AoeVfxMap: Map<SkillVfxType, String> = mapOf(
+// SkillVfxType → 범용 폴백 스프라이트 매핑 (개별 매핑 없는 유닛용, 18개 전부 커버)
+private val FallbackSpriteMap: Map<SkillVfxType, String> = mapOf(
     // Fire
     SkillVfxType.VOLCANIC_ERUPTION to "fx_aoe_fire",
     SkillVfxType.FIRESTORM_METEOR to "fx_aoe_meteor",
@@ -168,8 +168,8 @@ private val AoeVfxMap: Map<SkillVfxType, String> = mapOf(
     SkillVfxType.CYCLONE_PULL to "fx_splash",
 )
 
-// blueprintId → 궁극기 전용 스프라이트 (AoeVfxMap보다 우선)
-private val UltSpriteMap: Map<String, String> = mapOf(
+// blueprintId → 궁극기 전용 스프라이트 (FallbackSpriteMap보다 우선)
+private val UltimateSpriteMap: Map<String, String> = mapOf(
     // LEGEND
     "human_legend_01"  to "fx_ult_sword",
     "human_legend_02"  to "fx_ult_wisdom",
@@ -218,8 +218,8 @@ private val UltSpriteMap: Map<String, String> = mapOf(
     "special_frost_emperor"    to "fx_skill_xuanwu_barrier",  // 빙제 궁 (빙하시대)
 )
 
-// abilityId → 패시브 스킬 스프라이트 (ability 발동 시 표시)
-private val PassiveVfxMap: Map<String, String> = mapOf(
+// passiveAbilityId → 패시브 스킬 스프라이트 (패시브 발동 시 표시)
+private val PassiveSpriteMap: Map<String, String> = mapOf(
     // ── 정령 (SPIRIT) ──
     "earth_spirit_quake"     to "fx_skill_earth_power",      // 토정령 - 대지의힘
     "flash_burst"            to "fx_skill_flash",             // 빛정령 - 섬광
@@ -319,7 +319,7 @@ fun SkillEffectOverlay(
     // 정적 스프라이트 — 애니메이션이 없는 것만 로드
     val animatedStaticNames = remember { AnimOverrideMap.keys }
     val spriteBitmaps: Map<String, ImageBitmap?> = remember {
-        (AoeVfxMap.values.toSet() + UltSpriteMap.values.toSet() + PassiveVfxMap.values.toSet())
+        (FallbackSpriteMap.values.toSet() + UltimateSpriteMap.values.toSet() + PassiveSpriteMap.values.toSet())
             .filter { it !in animatedStaticNames }
             .associateWith { name -> decodeAssetBitmap(context, "fx/$name.png") }
     }
@@ -347,22 +347,27 @@ fun SkillEffectOverlay(
                 if (event.duration <= 0f) continue
                 val progress = (elapsed / event.duration).coerceIn(0f, 1f)
 
-                // 궁극기 전용 > 패시브 전용 > 범용 AOE 스프라이트 이름 결정
-                val ultAsset = UltSpriteMap[event.abilityId]
-                val passiveAsset = PassiveVfxMap[event.abilityId]
-                    ?: if (event.abilityId == "storm_king_tempest") "fx_chain_lightning" else null
-                val staticAsset = ultAsset ?: passiveAsset ?: AoeVfxMap[event.type] ?: continue
+                // 궁극기 전용 > 패시브 전용 > 범용 폴백 스프라이트 이름 결정
+                val ultAsset = UltimateSpriteMap[event.vfxKey]
+                val passiveAsset = PassiveSpriteMap[event.vfxKey]
+                    ?: if (event.vfxKey == "storm_king_tempest") "fx_chain_lightning" else null
+                val staticAsset = ultAsset ?: passiveAsset ?: FallbackSpriteMap[event.type] ?: continue
 
                 val cx = event.x * size.width
                 val cy = event.y * size.height
                 val radius = event.radius * size.minDimension
-                val spriteR = if (ultAsset != null) radius * 1.2f else radius * 1.0f
+                val isUlt = ultAsset != null
+                val spriteR = if (isUlt) radius * 1.5f else radius * 1.0f
                 val fadeAlpha = when {
                     progress < 0.1f -> progress / 0.1f
                     progress > 0.9f -> (1f - progress) / 0.1f
                     else -> 1f
                 }.coerceIn(0f, 1f)
-                val pulse = 1f + sin(elapsed * 3f) * 0.05f
+                // 궁극기: 시작 시 1.6x→1.0x burst, 이후 미세 pulse
+                val burst = if (isUlt && progress < 0.15f) {
+                    1f + 0.6f * (1f - progress / 0.15f)
+                } else 1f
+                val pulse = burst * (1f + sin(elapsed * 3f) * 0.05f)
                 val s = (spriteR * 2f * pulse).toInt().coerceAtLeast(1)
                 val dstOffset = IntOffset((cx - s / 2f).toInt(), (cy - s / 2f).toInt())
                 val dstSize = IntSize(s, s)

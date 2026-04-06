@@ -363,7 +363,7 @@ private fun SubPageHeader(title: String, onBack: () -> Unit) {
 
 @Composable
 private fun SettingsAudio(
-    data: com.jay.jaygame.data.GameData,
+    data: GameData,
     onBack: () -> Unit,
     onToggleSound: () -> Unit,
     onToggleMusic: () -> Unit,
@@ -436,9 +436,9 @@ private fun SettingsAudio(
 
 @Composable
 private fun SettingsGameplay(
-    data: com.jay.jaygame.data.GameData,
+    data: GameData,
     onBack: () -> Unit,
-    onUpdate: (com.jay.jaygame.data.GameData) -> Unit,
+    onUpdate: (GameData) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -603,9 +603,9 @@ private const val FAMILY_UPGRADE_PERCENT_PER_LEVEL = 0.1f // +0.1% per level
 
 @Composable
 private fun SettingsUpgrade(
-    data: com.jay.jaygame.data.GameData,
+    data: GameData,
     onBack: () -> Unit,
-    onUpdate: (com.jay.jaygame.data.GameData) -> Unit,
+    onUpdate: (GameData) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -960,7 +960,7 @@ private fun LicenseItem(name: String, license: String, copyright: String) {
 
 @Composable
 private fun SettingsFaq(onBack: () -> Unit) {
-    var expandedSection by remember { mutableStateOf(-1) }
+    var expandedSection by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
 
     Column(
         modifier = Modifier
@@ -972,7 +972,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // ── 전투 기본 ──
             FaqSection(
-                index = 0,
                 expanded = expandedSection == 0,
                 onToggle = { expandedSection = if (expandedSection == 0) -1 else 0 },
                 icon = "\u2694\uFE0F",
@@ -996,7 +995,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 소환 & 등급 ──
             FaqSection(
-                index = 1,
                 expanded = expandedSection == 1,
                 onToggle = { expandedSection = if (expandedSection == 1) -1 else 1 },
                 icon = "\u2728",
@@ -1019,7 +1017,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 합성 ──
             FaqSection(
-                index = 2,
                 expanded = expandedSection == 2,
                 onToggle = { expandedSection = if (expandedSection == 2) -1 else 2 },
                 icon = "\uD83D\uDD2E",
@@ -1041,7 +1038,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 유닛 강화 ──
             FaqSection(
-                index = 3,
                 expanded = expandedSection == 3,
                 onToggle = { expandedSection = if (expandedSection == 3) -1 else 3 },
                 icon = "\u2B06\uFE0F",
@@ -1066,7 +1062,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 종족 드래프트 시너지 ──
             FaqSection(
-                index = 4,
                 expanded = expandedSection == 4,
                 onToggle = { expandedSection = if (expandedSection == 4) -1 else 4 },
                 icon = "\uD83D\uDD25",
@@ -1084,7 +1079,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 유닛 조작 ──
             FaqSection(
-                index = 5,
                 expanded = expandedSection == 5,
                 onToggle = { expandedSection = if (expandedSection == 5) -1 else 5 },
                 icon = "\uD83D\uDC49",
@@ -1099,7 +1093,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 웨이브 & 보스 ──
             FaqSection(
-                index = 6,
                 expanded = expandedSection == 6,
                 onToggle = { expandedSection = if (expandedSection == 6) -1 else 6 },
                 icon = "\uD83D\uDC79",
@@ -1121,7 +1114,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 데미지 공식 ──
             FaqSection(
-                index = 7,
                 expanded = expandedSection == 7,
                 onToggle = { expandedSection = if (expandedSection == 7) -1 else 7 },
                 icon = "\uD83D\uDCA5",
@@ -1145,7 +1137,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 유물 ──
             FaqSection(
-                index = 8,
                 expanded = expandedSection == 8,
                 onToggle = { expandedSection = if (expandedSection == 8) -1 else 8 },
                 icon = "\uD83D\uDC8E",
@@ -1171,7 +1162,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 도감 ──
             FaqSection(
-                index = 9,
                 expanded = expandedSection == 9,
                 onToggle = { expandedSection = if (expandedSection == 9) -1 else 9 },
                 icon = "\uD83D\uDCD6",
@@ -1193,7 +1183,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 펫 ──
             FaqSection(
-                index = 10,
                 expanded = expandedSection == 10,
                 onToggle = { expandedSection = if (expandedSection == 10) -1 else 10 },
                 icon = "\uD83D\uDC3E",
@@ -1219,7 +1208,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 던전 ──
             FaqSection(
-                index = 11,
                 expanded = expandedSection == 11,
                 onToggle = { expandedSection = if (expandedSection == 11) -1 else 11 },
                 icon = "\uD83C\uDFF0",
@@ -1238,7 +1226,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 스태미나 ──
             FaqSection(
-                index = 12,
                 expanded = expandedSection == 12,
                 onToggle = { expandedSection = if (expandedSection == 12) -1 else 12 },
                 icon = "\u26A1",
@@ -1258,7 +1245,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 오프라인 보상 ──
             FaqSection(
-                index = 13,
                 expanded = expandedSection == 13,
                 onToggle = { expandedSection = if (expandedSection == 13) -1 else 13 },
                 icon = "\uD83C\uDF19",
@@ -1272,7 +1258,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
             // ── 시즌패스 & 랭크 ──
             FaqSection(
-                index = 14,
                 expanded = expandedSection == 14,
                 onToggle = { expandedSection = if (expandedSection == 14) -1 else 14 },
                 icon = "\uD83C\uDFC6",
@@ -1298,7 +1283,6 @@ private fun SettingsFaq(onBack: () -> Unit) {
 
 @Composable
 private fun FaqSection(
-    index: Int,
     expanded: Boolean,
     onToggle: () -> Unit,
     icon: String,

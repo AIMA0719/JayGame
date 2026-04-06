@@ -228,7 +228,7 @@ data class SkillEvent(
     val family: Int = 0,
     val startTime: Long = System.currentTimeMillis(),
     val duration: Float = 1f, // seconds
-    val abilityId: String = "", // 궁극기 스프라이트 매핑용
+    val vfxKey: String = "", // 궁극기=blueprintId, 패시브=passiveAbilityId
 )
 
 data class GoldPickupEvent(

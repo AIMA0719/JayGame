@@ -16,6 +16,9 @@ object UniqueAbilitySystem {
 
     private const val W = BattleEngine.W
     private const val H = BattleEngine.H
+    /** VFX 키 해석 — grade ≤ 2(패시브)면 passiveAbilityId, 그 외(궁극기)면 blueprintId */
+    private fun resolveVfxKey(unit: GameUnit): String =
+        if (unit.grade <= 2 && unit.passiveAbilityId.isNotEmpty()) unit.passiveAbilityId else unit.blueprintId
     /** Blueprint 기반 ability marker 기준값 (uniqueAbilityType >= 이 값이면 blueprint) */
     const val BLUEPRINT_ABILITY_BASE = 100
     /** 유닛 위치 PNG 이펙트 반경 — 그리드 1칸 크기 (96/720 ≈ 0.067) */
@@ -250,7 +253,7 @@ object UniqueAbilitySystem {
             // ── Fire ──
             // N2: Inferno — Firestorm Meteor: AoE meteor strike
             SkillVfxType.FIRESTORM_METEOR -> {
-                emitVfx(vfx, tx, ty, 0.15f, unit, 3f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 4, delayMs = 250L, radius = 0.15f, duration = 1.5f, scatter = 0.06f)
                 val atk = unit.effectiveATK() * gradeScale
                 for (e in enemies) {
                     if (!e.alive) continue
@@ -264,7 +267,7 @@ object UniqueAbilitySystem {
             }
             // N3: Volcano King — Volcanic Eruption: summon volcano zone
             SkillVfxType.VOLCANIC_ERUPTION -> {
-                emitVfx(vfx, tx, ty, 0.15f, unit, 8f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 400L, radius = 0.20f, duration = 2.0f, scatter = 0.04f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -279,7 +282,7 @@ object UniqueAbilitySystem {
             // ── Frost ──
             // O1: Frost Nova
             SkillVfxType.FROST_NOVA -> {
-                emitVfx(vfx, tx, ty, 0.12f, unit, 2.5f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 150L, radius = 0.14f, duration = 1.2f, scatter = 0.05f)
                 for (e in enemies) {
                     if (!e.alive) continue
                     val dx = e.position.x - unit.position.x
@@ -291,7 +294,7 @@ object UniqueAbilitySystem {
             }
             // O2: Iceborn — Absolute Zero: global freeze + shatter
             SkillVfxType.ABSOLUTE_ZERO -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 4f)
+                emitSequentialVfx(vfx, nx, ny, unit, count = 3, delayMs = 300L, radius = 0.22f, duration = 1.5f, scatter = 0.08f)
                 for (e in enemies) {
                     if (!e.alive) continue
                     e.buffs.addBuff(BuffType.Slow, 0.8f, 3f) // 3s freeze
@@ -300,7 +303,7 @@ object UniqueAbilitySystem {
             }
             // O3: Glacier Emperor — Ice Age Blizzard zone
             SkillVfxType.ICE_AGE_BLIZZARD -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 8f)
+                emitSequentialVfx(vfx, nx, ny, unit, count = 4, delayMs = 350L, radius = 0.18f, duration = 2.0f, scatter = 0.07f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -316,7 +319,7 @@ object UniqueAbilitySystem {
             // ── Poison ──
             // P1: Plague — Poison Cloud
             SkillVfxType.POISON_CLOUD -> {
-                emitVfx(vfx, tx, ty, 0.08f, unit, 5f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 300L, radius = 0.14f, duration = 1.8f, scatter = 0.05f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -331,7 +334,7 @@ object UniqueAbilitySystem {
             }
             // P2: Corrosive — Acid Spray: cone AoE + defense reduction
             SkillVfxType.ACID_SPRAY -> {
-                emitVfx(vfx, tx, ty, 0.15f, unit, 3f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 200L, radius = 0.16f, duration = 1.5f, scatter = 0.06f)
                 val atk = unit.effectiveATK()
                 for (e in enemies) {
                     if (!e.alive) continue
@@ -345,7 +348,7 @@ object UniqueAbilitySystem {
             }
             // P3: Hecate — Toxic Domain: poison swamp
             SkillVfxType.TOXIC_DOMAIN -> {
-                emitVfx(vfx, tx, ty, 0.15f, unit, 10f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 4, delayMs = 400L, radius = 0.18f, duration = 2.5f, scatter = 0.06f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -361,14 +364,14 @@ object UniqueAbilitySystem {
             // ── Lightning ──
             // Q1: Thunder — Lightning Strike
             SkillVfxType.LIGHTNING_STRIKE -> {
-                emitVfx(vfx, tx, ty, 0.12f, unit, 2f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 120L, radius = 0.13f, duration = 1.0f, scatter = 0.04f)
                 targetEnemy.takeDamage(unit.effectiveATK() * 2.5f)
                 targetEnemy.buffs.addBuff(BuffType.Slow, 0.5f, 1.5f)
                 BattleBridge.onDamageDealt(tx, ty, (unit.effectiveATK() * 2.5f).toInt(), true)
             }
             // Q2: Storm — Static Field: chain lightning
             SkillVfxType.STATIC_FIELD -> {
-                emitVfx(vfx, tx, ty, 0.15f, unit, 4f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 200L, radius = 0.16f, duration = 1.5f, scatter = 0.07f)
                 val atk = unit.effectiveATK()
                 var chainDmg = atk * 1.8f
                 val hit = mutableSetOf<Enemy>()
@@ -391,7 +394,7 @@ object UniqueAbilitySystem {
             }
             // Q3: Thunder King — Thunderstorm zone
             SkillVfxType.THUNDERSTORM -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 8f)
+                emitSequentialVfx(vfx, nx, ny, unit, count = 5, delayMs = 250L, radius = 0.16f, duration = 1.5f, scatter = 0.09f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -406,11 +409,11 @@ object UniqueAbilitySystem {
             // ── Support ──
             // R1: Oracle — Heal Pulse
             SkillVfxType.HEAL_PULSE -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 3f)
+                emitSequentialVfx(vfx, nx, ny, unit, count = 3, delayMs = 300L, radius = 0.18f, duration = 1.5f, scatter = 0.0f, firstExact = false)
             }
             // R2: Valkyrie — War Song: 아군 전체 ATK +25% 버프 (6초)
             SkillVfxType.WAR_SONG_AURA -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 6f)
+                emitSequentialVfx(vfx, nx, ny, unit, count = 3, delayMs = 250L, radius = 0.20f, duration = 2.0f, scatter = 0.0f, firstExact = false)
                 val atkBonus = 0.25f * gradeScale
                 activeUnits?.forEach { ally ->
                     if (ally.alive) {
@@ -420,7 +423,7 @@ object UniqueAbilitySystem {
             }
             // R3: Seraphim — Divine Shield: 아군 전체 실드 부여 (8초)
             SkillVfxType.DIVINE_SHIELD -> {
-                emitVfx(vfx, nx, ny, UNIT_VFX_RADIUS, unit, 8f)
+                emitSequentialVfx(vfx, nx, ny, unit, count = 3, delayMs = 350L, radius = 0.22f, duration = 2.0f, scatter = 0.0f, firstExact = false)
                 val shieldValue = unit.effectiveATK() * 2f * gradeScale
                 activeUnits?.forEach { ally ->
                     if (ally.alive && !ally.buffs.hasBuff(BuffType.Shield)) {
@@ -431,7 +434,7 @@ object UniqueAbilitySystem {
             // ── Wind ──
             // S1: Cyclone — Pull & damage
             SkillVfxType.CYCLONE_PULL -> {
-                emitVfx(vfx, tx, ty, 0.08f, unit, 3f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 200L, radius = 0.14f, duration = 1.5f, scatter = 0.05f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -446,7 +449,7 @@ object UniqueAbilitySystem {
             }
             // S2: Typhoon — Eye of Storm zone
             SkillVfxType.EYE_OF_STORM -> {
-                emitVfx(vfx, tx, ty, 0.18f, unit, 6f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 4, delayMs = 250L, radius = 0.16f, duration = 1.8f, scatter = 0.07f)
                 val zone = zonePool?.acquire()
                 if (zone != null) {
                     zone.init(
@@ -461,7 +464,7 @@ object UniqueAbilitySystem {
             }
             // S3: Sky Lord — Vacuum Slash: line AoE
             SkillVfxType.VACUUM_SLASH -> {
-                emitVfx(vfx, tx, ty, 0.25f, unit, 3f)
+                emitSequentialVfx(vfx, tx, ty, unit, count = 3, delayMs = 180L, radius = 0.20f, duration = 1.2f, scatter = 0.08f)
                 val atk = unit.effectiveATK()
                 for (e in enemies) {
                     if (!e.alive) continue
@@ -473,9 +476,11 @@ object UniqueAbilitySystem {
         }
     }
 
-    private fun emitVfx(type: SkillVfxType, x: Float, y: Float, radius: Float, unit: GameUnit, duration: Float) {
-        val id = if (unit.grade <= 2 && unit.passiveAbilityId.isNotEmpty())
-            unit.passiveAbilityId else unit.blueprintId
+    private fun emitVfx(
+        type: SkillVfxType, x: Float, y: Float, radius: Float,
+        unit: GameUnit, duration: Float,
+        startTime: Long = System.currentTimeMillis(),
+    ) {
         BattleBridge.emitSkillEvent(
             SkillEvent(
                 type = type,
@@ -483,10 +488,43 @@ object UniqueAbilitySystem {
                 radius = radius,
                 grade = unit.grade,
                 family = unit.familyOrdinal,
+                startTime = startTime,
                 duration = duration,
-                abilityId = id,
+                vfxKey = resolveVfxKey(unit),
             )
         )
+    }
+
+    /**
+     * 범용 순차 VFX 헬퍼 — 여러 SkillEvent를 startTime 오프셋으로 시간차 발동.
+     * scatter > 0이면 중심 주변 랜덤 산포, scatter == 0이면 같은 위치에 반복.
+     * firstExact=true면 첫 발은 정확 위치, false면 첫 발도 산포 적용.
+     */
+    private fun emitSequentialVfx(
+        type: SkillVfxType,
+        cx: Float,
+        cy: Float,
+        unit: GameUnit,
+        count: Int,
+        delayMs: Long = 200L,
+        radius: Float = 0.15f,
+        duration: Float = 1.5f,
+        scatter: Float = 0.06f,
+        firstExact: Boolean = true,
+    ) {
+        val now = System.currentTimeMillis()
+        for (i in 0 until count) {
+            val mx: Float
+            val my: Float
+            if (scatter <= 0f || (firstExact && i == 0)) {
+                mx = cx
+                my = cy
+            } else {
+                mx = (cx + (kotlin.random.Random.nextFloat() * 2f - 1f) * scatter).coerceIn(0.02f, 0.98f)
+                my = (cy + (kotlin.random.Random.nextFloat() * 2f - 1f) * scatter).coerceIn(0.02f, 0.98f)
+            }
+            emitVfx(type, mx, my, radius, unit, duration, startTime = now + i * delayMs)
+        }
     }
 
     /** 유닛 위치에 등급/종족 기반 VFX emit (패시브용 단축 헬퍼) */
