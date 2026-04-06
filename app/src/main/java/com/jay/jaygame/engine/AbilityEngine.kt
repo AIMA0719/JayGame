@@ -73,8 +73,8 @@ object AbilityEngine {
 
         return when (id) {
             // ── HUMAN COMMON ──
-            "bandit_steal" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.05f, r, isMagic,
-                listOf(AbilityEffect.CoinBonus(v.toInt())))
+            "bandit_steal" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.15f, r, isMagic,
+                listOf(AbilityEffect.ArmorBreak(v / 100f, 3f)))
 
             "militia_grit" -> makeAbility(id, trigger, AbilityPrimitive.SELF_BUFF_TIMER, 10f, 1f, r, isMagic,
                 listOf(AbilityEffect.SelfAtkBuff(v / 100f, Float.MAX_VALUE, 3)))
@@ -145,7 +145,7 @@ object AbilityEngine {
 
             // ── ANIMAL RARE ──
             "unicorn_heal" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
-                listOf(AbilityEffect.SpdBuff(v / 100f, 1f, false), AbilityEffect.CoinBonus(1)))
+                listOf(AbilityEffect.SpdBuff(v / 100f, 1f, false)))
 
             "viper_venom" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 0.40f, r, isMagic,
                 listOf(AbilityEffect.DoT(v / 100f, 4f)))
@@ -172,7 +172,7 @@ object AbilityEngine {
                 listOf(AbilityEffect.Damage(v / 100f, true), AbilityEffect.Slow(0.30f, 2f)))
 
             "assassin_execute" -> makeAbility(id, trigger, AbilityPrimitive.ON_HIT_CHANCE, cd, 1f, r, isMagic,
-                listOf(AbilityEffect.Execute(0.30f, 2f), AbilityEffect.CoinBonus(1)))
+                listOf(AbilityEffect.Execute(0.30f, 2f)))
 
             "commander_rally" -> makeAbility(id, trigger, AbilityPrimitive.AURA_BUFF, cd, 1f, r, isMagic,
                 listOf(AbilityEffect.AtkBuff(v / 100f, 1f, true)))

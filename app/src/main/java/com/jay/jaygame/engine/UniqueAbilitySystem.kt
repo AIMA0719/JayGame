@@ -825,7 +825,7 @@ object UniqueAbilitySystem {
             "abadon_passive", "abyss_king_passive" -> addPermanentAtk(unit, 0.05f, 0.35f)
             "chaos_lord_passive", "world_end_passive" -> addPermanentAtk(unit, 0.05f, 0.40f)
             "god_emperor_passive" -> unit.mana += 25f
-            "emperor_passive" -> coinBonus += 3f
+            "emperor_passive" -> coinBonus += 1f
         }
         return coinBonus
     }
@@ -910,7 +910,12 @@ object UniqueAbilitySystem {
                 family = unit.familyOrdinal,
                 grade = unit.grade.coerceAtMost(UnitGrade.MYTHIC.ordinal),
             ) ?: SkillVfxType.VOLCANIC_ERUPTION
-            emitVfx(ultVfxType, htx, hty, 0.1f, unit, 2f)
+            // 등급별 순차 VFX — 레거시 궁극기와 유사한 연출
+            when {
+                unit.grade >= 5 -> emitSequentialVfx(ultVfxType, htx, hty, unit, count = 4, delayMs = 250L, radius = 0.14f, duration = 1.8f, scatter = 0.03f)
+                unit.grade >= 4 -> emitSequentialVfx(ultVfxType, htx, hty, unit, count = 3, delayMs = 300L, radius = 0.12f, duration = 1.5f, scatter = 0.03f)
+                else            -> emitSequentialVfx(ultVfxType, htx, hty, unit, count = 3, delayMs = 300L, radius = 0.10f, duration = 1.5f, scatter = 0.03f)
+            }
         }
 
         unit.resetMana()
