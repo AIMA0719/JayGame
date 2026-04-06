@@ -171,8 +171,8 @@ fun EnemyOverlay() {
     // Per-enemy animation state — pre-allocated pool (256 max, GC-free)
     val animStates = remember { Array(256) { EnemyAnimState() } }
 
-    // Battle speed for animation & LOD
-    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
+    // Battle speed: read directly from StateFlow in draw scope to avoid redundant recomposition
+    // (Canvas already recomposes every frame due to smoothXs/smoothYs updates)
 
     // Pre-load VFX sprite bitmaps from assets/fx/
     val fxBitmaps = remember {
@@ -374,7 +374,7 @@ fun EnemyOverlay() {
             }
             val bitmap = if (isBoss) bossBitmap else (enemyBitmaps[type] ?: enemyBitmaps[0])
 
-            val bSpeed = battleSpeed
+            val bSpeed = BattleBridge.battleSpeed.value
 
             // ── WALK animation: wobble + bounce + tilt ──
             val wobbleOffsetX: Float
@@ -733,15 +733,15 @@ fun EnemyOverlay() {
                 )
             }
 
+            // PERF: use template fields directly instead of .copy() to avoid per-frame allocation
+            val deColorIdx = de.type % EnemyColors.size
+            val deColor = EnemyColors[deColorIdx]
             for (template in DeathParticleTemplate) {
-                val colorIdx = de.type % EnemyColors.size
-                val p = template.copy(colorIdx = colorIdx)
-                val px = dx + p.vx * progress
-                val py = dy + p.vy * progress + 20f * progress * progress
-                val pColor = EnemyColors[p.colorIdx % EnemyColors.size]
-                val pSize = p.size * (1f - progress * 0.5f)
+                val px = dx + template.vx * progress
+                val py = dy + template.vy * progress + 20f * progress * progress
+                val pSize = template.size * (1f - progress * 0.5f)
                 drawCircle(
-                    color = pColor, alpha = alpha * 0.7f,
+                    color = deColor, alpha = alpha * 0.7f,
                     radius = pSize,
                     center = Offset(px, py),
                 )

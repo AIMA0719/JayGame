@@ -168,7 +168,8 @@ private val GRID_NORM_H = Grid.GRID_H / Grid.CANVAS_H
 @Composable
 fun BattleField() {
     val unitPositions by BattleBridge.unitPositions.collectAsState()
-    val battleSpeed by BattleBridge.battleSpeed.collectAsState()
+    // battleSpeed: read directly from StateFlow in draw scope to avoid redundant recomposition
+    // (Canvas already recomposes every frame due to smoothXs/smoothYs updates)
     val selectedTile by BattleBridge.selectedTile.collectAsState()
     val moveModeTile by BattleBridge.moveModeTile.collectAsState()
     val validMoveTargets by BattleBridge.validMoveTargets.collectAsState()
@@ -434,6 +435,7 @@ fun BattleField() {
         val unitSizeNormal = minOf(cellW, cellH) * 1.1f
         val gridState = BattleBridge.gridState.value
         // PERF: Reduce visual detail when many units exist
+        val battleSpeed = BattleBridge.battleSpeed.value
         val fastBattleMode = battleSpeed >= 6f
         val highUnitCount = data.count > 50 || fastBattleMode
 

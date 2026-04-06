@@ -355,6 +355,12 @@ object BattleBridge {
     private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
     private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
 
+    // PERF: throttle timestamps for event types that previously had no throttle
+    private var lastMeleeHitEmitTime = 0L
+    private const val MELEE_HIT_EMIT_INTERVAL_MS = 33L // ~30 FPS for melee VFX
+    private var lastLevelUpEmitTime = 0L
+    private const val LEVEL_UP_EMIT_INTERVAL_MS = 100L // level-up badges don't need high FPS
+
     // Lock objects for thread-safe buffer access (game thread writes, UI thread reads)
     private val skillLock = Any()
     private val damageLock = Any()
@@ -687,7 +693,9 @@ object BattleBridge {
 
         // Clear visual effects on wave end
         if (update.state == 0 || update.state == 2 || update.state == 3) {
-            _damageEvents.value = emptyList()
+            if (_damageEvents.value.isNotEmpty()) {
+                _damageEvents.value = emptyList()
+            }
         }
     }
 
@@ -811,7 +819,7 @@ object BattleBridge {
 
     // PERF: Throttle damage event list emission to avoid per-hit List allocation
     private var lastDamageEmitTime = 0L
-    private const val DAMAGE_EMIT_INTERVAL_MS = 33L // ~30 FPS for damage numbers
+    private const val DAMAGE_EMIT_INTERVAL_MS = 50L // ~20 FPS for damage numbers (sufficient visual fidelity)
 
     @JvmStatic
     fun onDamageDealt(x: Float, y: Float, damage: Int, isCrit: Boolean) {
@@ -840,9 +848,20 @@ object BattleBridge {
                 if ((meleeHitBuffer.firstOrNull()?.timestamp ?: now) <= cutoff) meleeHitBuffer.removeFirst() else break
             }
             meleeHitBuffer.addLast(MeleeHitEvent(x, y, family, isCrit, angle))
-            _meleeHitEvents.value = meleeHitBuffer.toList()
+            // PERF: throttle emission — crits bypass throttle for immediate feedback
+            if (isCrit || now - lastMeleeHitEmitTime >= MELEE_HIT_EMIT_INTERVAL_MS) {
+                lastMeleeHitEmitTime = now
+                _meleeHitEvents.value = meleeHitBuffer.toList()
+            }
         }
     }
+
+    // PERF: cached grid arrays for dirty check — avoid recreating 18 GridTileState objects every call
+    private val cachedGridGrades = IntArray(GRID_TOTAL) { -1 }
+    private val cachedGridCanMerge = BooleanArray(GRID_TOTAL)
+    private val cachedGridLevels = IntArray(GRID_TOTAL)
+    private val cachedGridBlueprintIds = Array(GRID_TOTAL) { "" }
+    private var gridDirty = true
 
     @JvmStatic
     fun updateGridState(
@@ -853,6 +872,31 @@ object BattleBridge {
         roles: Array<UnitRole> = emptyArray(),
     ) {
         val count = grades.size.coerceAtMost(GRID_TOTAL)
+        // Grid dirty check — roles/familiesList 제외 (UnitRole 비활성화 상태)
+        var dirty = gridDirty
+        if (!dirty) {
+            for (i in 0 until count) {
+                if (grades[i] != cachedGridGrades[i] ||
+                    canMerge[i] != cachedGridCanMerge[i] ||
+                    levels[i] != cachedGridLevels[i] ||
+                    blueprintIds.getOrElse(i) { "" } != cachedGridBlueprintIds[i]
+                ) {
+                    dirty = true
+                    break
+                }
+            }
+        }
+        if (!dirty) return
+
+        // Update cache
+        grades.copyInto(cachedGridGrades, endIndex = count)
+        canMerge.copyInto(cachedGridCanMerge, endIndex = count)
+        levels.copyInto(cachedGridLevels, endIndex = count)
+        for (i in 0 until count) {
+            cachedGridBlueprintIds[i] = blueprintIds.getOrElse(i) { "" }
+        }
+        gridDirty = false
+
         val tiles = List(count) { i ->
             GridTileState(
                 grade = grades[i],
@@ -949,13 +993,18 @@ object BattleBridge {
 
     fun onUnitLevelUp(x: Float, y: Float) {
         synchronized(levelUpLock) {
-            val cutoff = System.currentTimeMillis() - 1500L
+            val now = System.currentTimeMillis()
+            val cutoff = now - 1500L
             while (levelUpBuffer.isNotEmpty()) {
                 val first = levelUpBuffer.firstOrNull() ?: break
                 if (first.timestamp <= cutoff) levelUpBuffer.removeFirst() else break
             }
             levelUpBuffer.addLast(LevelUpEvent(x, y))
-            _levelUpEvents.value = levelUpBuffer.toList()
+            // PERF: throttle emission — level-up badges don't need high-frequency updates
+            if (now - lastLevelUpEmitTime >= LEVEL_UP_EMIT_INTERVAL_MS) {
+                lastLevelUpEmitTime = now
+                _levelUpEvents.value = levelUpBuffer.toList()
+            }
         }
     }
 
@@ -1103,6 +1152,18 @@ object BattleBridge {
             _meleeHitEvents.value = emptyList()
         }
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
+        // PERF: reset grid dirty flag so first updateGridState after reset always emits
+        gridDirty = true
+        cachedGridGrades.fill(-1)
+        cachedGridCanMerge.fill(false)
+        cachedGridLevels.fill(0)
+        cachedGridBlueprintIds.fill("")
+        // PERF: reset throttle timestamps
+        lastDamageEmitTime = 0L
+        lastMeleeHitEmitTime = 0L
+        lastLevelUpEmitTime = 0L
+        lastSkillEmitTime = 0L
+        lastGoldEmitTime = 0L
         _selectedTile.value = -1
         _moveModeTile.value = -1
         _validMoveTargets.value = EMPTY_BOOL_ARRAY
@@ -1216,6 +1277,9 @@ object BattleBridge {
     val battleUpgradeLevels: StateFlow<IntArray> = _battleUpgradeLevels.asStateFlow()
 
     fun updateBattleUpgradeLevels(levels: IntArray) {
+        // PERF: skip emission if content unchanged
+        val current = _battleUpgradeLevels.value
+        if (current.size == levels.size && current.contentEquals(levels)) return
         _battleUpgradeLevels.value = levels.copyOf()
     }
 
@@ -1237,6 +1301,9 @@ object BattleBridge {
     val groupUpgradeLevels: StateFlow<IntArray> = _groupUpgradeLevels.asStateFlow()
 
     fun updateGroupUpgradeLevels(levels: IntArray) {
+        // PERF: skip emission if content unchanged
+        val current = _groupUpgradeLevels.value
+        if (current.size == levels.size && current.contentEquals(levels)) return
         _groupUpgradeLevels.value = levels.copyOf()
     }
 

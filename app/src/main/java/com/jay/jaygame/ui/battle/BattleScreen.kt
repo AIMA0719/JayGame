@@ -257,18 +257,21 @@ fun BattleScreen(
         SkillEffectOverlay(fieldOffset = fieldOffset, fieldSize = fieldSizePx)
 
         // Boss red vignette overlay (화면 전체)
+        // Note: radialGradient + Color.copy() per frame is acceptable here because this
+        // Canvas only renders during boss waves and the alpha changes per frame.
+        // Moving to pre-allocated would require caching per-alpha variants.
         if (bossVignetteAlpha > 0.01f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val vigAlpha = bossVignetteAlpha * bossPulse
                 drawRect(
-                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                    brush = Brush.radialGradient(
                         colors = listOf(
                             Color.Transparent,
                             Color.Transparent,
                             Color.Red.copy(alpha = vigAlpha * 0.5f),
                             Color.Red.copy(alpha = vigAlpha),
                         ),
-                        center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2),
+                        center = Offset(size.width / 2, size.height / 2),
                         radius = size.maxDimension * 0.7f,
                     ),
                     size = size,
@@ -412,6 +415,10 @@ private val ZoneLightningColor = Color(0xFFFFD54F)
 private val ZoneSupportColor = Color(0xFFCE93D8)
 private val ZoneWindColor = Color(0xFF80CBC4)
 
+// Pre-allocated Stroke objects for zone rendering (avoid per-frame allocation)
+private val ZoneOuterStroke = Stroke(width = 2.5f)
+private val ZoneInnerStroke = Stroke(width = 1.5f)
+
 private fun zoneColor(family: Int): Color = when (family) {
     0 -> ZoneFireColor
     1 -> ZoneFrostColor
@@ -480,7 +487,7 @@ private fun ZoneGroundOverlay() {
                     useCenter = false,
                     topLeft = Offset(cx - radius, cy - radius),
                     size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = 2.5f),
+                    style = ZoneOuterStroke,
                 )
             }
 
@@ -495,7 +502,7 @@ private fun ZoneGroundOverlay() {
                     useCenter = false,
                     topLeft = Offset(cx - innerRadius, cy - innerRadius),
                     size = Size(innerRadius * 2, innerRadius * 2),
-                    style = Stroke(width = 1.5f),
+                    style = ZoneInnerStroke,
                 )
             }
 

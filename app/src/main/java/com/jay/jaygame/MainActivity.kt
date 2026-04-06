@@ -162,7 +162,10 @@ class MainActivity : ComponentActivity() {
         engine?.stop()
         BattleBridge.engine = null
         engineScope.cancel()
-        BgmManager.stop()
+        // BgmManager.stop()을 여기서 호출하면 안 됨
+        // Android 라이프사이클상 ComposeActivity.onResume() 이후에 onDestroy()가 실행되어
+        // NavGraph에서 방금 시작한 홈 BGM까지 죽여버림
+        // 배틀 BGM 정리는 ComposeActivity 복귀 시 NavGraph의 play()가 자동 처리
         super.onDestroy()
     }
 

@@ -89,6 +89,10 @@ private const val VISUAL_TYPE_COUNT = 10
 @Composable
 fun ProjectileOverlay() {
     val projData by BattleBridge.projectiles.collectAsState()
+
+    // Early return before any Canvas allocation when no projectiles
+    if (projData.count == 0) return
+
     val context = LocalContext.current
 
     // Load all projectile bitmaps once (pre-scaled to 128×128 for performance)

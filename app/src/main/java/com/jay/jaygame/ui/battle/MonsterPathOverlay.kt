@@ -79,7 +79,7 @@ fun MonsterPathOverlay() {
     val stageId by BattleBridge.stageId.collectAsState()
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
 
-    // Stage-dependent colors
+    // Stage-dependent colors (pre-computed per stageId change)
     val pathColor = remember(stageId) { stage.pathColor }
     val pathColorBright = remember(stageId) { stage.pathColor.copy(alpha = 0.7f) }
     val pathColorDim = remember(stageId) { stage.pathColor.copy(alpha = 0.4f) }
@@ -88,6 +88,9 @@ fun MonsterPathOverlay() {
     val fieldTop = remember(stageId) { stage.fieldColors.first() }
     val fieldMid = remember(stageId) { stage.fieldColors.getOrElse(1) { stage.fieldColors.first() } }
     val fieldBot = remember(stageId) { stage.fieldColors.last() }
+    // Pre-allocated Brush objects (avoid per-frame Brush.verticalGradient allocation)
+    val pathGradient = remember(stageId) { Brush.verticalGradient(listOf(pathColorBright, pathColorDim)) }
+    val fieldGradient = remember(stageId) { Brush.verticalGradient(listOf(fieldTop, fieldMid, fieldBot)) }
     // Animated dash for path flow
     val infiniteTransition = rememberInfiniteTransition(label = "pathFlow")
     val dashOffset by infiniteTransition.animateFloat(
@@ -127,7 +130,7 @@ fun MonsterPathOverlay() {
 
         // Path fill
         drawRoundRect(
-            brush = Brush.verticalGradient(listOf(pathColorBright, pathColorDim)),
+            brush = pathGradient,
             topLeft = Offset(pL, pT),
             size = Size(pW, pH),
             cornerRadius = CornerRadius(16f),
@@ -151,9 +154,7 @@ fun MonsterPathOverlay() {
 
         // Main ground surface
         drawRoundRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(fieldTop, fieldMid, fieldBot),
-            ),
+            brush = fieldGradient,
             topLeft = Offset(gL, gT),
             size = Size(gW, gH),
             cornerRadius = CornerRadius(cornerR),
@@ -291,9 +292,20 @@ private fun DrawScope.drawPathTiles(
     }
 }
 
+// Pre-allocated Path objects — MonsterPathOverlay는 단일 Canvas에서만 사용 (메인 스레드 직렬)
+private val tlCornerPath = Path()
+private val tlCornerHighlight = Path()
+private val trCornerPath = Path()
+private val trCornerHighlight = Path()
+private val brCornerPath = Path()
+private val brCornerHighlight = Path()
+private val blCornerPath = Path()
+private val blCornerHighlight = Path()
+
 /**
  * Z8: Fills the 4 corner areas where the path turns with smooth rounded shapes.
  * Corners are the areas between the outer path rect and the inner grid rect at each corner.
+ * Uses pre-allocated Path objects to avoid GC pressure.
  */
 private fun DrawScope.drawCornerFills(
     pL: Float, pT: Float, pR: Float, pB: Float,
@@ -302,66 +314,57 @@ private fun DrawScope.drawCornerFills(
     val cornerRadius = 20f
 
     // Top-left corner: quarter arc from top strip into left strip
-    val tlPath = Path().apply {
-        moveTo(pL + 16f, gT)
-        lineTo(gL, gT)
-        lineTo(gL, pT + 16f)
-        // Arc curving inward
-        cubicTo(gL, pT + 16f, pL + 16f + cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, pL + 16f, gT)
-        close()
-    }
-    drawPath(tlPath, CornerFillDark)
+    tlCornerPath.reset()
+    tlCornerPath.moveTo(pL + 16f, gT)
+    tlCornerPath.lineTo(gL, gT)
+    tlCornerPath.lineTo(gL, pT + 16f)
+    tlCornerPath.cubicTo(gL, pT + 16f, pL + 16f + cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, pL + 16f, gT)
+    tlCornerPath.close()
+    drawPath(tlCornerPath, CornerFillDark)
     // Inner highlight arc
-    val tlHighlight = Path().apply {
-        moveTo(pL + 18f, gT - 2f)
-        cubicTo(pL + 18f, pT + 18f + cornerRadius * 0.3f, gL - 2f, pT + 18f, gL - 2f, pT + 18f)
-    }
-    drawPath(tlHighlight, CornerFillLight, style = CornerHighlightStroke)
+    tlCornerHighlight.reset()
+    tlCornerHighlight.moveTo(pL + 18f, gT - 2f)
+    tlCornerHighlight.cubicTo(pL + 18f, pT + 18f + cornerRadius * 0.3f, gL - 2f, pT + 18f, gL - 2f, pT + 18f)
+    drawPath(tlCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
 
     // Top-right corner
-    val trPath = Path().apply {
-        moveTo(gR, pT + 16f)
-        lineTo(gR, gT)
-        lineTo(pR - 16f, gT)
-        cubicTo(pR - 16f, gT, pR - 16f - cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, gR, pT + 16f)
-        close()
-    }
-    drawPath(trPath, CornerFillDark)
-    val trHighlight = Path().apply {
-        moveTo(gR + 2f, pT + 18f)
-        cubicTo(gR + 2f, pT + 18f, pR - 18f, pT + 18f + cornerRadius * 0.3f, pR - 18f, gT - 2f)
-    }
-    drawPath(trHighlight, CornerFillLight, style = CornerHighlightStroke)
+    trCornerPath.reset()
+    trCornerPath.moveTo(gR, pT + 16f)
+    trCornerPath.lineTo(gR, gT)
+    trCornerPath.lineTo(pR - 16f, gT)
+    trCornerPath.cubicTo(pR - 16f, gT, pR - 16f - cornerRadius * 0.2f, pT + 16f + cornerRadius * 0.2f, gR, pT + 16f)
+    trCornerPath.close()
+    drawPath(trCornerPath, CornerFillDark)
+    trCornerHighlight.reset()
+    trCornerHighlight.moveTo(gR + 2f, pT + 18f)
+    trCornerHighlight.cubicTo(gR + 2f, pT + 18f, pR - 18f, pT + 18f + cornerRadius * 0.3f, pR - 18f, gT - 2f)
+    drawPath(trCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
 
     // Bottom-right corner
-    val brPath = Path().apply {
-        moveTo(pR - 16f, gB)
-        lineTo(gR, gB)
-        lineTo(gR, pB - 16f)
-        cubicTo(gR, pB - 16f, pR - 16f - cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, pR - 16f, gB)
-        close()
-    }
-    drawPath(brPath, CornerFillDark)
-    val brHighlight = Path().apply {
-        moveTo(pR - 18f, gB + 2f)
-        cubicTo(pR - 18f, gB + 2f, pR - 18f - cornerRadius * 0.3f, pB - 18f, gR + 2f, pB - 18f)
-    }
-    drawPath(brHighlight, CornerFillLight, style = CornerHighlightStroke)
+    brCornerPath.reset()
+    brCornerPath.moveTo(pR - 16f, gB)
+    brCornerPath.lineTo(gR, gB)
+    brCornerPath.lineTo(gR, pB - 16f)
+    brCornerPath.cubicTo(gR, pB - 16f, pR - 16f - cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, pR - 16f, gB)
+    brCornerPath.close()
+    drawPath(brCornerPath, CornerFillDark)
+    brCornerHighlight.reset()
+    brCornerHighlight.moveTo(pR - 18f, gB + 2f)
+    brCornerHighlight.cubicTo(pR - 18f, gB + 2f, pR - 18f - cornerRadius * 0.3f, pB - 18f, gR + 2f, pB - 18f)
+    drawPath(brCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
 
     // Bottom-left corner
-    val blPath = Path().apply {
-        moveTo(gL, pB - 16f)
-        lineTo(gL, gB)
-        lineTo(pL + 16f, gB)
-        cubicTo(pL + 16f, gB, pL + 16f + cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, gL, pB - 16f)
-        close()
-    }
-    drawPath(blPath, CornerFillDark)
-    val blHighlight = Path().apply {
-        moveTo(gL - 2f, pB - 18f)
-        cubicTo(gL - 2f, pB - 18f, pL + 18f + cornerRadius * 0.3f, pB - 18f, pL + 18f, gB + 2f)
-    }
-    drawPath(blHighlight, CornerFillLight, style = CornerHighlightStroke)
+    blCornerPath.reset()
+    blCornerPath.moveTo(gL, pB - 16f)
+    blCornerPath.lineTo(gL, gB)
+    blCornerPath.lineTo(pL + 16f, gB)
+    blCornerPath.cubicTo(pL + 16f, gB, pL + 16f + cornerRadius * 0.2f, pB - 16f - cornerRadius * 0.2f, gL, pB - 16f)
+    blCornerPath.close()
+    drawPath(blCornerPath, CornerFillDark)
+    blCornerHighlight.reset()
+    blCornerHighlight.moveTo(gL - 2f, pB - 18f)
+    blCornerHighlight.cubicTo(gL - 2f, pB - 18f, pL + 18f + cornerRadius * 0.3f, pB - 18f, pL + 18f, gB + 2f)
+    drawPath(blCornerHighlight, CornerFillLight, style = CornerHighlightStroke)
 }
 
 /**

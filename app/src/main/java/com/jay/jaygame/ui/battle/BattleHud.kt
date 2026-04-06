@@ -162,7 +162,7 @@ private val RecipeBtnBrush = Brush.verticalGradient(listOf(RecipeBtnTop, RecipeB
 private val RecipeCraftBtnTop = Color(0xFF4CAF50)
 private val RecipeCraftBtnBot = Color(0xFF2E7D32)
 private val RecipeCraftEnabledBrush = Brush.verticalGradient(listOf(RecipeCraftBtnTop, RecipeCraftBtnBot))
-private val RecipeCraftDisabledBrush = Brush.verticalGradient(listOf(DisabledTop, DisabledBot))
+private val DisabledBrush = Brush.verticalGradient(listOf(DisabledTop, DisabledBot))
 private val RecipeCraftEnabledBorder = Color(0xFF1B5E20)
 private val RecipeGradeWarningColor = Color(0xFFFFAA33)
 
@@ -561,7 +561,7 @@ private fun RecipeBookDialog(onDismiss: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (hasReadyRecipe) RecipeCraftEnabledBrush else RecipeCraftDisabledBrush)
+                            .background(if (hasReadyRecipe) RecipeCraftEnabledBrush else DisabledBrush)
                             .border(
                                 2.dp,
                                 if (hasReadyRecipe) RecipeCraftEnabledBorder else DisabledBot,
@@ -1356,7 +1356,7 @@ fun BattleBottomHud(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .clip(sellShape)
-                    .background(if (hasUnits) SellBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
+                    .background(if (hasUnits) SellBtnBrush else DisabledBrush)
                     .border(2.dp, if (hasUnits) Color(0xFF8B1A1A) else DisabledBot, sellShape)
                     .then(if (hasUnits) Modifier.clickable(onClick = {
                     playClick()
@@ -1391,7 +1391,7 @@ fun BattleBottomHud(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .clip(mergeShape2)
-                    .background(if (canMerge) MergeBtnBrush else Brush.verticalGradient(listOf(DisabledTop, DisabledBot)))
+                    .background(if (canMerge) MergeBtnBrush else DisabledBrush)
                     .border(2.dp, if (canMerge) Color(0xFF8B6914) else DisabledBot, mergeShape2)
                     .then(if (canMerge) Modifier.clickable {
                         playClick()

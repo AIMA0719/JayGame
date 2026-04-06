@@ -41,7 +41,8 @@ class BuffContainer {
         var atkMult = 1f
         var spdMult = 1f
         var defMult = 1f
-        for (b in buffs) {
+        for (i in buffs.indices) {
+            val b = buffs[i]
             if (b.remaining <= 0f) continue
             flags = flags or (1 shl b.type.ordinal)
             when (b.type) {
@@ -73,7 +74,8 @@ class BuffContainer {
         } else duration
         var count = 0
         var oldest: BuffEntry? = null
-        for (b in buffs) {
+        for (i in buffs.indices) {
+            val b = buffs[i]
             if (b.type == type) {
                 count++
                 if (oldest == null || b.remaining < oldest!!.remaining) oldest = b
@@ -88,7 +90,14 @@ class BuffContainer {
         markDirty()
     }
 
-    fun countBuff(type: BuffType): Int = buffs.count { it.type == type && it.remaining > 0f }
+    fun countBuff(type: BuffType): Int {
+        var count = 0
+        for (i in buffs.indices) {
+            val b = buffs[i]
+            if (b.type == type && b.remaining > 0f) count++
+        }
+        return count
+    }
 
     fun isStunned(): Boolean {
         recomputeIfDirty()
@@ -103,13 +112,12 @@ class BuffContainer {
     fun update(dt: Float): Float {
         var dotDamage = 0f
         var removed = false
-        val iter = buffs.iterator()
-        while (iter.hasNext()) {
-            val b = iter.next()
+        for (i in buffs.lastIndex downTo 0) {
+            val b = buffs[i]
             b.remaining -= dt
             if (b.remaining <= 0f) {
                 if (b.type == BuffType.Shield) shieldHP = (shieldHP - b.value).coerceAtLeast(0f)
-                iter.remove()
+                buffs.removeAt(i)
                 removed = true
                 continue
             }

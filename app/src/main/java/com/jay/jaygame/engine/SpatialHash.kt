@@ -6,24 +6,25 @@ import com.jay.jaygame.engine.math.GameRect
  * Zero-allocation spatial hash using pre-allocated 2D grid arrays.
  * Designed for 720×1280 game field with configurable cell size.
  */
-class SpatialHash<T>(private val cellSize: Float = 64f) {
+class SpatialHash<T>(@PublishedApi internal val cellSize: Float = 64f) {
     // Grid dimensions: covers 0..799 x 0..1399 with some margin
-    private val gridW = (800f / cellSize).toInt() + 1   // 13
-    private val gridH = (1400f / cellSize).toInt() + 1   // 22
+    @PublishedApi internal val gridW = (800f / cellSize).toInt() + 1   // 13
+    @PublishedApi internal val gridH = (1400f / cellSize).toInt() + 1   // 22
     private val maxPerCell = 64
 
     // Flat storage: each cell holds up to maxPerCell item indices
-    private val cellItems = Array(gridW * gridH) { IntArray(maxPerCell) }
-    private val cellCounts = IntArray(gridW * gridH)
+    @PublishedApi internal val cellItems = Array(gridW * gridH) { IntArray(maxPerCell) }
+    @PublishedApi internal val cellCounts = IntArray(gridW * gridH)
 
     // Item registry: maps items to internal indices for dedup
     @Suppress("UNCHECKED_CAST")
-    private val items = arrayOfNulls<Any>(512) as Array<T?>
+    @PublishedApi internal val items = arrayOfNulls<Any>(512) as Array<T?>
     private var itemCount = 0
 
     // Generation counter for O(1) dedup reset
-    private var generation = 0
-    private val seenGen = IntArray(512)
+    @PublishedApi internal var generation = 0
+    @PublishedApi internal val seenGen = IntArray(512)
+
 
     fun clear() {
         for (i in cellCounts.indices) cellCounts[i] = 0
@@ -52,6 +53,7 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
 
     fun query(rect: GameRect): List<T> = query(rect.x, rect.y, rect.right, rect.bottom)
 
+    /** Query — 호출 빈도 낮은 경로용. 핫패스는 forEach() 사용 권장. */
     fun query(left: Float, top: Float, right: Float, bottom: Float): List<T> {
         val result = mutableListOf<T>()
         forEach(left, top, right, bottom) { result.add(it) }
@@ -59,10 +61,10 @@ class SpatialHash<T>(private val cellSize: Float = 64f) {
     }
 
     /**
-     * Zero-allocation forEach using generation-counter dedup.
+     * Zero-allocation inline forEach using generation-counter dedup.
      * SpatialHash is single-threaded (battle thread only).
      */
-    fun forEach(left: Float, top: Float, right: Float, bottom: Float, action: (T) -> Unit) {
+    inline fun forEach(left: Float, top: Float, right: Float, bottom: Float, action: (T) -> Unit) {
         val gen = ++generation
 
         val minCX = (left / cellSize).toInt().coerceIn(0, gridW - 1)

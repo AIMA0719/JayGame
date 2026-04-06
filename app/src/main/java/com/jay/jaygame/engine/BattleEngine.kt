@@ -903,9 +903,7 @@ class BattleEngine(
                 applyGroupBonus(unit)
                 // MIRROR 반사 디버프 감소 (behavior 유닛은 GameUnit.update() 안 타므로 여기서 처리)
                 if (unit.disabledTimer > 0f) unit.disabledTimer = (unit.disabledTimer - dt).coerceAtLeast(0f)
-                unit.behavior?.update(unit, dt) { pos, range ->
-                    findNearestEnemy(pos, range)
-                }
+                unit.behavior?.update(unit, dt, findEnemyLambda)
                 if (unit.attackAnimTimer > 0f) unit.attackAnimTimer = (unit.attackAnimTimer - dt).coerceAtLeast(0f)
                 if (unit.skillAnimTimer > 0f) unit.skillAnimTimer = (unit.skillAnimTimer - dt).coerceAtLeast(0f)
                 if (unit.critAnimTimer > 0f) unit.critAnimTimer = (unit.critAnimTimer - dt).coerceAtLeast(0f)
@@ -991,9 +989,7 @@ class BattleEngine(
                 }
             } else {
                 applyGroupBonus(unit)
-                unit.update(dt) { pos, range ->
-                    findNearestEnemy(pos, range)
-                }
+                unit.update(dt, findEnemyLambda)
                 if (unit.canAttack()) {
                     fireProjectile(unit)
                     if (roguelikeMultishot && unit.attackRange == AttackRange.RANGED && Math.random() < 0.20) {
@@ -1026,10 +1022,7 @@ class BattleEngine(
             val stillAlive = proj.update(dt)
             val target = proj.target
             if (!stillAlive && target != null && target.alive) {
-                AbilitySystem.onProjectileHit(proj, target, spatialHash) { from, t, dmg, type ->
-                    val chain = projectiles.acquire() ?: return@onProjectileHit
-                    chain.init(from, t, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
-                }
+                AbilitySystem.onProjectileHit(proj, target, spatialHash, chainProjectileLambda)
                 // Data-driven ability on-hit (AbilityEngine)
                 applyAbilityOnHit(proj.sourceUnitId, target)
 
@@ -1082,13 +1075,34 @@ class BattleEngine(
                 }
             }
         }
-        // Snapshot publishing uses preallocated buffers and skips empty frames cheaply
+        // Zone 수가 변했을 때만 copyOf로 스냅샷 생성 (UI 스레드 안전)
         if (zi > 0 || _zoneDataCount > 0) {
             BattleBridge.updateZoneData(
                 zoneXs.copyOf(zi), zoneYs.copyOf(zi), zoneRadii.copyOf(zi),
                 zoneFamilies.copyOf(zi), zoneProgresses.copyOf(zi), zoneGrades.copyOf(zi), zi,
             )
             _zoneDataCount = zi
+        }
+    }
+
+    // Pre-allocated lambdas — updatePets()에서 매 프레임 캡처 방지
+    private val petOnDamageEnemy: (Enemy, Float) -> Unit = { enemy, damage ->
+        if (enemy.alive) {
+            if (!enemy.isImmune()) {
+                enemy.hp -= damage
+                if (enemy.hp <= 0f) enemy.alive = false
+                val nx = enemy.position.x / W
+                val ny = enemy.position.y / H
+                BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
+            }
+        }
+    }
+    private val petOnBuffUnit: (GameUnit, BuffType, Float, Float) -> Unit = { unit, type, value, duration ->
+        unit.buffs.addBuff(type, value, duration)
+    }
+    private val petOnDotEnemy: (Enemy, Float, Float) -> Unit = { enemy, dps, duration ->
+        if (enemy.alive) {
+            enemy.buffs.addBuff(BuffType.DoT, dps, duration)
         }
     }
 
@@ -1101,25 +1115,9 @@ class BattleEngine(
             dt = dt,
             enemies = activeEnemies,
             units = activeUnits,
-            onDamageEnemy = { enemy, damage ->
-                if (enemy.alive) {
-                    if (!enemy.isImmune()) {
-                        enemy.hp -= damage
-                        if (enemy.hp <= 0f) enemy.alive = false
-                        val nx = enemy.position.x / W
-                        val ny = enemy.position.y / H
-                        BattleBridge.onDamageDealt(nx, ny, damage.toInt(), false)
-                    }
-                }
-            },
-            onBuffUnit = { unit, type, value, duration ->
-                unit.buffs.addBuff(type, value, duration)
-            },
-            onDotEnemy = { enemy, dps, duration ->
-                if (enemy.alive) {
-                    enemy.buffs.addBuff(BuffType.DoT, dps, duration)
-                }
-            },
+            onDamageEnemy = petOnDamageEnemy,
+            onBuffUnit = petOnBuffUnit,
+            onDotEnemy = petOnDotEnemy,
         )
     }
 
@@ -1177,6 +1175,13 @@ class BattleEngine(
                 attackerRange = unit.range,
             )
         }
+    }
+
+    // Pre-allocated lambdas — updateUnits/updateProjectiles에서 매 프레임 캡처 방지
+    private val findEnemyLambda: (Vec2, Float) -> Enemy? = { pos, range -> findNearestEnemy(pos, range) }
+    private val chainProjectileLambda: (Vec2, Enemy, Float, Int) -> Unit = lambda@{ from, t, dmg, type ->
+        val chain = projectiles.acquire() ?: return@lambda
+        chain.init(from, t, dmg, 400f, type, false, false, -1, 0, 0f, 0, 0)
     }
 
     private fun findNearestEnemy(pos: Vec2, range: Float): Enemy? {

@@ -38,6 +38,10 @@ private const val CRIT_ANIM = "anim_sfx3b_1"
 @Composable
 fun MeleeHitOverlay() {
     val events by BattleBridge.meleeHitEvents.collectAsState()
+
+    // Early return before any Canvas when no melee hit events
+    if (events.isEmpty()) return
+
     val context = LocalContext.current
 
     val manifest = remember { loadAnimManifest(context) }
