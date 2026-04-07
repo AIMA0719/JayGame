@@ -93,8 +93,9 @@ fun BattleParticleOverlay() {
     val prevSummonResult = remember { mutableStateOf(summonResult) }
     val prevMergeEffect = remember { mutableStateOf(mergeEffect) }
     val prevEnemyCount = remember { mutableStateOf(0) }
-    val prevEnemyXs = remember { mutableStateOf(FloatArray(0)) }
-    val prevEnemyYs = remember { mutableStateOf(FloatArray(0)) }
+    // Pre-allocated buffers (max 256) — avoids copyOf() allocation every frame
+    val prevEnemyXsBuf = remember { FloatArray(256) }
+    val prevEnemyYsBuf = remember { FloatArray(256) }
 
     // Helper to acquire a particle from the pool
     fun acquireParticle(): ComposeParticle? {
@@ -113,11 +114,11 @@ fun BattleParticleOverlay() {
     // Detect enemy deaths -> spawn soul particles flying to SP bar (bottom center)
     val curEnemyCount = enemies.count
     if (curEnemyCount < prevEnemyCount.value && prevEnemyCount.value > 0) {
-        val oldXs = prevEnemyXs.value
-        val oldYs = prevEnemyYs.value
+        val oldXs = prevEnemyXsBuf
+        val oldYs = prevEnemyYsBuf
         val oldCount = prevEnemyCount.value
 
-        for (oi in 0 until oldCount.coerceAtMost(oldXs.size)) {
+        for (oi in 0 until oldCount.coerceAtMost(256)) {
             var found = false
             for (ni in 0 until curEnemyCount) {
                 val dx = oldXs[oi] - enemies.xs[ni]
@@ -150,8 +151,9 @@ fun BattleParticleOverlay() {
         }
     }
     if (curEnemyCount > 0) {
-        prevEnemyXs.value = enemies.xs.copyOf(curEnemyCount)
-        prevEnemyYs.value = enemies.ys.copyOf(curEnemyCount)
+        val copyCount = curEnemyCount.coerceAtMost(256)
+        enemies.xs.copyInto(prevEnemyXsBuf, endIndex = copyCount)
+        enemies.ys.copyInto(prevEnemyYsBuf, endIndex = copyCount)
     }
     prevEnemyCount.value = curEnemyCount
 

@@ -28,6 +28,10 @@ data class Vec2(var x: Float = 0f, var y: Float = 0f) {
         return dx * dx + dy * dy
     }
 
+    /** Mutate this Vec2 to match another — zero allocation alternative to copy(). */
+    fun set(other: Vec2) { x = other.x; y = other.y }
+    fun set(nx: Float, ny: Float) { x = nx; y = ny }
+
     companion object {
         fun lerp(a: Vec2, b: Vec2, t: Float) = Vec2(
             a.x + (b.x - a.x) * t,

@@ -355,11 +355,33 @@ object BattleBridge {
     private val goldPickupBuffer = ArrayDeque<GoldPickupEvent>(16)
     private val levelUpBuffer = ArrayDeque<LevelUpEvent>(16)
 
+    /** Zero-allocation double-buffer: swap A/B and copy source into the inactive buffer. */
+    private class DoubleBuffer<T>(capacity: Int) {
+        private val a = ArrayList<T>(capacity)
+        private val b = ArrayList<T>(capacity)
+        private var useA = true
+        fun swap(source: Collection<T>): ArrayList<T> {
+            useA = !useA
+            val snap = if (useA) a else b
+            snap.clear()
+            snap.addAll(source)
+            return snap
+        }
+        fun reset() { useA = true }
+    }
+
+    private val damageSnap = DoubleBuffer<DamageEvent>(64)
+    private val meleeSnap = DoubleBuffer<MeleeHitEvent>(16)
+    private val skillSnap = DoubleBuffer<SkillEvent>(16)
+    private val goldSnap = DoubleBuffer<GoldPickupEvent>(16)
+    private val levelUpSnap = DoubleBuffer<LevelUpEvent>(16)
+
     // PERF: throttle timestamps for event types that previously had no throttle
     private var lastMeleeHitEmitTime = 0L
     private const val MELEE_HIT_EMIT_INTERVAL_MS = 33L // ~30 FPS for melee VFX
     private var lastLevelUpEmitTime = 0L
     private const val LEVEL_UP_EMIT_INTERVAL_MS = 100L // level-up badges don't need high FPS
+    private const val GOLD_EMIT_INTERVAL_MS = 50L // ~20 FPS for gold pickup VFX
 
     // Lock objects for thread-safe buffer access (game thread writes, UI thread reads)
     private val skillLock = Any()
@@ -673,7 +695,7 @@ object BattleBridge {
 
     @JvmStatic
     fun updateState(update: BattleStateUpdate) {
-        _state.value = BattleState(
+        val newState = BattleState(
             currentWave = update.wave,
             maxWaves = update.maxWaves,
             playerHP = update.hp,
@@ -690,6 +712,10 @@ object BattleBridge {
             waveDelayRemaining = update.waveDelayRemaining,
             specialWave = update.specialWave,
         )
+        // PERF: skip emission if BattleState is unchanged (custom equals compares all fields)
+        if (newState != _state.value) {
+            _state.value = newState
+        }
 
         // Clear visual effects on wave end
         if (update.state == 0 || update.state == 2 || update.state == 3) {
@@ -834,7 +860,7 @@ object BattleBridge {
             // Only emit a new list at throttled rate (crits always emit immediately)
             if (isCrit || now - lastDamageEmitTime >= DAMAGE_EMIT_INTERVAL_MS) {
                 lastDamageEmitTime = now
-                _damageEvents.value = damageBuffer.toList()
+                _damageEvents.value = damageSnap.swap(damageBuffer)
             }
         }
     }
@@ -851,7 +877,7 @@ object BattleBridge {
             // PERF: throttle emission — crits bypass throttle for immediate feedback
             if (isCrit || now - lastMeleeHitEmitTime >= MELEE_HIT_EMIT_INTERVAL_MS) {
                 lastMeleeHitEmitTime = now
-                _meleeHitEvents.value = meleeHitBuffer.toList()
+                _meleeHitEvents.value = meleeSnap.swap(meleeHitBuffer)
             }
         }
     }
@@ -862,6 +888,11 @@ object BattleBridge {
     private val cachedGridLevels = IntArray(GRID_TOTAL)
     private val cachedGridBlueprintIds = Array(GRID_TOTAL) { "" }
     private var gridDirty = true
+
+    // PERF: double-buffered grid tile lists — avoid List(18) allocation each update
+    private val gridTileSnapA: MutableList<GridTileState> = MutableList(GRID_TOTAL) { GridTileState() }
+    private val gridTileSnapB: MutableList<GridTileState> = MutableList(GRID_TOTAL) { GridTileState() }
+    private var gridUseA = true
 
     @JvmStatic
     fun updateGridState(
@@ -897,8 +928,11 @@ object BattleBridge {
         }
         gridDirty = false
 
-        val tiles = List(count) { i ->
-            GridTileState(
+        // PERF: reuse pre-allocated grid tile array, swap A/B to avoid mutating the list UI is reading
+        val snap = if (gridUseA) gridTileSnapA else gridTileSnapB
+        gridUseA = !gridUseA
+        for (i in 0 until count) {
+            snap[i] = GridTileState(
                 grade = grades[i],
                 canMerge = canMerge[i],
                 level = levels[i],
@@ -907,7 +941,7 @@ object BattleBridge {
                 role = roles.getOrElse(i) { UnitRole.RANGED_DPS },
             )
         }
-        _gridState.value = tiles
+        _gridState.value = snap
     }
 
     @JvmStatic
@@ -959,7 +993,7 @@ object BattleBridge {
             // Throttle StateFlow emission to avoid excessive recomposition
             if (now - lastSkillEmitTime >= SKILL_EMIT_THROTTLE_MS) {
                 lastSkillEmitTime = now
-                _skillEvents.value = skillBuffer.toList()
+                _skillEvents.value = skillSnap.swap(skillBuffer)
             }
         }
     }
@@ -980,9 +1014,9 @@ object BattleBridge {
                 if (first.timestamp <= cutoff) goldPickupBuffer.removeFirst() else break
             }
             goldPickupBuffer.addLast(GoldPickupEvent(x, y, amount))
-            if (now - lastGoldEmitTime >= 50L) {
+            if (now - lastGoldEmitTime >= GOLD_EMIT_INTERVAL_MS) {
                 lastGoldEmitTime = now
-                _goldPickupEvents.value = goldPickupBuffer.toList()
+                _goldPickupEvents.value = goldSnap.swap(goldPickupBuffer)
             }
         }
     }
@@ -1003,7 +1037,7 @@ object BattleBridge {
             // PERF: throttle emission — level-up badges don't need high-frequency updates
             if (now - lastLevelUpEmitTime >= LEVEL_UP_EMIT_INTERVAL_MS) {
                 lastLevelUpEmitTime = now
-                _levelUpEvents.value = levelUpBuffer.toList()
+                _levelUpEvents.value = levelUpSnap.swap(levelUpBuffer)
             }
         }
     }
@@ -1021,7 +1055,9 @@ object BattleBridge {
                     break
                 }
             }
-            if (removed) _skillEvents.value = skillBuffer.toList()
+            if (removed) {
+                _skillEvents.value = skillSnap.swap(skillBuffer)
+            }
         }
     }
 
@@ -1154,16 +1190,22 @@ object BattleBridge {
         _gridState.value = List(GRID_TOTAL) { GridTileState() }
         // PERF: reset grid dirty flag so first updateGridState after reset always emits
         gridDirty = true
+        gridUseA = true
         cachedGridGrades.fill(-1)
         cachedGridCanMerge.fill(false)
         cachedGridLevels.fill(0)
         cachedGridBlueprintIds.fill("")
-        // PERF: reset throttle timestamps
+        // PERF: reset throttle timestamps & double-buffer flags
         lastDamageEmitTime = 0L
         lastMeleeHitEmitTime = 0L
         lastLevelUpEmitTime = 0L
         lastSkillEmitTime = 0L
         lastGoldEmitTime = 0L
+        damageSnap.reset()
+        meleeSnap.reset()
+        skillSnap.reset()
+        goldSnap.reset()
+        levelUpSnap.reset()
         _selectedTile.value = -1
         _moveModeTile.value = -1
         _validMoveTargets.value = EMPTY_BOOL_ARRAY

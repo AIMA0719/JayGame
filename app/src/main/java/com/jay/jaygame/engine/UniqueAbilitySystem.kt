@@ -892,15 +892,15 @@ object UniqueAbilitySystem {
         val hpPercent = RE_HP_PERCENT.find(desc)?.groupValues?.get(1)?.toFloatOrNull()?.div(100f) ?: 0f
 
         var hitTarget: Enemy? = null
-        for (enemy in spatialHash.query(unit.position.x - range, unit.position.y - range, unit.position.x + range, unit.position.y + range)) {
-            if (!enemy.alive) continue
-            if (enemy.position.distanceTo(unit.position) > range) continue
-            enemy.takeDamage(atk * atkMult, isMagic)
-            for (cc in ccEffects) {
-                enemy.buffs.addBuff(cc.type, cc.value, cc.duration, unit.tileIndex)
+        spatialHash.forEach(unit.position.x - range, unit.position.y - range, unit.position.x + range, unit.position.y + range) { enemy ->
+            if (enemy.alive && enemy.position.distanceTo(unit.position) <= range) {
+                enemy.takeDamage(atk * atkMult, isMagic)
+                for (cc in ccEffects) {
+                    enemy.buffs.addBuff(cc.type, cc.value, cc.duration, unit.tileIndex)
+                }
+                if (hpPercent > 0f) enemy.takeDamage(enemy.hp * hpPercent, true)
+                if (hitTarget == null || enemy.maxHp > hitTarget!!.maxHp) hitTarget = enemy
             }
-            if (hpPercent > 0f) enemy.takeDamage(enemy.hp * hpPercent, true)
-            if (hitTarget == null || enemy.maxHp > hitTarget!!.maxHp) hitTarget = enemy
         }
 
         if (hitTarget != null) {
@@ -923,8 +923,12 @@ object UniqueAbilitySystem {
 
     private data class ParsedCC(val type: BuffType, val value: Float, val duration: Float)
 
+    /** Pre-allocated buffer for CC parsing — single-threaded (battle thread only). */
+    private val parsedCCBuffer = ArrayList<ParsedCC>(8)
+
     private fun parseUltimateCCFromDescription(desc: String, atk: Float): List<ParsedCC> {
-        val results = mutableListOf<ParsedCC>()
+        val results = parsedCCBuffer
+        results.clear()
 
         RE_STUN.find(desc)?.let { m ->
             results.add(ParsedCC(BuffType.Stun, 1f, m.groupValues[1].toFloatOrNull() ?: 3f))

@@ -80,6 +80,8 @@ import com.jay.jaygame.ui.components.GameCard
 import com.jay.jaygame.ui.components.NeonButton
 import com.jay.jaygame.ui.screens.ResultScreen
 import com.jay.jaygame.ui.theme.*
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.sin
@@ -108,9 +110,10 @@ fun BattleScreen(
     var showGambleDialog by remember { mutableStateOf(false) }
     var showUpgradeSheet by remember { mutableStateOf(false) }
 
-    // Boss vignette
-    val battleState by BattleBridge.state.collectAsState()
-    val isBoss = battleState.isBossRound
+    // Boss vignette — subscribe only to isBossRound to avoid full-tree recompose on every frame
+    val isBoss by remember {
+        BattleBridge.state.map { it.isBossRound }.distinctUntilChanged()
+    }.collectAsState(initial = BattleBridge.state.value.isBossRound)
     val bossVignetteAlpha by animateFloatAsState(
         targetValue = if (isBoss) 1f else 0f,
         animationSpec = tween(600),

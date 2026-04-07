@@ -1321,15 +1321,22 @@ fun BattleBottomHud(
 ) {
     val battle by BattleBridge.state.collectAsState()
     val gridState by BattleBridge.gridState.collectAsState()
-    var unitCount = 0
-    var canMerge = false
-    for (tile in gridState) {
-        val occupied = tile.blueprintId.isNotEmpty()
-        if (occupied) unitCount++
-        if (tile.canMerge) canMerge = true
-    }
-    val canSummon = battle.sp >= battle.summonCost && unitCount < battle.maxUnitSlots
-    val canGamble = battle.sp > 0f
+
+    // derivedStateOf: 실제 UI에 영향을 주는 값만 추출하여 불필요한 리컴포지션 방지
+    val spInt by remember { derivedStateOf { battle.sp.toInt() } }
+    val summonCost by remember { derivedStateOf { battle.summonCost } }
+    val maxUnitSlots by remember { derivedStateOf { battle.maxUnitSlots } }
+
+    val unitCount by remember { derivedStateOf {
+        var count = 0
+        for (tile in gridState) { if (tile.blueprintId.isNotEmpty()) count++ }
+        count
+    } }
+    val canMerge by remember { derivedStateOf {
+        gridState.any { it.canMerge }
+    } }
+    val canSummon = spInt >= summonCost && unitCount < maxUnitSlots
+    val canGamble = spInt > 0
     val hasUnits = unitCount > 0
     var showRecipeBook by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -1378,7 +1385,7 @@ fun BattleBottomHud(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    "${battle.sp.toInt()}",
+                    "$spInt",
                     color = GoldBright,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -1423,9 +1430,9 @@ fun BattleBottomHud(
         ) {
             // 소환 — 상단에 배치
             SummonButton(
-                cost = battle.summonCost,
+                cost = summonCost,
                 enabled = canSummon,
-                gridFull = unitCount >= battle.maxUnitSlots,
+                gridFull = unitCount >= maxUnitSlots,
                 onClick = {
                     HapticManager.medium(view)
                     SfxManager.play(SoundEvent.Summon)

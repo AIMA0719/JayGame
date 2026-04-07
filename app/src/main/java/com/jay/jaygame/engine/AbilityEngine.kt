@@ -520,27 +520,28 @@ object AbilityEngine {
                     unit.position.x - range, unit.position.y - range,
                     range * 2, range * 2,
                 )
-                val nearbyEnemies = spatialHash.query(rect)
-                for (enemy in nearbyEnemies) {
-                    if (!enemy.alive) continue
-                    val dist = enemy.position.distanceTo(unit.position)
-                    if (dist > range) continue
-                    for (effect in ability.effects) {
-                        when (effect) {
-                            is AbilityEffect.Damage -> {
-                                val dmg = atk * effect.atkPercent
-                                enemy.takeDamage(dmg, effect.isMagic)
-                                totalDamage += dmg
+                spatialHash.forEach(rect.x, rect.y, rect.right, rect.bottom) { enemy ->
+                    if (enemy.alive) {
+                        val dist = enemy.position.distanceTo(unit.position)
+                        if (dist <= range) {
+                            for (effect in ability.effects) {
+                                when (effect) {
+                                    is AbilityEffect.Damage -> {
+                                        val dmg = atk * effect.atkPercent
+                                        enemy.takeDamage(dmg, effect.isMagic)
+                                        totalDamage += dmg
+                                    }
+                                    is AbilityEffect.Slow -> enemy.buffs.addBuff(BuffType.Slow, effect.strength, effect.duration, unit.tileIndex)
+                                    is AbilityEffect.Stun -> enemy.buffs.addBuff(BuffType.Stun, 1f, effect.duration, unit.tileIndex)
+                                    is AbilityEffect.DoT -> enemy.buffs.addBuff(BuffType.DoT, atk * effect.atkPercentPerTick, effect.duration, unit.tileIndex)
+                                    is AbilityEffect.ArmorBreak -> enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
+                                    is AbilityEffect.MagicResistBreak -> enemy.buffs.addBuff(BuffType.MagicResistBreak, effect.percent, effect.duration, unit.tileIndex)
+                                    // Buff effects in periodic AOE target allies, not enemies
+                                    is AbilityEffect.AtkBuff -> applyAllyBuff(unit, allUnits, effect.percent, effect.duration, isAtk = true, targetAll = effect.targetAll)
+                                    is AbilityEffect.SpdBuff -> applyAllyBuff(unit, allUnits, effect.percent, effect.duration, isAtk = false, targetAll = effect.targetAll)
+                                    else -> {}
+                                }
                             }
-                            is AbilityEffect.Slow -> enemy.buffs.addBuff(BuffType.Slow, effect.strength, effect.duration, unit.tileIndex)
-                            is AbilityEffect.Stun -> enemy.buffs.addBuff(BuffType.Stun, 1f, effect.duration, unit.tileIndex)
-                            is AbilityEffect.DoT -> enemy.buffs.addBuff(BuffType.DoT, atk * effect.atkPercentPerTick, effect.duration, unit.tileIndex)
-                            is AbilityEffect.ArmorBreak -> enemy.buffs.addBuff(BuffType.ArmorBreak, effect.percent, effect.duration, unit.tileIndex)
-                            is AbilityEffect.MagicResistBreak -> enemy.buffs.addBuff(BuffType.MagicResistBreak, effect.percent, effect.duration, unit.tileIndex)
-                            // Buff effects in periodic AOE target allies, not enemies
-                            is AbilityEffect.AtkBuff -> applyAllyBuff(unit, allUnits, effect.percent, effect.duration, isAtk = true, targetAll = effect.targetAll)
-                            is AbilityEffect.SpdBuff -> applyAllyBuff(unit, allUnits, effect.percent, effect.duration, isAtk = false, targetAll = effect.targetAll)
-                            else -> {}
                         }
                     }
                 }
@@ -657,9 +658,8 @@ object AbilityEngine {
                             target.position.x - ability.range, target.position.y - ability.range,
                             ability.range * 2, ability.range * 2,
                         )
-                        for (nearby in spatialHash.query(rect)) {
-                            if (!nearby.alive) continue
-                            if (nearby.position.distanceTo(target.position) <= ability.range) {
+                        spatialHash.forEach(rect.x, rect.y, rect.right, rect.bottom) { nearby ->
+                            if (nearby.alive && nearby.position.distanceTo(target.position) <= ability.range) {
                                 val dmg = atk * effect.atkPercent
                                 nearby.takeDamage(dmg, effect.isMagic)
                                 totalDamage += dmg
@@ -693,13 +693,14 @@ object AbilityEngine {
                         target.position.x - 100f, target.position.y - 100f, 200f, 200f,
                     )
                     var pierced = 0
-                    for (nearby in spatialHash.query(rect)) {
-                        if (pierced >= effect.count) break
-                        if (!nearby.alive || nearby === target) continue
-                        val dmg = atk * effect.damagePercent
-                        nearby.takeDamage(dmg, ability.isMagic)
-                        totalDamage += dmg
-                        pierced++
+                    spatialHash.forEachUntil(rect.x, rect.y, rect.right, rect.bottom) { nearby ->
+                        if (nearby.alive && nearby !== target) {
+                            val dmg = atk * effect.damagePercent
+                            nearby.takeDamage(dmg, ability.isMagic)
+                            totalDamage += dmg
+                            pierced++
+                        }
+                        pierced >= effect.count // true = stop
                     }
                 }
                 is AbilityEffect.Execute -> {
@@ -750,10 +751,8 @@ object AbilityEngine {
         action: (Enemy) -> Unit,
     ) {
         val r = range.coerceAtLeast(80f)
-        val rect = GameRect(unit.position.x - r, unit.position.y - r, r * 2, r * 2)
-        for (enemy in spatialHash.query(rect)) {
-            if (!enemy.alive) continue
-            if (enemy.position.distanceTo(unit.position) <= r) {
+        spatialHash.forEach(unit.position.x - r, unit.position.y - r, unit.position.x + r, unit.position.y + r) { enemy ->
+            if (enemy.alive && enemy.position.distanceTo(unit.position) <= r) {
                 action(enemy)
             }
         }

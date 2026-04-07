@@ -25,7 +25,7 @@ class Enemy {
 
     fun applyBlock(blocker: GameUnit) {
         blockedBy = blocker
-        blockedPosition = position.copy()
+        blockedPosition = Vec2(position.x, position.y)
     }
 
     fun releaseBlock() {
@@ -59,7 +59,7 @@ class Enemy {
         this.baseArmor = armor
         this.magicResist = magicResist
         this.type = type
-        this.position = startPos.copy()
+        this.position.set(startPos)
         this.pathIndex = 0
         this.ccResistance = ccResistance
         this.buffs.ccResistance = ccResistance

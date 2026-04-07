@@ -86,4 +86,28 @@ class SpatialHash<T>(@PublishedApi internal val cellSize: Float = 64f) {
             }
         }
     }
+
+    /** Like forEach but action returns true to stop early. */
+    inline fun forEachUntil(left: Float, top: Float, right: Float, bottom: Float, action: (T) -> Boolean) {
+        val gen = ++generation
+        val minCX = (left / cellSize).toInt().coerceIn(0, gridW - 1)
+        val minCY = (top / cellSize).toInt().coerceIn(0, gridH - 1)
+        val maxCX = (right / cellSize).toInt().coerceIn(0, gridW - 1)
+        val maxCY = (bottom / cellSize).toInt().coerceIn(0, gridH - 1)
+        for (cy in minCY..maxCY) {
+            for (cx in minCX..maxCX) {
+                val ci = cy * gridW + cx
+                val cnt = cellCounts[ci]
+                val arr = cellItems[ci]
+                for (s in 0 until cnt) {
+                    val idx = arr[s]
+                    if (idx < seenGen.size && seenGen[idx] != gen) {
+                        seenGen[idx] = gen
+                        val item = items[idx]
+                        if (item != null && action(item)) return
+                    }
+                }
+            }
+        }
+    }
 }

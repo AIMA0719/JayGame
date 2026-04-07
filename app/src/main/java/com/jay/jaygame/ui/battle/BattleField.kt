@@ -218,7 +218,8 @@ fun BattleField() {
     val microOffsets = remember { mutableStateOf(FloatArray(0)) }
 
     // G5: Death effects list + previous tile set for detection
-    val deathEffects = remember { mutableStateOf(listOf<UnitDissolutionEffect>()) }
+    // PERF: Use mutableStateListOf to avoid toMutableList()/filter allocations per frame
+    val deathEffects = remember { mutableStateListOf<UnitDissolutionEffect>() }
     // PERF: Persistent mutable maps — reused each frame (clear + refill) to avoid HashMap allocation
     val prevTileXs = remember { mutableStateOf(mutableMapOf<Int, Float>()) }
     val prevTileYs = remember { mutableStateOf(mutableMapOf<Int, Float>()) }
@@ -283,7 +284,6 @@ fun BattleField() {
                         if (!found) { hasRemoved = true; break }
                     }
                     if (hasRemoved) {
-                        val newEffects = deathEffects.value.toMutableList()
                         for (tile in pxs.keys) {
                             var found = false
                             for (j in 0 until data.count) {
@@ -294,10 +294,9 @@ fun BattleField() {
                                 val ey = pys[tile] ?: continue
                                 val gr = pGrades[tile] ?: 0
                                 val fam = pFamilies[tile] ?: 0
-                                newEffects.add(UnitDissolutionEffect(ex, ey, gr, fam, animTime.floatValue))
+                                deathEffects.add(UnitDissolutionEffect(ex, ey, gr, fam, animTime.floatValue))
                             }
                         }
-                        deathEffects.value = newEffects
                     }
                 }
 
@@ -315,11 +314,14 @@ fun BattleField() {
                     }
                 }
 
-                // Expire old death effects (> 1s)
+                // Expire old death effects (> 1s) — in-place removal, no list allocation
                 val tNow = animTime.floatValue
-                val effects = deathEffects.value
-                if (effects.isNotEmpty()) {
-                    deathEffects.value = effects.filter { tNow - it.startTime < 1f }
+                if (deathEffects.isNotEmpty()) {
+                    for (idx in deathEffects.lastIndex downTo 0) {
+                        if (tNow - deathEffects[idx].startTime >= 1f) {
+                            deathEffects.removeAt(idx)
+                        }
+                    }
                 }
             }
         }
@@ -925,7 +927,7 @@ fun BattleField() {
 
         // ── G5: Draw death/dissolution effects ──
         val unitSizeDefault = unitSizeNormal
-        for (effect in deathEffects.value) {
+        for (effect in deathEffects) {
             val elapsed = t - effect.startTime
             val progress = (elapsed / 1f).coerceIn(0f, 1f)
             val effectColor = GradeColors.getOrElse(effect.grade) { Color.Gray }

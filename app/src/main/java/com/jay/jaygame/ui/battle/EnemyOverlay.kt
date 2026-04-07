@@ -182,19 +182,21 @@ fun EnemyOverlay() {
             .associateWith { name -> decodeAssetBitmap(context, "fx/$name.png") }
     }
 
-    // Smooth interpolated positions
-    val smoothXs = remember { mutableStateOf(FloatArray(0)) }
-    val smoothYs = remember { mutableStateOf(FloatArray(0)) }
+    // Smooth interpolated positions — pre-allocated max-size buffers (256 = enemy pool max)
+    // PERF: Avoids copyOf()/FloatArray() allocation on every enemy count change
+    val smoothXs = remember { FloatArray(256) }
+    val smoothYs = remember { FloatArray(256) }
+    var smoothCount by remember { mutableStateOf(0) }
 
     // Animation time
     val animTime = remember { mutableFloatStateOf(0f) }
 
-    // HP tracking for hit flash
-    val prevHpRatios = remember { mutableStateOf(FloatArray(0)) }
-    val hitFlashTimers = remember { mutableStateOf(FloatArray(0)) }
+    // HP tracking for hit flash — pre-allocated max-size buffers
+    val prevHpRatios = remember { FloatArray(256) { 1f } }
+    val hitFlashTimers = remember { FloatArray(256) }
 
     // Smooth HP bar values (lerped)
-    val smoothHpRatios = remember { mutableStateOf(FloatArray(0)) }
+    val smoothHpRatios = remember { FloatArray(256) }
 
     // Previous enemy count for death detection (pre-allocated buffers, no per-frame allocation)
     var prevEnemyCount by remember { mutableStateOf(0) }
@@ -217,13 +219,13 @@ fun EnemyOverlay() {
                 animTime.floatValue += dt
 
                 val data = BattleBridge.enemyPositions.value
-                val sx = smoothXs.value
-                val sy = smoothYs.value
+                val sx = smoothXs
+                val sy = smoothYs
 
                 // 배속 가져오기
                 val speed = BattleBridge.battleSpeed.value
 
-                if (data.count != sx.size) {
+                if (data.count != smoothCount) {
                     // Enemy count changed — reset animation states for new indices
                     for (ai in 0 until data.count.coerceAtMost(256)) {
                         animStates[ai].reset()
@@ -242,7 +244,7 @@ fun EnemyOverlay() {
                             currentEnemyPositionKeys.add(quantizedEnemyKey(data.xs[ni], data.ys[ni]))
                         }
 
-                        for (oi in 0 until oldCount.coerceAtMost(oldXs.size)) {
+                        for (oi in 0 until oldCount.coerceAtMost(256)) {
                             val key = quantizedEnemyKey(oldXs[oi], oldYs[oi])
                             if (key !in currentEnemyPositionKeys && deathEffects.size < 5) {
                                 val type = oldTypes.getOrElse(oi) { 0 }
@@ -250,54 +252,43 @@ fun EnemyOverlay() {
                                 dyingEnemies.add(DyingEnemy(x = oldXs[oi], y = oldYs[oi], type = type))
                             }
                         }
-                        
-                            // 죽는 몬스터 스프라이트 페이드아웃 추가
-                        
                     }
 
-                    // Snap to new positions
-                    smoothXs.value = data.xs.copyOf(data.count)
-                    smoothYs.value = data.ys.copyOf(data.count)
-                    smoothHpRatios.value = data.hpRatios.copyOf(data.count)
-                    prevHpRatios.value = data.hpRatios.copyOf(data.count)
-                    hitFlashTimers.value = FloatArray(data.count)
+                    // Snap to new positions — copy into pre-allocated buffers (no allocation)
+                    val count = data.count.coerceAtMost(256)
+                    data.xs.copyInto(sx, endIndex = count)
+                    data.ys.copyInto(sy, endIndex = count)
+                    data.hpRatios.copyInto(smoothHpRatios, endIndex = count)
+                    data.hpRatios.copyInto(prevHpRatios, endIndex = count)
+                    for (fi in 0 until count) { hitFlashTimers[fi] = 0f }
+                    smoothCount = data.count
                 } else if (data.count > 0) {
-                    // Lerp toward target positions
+                    // Lerp toward target positions (in-place, no allocation)
                     val lerpFactor = 0.2f
                     for (i in 0 until data.count) {
                         sx[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
                         sy[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
                     }
-                    smoothXs.value = sx
-                    smoothYs.value = sy
+                    smoothCount = data.count
 
-                    // Hit flash detection + HP smooth lerp
-                    val oldHp = prevHpRatios.value
-                    val flashTimers = hitFlashTimers.value
-                    val sHp = smoothHpRatios.value
+                    // Hit flash detection + HP smooth lerp (all in pre-allocated buffers)
                     for (i in 0 until data.count) {
                         // Detect HP decrease
-                        val prevHp = if (i < oldHp.size) oldHp[i] else 1f
-                        if (data.hpRatios[i] < prevHp - 0.01f) {
-                            flashTimers[i] = 0.12f // flash for 0.12 seconds
+                        if (data.hpRatios[i] < prevHpRatios[i] - 0.01f) {
+                            hitFlashTimers[i] = 0.12f // flash for 0.12 seconds
                         } else {
-                            flashTimers[i] = (if (i < flashTimers.size) flashTimers[i] else 0f) - dt
-                            if (flashTimers[i] < 0f) flashTimers[i] = 0f
+                            hitFlashTimers[i] = (hitFlashTimers[i] - dt).coerceAtLeast(0f)
                         }
                         // Smooth HP bar
-                        val curSmooth = if (i < sHp.size) sHp[i] else data.hpRatios[i]
-                        sHp[i] = curSmooth + (data.hpRatios[i] - curSmooth) * 0.15f
-                        oldHp[i] = data.hpRatios[i]
+                        smoothHpRatios[i] = smoothHpRatios[i] + (data.hpRatios[i] - smoothHpRatios[i]) * 0.15f
+                        prevHpRatios[i] = data.hpRatios[i]
                     }
-                    hitFlashTimers.value = flashTimers
-                    smoothHpRatios.value = sHp
-                    prevHpRatios.value = oldHp
 
                     // 스프라이트 시트 애니메이션 상태 업데이트 (8x 배속 이상이면 스킵)
                     if (speed < 8f) {
                         for (ai in 0 until data.count.coerceAtMost(256)) {
                             val anim = animStates[ai]
-                            val flash = if (ai < flashTimers.size) flashTimers[ai] else 0f
+                            val flash = hitFlashTimers[ai]
                             val buffBits = if (ai < data.buffs.size) data.buffs[ai] else 0
                             val isStunned = buffBits and BUFF_BIT_STUN != 0
                             // 상태 전이: hit > stun(idle) > walk
@@ -348,15 +339,15 @@ fun EnemyOverlay() {
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val data = enemies
-        val sxArr = smoothXs.value
-        val syArr = smoothYs.value
+        val sxArr = smoothXs
+        val syArr = smoothYs
         val t = animTime.floatValue
         val w = size.width
         val h = size.height
-        // Use smooth positions if sizes match, otherwise fall back to raw
-        val useSmooth = sxArr.size == data.count && data.count > 0
-        val flashTimers = hitFlashTimers.value
-        val sHp = smoothHpRatios.value
+        // Use smooth positions if count matches
+        val useSmooth = smoothCount == data.count && data.count > 0
+        val flashTimers = hitFlashTimers
+        val sHp = smoothHpRatios
 
         for (i in 0 until data.count) {
             val screenX = if (useSmooth) sxArr[i] * w else data.xs[i] * w
