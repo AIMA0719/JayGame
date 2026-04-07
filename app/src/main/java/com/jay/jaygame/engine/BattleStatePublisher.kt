@@ -25,6 +25,14 @@ internal class BattleStatePublisher(
 ) {
     private var gridPushTimer = 0f
 
+    // Change detection — skip emit when data hasn't changed
+    private var lastEnemyCount = -1
+    private var lastEnemyHash = 0L
+    private var lastUnitCount = -1
+    private var lastUnitHash = 0L
+    private var lastProjCount = -1
+    private var lastProjHash = 0L
+
     private val enemyXBuf = FloatArray(maxEnemies)
     private val enemyYBuf = FloatArray(maxEnemies)
     private val enemyTypeBuf = IntArray(maxEnemies)
@@ -70,8 +78,16 @@ internal class BattleStatePublisher(
     private val gridFamiliesListBuf = Array<List<UnitFamily>>(gridSlots) { emptyList() }
     private val gridRoleBuf = Array(gridSlots) { UnitRole.RANGED_DPS }
 
+    private var stateThrottleTimer = 0f
+    private var lastStateWave = -1
+    private var lastStateHp = -1
+    private var lastStateOrdinal = -1
+    private var lastStateSummonCost = -1
+    private var lastStateBoss = false
+
     fun advance(dt: Float) {
         gridPushTimer += dt
+        stateThrottleTimer += dt
     }
 
     fun publishBattleState(
@@ -86,6 +102,19 @@ internal class BattleStatePublisher(
         isBossRound: Boolean,
         waveDelayRemaining: Float,
     ) {
+        val wave = waveSystem.currentWave + 1
+        val hp = (defeatEnemyCount - enemyCount).coerceAtLeast(0)
+        // 중요 필드 변경 시 즉시 emit, 아니면 100ms throttle
+        val importantChange = wave != lastStateWave || hp != lastStateHp ||
+                stateOrdinal != lastStateOrdinal || summonCost != lastStateSummonCost ||
+                isBossRound != lastStateBoss
+        if (!importantChange && stateThrottleTimer < 0.1f) return
+        stateThrottleTimer = 0f
+        lastStateWave = wave
+        lastStateHp = hp
+        lastStateOrdinal = stateOrdinal
+        lastStateSummonCost = summonCost
+        lastStateBoss = isBossRound
         BattleBridge.updateState(
             BattleStateUpdate(
                 wave = waveSystem.currentWave + 1,
@@ -108,20 +137,30 @@ internal class BattleStatePublisher(
 
     fun publishEnemyPositions(enemies: ObjectPool<Enemy>, worldWidth: Float, worldHeight: Float) {
         var index = 0
+        var hash = 0L
         enemies.forEach { enemy ->
             if (index >= enemyXBuf.size) return@forEach
-            enemyXBuf[index] = enemy.position.x / worldWidth
-            enemyYBuf[index] = enemy.position.y / worldHeight
+            val nx = enemy.position.x / worldWidth
+            val ny = enemy.position.y / worldHeight
+            enemyXBuf[index] = nx
+            enemyYBuf[index] = ny
             enemyTypeBuf[index] = if (enemy.isBoss) WaveSystem.BOSS_ENEMY_TYPE else enemy.type
             enemyHpBuf[index] = enemy.hpRatio
             enemyBuffBuf[index] = enemyBuffBits(enemy)
+            // fast hash: position quantized to ~0.5px + hp quantized to 1%
+            hash = hash * 31 + (nx * 1000).toInt() + (ny * 1000).toInt() * 7 + (enemy.hpRatio * 100).toInt() * 13
             index++
         }
-        BattleBridge.updateEnemyPositions(enemyXBuf, enemyYBuf, enemyTypeBuf, enemyHpBuf, enemyBuffBuf, index)
+        if (index != lastEnemyCount || hash != lastEnemyHash) {
+            lastEnemyCount = index
+            lastEnemyHash = hash
+            BattleBridge.updateEnemyPositions(enemyXBuf, enemyYBuf, enemyTypeBuf, enemyHpBuf, enemyBuffBuf, index)
+        }
     }
 
     fun publishUnitPositions(units: ObjectPool<GameUnit>, grid: Grid, worldWidth: Float, worldHeight: Float) {
         var index = 0
+        var hash = 0L
         units.forEach { unit ->
             if (index >= unitXBuf.size) return@forEach
             unitXBuf[index] = unit.position.x / worldWidth
@@ -147,7 +186,14 @@ internal class BattleStatePublisher(
             unitBuffBuf[index] = unitBuffBits(unit)
             unitSkillAnimBuf[index] = unit.skillAnimTimer
             unitCritAnimBuf[index] = unit.critAnimTimer
+            hash = hash * 31 + (unit.attackAnimTimer * 100).toInt() + (if (unit.isAttacking) 1 else 0) * 7 + unit.buffs.hashCode() * 13
             index++
+        }
+        if (index != lastUnitCount || hash != lastUnitHash) {
+            lastUnitCount = index
+            lastUnitHash = hash
+        } else {
+            return // 변경 없으면 emit 스킵
         }
         BattleBridge.updateUnitPositions(
             UnitPositionBatch(
@@ -181,27 +227,29 @@ internal class BattleStatePublisher(
 
     fun publishProjectiles(projectiles: ObjectPool<Projectile>, worldWidth: Float, worldHeight: Float) {
         var index = 0
+        var hash = 0L
         projectiles.forEach { projectile ->
             if (index >= projSrcXBuf.size) return@forEach
+            val dx = projectile.position.x / worldWidth
+            val dy = projectile.position.y / worldHeight
             projSrcXBuf[index] = projectile.sourcePos.x / worldWidth
             projSrcYBuf[index] = projectile.sourcePos.y / worldHeight
-            projDstXBuf[index] = projectile.position.x / worldWidth
-            projDstYBuf[index] = projectile.position.y / worldHeight
+            projDstXBuf[index] = dx
+            projDstYBuf[index] = dy
             projTypeBuf[index] = projectile.type
             projFamilyBuf[index] = projectile.family
             projGradeBuf[index] = projectile.grade
+            hash = hash * 31 + (dx * 1000).toInt() + (dy * 1000).toInt() * 7
             index++
         }
-        BattleBridge.updateProjectiles(
-            projSrcXBuf,
-            projSrcYBuf,
-            projDstXBuf,
-            projDstYBuf,
-            projTypeBuf,
-            index,
-            projFamilyBuf,
-            projGradeBuf,
-        )
+        if (index != lastProjCount || hash != lastProjHash) {
+            lastProjCount = index
+            lastProjHash = hash
+            BattleBridge.updateProjectiles(
+                projSrcXBuf, projSrcYBuf, projDstXBuf, projDstYBuf,
+                projTypeBuf, index, projFamilyBuf, projGradeBuf,
+            )
+        }
     }
 
     fun publishGridState(grid: Grid, mergeableTiles: Set<Int>) {
