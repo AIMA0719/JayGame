@@ -207,25 +207,23 @@ fun BattleField() {
     val stage = remember(stageId) { STAGES.getOrNull(stageId) ?: STAGES[0] }
     val fieldBorderColor = remember(stageId) { stage.fieldColors.last().copy(alpha = 0.6f) }
 
-    // Smooth unit positions — pre-allocated (max 18 units in 3x6 grid)
-    val smoothXs = remember { FloatArray(18) }
-    val smoothYs = remember { FloatArray(18) }
-    val smoothUnitCountRef = remember { intArrayOf(0) }
+    // Smooth unit positions
+    val smoothXs = remember { mutableStateOf(FloatArray(0)) }
+    val smoothYs = remember { mutableStateOf(FloatArray(0)) }
 
     // Animation time for idle bounce, attack pulse, pedestal particles
     val animTime = remember { mutableFloatStateOf(0f) }
 
     // G3: Per-unit micro-movement offsets (interleaved [dx0,dy0,dx1,dy1,...])
-    val microOffsets = remember { FloatArray(36) } // 18 units * 2
+    val microOffsets = remember { mutableStateOf(FloatArray(0)) }
 
     // G5: Death effects list + previous tile set for detection
-    // PERF: Use mutableStateListOf to avoid toMutableList()/filter allocations per frame
-    val deathEffects = remember { mutableStateListOf<UnitDissolutionEffect>() }
-    // Persistent mutable maps — reused each frame (clear + refill), not Compose State
-    val prevTileXs = remember { mutableMapOf<Int, Float>() }
-    val prevTileYs = remember { mutableMapOf<Int, Float>() }
-    val prevGradeMap = remember { mutableMapOf<Int, Int>() }
-    val prevFamilyMap = remember { mutableMapOf<Int, Int>() }
+    val deathEffects = remember { mutableStateOf(listOf<UnitDissolutionEffect>()) }
+    // PERF: Persistent mutable maps — reused each frame (clear + refill) to avoid HashMap allocation
+    val prevTileXs = remember { mutableStateOf(mutableMapOf<Int, Float>()) }
+    val prevTileYs = remember { mutableStateOf(mutableMapOf<Int, Float>()) }
+    val prevGradeMap = remember { mutableStateOf(mutableMapOf<Int, Int>()) }
+    val prevFamilyMap = remember { mutableStateOf(mutableMapOf<Int, Int>()) }
 
     LaunchedEffect(Unit) {
         var lastFrameNanos = 0L
@@ -237,39 +235,41 @@ fun BattleField() {
                 animTime.floatValue += dt
 
                 val data = BattleBridge.unitPositions.value
-                val sx = smoothXs
-                val sy = smoothYs
+                val sx = smoothXs.value
+                val sy = smoothYs.value
 
-                if (data.count != smoothUnitCountRef[0]) {
-                    val count = data.count.coerceAtMost(18)
-                    data.xs.copyInto(sx, endIndex = count)
-                    data.ys.copyInto(sy, endIndex = count)
-                    for (mi in 0 until count * 2) { microOffsets[mi] = 0f }
-                    smoothUnitCountRef[0] = data.count
+                if (data.count != sx.size) {
+                    smoothXs.value = data.xs.copyOf(data.count)
+                    smoothYs.value = data.ys.copyOf(data.count)
+                    microOffsets.value = FloatArray(data.count * 2)
                 } else if (data.count > 0) {
+                    // PERF: Mutate arrays in-place instead of allocating new ones each frame
                     val lerpFactor = 0.25f
                     for (i in 0 until data.count) {
                         sx[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
                         sy[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
                     }
+                    // Trigger recomposition by reassigning the same array wrapped in a new state
+                    smoothXs.value = sx
+                    smoothYs.value = sy
                 }
 
                 // G3: Update micro-movement offsets slowly (in-place)
-                val mo = microOffsets
-                if (data.count * 2 <= mo.size) {
+                val mo = microOffsets.value
+                if (mo.size == data.count * 2) {
                     for (idx in 0 until data.count * 2) {
                         val target = sin(animTime.floatValue * 0.3f + idx * 1.7f) * 1.2f
                         mo[idx] = mo[idx] + (target - mo[idx]) * 0.02f
                     }
-                    // microOffsets updated in-place, no State reassignment needed
+                    microOffsets.value = mo
                 }
 
                 // G5: Detect removed units by comparing tile sets
                 // PERF: Reuse persistent maps — clear + refill avoids HashMap allocation per frame
-                val pxs = prevTileXs
-                val pys = prevTileYs
-                val pGrades = prevGradeMap
-                val pFamilies = prevFamilyMap
+                val pxs = prevTileXs.value
+                val pys = prevTileYs.value
+                val pGrades = prevGradeMap.value
+                val pFamilies = prevFamilyMap.value
 
                 // Check for removals before clearing
                 if (pxs.isNotEmpty()) {
@@ -283,6 +283,7 @@ fun BattleField() {
                         if (!found) { hasRemoved = true; break }
                     }
                     if (hasRemoved) {
+                        val newEffects = deathEffects.value.toMutableList()
                         for (tile in pxs.keys) {
                             var found = false
                             for (j in 0 until data.count) {
@@ -293,9 +294,10 @@ fun BattleField() {
                                 val ey = pys[tile] ?: continue
                                 val gr = pGrades[tile] ?: 0
                                 val fam = pFamilies[tile] ?: 0
-                                deathEffects.add(UnitDissolutionEffect(ex, ey, gr, fam, animTime.floatValue))
+                                newEffects.add(UnitDissolutionEffect(ex, ey, gr, fam, animTime.floatValue))
                             }
                         }
+                        deathEffects.value = newEffects
                     }
                 }
 
@@ -313,14 +315,11 @@ fun BattleField() {
                     }
                 }
 
-                // Expire old death effects (> 1s) — in-place removal, no list allocation
+                // Expire old death effects (> 1s)
                 val tNow = animTime.floatValue
-                if (deathEffects.isNotEmpty()) {
-                    for (idx in deathEffects.lastIndex downTo 0) {
-                        if (tNow - deathEffects[idx].startTime >= 1f) {
-                            deathEffects.removeAt(idx)
-                        }
-                    }
+                val effects = deathEffects.value
+                if (effects.isNotEmpty()) {
+                    deathEffects.value = effects.filter { tNow - it.startTime < 1f }
                 }
             }
         }
@@ -425,11 +424,11 @@ fun BattleField() {
 
         // ── Draw unit sprites (Compose drawable icons) ──
         val data = unitPositions
-        val sxArr = smoothXs
-        val syArr = smoothYs
-        val useSmooth = smoothUnitCountRef[0] == data.count && data.count > 0
-        val moArr = microOffsets
-        val useMicro = data.count * 2 <= moArr.size
+        val sxArr = smoothXs.value
+        val syArr = smoothYs.value
+        val useSmooth = sxArr.size == data.count && data.count > 0
+        val moArr = microOffsets.value
+        val useMicro = moArr.size == data.count * 2
 
         val cellW = gridW / Grid.COLS
         val cellH = gridH / Grid.ROWS
@@ -926,7 +925,7 @@ fun BattleField() {
 
         // ── G5: Draw death/dissolution effects ──
         val unitSizeDefault = unitSizeNormal
-        for (effect in deathEffects) {
+        for (effect in deathEffects.value) {
             val elapsed = t - effect.startTime
             val progress = (elapsed / 1f).coerceIn(0f, 1f)
             val effectColor = GradeColors.getOrElse(effect.grade) { Color.Gray }
