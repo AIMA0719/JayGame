@@ -82,7 +82,7 @@ fun BattleParticleOverlay() {
         Array(MAX_PARTICLES) { ComposeParticle() }
     }
     val animTime = remember { mutableFloatStateOf(0f) }
-    val activeCount = remember { mutableStateOf(0) }
+    val activeCountRef = remember { intArrayOf(0) }
 
     // Watch summon/merge/enemy events to spawn particles
     val summonResult by BattleBridge.summonResult.collectAsState()
@@ -109,7 +109,7 @@ fun BattleParticleOverlay() {
     }
 
     // 합산 LOD: 자신의 파티클 수를 등록 (commitFrame은 BattleScreen에서 호출)
-    ParticleLOD.addParticleCount(activeCount.value)
+    ParticleLOD.addParticleCount(activeCountRef[0])
 
     // Detect enemy deaths -> spawn soul particles flying to SP bar (bottom center)
     val curEnemyCount = enemies.count
@@ -247,12 +247,12 @@ fun BattleParticleOverlay() {
                     p.vy += p.gravity * dt
                     count++
                 }
-                activeCount.value = count
+                activeCountRef[0] = count
             }
         }
     }
 
-    if (activeCount.value == 0) return
+    if (activeCountRef[0] == 0) return
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
