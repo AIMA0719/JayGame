@@ -102,6 +102,10 @@ fun BattleScreen(
     val roguelikeChoices by BattleBridge.roguelikeChoices.collectAsState()
     val activeRoguelikeBuffs by BattleBridge.activeRoguelikeBuffs.collectAsState()
     val roguelikeRerollsLeft by BattleBridge.roguelikeRerollsLeft.collectAsState()
+    val auctionState by BattleBridge.auctionState.collectAsState()
+    val auctionPlayerSp by remember {
+        BattleBridge.state.map { it.sp.toInt() }.distinctUntilChanged()
+    }.collectAsState(initial = BattleBridge.state.value.sp.toInt())
 
     var showMenuDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
@@ -336,6 +340,17 @@ fun BattleScreen(
                 onReroll = {
                     BattleBridge.requestRerollRoguelike()
                 },
+            )
+        }
+
+        // 경매 다이얼로그
+        auctionState?.let { auction ->
+            AuctionDialog(
+                state = auction,
+                playerSp = auctionPlayerSp.toFloat(),
+                onBid = { BattleBridge.requestAuctionBid() },
+                onPass = { BattleBridge.requestAuctionPass() },
+                onDismiss = { BattleBridge.requestAuctionDismiss() },
             )
         }
 

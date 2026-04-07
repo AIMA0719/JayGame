@@ -13,6 +13,7 @@ import com.jay.jaygame.engine.UnitRole
 import com.jay.jaygame.engine.UnitState
 import com.jay.jaygame.engine.RoguelikeBuff
 import com.jay.jaygame.engine.ActiveRoguelikeBuff
+import com.jay.jaygame.engine.AuctionState
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -471,6 +472,9 @@ object BattleBridge {
         data class BattleUpgrade(val upgradeType: Int, val level: Int, val cost: Float) : BattleCommand()
         data class SelectRoguelikeBuff(val index: Int) : BattleCommand()
         object RerollRoguelike : BattleCommand()
+        object AuctionBid : BattleCommand()
+        object AuctionPass : BattleCommand()
+        object AuctionDismiss : BattleCommand()
     }
 
     /** Drain all pending commands — called by the game loop on its own thread. */
@@ -544,6 +548,22 @@ object BattleBridge {
     fun requestRerollRoguelike() {
         commandQueue.add(BattleCommand.RerollRoguelike)
     }
+
+    // ── Auction system ──
+    private val _auctionState = MutableStateFlow<AuctionState?>(null)
+    val auctionState: StateFlow<AuctionState?> = _auctionState.asStateFlow()
+
+    @JvmStatic
+    fun updateAuction(state: AuctionState) { _auctionState.value = state }
+    @JvmStatic
+    fun clearAuction() { _auctionState.value = null }
+
+    @JvmStatic
+    fun requestAuctionBid() { commandQueue.add(BattleCommand.AuctionBid) }
+    @JvmStatic
+    fun requestAuctionPass() { commandQueue.add(BattleCommand.AuctionPass) }
+    @JvmStatic
+    fun requestAuctionDismiss() { commandQueue.add(BattleCommand.AuctionDismiss) }
 
     private val _state = MutableStateFlow(BattleState())
     val state: StateFlow<BattleState> = _state.asStateFlow()
@@ -1241,6 +1261,7 @@ object BattleBridge {
         _roguelikeChoices.value = null
         _activeRoguelikeBuffs.value = emptyList()
         _roguelikeRerollsLeft.value = MAX_ROGUELIKE_REROLLS
+        _auctionState.value = null
         commandQueue.clear()
     }
 

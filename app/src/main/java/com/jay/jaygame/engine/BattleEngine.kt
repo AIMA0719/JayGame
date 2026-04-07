@@ -192,6 +192,10 @@ class BattleEngine(
     internal var roguelikeExecute = false
     internal var roguelikeMultishot = false
     private var pendingRoguelike = false
+    private var pendingAuction = false
+    private val auctionSystem by lazy { AuctionSystem(blueprintRegistry) }
+    private var auctionTimer = 0f
+    private var lastAuctionEmitTimer = -1f
 
     /** 코인 합연산 멀티플라이어 (난이도 + 시너지 보너스를 합산) */
     private val additiveCoinMult: Float
@@ -420,6 +424,11 @@ class BattleEngine(
                                 BattleBridge.updateActiveRoguelikeBuffs(activeRoguelikeBuffs.toList())
                                 BattleBridge.clearRoguelikeChoices()
                                 pendingRoguelike = false
+                                // 경매 시작
+                                val auctionWave = waveSystem.currentWave + 1
+                                if (auctionWave % 10 == 0 && grid.findEmpty() >= 0) {
+                                    startAuction(auctionWave)
+                                }
                             }
                         }
                         is BattleBridge.BattleCommand.RerollRoguelike -> {
@@ -431,6 +440,35 @@ class BattleEngine(
                                     BattleBridge.showRoguelikeChoices(newChoices)
                                 }
                             }
+                        }
+                        is BattleBridge.BattleCommand.AuctionBid -> {
+                            val aState = BattleBridge.auctionState.value ?: continue
+                            if (aState.phase == AuctionPhase.BIDDING && !aState.playerRetired) {
+                                val nextBid = aState.currentBid + aState.bidIncrement
+                                if (sp >= nextBid) {
+                                    auctionTimer = 0f
+                                    BattleBridge.updateAuction(aState.copy(
+                                        currentBid = nextBid,
+                                        currentBidder = AuctionSystem.BIDDER_PLAYER,
+                                        phase = AuctionPhase.NPC_TURN,
+                                        timer = AuctionSystem.NPC_DELAY,
+                                    ))
+                                }
+                            }
+                        }
+                        is BattleBridge.BattleCommand.AuctionPass -> {
+                            val aState = BattleBridge.auctionState.value ?: continue
+                            auctionTimer = 0f
+                            BattleBridge.updateAuction(aState.copy(
+                                playerRetired = true,
+                                playerCanBid = false,
+                                phase = AuctionPhase.NPC_TURN,
+                                timer = AuctionSystem.NPC_DELAY,
+                            ))
+                        }
+                        is BattleBridge.BattleCommand.AuctionDismiss -> {
+                            BattleBridge.clearAuction()
+                            pendingAuction = false
                         }
                     }
                 }
@@ -465,6 +503,8 @@ class BattleEngine(
             State.WaveDelay -> {
                 if (pendingRoguelike) {
                     // Waiting for roguelike selection before starting the next wave
+                } else if (pendingAuction) {
+                    advanceAuction(dt)
                 } else {
                     waveDelayTimer -= dt
                     if (waveDelayTimer <= 0f) {
@@ -558,6 +598,9 @@ class BattleEngine(
                             if (choices.isNotEmpty()) {
                                 BattleBridge.showRoguelikeChoices(choices)
                                 pendingRoguelike = true
+                            } else {
+                                // 로그라이크 없으면 바로 경매
+                                if (grid.findEmpty() >= 0) startAuction(clearedWave)
                             }
                         }
 
@@ -1390,6 +1433,148 @@ class BattleEngine(
         statePublisher.publishGridState(grid, getMergeableTiles())
     }
 
+
+    // endregion
+
+    // region Auction System
+
+    private fun startAuction(wave: Int) {
+        val bp = auctionSystem.pickBlueprint(wave, BattleBridge.selectedRaces.value) ?: return
+        val startPrice = auctionSystem.startingPrice(wave)
+        val npcs = auctionSystem.generateNpcs(wave, startPrice)
+
+        BattleBridge.updateAuction(AuctionState(
+            blueprintId = bp.id,
+            blueprintName = bp.name,
+            blueprintGrade = bp.grade.ordinal,
+            blueprintAtk = bp.stats.baseATK,
+            blueprintSpd = bp.stats.baseSpeed,
+            currentBid = startPrice,
+            currentBidder = AuctionSystem.BIDDER_NONE,
+            npcs = npcs,
+            timer = AuctionSystem.INTRO_TIME,
+            phase = AuctionPhase.INTRO,
+            startingPrice = startPrice,
+            bidIncrement = AuctionSystem.BID_INCREMENT,
+            playerCanBid = sp >= startPrice + AuctionSystem.BID_INCREMENT,
+            playerRetired = false,
+        ))
+        pendingAuction = true
+        auctionTimer = 0f
+    }
+
+    private fun advanceAuction(dt: Float) {
+        val state = BattleBridge.auctionState.value ?: return
+        auctionTimer += dt
+
+        when (state.phase) {
+            AuctionPhase.INTRO -> {
+                if (auctionTimer >= AuctionSystem.INTRO_TIME) {
+                    auctionTimer = 0f
+                    BattleBridge.updateAuction(state.copy(
+                        phase = AuctionPhase.BIDDING,
+                        timer = AuctionSystem.ROUND_TIME,
+                        playerCanBid = sp >= state.currentBid + state.bidIncrement
+                    ))
+                }
+            }
+            AuctionPhase.BIDDING -> {
+                val remaining = AuctionSystem.ROUND_TIME - auctionTimer
+                if (remaining <= 0f) {
+                    auctionTimer = 0f
+                    lastAuctionEmitTimer = -1f
+                    BattleBridge.updateAuction(state.copy(phase = AuctionPhase.NPC_TURN, timer = AuctionSystem.NPC_DELAY))
+                } else if (lastAuctionEmitTimer < 0f || state.timer - remaining >= 0.1f) {
+                    lastAuctionEmitTimer = remaining
+                    BattleBridge.updateAuction(state.copy(timer = remaining))
+                }
+            }
+            AuctionPhase.NPC_TURN -> {
+                if (auctionTimer >= AuctionSystem.NPC_DELAY) {
+                    auctionTimer = 0f
+                    lastAuctionEmitTimer = -1f
+                    processNpcBids(state)
+                }
+            }
+            AuctionPhase.GOING_ONCE -> {
+                val remaining = AuctionSystem.ROUND_TIME - auctionTimer
+                if (remaining <= 0f) {
+                    finalizeAuction(state)
+                } else if (lastAuctionEmitTimer < 0f || state.timer - remaining >= 0.1f) {
+                    lastAuctionEmitTimer = remaining
+                    BattleBridge.updateAuction(state.copy(timer = remaining))
+                }
+            }
+            else -> {} // SOLD, UNSOLD — 커맨드 대기
+        }
+    }
+
+    private fun processNpcBids(state: AuctionState) {
+        val nextBid = state.currentBid + state.bidIncrement
+        // 단일 pass: 퇴출 + 입찰자 탐색
+        var winnerName: String? = null
+        val updatedNpcs = state.npcs.map { npc ->
+            when {
+                npc.retired -> npc
+                nextBid > npc.maxBid -> npc.copy(retired = true)
+                winnerName == null && npc.name != state.currentBidder && auctionSystem.npcDecideBid(npc, nextBid) -> {
+                    winnerName = npc.name
+                    npc.copy(lastBid = nextBid)
+                }
+                else -> npc
+            }
+        }
+
+        if (winnerName != null) {
+            BattleBridge.updateAuction(state.copy(
+                currentBid = nextBid,
+                currentBidder = winnerName!!,
+                npcs = updatedNpcs,
+                phase = if (state.playerRetired) AuctionPhase.NPC_TURN else AuctionPhase.BIDDING,
+                timer = if (state.playerRetired) AuctionSystem.NPC_DELAY else AuctionSystem.ROUND_TIME,
+                playerCanBid = !state.playerRetired && sp >= nextBid + state.bidIncrement,
+            ))
+            auctionTimer = 0f
+            lastAuctionEmitTimer = -1f
+        } else {
+            val activeNpcs = updatedNpcs.count { !it.retired && it.name != state.currentBidder }
+            if (activeNpcs == 0 && state.playerRetired) {
+                finalizeAuction(state.copy(npcs = updatedNpcs))
+            } else {
+                BattleBridge.updateAuction(state.copy(
+                    npcs = updatedNpcs,
+                    phase = AuctionPhase.GOING_ONCE,
+                    timer = AuctionSystem.ROUND_TIME,
+                ))
+                auctionTimer = 0f
+                lastAuctionEmitTimer = -1f
+            }
+        }
+    }
+
+    private fun finalizeAuction(state: AuctionState) {
+        if (state.currentBidder == AuctionSystem.BIDDER_PLAYER) {
+            sp -= state.currentBid
+            val bp = blueprintRegistry.findById(state.blueprintId)
+            if (bp != null) {
+                val unit = spawnFromBlueprint(bp)
+                if (unit != null) {
+                    val slot = grid.findStackableSlot(bp.id).let { if (it >= 0) it else grid.findEmpty() }
+                    if (slot >= 0) {
+                        grid.placeUnit(slot, unit)
+                        invalidateMergeCache()
+                    } else {
+                        units.release(unit)
+                    }
+                }
+            }
+            BattleBridge.updateAuction(state.copy(phase = AuctionPhase.SOLD))
+        } else if (state.currentBidder.isNotEmpty()) {
+            BattleBridge.updateAuction(state.copy(phase = AuctionPhase.SOLD))
+        } else {
+            BattleBridge.updateAuction(state.copy(phase = AuctionPhase.UNSOLD))
+        }
+    }
 
     // endregion
 
