@@ -186,7 +186,7 @@ fun EnemyOverlay() {
     // PERF: Avoids copyOf()/FloatArray() allocation on every enemy count change
     val smoothXs = remember { FloatArray(256) }
     val smoothYs = remember { FloatArray(256) }
-    var smoothCount by remember { mutableStateOf(0) }
+    val smoothCountRef = remember { intArrayOf(0) }
 
     // Animation time
     val animTime = remember { mutableFloatStateOf(0f) }
@@ -225,7 +225,7 @@ fun EnemyOverlay() {
                 // 배속 가져오기
                 val speed = BattleBridge.battleSpeed.value
 
-                if (data.count != smoothCount) {
+                if (data.count != smoothCountRef[0]) {
                     // Enemy count changed — reset animation states for new indices
                     for (ai in 0 until data.count.coerceAtMost(256)) {
                         animStates[ai].reset()
@@ -261,7 +261,7 @@ fun EnemyOverlay() {
                     data.hpRatios.copyInto(smoothHpRatios, endIndex = count)
                     data.hpRatios.copyInto(prevHpRatios, endIndex = count)
                     for (fi in 0 until count) { hitFlashTimers[fi] = 0f }
-                    smoothCount = data.count
+                    smoothCountRef[0] = data.count
                 } else if (data.count > 0) {
                     // Lerp toward target positions (in-place, no allocation)
                     val lerpFactor = 0.2f
@@ -269,7 +269,7 @@ fun EnemyOverlay() {
                         sx[i] = sx[i] + (data.xs[i] - sx[i]) * lerpFactor
                         sy[i] = sy[i] + (data.ys[i] - sy[i]) * lerpFactor
                     }
-                    smoothCount = data.count
+                    smoothCountRef[0] = data.count
 
                     // Hit flash detection + HP smooth lerp (all in pre-allocated buffers)
                     for (i in 0 until data.count) {
@@ -345,7 +345,7 @@ fun EnemyOverlay() {
         val w = size.width
         val h = size.height
         // Use smooth positions if count matches
-        val useSmooth = smoothCount == data.count && data.count > 0
+        val useSmooth = smoothCountRef[0] == data.count && data.count > 0
         val flashTimers = hitFlashTimers
         val sHp = smoothHpRatios
 
